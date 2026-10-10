@@ -15,6 +15,7 @@ interface PhotoshopMenuBarProps {
   onOpenProjectSettings: () => void;
   onExportBlenderSpec: () => void;
   onExportOBJ: () => void;
+  onExportBundleZip: () => void;
   onTriggerProjectionScreenshot: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -25,6 +26,8 @@ interface PhotoshopMenuBarProps {
   onTogglePanel: (panelName: string) => void;
   activePanels: Record<string, boolean>;
   onNumpadKey: (key: string, ctrl: boolean) => void;
+  selectedModelKey?: string;
+  onSelectModelKey?: (key: string) => void;
 }
 
 export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
@@ -34,6 +37,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onOpenProjectSettings,
   onExportBlenderSpec,
   onExportOBJ,
+  onExportBundleZip,
   onTriggerProjectionScreenshot,
   onUndo,
   onRedo,
@@ -44,6 +48,8 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onTogglePanel,
   activePanels,
   onNumpadKey,
+  selectedModelKey = 'suzanne',
+  onSelectModelKey,
 }) => {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -106,12 +112,20 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 <span>Save Project (.xblend)</span>
                 <span className="text-[#888] font-mono text-[10px]">Ctrl+S</span>
               </button>
+              <button
+                onClick={() => { onExportBundleZip(); close(); }}
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#89b4fa]"
+              >
+                <span>Export .xblend + ZIP Bundle</span>
+                <span className="text-[#89b4fa] font-mono text-[10px]">ZIP</span>
+              </button>
               <div className="my-1 border-t border-[#444]" />
               <button
                 onClick={() => { onOpenProjectSettings(); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white"
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
               >
-                Link / Embed 3D Asset Settings...
+                <span>Import 3D Model (.obj / .blend)...</span>
+                <span className="text-[#a6e3a1] font-mono text-[10px]">OBJ</span>
               </button>
               <div className="my-1 border-t border-[#444]" />
               <button
@@ -343,6 +357,27 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
             </div>
           )}
         </div>
+
+        {/* 3D Model Selection Mesh Dropdown beside Help menu */}
+        {onSelectModelKey && (
+          <div className="flex items-center gap-1.5 bg-[#262626] px-2 py-0.5 rounded border border-[#484848] ml-2 cs5-inset">
+            <Box className="w-3.5 h-3.5 text-[#3d7fb8]" />
+            <span className="text-[10px] text-[#aaa] font-medium">Mesh:</span>
+            <select
+              value={selectedModelKey}
+              onChange={(e) => onSelectModelKey(e.target.value)}
+              className="bg-[#2e2e2e] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[10px] outline-none font-medium cursor-pointer"
+              title="Switch 3D Geometry Model Mesh"
+            >
+              <option value="suzanne">Suzanne (Blender Monkey)</option>
+              <option value="helmet">Cyber Armor Helmet</option>
+              <option value="sphere">Showcase Sphere</option>
+              <option value="cube">Beveled Box</option>
+              <option value="cylinder">Barrel Cylinder</option>
+              <option value="torus">Arc Torus</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Right Quick Controls */}

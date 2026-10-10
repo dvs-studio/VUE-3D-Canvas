@@ -55,6 +55,37 @@ export interface Layer {
   channel: 'color' | 'roughness' | 'metallic' | 'normal' | 'height';
 }
 
+export type BrushStrokeType = 'space' | 'airbrush' | 'dot' | 'dragged-dot' | 'curve';
+
+export type BrushMaskType = 
+  | 'none' 
+  | 'grunge' 
+  | 'splat' 
+  | 'scratch' 
+  | 'dots' 
+  | 'noise' 
+  | 'canvas' 
+  | 'cracks'
+  | 'hex_grid'
+  | 'camo'
+  | 'veins'
+  | string;
+
+export type BrushPatternType = 
+  | 'none' 
+  | 'checker' 
+  | 'carbon' 
+  | 'halftone' 
+  | 'diagonal' 
+  | 'leather' 
+  | 'wood' 
+  | 'weave'
+  | 'hex_mesh'
+  | 'marble'
+  | string;
+
+export type StencilApplicationMode = 'spacing' | 'grid' | 'random' | 'triplanar';
+
 export interface BrushPreset {
   id: string;
   name: string;
@@ -68,6 +99,36 @@ export interface BrushPreset {
   stabilizer: number; // 0 - 100% (Medibang lazy mouse)
   color: string;
   tipShape?: 'round' | 'flat' | 'grunge' | 'hex' | 'grain' | 'calligraphy';
+  // Brush Type (Stroke method) vs Brush Settings
+  strokeType?: BrushStrokeType;
+  
+  // Stencil Mask & Sub-Settings
+  maskType?: BrushMaskType;
+  maskScale?: number;
+  stencilMode?: StencilApplicationMode;
+  stencilAngle?: number;
+  stencilAngleJitter?: number;
+  stencilContrast?: number;
+  stencilInvert?: boolean;
+
+  // Pattern & Sub-Settings
+  patternType?: BrushPatternType;
+  patternScale?: number;
+  patternBlend?: 'multiply' | 'overlay' | 'hard_light' | 'screen' | 'normal';
+  patternAngle?: number;
+  patternOffsetJitter?: number;
+  patternDepth?: number;
+  patternInvert?: boolean;
+
+  // Stylus / Pen Tablet (Wintab / Windows Ink) Dynamics
+  pressureSize?: boolean;
+  minSizePercent?: number; // e.g. 15%
+  pressureOpacity?: boolean;
+  minOpacityPercent?: number; // e.g. 10%
+  tiltDynamics?: boolean; // stylus angle/tiltX/tiltY influence
+  twistDynamics?: boolean; // stylus barrel rotation
+  startTaperPercent?: number; // 0% - 50% stroke start taper
+  endTaperPercent?: number; // 0% - 50% stroke end taper
 }
 
 export interface VectorPoint {
@@ -108,19 +169,33 @@ export interface NodeSocket {
   value?: any;
 }
 
+export type ShaderNodeType =
+  | 'noise'
+  | 'voronoi'
+  | 'musgrave'
+  | 'wave'
+  | 'brick'
+  | 'checker'
+  | 'mapping'
+  | 'color_ramp'
+  | 'mix_rgb'
+  | 'math'
+  | 'vector_math'
+  | 'invert'
+  | 'separate_rgb'
+  | 'combine_rgb'
+  | 'bump'
+  | 'normal_map'
+  | 'tex_coord'
+  | 'image_texture'
+  | 'rgb'
+  | 'value'
+  | 'principled_bsdf'
+  | 'material_output';
+
 export interface GraphNode {
   id: string;
-  type: 
-    | 'noise'
-    | 'voronoi'
-    | 'brick'
-    | 'checker'
-    | 'color_ramp'
-    | 'mix_rgb'
-    | 'math'
-    | 'tex_coord'
-    | 'principled_bsdf'
-    | 'material_output';
+  type: ShaderNodeType;
   title: string;
   x: number;
   y: number;

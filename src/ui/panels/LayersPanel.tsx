@@ -1,13 +1,27 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * VUE 3D Canvas - Layers Panel (Autodesk Sketchbook / CS5 Fusion)
+ * VUE 3D Canvas - Layers Panel with Right-Click UV & Alpha Mask Export
  * Created by Victory Ukpong
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Layer, BlendMode } from '../../core/types';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, Copy, Layers, MoveUp, MoveDown } from 'lucide-react';
+import { 
+  Eye, 
+  EyeOff, 
+  Lock, 
+  Unlock, 
+  Plus, 
+  Trash2, 
+  Copy, 
+  Layers, 
+  MoveUp, 
+  MoveDown,
+  Download,
+  MoreVertical,
+  Image as ImageIcon
+} from 'lucide-react';
 
 interface LayersPanelProps {
   layers: Layer[];
@@ -21,6 +35,8 @@ interface LayersPanelProps {
   onUpdateOpacity: (id: string, opacity: number) => void;
   onUpdateBlendMode: (id: string, mode: BlendMode) => void;
   onMoveLayer: (id: string, dir: 'up' | 'down') => void;
+  onOpenExportDialog: (layerId: string, mode: 'merged' | 'alpha_mask') => void;
+  onExportAlphaMaskDirect: (layerId: string) => void;
 }
 
 const BLEND_MODES: BlendMode[] = [
@@ -47,11 +63,32 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onUpdateOpacity,
   onUpdateBlendMode,
   onMoveLayer,
+  onOpenExportDialog,
+  onExportAlphaMaskDirect,
 }) => {
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    layerId: string;
+  } | null>(null);
+
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
 
+  const handleContextMenu = (e: React.MouseEvent, layerId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      layerId,
+    });
+  };
+
   return (
-    <div className="flex flex-col h-full text-xs text-[#c8c8c8] select-none bg-[#383838]">
+    <div 
+      className="flex flex-col h-full text-xs text-[#c8c8c8] select-none bg-[#383838]"
+      onClick={() => setContextMenu(null)}
+    >
       {/* Top Toolbar: Blend Mode & Opacity */}
       <div className="p-2 border-b border-[#494949] bg-[#333] space-y-1.5">
         <div className="flex items-center justify-between gap-1">
@@ -94,7 +131,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             <div
               key={layer.id}
               onClick={() => onSelectLayer(layer.id)}
-              className={`flex items-center gap-1.5 p-1.5 rounded cursor-pointer transition-colors border ${
+              onContextMenu={(e) => handleContextMenu(e, layer.id)}
+              className={`flex items-center gap-1.5 p-1.5 rounded cursor-pointer transition-colors border relative ${
                 isActive
                   ? 'bg-[#3d7fb8]/35 border-[#3d7fb8] text-white shadow-xs'
                   : 'bg-[#303030] border-[#444] text-[#ccc] hover:bg-[#393939]'
@@ -138,6 +176,15 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               >
                 {layer.locked ? <Lock className="w-3 h-3 text-[#e5a038]" /> : <Unlock className="w-3 h-3 text-[#666]" />}
               </button>
+
+              {/* Right-click Context Trigger Button */}
+              <button
+                onClick={(e) => handleContextMenu(e, layer.id)}
+                className="text-[#777] hover:text-white p-0.5"
+                title="Layer Context Actions (Right-Click)"
+              >
+                <MoreVertical className="w-3 h-3" />
+              </button>
             </div>
           );
         })}
@@ -176,19 +223,91 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           </button>
         </div>
 
-        <button
-          onClick={() => onDeleteLayer(activeLayerId)}
-          disabled={layers.length <= 1}
-          className={`p-1 rounded border transition-colors ${
-            layers.length > 1
-              ? 'bg-[#3a3a3a] hover:bg-[#8b2626] text-[#eee] border-[#505050]'
-              : 'bg-[#292929] text-[#666] border-[#3a3a3a] cursor-not-allowed'
-          }`}
-          title="Delete Active Layer"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onOpenExportDialog(activeLayerId, 'merged')}
+            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#3d7fb8] rounded border border-[#505050] transition-colors"
+            title="Export Merged UV Texture (CorelDraw Style Scale)"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => onDeleteLayer(activeLayerId)}
+            disabled={layers.length <= 1}
+            className={`p-1 rounded border transition-colors ${
+              layers.length > 1
+                ? 'bg-[#3a3a3a] hover:bg-[#8b2626] text-[#eee] border-[#505050]'
+                : 'bg-[#292929] text-[#666] border-[#3a3a3a] cursor-not-allowed'
+            }`}
+            title="Delete Active Layer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
+
+      {/* Layer Right-Click Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-[#303030] border border-[#555] rounded shadow-2xl py-1 text-xs w-64 cs5-outset"
+          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-3 py-1 text-[10px] font-mono text-[#888] border-b border-[#444] uppercase tracking-wider">
+            LAYER EXPORT &amp; UTILITIES
+          </div>
+
+          {/* CorelDraw style custom scaling export */}
+          <button
+            onClick={() => {
+              onOpenExportDialog(contextMenu.layerId, 'merged');
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white flex items-center gap-2 text-[#eee]"
+          >
+            <Download className="w-3.5 h-3.5 text-[#3d7fb8]" />
+            <span>Export Merged UV Texture (Scale Menu)...</span>
+          </button>
+
+          {/* Alpha mask only export using layer name */}
+          <button
+            onClick={() => {
+              onExportAlphaMaskDirect(contextMenu.layerId);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white flex items-center gap-2 text-[#eee]"
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-[#e5a038]" />
+            <span>Export UV Alpha Mask Only (Named PNG)</span>
+          </button>
+
+          <div className="border-t border-[#444] my-1" />
+
+          <button
+            onClick={() => {
+              onDuplicateLayer(contextMenu.layerId);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-1 hover:bg-[#444] text-[#ccc]"
+          >
+            Duplicate Layer
+          </button>
+
+          <button
+            onClick={() => {
+              onDeleteLayer(contextMenu.layerId);
+              setContextMenu(null);
+            }}
+            disabled={layers.length <= 1}
+            className={`w-full text-left px-3 py-1 ${
+              layers.length > 1 ? 'hover:bg-[#8b2626] hover:text-white text-[#bbb]' : 'text-[#666] cursor-not-allowed'
+            }`}
+          >
+            Delete Layer
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,21 +1,22 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * VUE 3D Canvas - 3-State Ring Buffer Undo State Manager
+ * VUE 3D Canvas - Normalized Undo & Redo History Manager
  * Created by Victory Ukpong
  * 
- * Strict maximum of 3 undo states directly within memory and the .xblend project format.
- * Guarantees zero memory bloating on constrained hardware.
+ * Normalized runtime undo/redo stack (up to 30 states) for smooth in-session editing,
+ * with strict 3-state ring buffer extraction dedicated specifically for .xblend project saving.
  */
 
 import { Layer, UndoSnapshot } from './types';
 import { WasmMemoryEngine } from './wasmMemoryEngine';
 
 export class UndoRingBuffer {
-  public static readonly MAX_STATES = 3;
-  private ring: (UndoSnapshot | null)[] = [null, null, null];
+  public static readonly MAX_RUNTIME_STATES = 30; // Normalized history depth
+  public static readonly XBLEND_SAVE_STATES = 3;  // Strict 3-state budget for .xblend saving
+
+  private stack: UndoSnapshot[] = [];
   private currentIndex = -1;
-  private count = 0;
   private listeners: (() => void)[] = [];
 
   constructor() {
@@ -34,29 +35,38 @@ export class UndoRingBuffer {
   }
 
   public reset() {
-    this.ring = [null, null, null];
+    this.stack = [];
     this.currentIndex = -1;
-    this.count = 0;
     this.notify();
   }
 
   /**
-   * Captures the current layer state into the 3-element ring buffer.
+   * Pushes a new state onto the normalized undo history stack.
    */
   public pushState(description: string, layers: Layer[]) {
     const memory = WasmMemoryEngine.getInstance();
-    
-    // Create layer snapshots
+
+    // If we branched by undoing earlier, truncate future states
+    if (this.currentIndex < this.stack.length - 1) {
+      const discarded = this.stack.slice(this.currentIndex + 1);
+      discarded.forEach(snap => {
+        snap.layerData.forEach(ld => {
+          memory.unregisterBuffer(ld.imageData.data.byteLength);
+        });
+      });
+      this.stack = this.stack.slice(0, this.currentIndex + 1);
+    }
+
+    // Capture layer snapshots
     const layerData = layers.map(layer => {
       const w = layer.canvas.width;
       const h = layer.canvas.height;
       const originalData = layer.ctx.getImageData(0, 0, w, h);
-      
-      // Clone pixel data into fresh ImageData
+
+      // Clone pixel data
       const copyData = layer.ctx.createImageData(w, h);
       copyData.data.set(originalData.data);
-      
-      // Track memory allocation in wasm manager
+
       memory.registerBuffer(copyData.data.byteLength);
 
       return {
@@ -72,42 +82,36 @@ export class UndoRingBuffer {
       layerData,
     };
 
-    if (this.count === 0) {
-      this.ring[0] = snapshot;
-      this.currentIndex = 0;
-      this.count = 1;
-    } else {
-      // Ring shift if advancing past current index or at capacity
-      this.currentIndex = (this.currentIndex + 1) % UndoRingBuffer.MAX_STATES;
-      
-      // Free previously occupied snapshot memory if overwriting
-      const old = this.ring[this.currentIndex];
-      if (old) {
-        old.layerData.forEach(l => {
-          memory.unregisterBuffer(l.imageData.data.byteLength);
+    this.stack.push(snapshot);
+    this.currentIndex = this.stack.length - 1;
+
+    // Prune oldest states if exceeding normalized runtime capacity
+    if (this.stack.length > UndoRingBuffer.MAX_RUNTIME_STATES) {
+      const oldest = this.stack.shift();
+      if (oldest) {
+        oldest.layerData.forEach(ld => {
+          memory.unregisterBuffer(ld.imageData.data.byteLength);
         });
       }
-
-      this.ring[this.currentIndex] = snapshot;
-      this.count = Math.min(UndoRingBuffer.MAX_STATES, this.count + 1);
+      this.currentIndex--;
     }
 
     this.notify();
   }
 
   public canUndo(): boolean {
-    return this.count > 1 && this.currentIndex > 0;
+    return this.currentIndex > 0;
   }
 
   public canRedo(): boolean {
-    return this.currentIndex < this.count - 1 && this.ring[this.currentIndex + 1] !== null;
+    return this.currentIndex < this.stack.length - 1;
   }
 
   public undo(layers: Layer[]): boolean {
     if (!this.canUndo()) return false;
 
     this.currentIndex--;
-    const snapshot = this.ring[this.currentIndex];
+    const snapshot = this.stack[this.currentIndex];
     if (!snapshot) return false;
 
     this.applySnapshotToLayers(snapshot, layers);
@@ -119,7 +123,19 @@ export class UndoRingBuffer {
     if (!this.canRedo()) return false;
 
     this.currentIndex++;
-    const snapshot = this.ring[this.currentIndex];
+    const snapshot = this.stack[this.currentIndex];
+    if (!snapshot) return false;
+
+    this.applySnapshotToLayers(snapshot, layers);
+    this.notify();
+    return true;
+  }
+
+  public jumpToState(index: number, layers: Layer[]): boolean {
+    if (index < 0 || index >= this.stack.length || index === this.currentIndex) return false;
+
+    this.currentIndex = index;
+    const snapshot = this.stack[this.currentIndex];
     if (!snapshot) return false;
 
     this.applySnapshotToLayers(snapshot, layers);
@@ -137,20 +153,37 @@ export class UndoRingBuffer {
   }
 
   /**
-   * Returns metadata for UI visualization of the 3 ring slots
+   * Extracts strictly the last 3 states for saving into the .xblend project format.
    */
-  public getRingSlots() {
-    return [0, 1, 2].map(slotIndex => {
-      const snapshot = this.ring[slotIndex];
-      const isActive = slotIndex === this.currentIndex;
-      return {
-        slotIndex,
-        isFilled: snapshot !== null,
-        isActive,
-        description: snapshot ? snapshot.description : 'Empty Slot',
-        timestamp: snapshot ? snapshot.timestamp : null,
-      };
-    });
+  public getSaveStatesForXBlend() {
+    if (this.stack.length === 0) return [];
+    const endIndex = this.currentIndex >= 0 ? this.currentIndex : this.stack.length - 1;
+    const startIndex = Math.max(0, endIndex - 2);
+    const chosen = this.stack.slice(startIndex, endIndex + 1);
+
+    return chosen.map((snap, i) => ({
+      slotIndex: i,
+      id: snap.id,
+      timestamp: snap.timestamp,
+      description: snap.description,
+    }));
+  }
+
+  /**
+   * Returns metadata for the normalized history UI list.
+   */
+  public getHistoryList() {
+    const saveStates = this.getSaveStatesForXBlend();
+    const saveStateIds = new Set(saveStates.map(s => s.id));
+
+    return this.stack.map((snap, index) => ({
+      index,
+      id: snap.id,
+      description: snap.description,
+      timestamp: snap.timestamp,
+      isActive: index === this.currentIndex,
+      isCommittedToXBlend: saveStateIds.has(snap.id),
+    }));
   }
 
   public getCurrentIndex(): number {
@@ -158,6 +191,6 @@ export class UndoRingBuffer {
   }
 
   public getCount(): number {
-    return this.count;
+    return this.stack.length;
   }
 }

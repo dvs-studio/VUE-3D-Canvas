@@ -22,6 +22,7 @@ interface ProjectSettingsModalProps {
   onExportBlenderMaterial: () => void;
   onExportOBJ: () => void;
   onImportCustomModel: (fileName: string, content: string) => void;
+  onExportBundleZip: () => void;
 }
 
 export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
@@ -37,6 +38,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   onExportBlenderMaterial,
   onExportOBJ,
   onImportCustomModel,
+  onExportBundleZip,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const modelInputRef = useRef<HTMLInputElement | null>(null);
@@ -147,21 +149,30 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-3 gap-2 pt-1">
             <button
               onClick={onSaveXBlend}
-              className="p-2 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#555] flex items-center justify-center gap-2 transition-colors font-medium text-xs cs5-outset"
+              className="p-2 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#555] flex items-center justify-center gap-1.5 transition-colors font-medium text-xs cs5-outset"
             >
               <Save className="w-3.5 h-3.5 text-[#3d7fb8]" />
-              Save .xblend Project
+              Save .xblend
+            </button>
+
+            <button
+              onClick={onExportBundleZip}
+              className="p-2 bg-[#3a4454] hover:bg-[#47576d] text-white rounded border border-[#52637a] flex items-center justify-center gap-1.5 transition-colors font-medium text-xs shadow-xs"
+              title="Export .xblend + all texture maps + alpha masks + node mapping in a single ZIP"
+            >
+              <Package className="w-3.5 h-3.5 text-[#89b4fa]" />
+              Export ZIP Bundle
             </button>
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#555] flex items-center justify-center gap-2 transition-colors font-medium text-xs cs5-outset"
+              className="p-2 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#555] flex items-center justify-center gap-1.5 transition-colors font-medium text-xs cs5-outset"
             >
               <FolderOpen className="w-3.5 h-3.5 text-[#e5a038]" />
-              Open .xblend File
+              Open .xblend
             </button>
             <input
               type="file"

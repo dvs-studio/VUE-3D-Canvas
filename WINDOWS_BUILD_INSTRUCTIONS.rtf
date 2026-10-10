@@ -1,0 +1,44 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0\fnil\fcharset0 Calibri;}{\f1\fnil\fcharset0 Consolas;}}
+{\colortbl ;\red61\green127\blue184;\red56\green189\blue248;\red50\green50\blue50;}
+\viewkind4\uc1\pard\cf1\b\fs32 VUE 3D Canvas - Windows Compilation & Build Guide\cf0\b0\fs22\par
+\b Author / Creator:\b0  Victory Ukpong\par
+\b Target Architecture:\b0  Rust (Core/Logic) + WASM-first + Native Windows Desktop (DirectX 11 / OpenGL 2.0 Fallback)\par
+\b Core Constraints:\b0  Low memory footprint, max 3 undo states in .xblend, linked assets by default, no ray-tracing or D3D12 dependency.\par
+\par
+\hr\par
+\cf1\b\fs26 1. System Requirements\cf0\b0\fs22\par
+- OS: Windows 10 (64-bit) or Windows 11\par
+- RAM: 4 GB minimum (optimized for low-end hardware)\par
+- GPU: DirectX 11 or OpenGL 2.0 capable graphics card\par
+- Build Prerequisites: Node.js (v18+ or v20+ LTS), Rust Toolchain (rustup-init.exe, MSVC x64), Visual Studio C++ Build Tools.\par
+\par
+\cf1\b\fs26 2. Option A: Web / WASM-First Build (Quickest Execution)\cf0\b0\fs22\par
+1. Open PowerShell in project directory:\par
+{\f1\cf3   cd C:\\path\\to\\vue-3d-canvas\par
+  npm install\par
+  npm run dev\par}\par
+2. Open http://localhost:3000 in your web browser.\par
+3. To generate production distribution bundle:\par
+{\f1\cf3   npm run build\par}\par
+\par
+\cf1\b\fs26 3. Option B: Standalone Native Windows Application (.exe via Tauri)\cf0\b0\fs22\par
+1. Install Tauri CLI:\par
+{\f1\cf3   npm install --save-dev @tauri-apps/cli\par}\par
+2. Build standalone executable:\par
+{\f1\cf3   npm run build\par
+  npx tauri build\par}\par
+3. Output executable location:\par
+{\f1\cf3   src-tauri\\target\\release\\VUE 3D Canvas.exe\par}\par
+\par
+\cf1\b\fs26 4. Digital Stylus Tablet & Wintab Driver Notes\cf0\b0\fs22\par
+- Enable Windows Ink in your tablet driver settings (Wacom, Huion, XP-Pen).\par
+- In VUE 3D Canvas, enable "Touch Nav". Single touch finger navigates (pans and zooms 3D and 2D UV view), while stylus pen draws directly with pressure and tilt.\par
+\par
+\cf1\b\fs26 5. 2D UV Texture Map & Overlay Features\cf0\b0\fs22\par
+- Switch between 3D View, Split 3D+UV, and 2D UV Map using the top view mode switcher.\par
+- In 2D UV view, toggle the "UV Overlay: ON/OFF" button to display the flattened 3D model wireframe mesh.\par
+- Multi-touch pinch-to-zoom and two-finger pan are fully supported on touchscreens.\par
+\par
+\pard\qc\fs18 VUE 3D Canvas - Developed by Victory Ukpong. Licensed under Apache-2.0.\par
+}

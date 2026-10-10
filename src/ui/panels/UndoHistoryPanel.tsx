@@ -1,25 +1,30 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * VUE 3D Canvas - 3-State Ring Buffer History Panel
+ * VUE 3D Canvas - Normalized Undo & Redo History Panel
  * Created by Victory Ukpong
  */
 
 import React, { useEffect, useState } from 'react';
 import { UndoRingBuffer } from '../../core/history';
 import { WasmMemoryEngine } from '../../core/wasmMemoryEngine';
-import { Undo2, Redo2, RotateCcw, Cpu, Database, CheckCircle2 } from 'lucide-react';
+import { Undo2, Redo2, Cpu, Database, Save, CheckCircle2 } from 'lucide-react';
+import { Layer } from '../../core/types';
 
 interface UndoHistoryPanelProps {
   undoBuffer: UndoRingBuffer;
+  layers: Layer[];
   onUndo: () => void;
   onRedo: () => void;
+  onJumpToState?: (index: number) => void;
 }
 
 export const UndoHistoryPanel: React.FC<UndoHistoryPanelProps> = ({
   undoBuffer,
+  layers,
   onUndo,
   onRedo,
+  onJumpToState,
 }) => {
   const [, setTick] = useState(0);
 
@@ -29,16 +34,18 @@ export const UndoHistoryPanel: React.FC<UndoHistoryPanelProps> = ({
     });
   }, [undoBuffer]);
 
-  const slots = undoBuffer.getRingSlots();
+  const historyList = undoBuffer.getHistoryList();
   const memoryStats = WasmMemoryEngine.getInstance().getMemoryStats();
 
   return (
     <div className="flex flex-col h-full text-xs text-[#c8c8c8] select-none bg-[#383838]">
       {/* Header with Undo / Redo Buttons */}
       <div className="p-2 border-b border-[#494949] bg-[#333] flex items-center justify-between">
-        <span className="text-[10px] text-[#999] font-mono uppercase tracking-wider">
-          RING BUFFER (MAX 3)
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-[#999] font-mono uppercase tracking-wider">
+            HISTORY ({historyList.length})
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={onUndo}
@@ -69,39 +76,41 @@ export const UndoHistoryPanel: React.FC<UndoHistoryPanelProps> = ({
         </div>
       </div>
 
-      {/* 3 Circular Ring Buffer Slots */}
-      <div className="p-2 space-y-2 flex-1 overflow-y-auto">
-        <div className="text-[10px] text-[#aaa] leading-snug">
-          Strict 3-slot circular ring buffer. Overwrites oldest state on 4th stroke to prevent RAM bloating on constrained hardware.
+      {/* Normalized History Stack List */}
+      <div className="p-2 space-y-1.5 flex-1 overflow-y-auto">
+        <div className="text-[10px] text-[#aaa] leading-snug bg-[#2c2c2c] p-1.5 rounded border border-[#444] mb-2 flex items-start gap-1.5">
+          <Save className="w-3.5 h-3.5 text-[#3d7fb8] shrink-0 mt-0.5" />
+          <span>
+            Normalized undo/redo active. For compact file size, strictly the <strong>last 3 states</strong> are preserved when saving to <strong>.xblend</strong>.
+          </span>
         </div>
 
-        <div className="space-y-1.5">
-          {slots.map((slot) => (
+        <div className="space-y-1">
+          {historyList.map((item) => (
             <div
-              key={slot.slotIndex}
-              className={`p-2 rounded border transition-all ${
-                slot.isActive
-                  ? 'bg-[#3d7fb8]/30 border-[#3d7fb8] text-white'
-                  : slot.isFilled
-                  ? 'bg-[#2f2f2f] border-[#444] text-[#ccc]'
-                  : 'bg-[#262626] border-[#383838] text-[#666]'
+              key={item.id}
+              onClick={() => onJumpToState && onJumpToState(item.index)}
+              className={`p-1.5 rounded border transition-all cursor-pointer ${
+                item.isActive
+                  ? 'bg-[#3d7fb8]/35 border-[#3d7fb8] text-white shadow-xs'
+                  : 'bg-[#2f2f2f] border-[#444] text-[#ccc] hover:bg-[#383838]'
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-mono">
                 <span className="font-bold flex items-center gap-1">
-                  <span className={`w-2 h-2 rounded-full ${slot.isActive ? 'bg-[#3d7fb8]' : slot.isFilled ? 'bg-[#22c55e]' : 'bg-[#555]'}`} />
-                  SLOT #{slot.slotIndex + 1}
+                  <span className={`w-1.5 h-1.5 rounded-full ${item.isActive ? 'bg-[#3d7fb8]' : 'bg-[#666]'}`} />
+                  #{item.index + 1} {item.description}
                 </span>
-                <span>{slot.isActive ? 'ACTIVE HEAD' : slot.isFilled ? 'COMMITTED' : 'VACANT'}</span>
+                {item.isCommittedToXBlend && (
+                  <span className="text-[9px] text-[#a6e3a1] bg-[#223326] px-1 rounded border border-[#38553e]">
+                    .xblend
+                  </span>
+                )}
               </div>
-              <div className="text-[11px] font-medium mt-1 truncate">
-                {slot.description}
+              <div className="text-[9px] text-[#888] font-mono mt-0.5 flex justify-between">
+                <span>{new Date(item.timestamp).toLocaleTimeString()}</span>
+                {item.isActive && <span className="text-[#3d7fb8] font-bold">CURRENT</span>}
               </div>
-              {slot.timestamp && (
-                <div className="text-[9px] text-[#888] font-mono mt-0.5">
-                  {new Date(slot.timestamp).toLocaleTimeString()}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -121,8 +130,8 @@ export const UndoHistoryPanel: React.FC<UndoHistoryPanelProps> = ({
             <span className="text-[#eee]">{memoryStats.peakMB} MB</span>
           </div>
           <div className="flex items-center justify-between text-[#888]">
-            <span>PIXEL BUFFERS</span>
-            <span className="text-[#a6e3a1]">{memoryStats.activeBuffers} active</span>
+            <span>SAVE RING BUDGET</span>
+            <span className="text-[#a6e3a1]">3-state .xblend</span>
           </div>
         </div>
       </div>

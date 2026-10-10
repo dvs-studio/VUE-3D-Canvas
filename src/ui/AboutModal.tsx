@@ -95,8 +95,8 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             </div>
             <div className="bg-[#2b2b2b] p-2 rounded border border-[#404040]">
               <div className="text-[#888] text-[9px]">UNDO MEMORY BUDGET</div>
-              <div className="text-[#eee] font-bold">3-State Ring Buffer</div>
-              <div className="text-[#aaa] text-[9px] mt-0.5">Strict limit prevents RAM bloating</div>
+              <div className="text-[#eee] font-bold">Normalized Stack</div>
+              <div className="text-[#aaa] text-[9px] mt-0.5">Full in-session undo/redo; 3 states saved to .xblend</div>
             </div>
             <div className="bg-[#2b2b2b] p-2 rounded border border-[#404040]">
               <div className="text-[#888] text-[9px]">PAINT ENGINE</div>

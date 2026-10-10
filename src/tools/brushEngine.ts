@@ -1,11 +1,11 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * VUE 3D Canvas - Medibang-Inspired Brush Engine
+ * VUE 3D Canvas - Medibang / ArmorPaint Inspired Brush Engine
  * Created by Victory Ukpong
  */
 
-import { BrushPreset } from '../core/types';
+import { BrushPreset, BrushStrokeType, BrushMaskType, BrushPatternType } from '../core/types';
 import { WasmMemoryEngine } from '../core/wasmMemoryEngine';
 
 export interface StrokePoint {
@@ -22,6 +22,11 @@ export class BrushEngine {
   private stabilizedPos: { x: number; y: number } | null = null;
   private lastDabPos: { x: number; y: number } | null = null;
   private residualDistance = 0;
+
+  // Stroke Type state
+  private strokeStartPos: { x: number; y: number } | null = null;
+  private dotPlaced = false;
+  private curvePoints: { x: number; y: number }[] = [];
 
   // Clone stamp source point
   public cloneSourcePoint: { x: number; y: number } | null = null;
@@ -40,8 +45,19 @@ export class BrushEngine {
   public beginStroke(x: number, y: number, pressure = 1.0) {
     this.stabilizedPos = { x, y };
     this.lastDabPos = { x, y };
+    this.strokeStartPos = { x, y };
     this.residualDistance = 0;
     this.smudgeColor = null;
+    this.dotPlaced = false;
+    this.curvePoints = [{ x, y }];
+  }
+
+  public endStroke() {
+    this.stabilizedPos = null;
+    this.lastDabPos = null;
+    this.strokeStartPos = null;
+    this.dotPlaced = false;
+    this.curvePoints = [];
   }
 
   /**
@@ -76,7 +92,7 @@ export class BrushEngine {
   }
 
   /**
-   * Paints along the line from previous dab to new point with spacing, scattering, and hardness
+   * Paints along the stroke respecting Brush Type (space, airbrush, dot, dragged-dot, curve)
    */
   public paintDabs(
     ctx: CanvasRenderingContext2D,
@@ -86,6 +102,70 @@ export class BrushEngine {
     pressure = 1.0,
     isEraser = false
   ) {
+    const strokeType: BrushStrokeType = brush.strokeType || 'space';
+
+    // 1. DOT MODE: exactly 1 dab per stroke at start position
+    if (strokeType === 'dot') {
+      if (this.dotPlaced) return;
+      this.renderSingleDab(ctx, toX, toY, brush.size * pressure, brush, isEraser);
+      this.dotPlaced = true;
+      return;
+    }
+
+    // 2. DRAGGED-DOT MODE: single dab whose scale and rotation follow drag distance
+    if (strokeType === 'dragged-dot') {
+      if (!this.strokeStartPos) this.strokeStartPos = { x: toX, y: toY };
+      const dx = toX - this.strokeStartPos.x;
+      const dy = toY - this.strokeStartPos.y;
+      const dragDist = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+      const dynamicSize = Math.max(brush.size * 0.5, dragDist * 1.5);
+      this.renderSingleDab(ctx, this.strokeStartPos.x, this.strokeStartPos.y, dynamicSize, brush, isEraser, angle);
+      return;
+    }
+
+    // 3. CURVE MODE: accumulate points and smooth via cardinal/bezier interpolation
+    if (strokeType === 'curve') {
+      this.curvePoints.push({ x: toX, y: toY });
+      if (this.curvePoints.length >= 3) {
+        const p0 = this.curvePoints[this.curvePoints.length - 3];
+        const p1 = this.curvePoints[this.curvePoints.length - 2];
+        const p2 = this.curvePoints[this.curvePoints.length - 1];
+
+        // Midpoint interpolation
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        this.renderSingleDab(ctx, midX, midY, brush.size * pressure, brush, isEraser);
+      } else {
+        this.renderSingleDab(ctx, toX, toY, brush.size * pressure, brush, isEraser);
+      }
+      return;
+    }
+
+    // 4. AIRBRUSH MODE: tighter continuous spray with softer flow
+    if (strokeType === 'airbrush') {
+      const effectiveSize = Math.max(1, brush.size * Math.max(0.3, pressure));
+      const step = Math.max(1, effectiveSize * 0.08); // very tight step for seamless spray
+      if (!this.lastDabPos) this.lastDabPos = { x: toX, y: toY };
+
+      const fromX = this.lastDabPos.x;
+      const fromY = this.lastDabPos.y;
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const distance = Math.hypot(dx, dy);
+
+      const dabsCount = Math.max(1, Math.floor(distance / step));
+      for (let i = 0; i <= dabsCount; i++) {
+        const t = dabsCount > 0 ? i / dabsCount : 1;
+        const dabX = fromX + dx * t;
+        const dabY = fromY + dy * t;
+        this.renderSingleDab(ctx, dabX, dabY, effectiveSize, brush, isEraser);
+      }
+      this.lastDabPos = { x: toX, y: toY };
+      return;
+    }
+
+    // 5. SPACE MODE: standard spaced step dabs (default)
     if (!this.lastDabPos) {
       this.lastDabPos = { x: toX, y: toY };
     }
@@ -96,8 +176,13 @@ export class BrushEngine {
     const dy = toY - fromY;
     const distance = Math.hypot(dx, dy);
 
-    // Dynamic size adjusted by pressure
-    const effectiveSize = Math.max(1, brush.size * Math.max(0.2, pressure));
+    // Dynamic size adjusted by stylus pen pressure and min-size dynamics
+    let sizeFactor = 1.0;
+    if (brush.pressureSize ?? true) {
+      const minPercent = (brush.minSizePercent ?? 20) / 100;
+      sizeFactor = minPercent + (1.0 - minPercent) * pressure;
+    }
+    const effectiveSize = Math.max(1, brush.size * sizeFactor);
     // Spacing in pixels
     const step = Math.max(1, (effectiveSize * (brush.spacing / 100)));
 
@@ -121,8 +206,13 @@ export class BrushEngine {
         dabY += Math.sin(scatterAngle) * scatterDist;
       }
 
-      this.renderSingleDab(ctx, dabX, dabY, effectiveSize, brush, isEraser);
+      // Calculate dab rotation with stencil angle & angle jitter
+      let dabRotation = (brush.stencilAngle || 0) * (Math.PI / 180);
+      if (brush.stencilAngleJitter && brush.stencilAngleJitter > 0) {
+        dabRotation += (Math.random() - 0.5) * Math.PI * 2 * (brush.stencilAngleJitter / 100);
+      }
 
+      this.renderSingleDab(ctx, dabX, dabY, effectiveSize, brush, isEraser, dabRotation, pressure);
       progress += step / distance;
     }
 
@@ -131,7 +221,7 @@ export class BrushEngine {
   }
 
   /**
-   * Renders an individual brush stamp dab onto canvas
+   * Renders an individual brush stamp dab onto canvas with Mask & Pattern support
    */
   private renderSingleDab(
     ctx: CanvasRenderingContext2D,
@@ -139,54 +229,171 @@ export class BrushEngine {
     y: number,
     size: number,
     brush: BrushPreset,
-    isEraser: boolean
+    isEraser: boolean,
+    rotationAngle = 0,
+    pressure = 1.0
   ) {
     const radius = size / 2;
     ctx.save();
+    ctx.translate(x, y);
+    if (rotationAngle !== 0) ctx.rotate(rotationAngle);
+
+    // Pressure Opacity Dynamics
+    let opacityFactor = 1.0;
+    if (brush.pressureOpacity ?? true) {
+      const minOp = (brush.minOpacityPercent ?? 15) / 100;
+      opacityFactor = minOp + (1.0 - minOp) * pressure;
+    }
 
     if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.globalAlpha = (brush.opacity / 100) * (brush.flow / 100);
+      ctx.globalAlpha = (brush.opacity / 100) * (brush.flow / 100) * opacityFactor;
     } else {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = (brush.opacity / 100) * (brush.flow / 100) * 0.85;
+      ctx.globalCompositeOperation = brush.patternBlend === 'overlay' ? 'overlay'
+        : brush.patternBlend === 'multiply' ? 'multiply'
+        : brush.patternBlend === 'screen' ? 'screen'
+        : brush.patternBlend === 'hard_light' ? 'hard-light'
+        : 'source-over';
+      ctx.globalAlpha = (brush.opacity / 100) * (brush.flow / 100) * opacityFactor * 0.85;
     }
 
-    if (brush.hardness < 85 && !isEraser) {
-      // Soft / radial gradient dab
-      const grad = ctx.createRadialGradient(x, y, radius * (brush.hardness / 100), x, y, radius);
+    // 1. Procedural Mask Modulation (if active)
+    if (brush.maskType && brush.maskType !== 'none') {
+      this.applyMaskModulation(ctx, radius, brush.maskType, brush.maskScale || 1.0);
+    }
+
+    // 2. Procedural Pattern Fill (if active)
+    if (brush.patternType && brush.patternType !== 'none' && !isEraser) {
+      this.applyPatternFill(ctx, radius, brush.color, brush.patternType, brush.patternScale || 1.0);
+    } else if (brush.hardness < 85 && !isEraser) {
+      // Soft radial gradient dab
+      const grad = ctx.createRadialGradient(0, 0, radius * (brush.hardness / 100), 0, 0, radius);
       grad.addColorStop(0, brush.color);
       grad.addColorStop(1, 'transparent');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.fill();
     } else if (brush.tipShape === 'flat') {
       ctx.fillStyle = isEraser ? '#000000' : brush.color;
-      ctx.fillRect(x - radius, y - radius * 0.35, size, size * 0.7);
+      ctx.fillRect(-radius, -radius * 0.35, size, size * 0.7);
     } else if (brush.tipShape === 'hex') {
       ctx.fillStyle = isEraser ? '#000000' : brush.color;
-      this.drawPolygon(ctx, x, y, radius, 6);
+      this.drawPolygon(ctx, 0, 0, radius, 6);
     } else if (brush.tipShape === 'grunge') {
       ctx.fillStyle = isEraser ? '#000000' : brush.color;
-      // Procedural grunge cluster
       for (let i = 0; i < 4; i++) {
         const offX = (Math.random() - 0.5) * radius * 1.2;
         const offY = (Math.random() - 0.5) * radius * 1.2;
         const r = (radius * 0.3) + Math.random() * (radius * 0.4);
         ctx.beginPath();
-        ctx.arc(x + offX, y + offY, r, 0, Math.PI * 2);
+        ctx.arc(offX, offY, r, 0, Math.PI * 2);
         ctx.fill();
       }
     } else {
       // Crisp round circle
       ctx.fillStyle = isEraser ? '#000000' : brush.color;
       ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.fill();
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Procedural Mask stencil generator
+   */
+  private applyMaskModulation(
+    ctx: CanvasRenderingContext2D,
+    radius: number,
+    maskType: BrushMaskType,
+    scale: number
+  ) {
+    if (maskType === 'grunge') {
+      // Jitter opacity & stipple
+      ctx.globalAlpha *= 0.75 + Math.random() * 0.25;
+      for (let i = 0; i < 5; i++) {
+        const offX = (Math.random() - 0.5) * radius * scale;
+        const offY = (Math.random() - 0.5) * radius * scale;
+        ctx.beginPath();
+        ctx.arc(offX, offY, radius * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (maskType === 'splat') {
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * radius * scale;
+        ctx.beginPath();
+        ctx.arc(Math.cos(angle) * dist, Math.sin(angle) * dist, radius * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (maskType === 'scratch') {
+      ctx.beginPath();
+      ctx.moveTo(-radius * scale, -radius * 0.2);
+      ctx.lineTo(radius * scale, radius * 0.2);
+      ctx.lineWidth = Math.max(1, radius * 0.2);
+      ctx.stroke();
+    } else if (maskType === 'dots') {
+      for (let dx = -radius; dx <= radius; dx += Math.max(4, radius * 0.4 * scale)) {
+        for (let dy = -radius; dy <= radius; dy += Math.max(4, radius * 0.4 * scale)) {
+          if (dx * dx + dy * dy <= radius * radius) {
+            ctx.beginPath();
+            ctx.arc(dx, dy, Math.max(1, radius * 0.1), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Procedural Pattern fill generator
+   */
+  private applyPatternFill(
+    ctx: CanvasRenderingContext2D,
+    radius: number,
+    color: string,
+    patternType: BrushPatternType,
+    scale: number
+  ) {
+    const pCanvas = document.createElement('canvas');
+    const tileSize = Math.max(4, Math.floor(16 * scale));
+    pCanvas.width = tileSize;
+    pCanvas.height = tileSize;
+    const pctx = pCanvas.getContext('2d');
+    if (!pctx) return;
+
+    pctx.fillStyle = color;
+    pctx.fillRect(0, 0, tileSize, tileSize);
+
+    if (patternType === 'checker') {
+      pctx.fillStyle = 'rgba(0,0,0,0.45)';
+      pctx.fillRect(0, 0, tileSize / 2, tileSize / 2);
+      pctx.fillRect(tileSize / 2, tileSize / 2, tileSize / 2, tileSize / 2);
+    } else if (patternType === 'carbon') {
+      pctx.fillStyle = 'rgba(0,0,0,0.5)';
+      pctx.fillRect(0, 0, tileSize, tileSize / 2);
+      pctx.fillStyle = 'rgba(255,255,255,0.2)';
+      pctx.fillRect(0, tileSize / 2, tileSize / 2, tileSize / 2);
+    } else if (patternType === 'halftone') {
+      pctx.fillStyle = 'rgba(0,0,0,0.4)';
+      pctx.beginPath();
+      pctx.arc(tileSize / 2, tileSize / 2, tileSize * 0.35, 0, Math.PI * 2);
+      pctx.fill();
+    } else if (patternType === 'wood' || patternType === 'leather') {
+      pctx.fillStyle = 'rgba(0,0,0,0.3)';
+      pctx.fillRect(0, 0, tileSize, tileSize * 0.3);
+      pctx.fillRect(0, tileSize * 0.6, tileSize, tileSize * 0.2);
+    }
+
+    const pat = ctx.createPattern(pCanvas, 'repeat');
+    if (pat) {
+      ctx.fillStyle = pat;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   private drawPolygon(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, sides: number) {
@@ -238,31 +445,35 @@ export class BrushEngine {
     if (!this.cloneOffset) return;
     const srcX = x - this.cloneOffset.dx;
     const srcY = y - this.cloneOffset.dy;
-    const radius = brush.size / 2;
+    const radius = Math.floor(brush.size / 2);
 
-    const srcMinX = Math.max(0, Math.floor(srcX - radius));
-    const srcMinY = Math.max(0, Math.floor(srcY - radius));
-    const patchW = Math.min(ctx.canvas.width - srcMinX, Math.ceil(radius * 2));
-    const patchH = Math.min(ctx.canvas.height - srcMinY, Math.ceil(radius * 2));
+    const sMinX = Math.max(0, Math.floor(srcX - radius));
+    const sMinY = Math.max(0, Math.floor(srcY - radius));
+    const sW = Math.min(ctx.canvas.width - sMinX, radius * 2);
+    const sH = Math.min(ctx.canvas.height - sMinY, radius * 2);
 
-    if (patchW <= 0 || patchH <= 0) return;
+    if (sW <= 0 || sH <= 0) return;
+
+    const sourceData = ctx.getImageData(sMinX, sMinY, sW, sH);
 
     ctx.save();
+    ctx.globalAlpha = brush.opacity / 100;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.clip();
-    ctx.globalAlpha = (brush.opacity / 100);
-    // Draw cloned region
-    ctx.drawImage(
-      ctx.canvas,
-      srcMinX, srcMinY, patchW, patchH,
-      x - radius, y - radius, patchW, patchH
-    );
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = sW;
+    tempCanvas.height = sH;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.putImageData(sourceData, 0, 0);
+
+    ctx.drawImage(tempCanvas, x - radius, y - radius);
     ctx.restore();
   }
 
   /**
-   * Smudge tool: Memory-optimized pixel dragging
+   * Smudge tool: pushes and blends local pixels along the motion vector
    */
   public applySmudgeAt(
     ctx: CanvasRenderingContext2D,
@@ -272,31 +483,24 @@ export class BrushEngine {
     toY: number,
     brush: BrushPreset
   ) {
-    const radius = Math.max(2, brush.size / 2);
-    // Sample color if not yet picked
-    const sampleX = Math.min(Math.max(0, Math.floor(fromX)), ctx.canvas.width - 1);
-    const sampleY = Math.min(Math.max(0, Math.floor(fromY)), ctx.canvas.height - 1);
-    const p = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-    
-    if (p[3] > 0) {
-      this.smudgeColor = { r: p[0], g: p[1], b: p[2], a: p[3] / 255 };
+    const radius = Math.max(3, Math.floor(brush.size / 2));
+    const sX = Math.max(0, Math.floor(fromX - radius));
+    const sY = Math.max(0, Math.floor(fromY - radius));
+    const size = radius * 2;
+
+    if (sX + size > ctx.canvas.width || sY + size > ctx.canvas.height) return;
+
+    if (!this.smudgeColor) {
+      const sample = ctx.getImageData(Math.floor(fromX), Math.floor(fromY), 1, 1).data;
+      this.smudgeColor = { r: sample[0], g: sample[1], b: sample[2], a: sample[3] };
     }
 
-    if (!this.smudgeColor) return;
-
     ctx.save();
-    ctx.globalAlpha = (brush.opacity / 100) * 0.45;
-    ctx.fillStyle = `rgba(${this.smudgeColor.r}, ${this.smudgeColor.g}, ${this.smudgeColor.b}, ${this.smudgeColor.a})`;
+    ctx.globalAlpha = (brush.opacity / 100) * 0.4;
+    ctx.fillStyle = `rgba(${this.smudgeColor.r}, ${this.smudgeColor.g}, ${this.smudgeColor.b}, ${this.smudgeColor.a / 255})`;
     ctx.beginPath();
     ctx.arc(toX, toY, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-  }
-
-  public endStroke() {
-    this.stabilizedPos = null;
-    this.lastDabPos = null;
-    this.smudgeColor = null;
-    this.residualDistance = 0;
   }
 }

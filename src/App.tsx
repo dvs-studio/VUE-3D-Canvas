@@ -43,6 +43,8 @@ import { TriplanarDialog } from './ui/TriplanarDialog';
 import { ProjectionModal } from './ui/ProjectionModal';
 import { AboutModal } from './ui/AboutModal';
 import { ProjectSettingsModal } from './ui/ProjectSettingsModal';
+import { ExportTextureDialog } from './ui/ExportTextureDialog';
+import { DockerGroup, DockerTabItem } from './ui/DockerGroup';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -128,6 +130,32 @@ export default function App() {
   const [isNavLocked, setIsNavLocked] = useState<boolean>(false);
   const [projectionScreenshotUrl, setProjectionScreenshotUrl] = useState<string | null>(null);
   const [isProjectionModalOpen, setIsProjectionModalOpen] = useState<boolean>(false);
+
+  // Android / Tablet Touch Input Navigation Toggle
+  const [touchNavEnabled, setTouchNavEnabled] = useState<boolean>(false);
+
+  // Square Gizmo & Viewport Layout (Perspective vs Quad View)
+  const [showGizmo, setShowGizmo] = useState<boolean>(true);
+  const [viewLayout, setViewLayout] = useState<'perspective' | 'quad'>('perspective');
+
+  // Live Composite Canvas for 3D Supervisor Clone Navigator
+  const [compositeCanvas, setCompositeCanvas] = useState<HTMLCanvasElement | null>(null);
+
+  // CorelDraw-style Texture & Alpha Mask Export Dialog State
+  const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
+  const [exportDialogLayerId, setExportDialogLayerId] = useState<string>('layer_details');
+  const [exportDialogMode, setExportDialogMode] = useState<'merged' | 'alpha_mask'>('merged');
+
+  // Docker Tabs grouping state
+  const [useDockerTabs, setUseDockerTabs] = useState<boolean>(true);
+  const [dockerGroup1Tab, setDockerGroup1Tab] = useState<string>('layers');
+  const [dockerGroup2Tab, setDockerGroup2Tab] = useState<string>('navigator');
+
+  const handleOpenExportDialog = (layerId: string, mode: 'merged' | 'alpha_mask') => {
+    setExportDialogLayerId(layerId);
+    setExportDialogMode(mode);
+    setExportDialogOpen(true);
+  };
 
   // UI Dialogs
   const [isCarouselOpen, setIsCarouselOpen] = useState<boolean>(false);
@@ -530,6 +558,62 @@ export default function App() {
     XBlendManager.downloadFile(objData, `${projectName}.obj`, 'text/plain');
   };
 
+  // Export .xblend + ZIP Bundle (Master Spec Requirements)
+  const handleExportBundleZip = async () => {
+    const modelAsset: MeshModelAsset = {
+      id: modelKey,
+      name: modelKey.toUpperCase(),
+      source: customOBJText ? 'file' : 'primitive',
+      linked: !embed3DAssets,
+      filePath: `/models/${modelKey}.obj`,
+      fileSizeEstimate: embed3DAssets ? '2.45 MB' : '14.2 KB',
+      vertexCount: 1240,
+      triangleCount: 2480,
+      embeddedGeometryData: embed3DAssets ? (customOBJText || 'embedded_geometry') : undefined,
+    };
+
+    await XBlendManager.exportProjectBundleZip(
+      projectName,
+      embed3DAssets,
+      modelAsset,
+      layers,
+      { nodes, connections },
+      undoBuffer,
+      materialProps
+    );
+  };
+
+  // Direct Alpha Mask Export for a layer
+  const handleExportAlphaMaskDirect = (layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (!layer) return;
+
+    const alphaCanvas = document.createElement('canvas');
+    alphaCanvas.width = layer.canvas.width;
+    alphaCanvas.height = layer.canvas.height;
+    const actx = alphaCanvas.getContext('2d')!;
+    actx.drawImage(layer.canvas, 0, 0);
+
+    const imgData = actx.getImageData(0, 0, alphaCanvas.width, alphaCanvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i + 3];
+      data[i] = a;     // R
+      data[i + 1] = a; // G
+      data[i + 2] = a; // B
+      data[i + 3] = 255;
+    }
+    actx.putImageData(imgData, 0, 0);
+
+    const cleanName = layer.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const link = document.createElement('a');
+    link.download = `${cleanName}_AlphaMask.png`;
+    link.href = alphaCanvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleImportCustomModel = (fileName: string, content: string) => {
     setCustomOBJText(content);
     setModelKey('custom_obj');
@@ -563,6 +647,7 @@ export default function App() {
         onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
         onExportBlenderSpec={handleExportBlenderMaterial}
         onExportOBJ={handleExportOBJ}
+        onExportBundleZip={handleExportBundleZip}
         onTriggerProjectionScreenshot={triggerProjectionScreenshot}
         onUndo={handleUndo}
         onRedo={handleRedo}
@@ -589,6 +674,10 @@ export default function App() {
         onOpenCarousel={() => setIsCarouselOpen(true)}
         onTriggerProjection={triggerProjectionScreenshot}
         isNavLocked={isNavLocked}
+        touchNavEnabled={touchNavEnabled}
+        onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
+        viewLayout={viewLayout}
+        onSelectViewLayout={setViewLayout}
       />
 
       {/* 3. Main Workspace Area: Left ToolBox + Center Viewport(s) + Right Dockable Panels */}
@@ -621,11 +710,16 @@ export default function App() {
                 materialProps={materialProps}
                 undoBuffer={undoBuffer}
                 onTextureUpdated={notifyTextureUpdated}
-                isNavLocked={isNavLocked}
                 onColorSampled={setPrimaryColor}
                 isOrtho={isOrtho}
                 onToggleOrtho={() => setIsOrtho(!isOrtho)}
                 zoomFactor={zoomFactor}
+                touchNavEnabled={touchNavEnabled}
+                onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
+                onCompositeCanvasReady={setCompositeCanvas}
+                showGizmo={showGizmo}
+                viewLayout={viewLayout}
+                onSelectViewLayout={setViewLayout}
               />
             </div>
           )}
@@ -645,126 +739,289 @@ export default function App() {
                 undoBuffer={undoBuffer}
                 onTextureUpdated={notifyTextureUpdated}
                 onColorSampled={setPrimaryColor}
+                modelKey={modelKey}
+                customOBJText={customOBJText}
+                touchNavEnabled={touchNavEnabled}
+                onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
               />
             </div>
           )}
         </div>
 
-        {/* Right Dockable Workspace Panels (Autodesk Sketchbook / CS5 Fusion) */}
-        <div className="w-64 bg-[#383838] border-l border-[#242424] flex flex-col overflow-y-auto shrink-0 z-30 cs5-outset">
-          {/* Layers Panel */}
-          {activePanels.layers && !panelFloating.layers && (
-            <div className="border-b border-[#444] h-64 shrink-0">
-              <DockablePanelFrame
-                id="layers"
-                title="Layers"
-                icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
-                onClose={() => togglePanel('layers')}
-                onToggleFloat={() => togglePanelFloat('layers')}
-              >
-                <LayersPanel
-                  layers={layers}
-                  activeLayerId={activeLayerId}
-                  onSelectLayer={setActiveLayerId}
-                  onAddLayer={handleAddLayer}
-                  onDeleteLayer={handleDeleteLayer}
-                  onDuplicateLayer={handleDuplicateLayer}
-                  onToggleVisibility={handleToggleVisibility}
-                  onToggleLock={handleToggleLock}
-                  onUpdateOpacity={handleUpdateOpacity}
-                  onUpdateBlendMode={handleUpdateBlendMode}
-                  onMoveLayer={handleMoveLayer}
-                />
-              </DockablePanelFrame>
-            </div>
-          )}
+        {/* Right Dockable Workspace Panels (Autodesk Sketchbook / CS5 Fusion / Docker System) */}
+        <div className="w-72 bg-[#383838] border-l border-[#242424] flex flex-col overflow-y-auto shrink-0 z-30 cs5-outset">
+          {/* Docker Header Switcher: Grouped Dockers (Tabs) vs Expanded Panels (Stack) */}
+          <div className="p-1.5 bg-[#2c2c2c] border-b border-[#444] flex items-center justify-between text-[10px]">
+            <span className="font-mono text-[#888] uppercase tracking-wider flex items-center gap-1">
+              <LayersIcon className="w-3 h-3 text-[#3d7fb8]" />
+              Docker System
+            </span>
+            <button
+              onClick={() => setUseDockerTabs(!useDockerTabs)}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono border transition-colors cursor-pointer ${
+                useDockerTabs
+                  ? 'bg-[#3d7fb8] text-white border-[#5ca2db]'
+                  : 'bg-[#3a3a3a] text-[#bbb] border-[#555] hover:text-white'
+              }`}
+              title="Toggle Grouped Docker Tabs vs Expanded Stack"
+            >
+              {useDockerTabs ? 'Grouped Dockers (Tabs)' : 'Expanded Stack'}
+            </button>
+          </div>
 
-          {/* Color Wheel Panel */}
-          {activePanels.colorWheel && !panelFloating.colorWheel && (
-            <div className="border-b border-[#444] shrink-0">
-              <DockablePanelFrame
-                id="colorWheel"
-                title="Color Wheel"
-                icon={<Palette className="w-3.5 h-3.5 text-[#e5a038]" />}
-                onClose={() => togglePanel('colorWheel')}
-                onToggleFloat={() => togglePanelFloat('colorWheel')}
-              >
-                <ColorWheelPanel
-                  currentColor={primaryColor}
-                  onChangeColor={setPrimaryColor}
+          {useDockerTabs ? (
+            <div className="flex flex-col gap-2 p-1">
+              {/* Docker Group 1: Layers / Color / History */}
+              <div className="border border-[#444] rounded overflow-hidden">
+                <DockerGroup
+                  id="docker_group_1"
+                  tabs={[
+                    {
+                      id: 'layers',
+                      title: 'Layers',
+                      icon: <LayersIcon className="w-3 h-3 text-[#3d7fb8]" />,
+                      content: (
+                        <div className="h-64">
+                          <LayersPanel
+                            layers={layers}
+                            activeLayerId={activeLayerId}
+                            onSelectLayer={setActiveLayerId}
+                            onAddLayer={handleAddLayer}
+                            onDeleteLayer={handleDeleteLayer}
+                            onDuplicateLayer={handleDuplicateLayer}
+                            onToggleVisibility={handleToggleVisibility}
+                            onToggleLock={handleToggleLock}
+                            onUpdateOpacity={handleUpdateOpacity}
+                            onUpdateBlendMode={handleUpdateBlendMode}
+                            onMoveLayer={handleMoveLayer}
+                            onOpenExportDialog={handleOpenExportDialog}
+                            onExportAlphaMaskDirect={handleExportAlphaMaskDirect}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'colorWheel',
+                      title: 'Color',
+                      icon: <Palette className="w-3 h-3 text-[#e5a038]" />,
+                      content: (
+                        <ColorWheelPanel
+                          currentColor={primaryColor}
+                          onChangeColor={setPrimaryColor}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'history',
+                      title: 'History',
+                      icon: <History className="w-3 h-3 text-[#3d7fb8]" />,
+                      content: (
+                        <div className="h-56">
+                          <UndoHistoryPanel
+                            undoBuffer={undoBuffer}
+                            layers={layers}
+                            onUndo={handleUndo}
+                            onRedo={handleRedo}
+                            onJumpToState={(idx) => {
+                              if (undoBuffer.jumpToState(idx, layers)) {
+                                notifyTextureUpdated();
+                              }
+                            }}
+                          />
+                        </div>
+                      ),
+                    },
+                  ]}
+                  activeTabId={dockerGroup1Tab}
+                  onSelectTab={setDockerGroup1Tab}
+                  width={280}
                 />
-              </DockablePanelFrame>
-            </div>
-          )}
+              </div>
 
-          {/* Brush Library & Dynamics */}
-          {activePanels.brushes && !panelFloating.brushes && (
-            <div className="border-b border-[#444] h-72 shrink-0">
-              <DockablePanelFrame
-                id="brushes"
-                title="Brushes &amp; Dynamics"
-                icon={<Paintbrush className="w-3.5 h-3.5 text-[#a6e3a1]" />}
-                onClose={() => togglePanel('brushes')}
-                onToggleFloat={() => togglePanelFloat('brushes')}
-              >
-                <BrushLibraryPanel
-                  brushes={brushes}
-                  activeBrush={activeBrush}
-                  onSelectBrush={setActiveBrush}
-                  onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
-                  onOpenCarousel={() => setIsCarouselOpen(true)}
+              {/* Docker Group 2: Supervisor 3D Viewport Clone / Brushes / Numpad */}
+              <div className="border border-[#444] rounded overflow-hidden">
+                <DockerGroup
+                  id="docker_group_2"
+                  tabs={[
+                    {
+                      id: 'navigator',
+                      title: '3D Viewport',
+                      icon: <Compass className="w-3 h-3 text-[#f38ba8]" />,
+                      content: (
+                        <NavigatorPanel
+                          modelKey={modelKey}
+                          customOBJText={customOBJText}
+                          compositeCanvas={compositeCanvas}
+                          textureVersion={textureVersion}
+                          materialProps={materialProps}
+                          showGizmo={showGizmo}
+                          onToggleGizmo={() => setShowGizmo(g => !g)}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'brushes',
+                      title: 'Brushes',
+                      icon: <Paintbrush className="w-3 h-3 text-[#a6e3a1]" />,
+                      content: (
+                        <div className="h-72">
+                          <BrushLibraryPanel
+                            brushes={brushes}
+                            activeBrush={activeBrush}
+                            onSelectBrush={setActiveBrush}
+                            onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
+                            onOpenCarousel={() => setIsCarouselOpen(true)}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'numpad',
+                      title: 'Numpad',
+                      icon: <Hash className="w-3 h-3 text-[#a6e3a1]" />,
+                      content: (
+                        <div className="p-2 flex justify-center bg-[#333]">
+                          <NumpadOverlay
+                            onNumpadKey={handleNumpadKey}
+                            isOrtho={isOrtho}
+                          />
+                        </div>
+                      ),
+                    },
+                  ]}
+                  activeTabId={dockerGroup2Tab}
+                  onSelectTab={setDockerGroup2Tab}
+                  width={280}
                 />
-              </DockablePanelFrame>
+              </div>
             </div>
-          )}
+          ) : (
+            <div className="flex flex-col">
+              {/* Layers Panel */}
+              {activePanels.layers && !panelFloating.layers && (
+                <div className="border-b border-[#444] h-64 shrink-0">
+                  <DockablePanelFrame
+                    id="layers"
+                    title="Layers"
+                    icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
+                    onClose={() => togglePanel('layers')}
+                    onToggleFloat={() => togglePanelFloat('layers')}
+                  >
+                    <LayersPanel
+                      layers={layers}
+                      activeLayerId={activeLayerId}
+                      onSelectLayer={setActiveLayerId}
+                      onAddLayer={handleAddLayer}
+                      onDeleteLayer={handleDeleteLayer}
+                      onDuplicateLayer={handleDuplicateLayer}
+                      onToggleVisibility={handleToggleVisibility}
+                      onToggleLock={handleToggleLock}
+                      onUpdateOpacity={handleUpdateOpacity}
+                      onUpdateBlendMode={handleUpdateBlendMode}
+                      onMoveLayer={handleMoveLayer}
+                      onOpenExportDialog={handleOpenExportDialog}
+                      onExportAlphaMaskDirect={handleExportAlphaMaskDirect}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
 
-          {/* Undo History (3-State Ring Buffer) */}
-          {activePanels.history && !panelFloating.history && (
-            <div className="border-b border-[#444] h-52 shrink-0">
-              <DockablePanelFrame
-                id="history"
-                title="Undo Ring Buffer"
-                icon={<History className="w-3.5 h-3.5 text-[#3d7fb8]" />}
-                onClose={() => togglePanel('history')}
-                onToggleFloat={() => togglePanelFloat('history')}
-              >
-                <UndoHistoryPanel
-                  undoBuffer={undoBuffer}
-                  onUndo={handleUndo}
-                  onRedo={handleRedo}
-                />
-              </DockablePanelFrame>
-            </div>
-          )}
+              {/* Color Wheel Panel */}
+              {activePanels.colorWheel && !panelFloating.colorWheel && (
+                <div className="border-b border-[#444] shrink-0">
+                  <DockablePanelFrame
+                    id="colorWheel"
+                    title="Color Wheel"
+                    icon={<Palette className="w-3.5 h-3.5 text-[#e5a038]" />}
+                    onClose={() => togglePanel('colorWheel')}
+                    onToggleFloat={() => togglePanelFloat('colorWheel')}
+                  >
+                    <ColorWheelPanel
+                      currentColor={primaryColor}
+                      onChangeColor={setPrimaryColor}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
 
-          {/* Navigator Panel */}
-          {activePanels.navigator && !panelFloating.navigator && (
-            <div className="border-b border-[#444] shrink-0">
-              <DockablePanelFrame
-                id="navigator"
-                title="Navigator"
-                icon={<Compass className="w-3.5 h-3.5 text-[#f38ba8]" />}
-                onClose={() => togglePanel('navigator')}
-                onToggleFloat={() => togglePanelFloat('navigator')}
-              >
-                <NavigatorPanel
-                  zoomLevel={zoomFactor}
-                  onZoomChange={setZoomFactor}
-                  onResetView={() => setZoomFactor(1.0)}
-                  isOrtho={isOrtho}
-                  onToggleOrtho={() => setIsOrtho(!isOrtho)}
-                />
-              </DockablePanelFrame>
-            </div>
-          )}
+              {/* Brush Library & Dynamics */}
+              {activePanels.brushes && !panelFloating.brushes && (
+                <div className="border-b border-[#444] h-72 shrink-0">
+                  <DockablePanelFrame
+                    id="brushes"
+                    title="Brushes &amp; Dynamics"
+                    icon={<Paintbrush className="w-3.5 h-3.5 text-[#a6e3a1]" />}
+                    onClose={() => togglePanel('brushes')}
+                    onToggleFloat={() => togglePanelFloat('brushes')}
+                  >
+                    <BrushLibraryPanel
+                      brushes={brushes}
+                      activeBrush={activeBrush}
+                      onSelectBrush={setActiveBrush}
+                      onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
+                      onOpenCarousel={() => setIsCarouselOpen(true)}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
 
-          {/* Simulated Numpad Panel */}
-          {activePanels.numpad && !panelFloating.numpad && (
-            <div className="p-2 border-b border-[#444] shrink-0 flex justify-center">
-              <NumpadOverlay
-                onNumpadKey={handleNumpadKey}
-                isOrtho={isOrtho}
-              />
+              {/* Undo History (Normalized) */}
+              {activePanels.history && !panelFloating.history && (
+                <div className="border-b border-[#444] h-52 shrink-0">
+                  <DockablePanelFrame
+                    id="history"
+                    title="Undo History (Normalized)"
+                    icon={<History className="w-3.5 h-3.5 text-[#3d7fb8]" />}
+                    onClose={() => togglePanel('history')}
+                    onToggleFloat={() => togglePanelFloat('history')}
+                  >
+                    <UndoHistoryPanel
+                      undoBuffer={undoBuffer}
+                      layers={layers}
+                      onUndo={handleUndo}
+                      onRedo={handleRedo}
+                      onJumpToState={(idx) => {
+                        if (undoBuffer.jumpToState(idx, layers)) {
+                          notifyTextureUpdated();
+                        }
+                      }}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
+
+              {/* Supervisor 3D Viewport Clone Navigator */}
+              {activePanels.navigator && !panelFloating.navigator && (
+                <div className="border-b border-[#444] shrink-0">
+                  <DockablePanelFrame
+                    id="navigator"
+                    title="3D Viewport"
+                    icon={<Compass className="w-3.5 h-3.5 text-[#f38ba8]" />}
+                    onClose={() => togglePanel('navigator')}
+                    onToggleFloat={() => togglePanelFloat('navigator')}
+                  >
+                    <NavigatorPanel
+                      modelKey={modelKey}
+                      customOBJText={customOBJText}
+                      compositeCanvas={compositeCanvas}
+                      textureVersion={textureVersion}
+                      materialProps={materialProps}
+                      showGizmo={showGizmo}
+                      onToggleGizmo={() => setShowGizmo(g => !g)}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
+
+              {/* Simulated Numpad Panel */}
+              {activePanels.numpad && !panelFloating.numpad && (
+                <div className="p-2 border-b border-[#444] shrink-0 flex justify-center">
+                  <NumpadOverlay
+                    onNumpadKey={handleNumpadKey}
+                    isOrtho={isOrtho}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -800,10 +1057,21 @@ export default function App() {
           <span className="text-[#a6e3a1]">● RUST/WASM CORE</span>
           <span>DIRECTX 11 / OPENGL 2.0 WEBGL LIMITS</span>
           <span className="text-[#3d7fb8]">.XBLEND FORMAT (LINKED ASSETS DEFAULT)</span>
+          <button
+            onClick={() => setTouchNavEnabled(t => !t)}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-mono border transition-colors cursor-pointer ${
+              touchNavEnabled
+                ? 'bg-[#3d7fb8] text-white border-[#5ca2db]'
+                : 'bg-[#333] text-[#aaa] border-[#444] hover:text-white'
+            }`}
+            title="Toggle Android / Tablet Touch Navigation"
+          >
+            TOUCH NAV (ANDROID): {touchNavEnabled ? 'ENABLED' : 'DISABLED'}
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
-          <span>UNDO: STRICT 3-SLOT RING BUFFER</span>
+          <span>UNDO: NORMALIZED (3 STATES SAVED TO .XBLEND)</span>
           <span>VICTORY UKPONG · OPEN SOURCE</span>
         </div>
       </div>
@@ -862,6 +1130,16 @@ export default function App() {
         onExportBlenderMaterial={handleExportBlenderMaterial}
         onExportOBJ={handleExportOBJ}
         onImportCustomModel={handleImportCustomModel}
+        onExportBundleZip={handleExportBundleZip}
+      />
+
+      {/* 10. CorelDraw-Style Texture & Alpha Mask Export Dialog */}
+      <ExportTextureDialog
+        isOpen={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        layers={layers}
+        selectedLayerId={exportDialogLayerId}
+        defaultMode={exportDialogMode}
       />
     </div>
   );

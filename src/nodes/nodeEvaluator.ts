@@ -9,7 +9,7 @@ import { GraphNode, NodeConnection } from '../core/types';
 
 export class NodeEvaluator {
   /**
-   * Bakes the procedural graph to a 2D canvas context
+   * Bakes the procedural shader node graph to a 2D canvas context
    */
   public static bakeToCanvas(
     nodes: GraphNode[],
@@ -21,23 +21,33 @@ export class NodeEvaluator {
     const imgData = ctx.createImageData(w, h);
     const data = imgData.data;
 
-    // Find active generator and color ramp
+    // Identify active nodes
+    const mappingNode = nodes.find(n => n.type === 'mapping');
     const noiseNode = nodes.find(n => n.type === 'noise');
     const voronoiNode = nodes.find(n => n.type === 'voronoi');
+    const musgraveNode = nodes.find(n => n.type === 'musgrave');
+    const waveNode = nodes.find(n => n.type === 'wave');
     const brickNode = nodes.find(n => n.type === 'brick');
     const checkerNode = nodes.find(n => n.type === 'checker');
     const rampNode = nodes.find(n => n.type === 'color_ramp');
-    const principledNode = nodes.find(n => n.type === 'principled_bsdf');
+    const mixNode = nodes.find(n => n.type === 'mix_rgb');
 
-    const rampC1 = rampNode?.properties.color1 || '#2c3e50';
-    const rampC2 = rampNode?.properties.color2 || '#e74c3c';
-    const rgb1 = this.hexToRgb(rampC1);
-    const rgb2 = this.hexToRgb(rampC2);
+    // Vector Mapping parameters
+    const locX = mappingNode?.properties.locX ?? 0;
+    const locY = mappingNode?.properties.locY ?? 0;
+    const scaleX = mappingNode?.properties.scaleX ?? 1;
+    const scaleY = mappingNode?.properties.scaleY ?? 1;
+
+    // ColorRamp stops
+    const stops = rampNode?.properties.stops || [
+      { pos: 0.0, color: '#000000' },
+      { pos: 1.0, color: '#ffffff' },
+    ];
 
     for (let y = 0; y < h; y++) {
-      const v = y / h;
+      let v = (y / h) * scaleY + locY;
       for (let x = 0; x < w; x++) {
-        const u = x / w;
+        let u = (x / w) * scaleX + locX;
         const idx = (y * w + x) * 4;
 
         let val = 0;
@@ -45,41 +55,74 @@ export class NodeEvaluator {
           const bScale = brickNode.properties.scale || 10;
           const row = Math.floor(v * bScale);
           const shift = (row % 2) * 0.5;
-          const bx = (u * bScale + shift) % 1;
-          const by = (v * bScale) % 1;
+          const bx = Math.abs((u * bScale + shift) % 1);
+          const by = Math.abs((v * bScale) % 1);
           val = (bx < 0.08 || by < 0.08) ? 0.1 : 0.9;
         } else if (checkerNode) {
           const cScale = checkerNode.properties.scale || 8;
-          const cx = Math.floor(u * cScale) % 2;
-          const cy = Math.floor(v * cScale) % 2;
+          const cx = Math.floor(Math.abs(u) * cScale) % 2;
+          const cy = Math.floor(Math.abs(v) * cScale) % 2;
           val = (cx ^ cy) ? 1.0 : 0.0;
         } else if (voronoiNode) {
           const vScale = voronoiNode.properties.scale || 6;
-          const fx = (u * vScale) % 1;
-          const fy = (v * vScale) % 1;
+          const fx = Math.abs((u * vScale) % 1);
+          const fy = Math.abs((v * vScale) % 1);
           val = Math.hypot(fx - 0.5, fy - 0.5) * 2;
           val = Math.min(1, Math.max(0, val));
+        } else if (waveNode) {
+          const wScale = waveNode.properties.scale || 5;
+          val = (Math.sin(u * wScale * Math.PI * 2) + 1) / 2;
+        } else if (musgraveNode) {
+          const mScale = musgraveNode.properties.scale || 4;
+          val = Math.abs(Math.sin(u * mScale * 3) * Math.cos(v * mScale * 3));
         } else {
           // Noise
           const nScale = noiseNode?.properties.scale || 8;
-          const s1 = Math.sin(u * nScale * 3.14 + Math.cos(v * nScale * 2));
-          const s2 = Math.cos(v * nScale * 3.14 + Math.sin(u * nScale * 2));
+          const s1 = Math.sin(u * nScale * Math.PI + Math.cos(v * nScale * 2));
+          const s2 = Math.cos(v * nScale * Math.PI + Math.sin(u * nScale * 2));
           val = (s1 + s2 + 2) / 4;
         }
 
-        // Apply Color Ramp interpolation
-        const r = Math.round(rgb1.r * (1 - val) + rgb2.r * val);
-        const g = Math.round(rgb1.g * (1 - val) + rgb2.g * val);
-        const b = Math.round(rgb1.b * (1 - val) + rgb2.b * val);
+        val = Math.max(0, Math.min(1, val));
 
-        data[idx] = r;
-        data[idx + 1] = g;
-        data[idx + 2] = b;
+        // Evaluate ColorRamp stops
+        const color = this.sampleColorRamp(val, stops);
+
+        data[idx] = color.r;
+        data[idx + 1] = color.g;
+        data[idx + 2] = color.b;
         data[idx + 3] = 255;
       }
     }
 
     ctx.putImageData(imgData, 0, 0);
+  }
+
+  private static sampleColorRamp(t: number, stops: { pos: number; color: string }[]): { r: number; g: number; b: number } {
+    if (stops.length === 0) return { r: 255, g: 255, b: 255 };
+    if (stops.length === 1) return this.hexToRgb(stops[0].color);
+
+    const sorted = [...stops].sort((a, b) => a.pos - b.pos);
+    if (t <= sorted[0].pos) return this.hexToRgb(sorted[0].color);
+    if (t >= sorted[sorted.length - 1].pos) return this.hexToRgb(sorted[sorted.length - 1].color);
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const s0 = sorted[i];
+      const s1 = sorted[i + 1];
+      if (t >= s0.pos && t <= s1.pos) {
+        const span = s1.pos - s0.pos;
+        const factor = span > 0 ? (t - s0.pos) / span : 0;
+        const c0 = this.hexToRgb(s0.color);
+        const c1 = this.hexToRgb(s1.color);
+        return {
+          r: Math.round(c0.r * (1 - factor) + c1.r * factor),
+          g: Math.round(c0.g * (1 - factor) + c1.g * factor),
+          b: Math.round(c0.b * (1 - factor) + c1.b * factor),
+        };
+      }
+    }
+
+    return this.hexToRgb(sorted[sorted.length - 1].color);
   }
 
   private static hexToRgb(hex: string): { r: number; g: number; b: number } {
