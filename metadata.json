@@ -1,0 +1,6 @@
+{
+  "name": "VUE 3D Canvas",
+  "description": "High-performance, lightweight 3D texturing and painting application by Victory Ukpong. Rust/WASM-first, DirectX 11/OpenGL 2.0 limits, .xblend projects, and procedural nodes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
