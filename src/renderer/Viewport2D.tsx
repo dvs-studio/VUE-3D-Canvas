@@ -496,6 +496,12 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   // Direct paint dab applicator on active texture layer
   const execute2DPaint = (x: number, y: number, pressure: number) => {
     if (!activeLayer) return;
+
+    // Physical temporary selector mask: only paint within active selection
+    if (selectionMask && selectionMask.active && !SelectionTool.isPointInSelection(x, y, selectionMask)) {
+      return;
+    }
+
     const ctx = activeLayer.ctx;
 
     if (activeTool === 'brush') {
@@ -550,6 +556,15 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (activeLayer) {
       penToolRef.current.fillPath(activeLayer.ctx, primaryColor, brush.opacity);
       undoBuffer.pushState('Fill Vector Path', layers);
+      onTextureUpdated();
+    }
+    setPenMenu(null);
+  };
+
+  const handleErasePath = () => {
+    if (activeLayer) {
+      penToolRef.current.erasePath(activeLayer.ctx);
+      undoBuffer.pushState('Erase Vector Path Area', layers);
       onTextureUpdated();
     }
     setPenMenu(null);
@@ -725,13 +740,19 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
             onClick={handleFillPath}
             className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white text-[#ddd]"
           >
-            2. Fill Path with Color
+            2. Fill Curve Area with Color
+          </button>
+          <button
+            onClick={handleErasePath}
+            className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white text-[#ddd]"
+          >
+            3. Erase Curve Area
           </button>
           <button
             onClick={handleConvertPathToSelection}
             className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white text-[#ddd]"
           >
-            3. Convert Path to Plain Selection
+            4. Convert Curve to Selector Mask
           </button>
           <div className="border-t border-[#444] my-0.5" />
           <button

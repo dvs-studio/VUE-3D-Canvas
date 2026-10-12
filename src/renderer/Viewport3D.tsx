@@ -11,9 +11,12 @@ import {
   ToolType, 
   BrushPreset, 
   Layer, 
-  ViewportShadingMode 
+  ViewportShadingMode,
+  SelectionMask
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
+import { SelectionTool } from '../tools/selectionTool';
+import { SymmetryConfig, SymmetryEngine } from '../tools/symmetryEngine';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
@@ -46,6 +49,8 @@ interface Viewport3DProps {
   onSelectViewLayout?: (layout: 'perspective' | 'quad') => void;
   surfaceMode?: 'smooth' | 'hard' | 'default';
   isSymmetryX?: boolean;
+  selectionMask?: SelectionMask | null;
+  symmetryConfig?: SymmetryConfig;
 }
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
@@ -74,6 +79,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   onSelectViewLayout,
   surfaceMode = 'default',
   isSymmetryX = false,
+  selectionMask = null,
+  symmetryConfig,
 }) => {
   const [internalViewLayout, setInternalViewLayout] = useState<'perspective' | 'quad'>('perspective');
   const viewLayout = controlledViewLayout || internalViewLayout;
@@ -397,6 +404,58 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
   }, [layers, textureVersion, updateCompositeTexture]);
 
+  // Virtual 3D Origin Cursor / Plane Helper for Symmetry
+  const virtualSymmetryHelperRef = useRef<THREE.Group | null>(null);
+
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    if (virtualSymmetryHelperRef.current) {
+      sceneRef.current.remove(virtualSymmetryHelperRef.current);
+      virtualSymmetryHelperRef.current = null;
+    }
+
+    if (symmetryConfig?.showVirtualCursorPlane) {
+      const group = new THREE.Group();
+      
+      // Semi-transparent slice plane
+      const planeGeom = new THREE.PlaneGeometry(5, 5);
+      const planeMat = new THREE.MeshBasicMaterial({
+        color: 0x3d7fb8,
+        transparent: true,
+        opacity: 0.22,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const planeMesh = new THREE.Mesh(planeGeom, planeMat);
+      group.add(planeMesh);
+
+      // 3D Axis Crosshair Locator
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x89b4fa, transparent: true, opacity: 0.75 });
+      const pts = [
+        new THREE.Vector3(-2.5, 0, 0), new THREE.Vector3(2.5, 0, 0),
+        new THREE.Vector3(0, -2.5, 0), new THREE.Vector3(0, 2.5, 0),
+      ];
+      const lineGeom = new THREE.BufferGeometry().setFromPoints(pts);
+      const cross = new THREE.LineSegments(lineGeom, lineMat);
+      group.add(cross);
+
+      const loc = symmetryConfig.locatorValue;
+      if (symmetryConfig.axis === 'X') {
+        group.rotation.y = Math.PI / 2;
+        group.position.set(loc, 0, 0);
+      } else if (symmetryConfig.axis === 'Y') {
+        group.rotation.x = Math.PI / 2;
+        group.position.set(0, loc, 0);
+      } else {
+        group.rotation.set(0, 0, 0);
+        group.position.set(0, 0, loc);
+      }
+
+      sceneRef.current.add(group);
+      virtualSymmetryHelperRef.current = group;
+    }
+  }, [symmetryConfig?.showVirtualCursorPlane, symmetryConfig?.axis, symmetryConfig?.locatorValue]);
+
   const updateCameraPosition = () => {
     const { radius, theta, phi, target } = orbitState.current;
     const r = radius / zoomFactor;
@@ -682,29 +741,57 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   };
 
   const executePaintTool = (layer: Layer, x: number, y: number, pressure: number) => {
+    // 1. Temporary Selection Mask: Only allow painting inside selection
+    if (selectionMask && selectionMask.active && !SelectionTool.isPointInSelection(x, y, selectionMask)) {
+      return;
+    }
+
     const ctx = layer.ctx;
-    if (activeTool === 'brush') {
-      brushEngine.paintDabs(ctx, x, y, brush, pressure, false);
-    } else if (activeTool === 'eraser') {
-      brushEngine.paintDabs(ctx, x, y, brush, pressure, true);
-    } else if (activeTool === 'pen') {
-      brushEngine.paintDabs(ctx, x, y, { ...brush, hardness: 100, size: Math.max(2, brush.size * 0.4) }, pressure, false);
-    } else if (activeTool === 'blur') {
-      brushEngine.applyBlurAt(ctx, x, y, brush);
-    } else if (activeTool === 'clone') {
-      brushEngine.applyCloneStampAt(ctx, x, y, brush);
-    } else if (activeTool === 'smudge') {
-      brushEngine.applySmudgeAt(ctx, x, y, x, y, brush);
-    } else if (activeTool === 'bucket') {
-      FillSuite.applyBucketFill(ctx, brush.color, brush.opacity);
-    } else if (activeTool === 'gradient_linear') {
-      FillSuite.applyLinearGradient(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, brush.color, '#1a1a1a', brush.opacity);
-    } else if (activeTool === 'gradient_radial') {
-      FillSuite.applyRadialGradient(ctx, x, y, x + brush.size * 3.5, y, brush.color, 'transparent', brush.opacity);
-    } else if (activeTool === 'eyedropper' && onColorSampled) {
-      const p = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
-      const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
-      onColorSampled(hex);
+
+    const applyDabAt = (dx: number, dy: number) => {
+      if (activeTool === 'brush') {
+        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false);
+      } else if (activeTool === 'eraser') {
+        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, true);
+      } else if (activeTool === 'pen') {
+        brushEngine.paintDabs(ctx, dx, dy, { ...brush, hardness: 100, size: Math.max(2, brush.size * 0.4) }, pressure, false);
+      } else if (activeTool === 'blur') {
+        brushEngine.applyBlurAt(ctx, dx, dy, brush);
+      } else if (activeTool === 'clone') {
+        brushEngine.applyCloneStampAt(ctx, dx, dy, brush);
+      } else if (activeTool === 'smudge') {
+        brushEngine.applySmudgeAt(ctx, dx, dy, dx, dy, brush);
+      } else if (activeTool === 'bucket') {
+        FillSuite.applyBucketFill(ctx, brush.color, brush.opacity);
+      } else if (activeTool === 'gradient_linear') {
+        FillSuite.applyLinearGradient(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, brush.color, '#1a1a1a', brush.opacity);
+      } else if (activeTool === 'gradient_radial') {
+        FillSuite.applyRadialGradient(ctx, dx, dy, dx + brush.size * 3.5, dy, brush.color, 'transparent', brush.opacity);
+      } else if (activeTool === 'eyedropper' && onColorSampled) {
+        const p = ctx.getImageData(Math.floor(dx), Math.floor(dy), 1, 1).data;
+        const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
+        onColorSampled(hex);
+      }
+    };
+
+    // Primary stroke dab
+    applyDabAt(x, y);
+
+    // 2. Real-time Symmetry Mirror Stroke Dab
+    const isMirrorActive = symmetryConfig ? symmetryConfig.activeRealtimeMirror : isSymmetryX;
+    if (isMirrorActive) {
+      const activeSymConfig = symmetryConfig || {
+        axis: 'X' as const,
+        direction: '+ to -' as const,
+        originMode: 'mesh_origin' as const,
+        locatorValue: 0,
+        activeRealtimeMirror: true,
+        showVirtualCursorPlane: false,
+      };
+      const mirrored = SymmetryEngine.getMirroredCoord(x, y, activeSymConfig, layer.canvas.width, layer.canvas.height);
+      if (!selectionMask || !selectionMask.active || SelectionTool.isPointInSelection(mirrored.x, mirrored.y, selectionMask)) {
+        applyDabAt(mirrored.x, mirrored.y);
+      }
     }
 
     updateCompositeTexture();

@@ -29,6 +29,10 @@ interface PhotoshopMenuBarProps {
   onConvertToBump?: () => void;
   onConvertToNormal?: () => void;
   onConvertToClipMask?: () => void;
+  onOpenUndoSettings?: () => void;
+  onOpenHelpPDF?: () => void;
+  onOpenTutorialPDF?: () => void;
+  onDownloadHelpDocx?: () => void;
   onTogglePanel: (panelName: string) => void;
   activePanels: Record<string, boolean>;
   onNumpadKey: (key: string, ctrl: boolean) => void;
@@ -57,6 +61,10 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onConvertToBump,
   onConvertToNormal,
   onConvertToClipMask,
+  onOpenUndoSettings,
+  onOpenHelpPDF,
+  onOpenTutorialPDF,
+  onDownloadHelpDocx,
   onTogglePanel,
   activePanels,
   onNumpadKey,
@@ -190,6 +198,13 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               >
                 <span>Redo</span>
                 <span className="text-[#888] font-mono text-[10px]">Ctrl+Y</span>
+              </button>
+              <button
+                onClick={() => { if (onOpenUndoSettings) onOpenUndoSettings(); close(); }}
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#89b4fa]"
+              >
+                <span>Undo &amp; Redo Settings...</span>
+                <span className="font-mono text-[10px]">Ctrl+K</span>
               </button>
               <div className="my-1 border-t border-[#444]" />
               <button
@@ -389,13 +404,13 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               className="absolute top-full left-0 mt-0.5 w-48 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
               onMouseLeave={close}
             >
-              {['layers', 'colorWheel', 'brushes', 'navigator', 'nodeGraph', 'history', 'numpad'].map((panel) => (
+              {['layers', 'colorWheel', 'brushes', 'navigator', 'symmetry', 'masking', 'nodeGraph', 'history', 'numpad'].map((panel) => (
                 <button
                   key={panel}
                   onClick={() => { onTogglePanel(panel); close(); }}
                   className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between"
                 >
-                  <span className="capitalize">{panel.replace(/([A-Z])/g, ' $1')}</span>
+                  <span className="capitalize">{panel === 'masking' ? 'Mask Painting' : panel.replace(/([A-Z])/g, ' $1')}</span>
                   {activePanels[panel] && <span className="text-[#a6e3a1]">✓</span>}
                 </button>
               ))}
@@ -415,9 +430,31 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           </button>
           {openMenu === 'help' && (
             <div 
-              className="absolute top-full left-0 mt-0.5 w-56 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
+              className="absolute top-full left-0 mt-0.5 w-60 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
               onMouseLeave={close}
             >
+              <button
+                onClick={() => { if (onOpenHelpPDF) onOpenHelpPDF(); close(); }}
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
+              >
+                <span>Help Documentation (help.pdf)</span>
+                <span className="text-[#a6e3a1] font-mono text-[10px]">PDF</span>
+              </button>
+              <button
+                onClick={() => { if (onOpenTutorialPDF) onOpenTutorialPDF(); close(); }}
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
+              >
+                <span>Tutorial Guide (tutorial.pdf)</span>
+                <span className="text-[#89b4fa] font-mono text-[10px]">PDF</span>
+              </button>
+              <button
+                onClick={() => { if (onDownloadHelpDocx) onDownloadHelpDocx(); close(); }}
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#ffd175]"
+              >
+                <span>Help Document Source (help.docx)</span>
+                <span className="font-mono text-[10px]">DOCX</span>
+              </button>
+              <div className="my-1 border-t border-[#444]" />
               <button
                 onClick={() => { onOpenAbout(); close(); }}
                 className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white"

@@ -112,6 +112,26 @@ export class PenVectorTool {
   }
 
   /**
+   * Action 2b: Erase area enclosed by curve path
+   */
+  public erasePath(ctx: CanvasRenderingContext2D) {
+    if (!this.activePath || this.activePath.points.length < 3) return;
+    const pts = this.activePath.points;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /**
    * Action 3: Convert path to plain selection
    */
   public convertPathToSelection() {

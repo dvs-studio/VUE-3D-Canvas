@@ -12,15 +12,37 @@ import { Layer, UndoSnapshot } from './types';
 import { WasmMemoryEngine } from './wasmMemoryEngine';
 
 export class UndoRingBuffer {
-  public static readonly MAX_RUNTIME_STATES = 30; // Normalized history depth
+  public static readonly DEFAULT_RUNTIME_STATES = 30; // Default history depth
   public static readonly XBLEND_SAVE_STATES = 3;  // Strict 3-state budget for .xblend saving
 
+  private maxStates = 30;
   private stack: UndoSnapshot[] = [];
   private currentIndex = -1;
   private listeners: (() => void)[] = [];
 
-  constructor() {
+  constructor(initialMaxStates = 30) {
+    this.maxStates = initialMaxStates;
     this.reset();
+  }
+
+  public getMaxStates(): number {
+    return this.maxStates;
+  }
+
+  public setMaxStates(newMax: number) {
+    const memory = WasmMemoryEngine.getInstance();
+    this.maxStates = Math.max(3, Math.min(120, Math.round(newMax)));
+
+    while (this.stack.length > this.maxStates) {
+      const oldest = this.stack.shift();
+      if (oldest) {
+        oldest.layerData.forEach(ld => {
+          memory.unregisterBuffer(ld.imageData.data.byteLength);
+        });
+      }
+      this.currentIndex = Math.max(0, this.currentIndex - 1);
+    }
+    this.notify();
   }
 
   public subscribe(fn: () => void) {
@@ -86,7 +108,7 @@ export class UndoRingBuffer {
     this.currentIndex = this.stack.length - 1;
 
     // Prune oldest states if exceeding normalized runtime capacity
-    if (this.stack.length > UndoRingBuffer.MAX_RUNTIME_STATES) {
+    if (this.stack.length > this.maxStates) {
       const oldest = this.stack.shift();
       if (oldest) {
         oldest.layerData.forEach(ld => {

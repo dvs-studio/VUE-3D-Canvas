@@ -52,6 +52,10 @@ import { AboutModal } from './ui/AboutModal';
 import { ProjectSettingsModal } from './ui/ProjectSettingsModal';
 import { ExportTextureDialog } from './ui/ExportTextureDialog';
 import { DockerGroup, DockerTabItem } from './ui/DockerGroup';
+import { SymmetryPanel } from './ui/panels/SymmetryPanel';
+import { MaskPanel } from './ui/panels/MaskPanel';
+import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
+import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -63,7 +67,9 @@ import {
   Share2, 
   History, 
   Hash, 
-  HardDrive 
+  HardDrive,
+  SplitSquareVertical,
+  Square as SquareIcon
 } from 'lucide-react';
 
 export default function App() {
@@ -180,6 +186,18 @@ export default function App() {
   const [isStitchStudioOpen, setIsStitchStudioOpen] = useState<boolean>(false);
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState<boolean>(false);
+  const [isUndoSettingsOpen, setIsUndoSettingsOpen] = useState<boolean>(false);
+  const [surfaceMode, setSurfaceMode] = useState<'smooth' | 'hard' | 'default'>('default');
+
+  // Symmetry Tool Configuration
+  const [symmetryConfig, setSymmetryConfig] = useState<SymmetryConfig>({
+    axis: 'X',
+    direction: '+ to -',
+    originMode: 'mesh_origin',
+    locatorValue: 0,
+    activeRealtimeMirror: false,
+    showVirtualCursorPlane: false,
+  });
 
   // Floating & Docked Panels Visibility
   const [activePanels, setActivePanels] = useState<Record<string, boolean>>({
@@ -187,6 +205,8 @@ export default function App() {
     brushes: true,
     colorWheel: true,
     navigator: true,
+    symmetry: true,
+    masking: false,
     nodeGraph: false,
     history: true,
     numpad: true,
@@ -197,6 +217,8 @@ export default function App() {
     brushes: false,
     colorWheel: false,
     navigator: false,
+    symmetry: false,
+    masking: false,
     nodeGraph: true,
     history: false,
     numpad: false,
@@ -228,6 +250,41 @@ export default function App() {
     syncCompositeCanvas();
     setTextureVersion(v => v + 1);
   }, [syncCompositeCanvas]);
+
+  const handleSymmetrize = useCallback((allLayers = false) => {
+    if (allLayers) {
+      layers.forEach(l => {
+        if (l.visible && !l.locked) {
+          SymmetryEngine.symmetrizeLayer(l, symmetryConfig);
+        }
+      });
+      undoBuffer.pushState(`Symmetrize All Layers (${symmetryConfig.axis}: ${symmetryConfig.direction})`, layers);
+    } else {
+      const activeLayer = layers.find(l => l.id === activeLayerId);
+      if (activeLayer && !activeLayer.locked) {
+        SymmetryEngine.symmetrizeLayer(activeLayer, symmetryConfig);
+        undoBuffer.pushState(`Symmetrize ${activeLayer.name} (${symmetryConfig.axis}: ${symmetryConfig.direction})`, layers);
+      }
+    }
+    notifyTextureUpdated();
+  }, [layers, activeLayerId, symmetryConfig, undoBuffer, notifyTextureUpdated]);
+
+  const handleOpenHelpPDF = useCallback(() => {
+    window.open('/help.pdf', '_blank');
+  }, []);
+
+  const handleOpenTutorialPDF = useCallback(() => {
+    window.open('/tutorial.pdf', '_blank');
+  }, []);
+
+  const handleDownloadHelpDocx = useCallback(() => {
+    const a = document.createElement('a');
+    a.href = '/help.docx';
+    a.download = 'VUE_3D_Canvas_Help_Documentation.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, []);
 
   // Initial Composite Sync
   useEffect(() => {
@@ -752,6 +809,10 @@ export default function App() {
         onConvertToBump={() => handleConvertToBump(activeLayerId)}
         onConvertToNormal={() => handleConvertToNormal(activeLayerId)}
         onConvertToClipMask={() => handleConvertToClipMask(activeLayerId)}
+        onOpenUndoSettings={() => setIsUndoSettingsOpen(true)}
+        onOpenHelpPDF={handleOpenHelpPDF}
+        onOpenTutorialPDF={handleOpenTutorialPDF}
+        onDownloadHelpDocx={handleDownloadHelpDocx}
         onTogglePanel={togglePanel}
         activePanels={activePanels}
         onNumpadKey={handleNumpadKey}
@@ -775,6 +836,12 @@ export default function App() {
         onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
         viewLayout={viewLayout}
         onSelectViewLayout={setViewLayout}
+        isSymmetryX={symmetryConfig.activeRealtimeMirror}
+        onToggleSymmetryX={() => setSymmetryConfig(c => ({ ...c, activeRealtimeMirror: !c.activeRealtimeMirror }))}
+        onOpenSymmetryPanel={() => {
+          setDockerGroup2Tab('symmetry');
+          setActivePanels(p => ({ ...p, symmetry: true }));
+        }}
       />
 
       {/* 3. Main Workspace Area: Left ToolBox + Center Viewport(s) + Right Dockable Panels */}
@@ -789,6 +856,8 @@ export default function App() {
           onResetColors={resetColors}
           onChangePrimaryColor={setPrimaryColor}
           onChangeSecondaryColor={setSecondaryColor}
+          surfaceMode={surfaceMode}
+          onSelectSurfaceMode={setSurfaceMode}
         />
 
         {/* Center Viewport Area (3D, 2D, or Split) */}
@@ -818,6 +887,10 @@ export default function App() {
                 showGizmo={showGizmo}
                 viewLayout={viewLayout}
                 onSelectViewLayout={setViewLayout}
+                surfaceMode={surfaceMode}
+                isSymmetryX={symmetryConfig.activeRealtimeMirror}
+                selectionMask={selectionMask}
+                symmetryConfig={symmetryConfig}
               />
             </div>
           )}
@@ -980,6 +1053,41 @@ export default function App() {
                       ),
                     },
                     {
+                      id: 'symmetry',
+                      title: 'Symmetry',
+                      icon: <SplitSquareVertical className="w-3 h-3 text-[#3d7fb8]" />,
+                      content: (
+                        <div className="h-72">
+                          <SymmetryPanel
+                            config={symmetryConfig}
+                            onChangeConfig={(patch) => setSymmetryConfig(c => ({ ...c, ...patch }))}
+                            onSymmetrize={handleSymmetrize}
+                            activeLayerName={layers.find(l => l.id === activeLayerId)?.name || 'Active Layer'}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'masking',
+                      title: 'Mask',
+                      icon: <SquareIcon className="w-3 h-3 text-[#f97316]" />,
+                      content: (
+                        <div className="h-72">
+                          <MaskPanel
+                            selectionMask={selectionMask}
+                            onUpdateSelectionMask={setSelectionMask}
+                            activeTool={activeTool}
+                            onSelectTool={setActiveTool}
+                            layers={layers}
+                            activeLayerId={activeLayerId}
+                            undoBuffer={undoBuffer}
+                            onTextureUpdated={notifyTextureUpdated}
+                            primaryColor={primaryColor}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
                       id: 'numpad',
                       title: 'Numpad',
                       icon: <Hash className="w-3 h-3 text-[#a6e3a1]" />,
@@ -1132,6 +1240,51 @@ export default function App() {
                   />
                 </div>
               )}
+
+              {/* Symmetry & Symmetrize Panel */}
+              {activePanels.symmetry && !panelFloating.symmetry && (
+                <div className="border-b border-[#444] h-72 shrink-0">
+                  <DockablePanelFrame
+                    id="symmetry"
+                    title="Symmetry &amp; Symmetrize Docker"
+                    icon={<SplitSquareVertical className="w-3.5 h-3.5 text-[#3d7fb8]" />}
+                    onClose={() => togglePanel('symmetry')}
+                    onToggleFloat={() => togglePanelFloat('symmetry')}
+                  >
+                    <SymmetryPanel
+                      config={symmetryConfig}
+                      onChangeConfig={(patch) => setSymmetryConfig(c => ({ ...c, ...patch }))}
+                      onSymmetrize={handleSymmetrize}
+                      activeLayerName={layers.find(l => l.id === activeLayerId)?.name || 'Active Layer'}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
+
+              {/* Mask Painting Panel */}
+              {activePanels.masking && !panelFloating.masking && (
+                <div className="border-b border-[#444] h-72 shrink-0">
+                  <DockablePanelFrame
+                    id="masking"
+                    title="Mask Painting Docker"
+                    icon={<SquareIcon className="w-3.5 h-3.5 text-[#f97316]" />}
+                    onClose={() => togglePanel('masking')}
+                    onToggleFloat={() => togglePanelFloat('masking')}
+                  >
+                    <MaskPanel
+                      selectionMask={selectionMask}
+                      onUpdateSelectionMask={setSelectionMask}
+                      activeTool={activeTool}
+                      onSelectTool={setActiveTool}
+                      layers={layers}
+                      activeLayerId={activeLayerId}
+                      undoBuffer={undoBuffer}
+                      onTextureUpdated={notifyTextureUpdated}
+                      primaryColor={primaryColor}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1157,6 +1310,53 @@ export default function App() {
             onUpdateConnections={setConnections}
             onBakeToLayer={handleBakeNodeTree}
             onExportBlenderSpec={handleExportBlenderMaterial}
+          />
+        </DockablePanelFrame>
+      )}
+
+      {panelFloating.symmetry && activePanels.symmetry && (
+        <DockablePanelFrame
+          id="symmetry"
+          title="Symmetry &amp; Symmetrize Docker"
+          icon={<SplitSquareVertical className="w-3.5 h-3.5 text-[#3d7fb8]" />}
+          isFloating={true}
+          initialPos={{ x: 260, y: 140 }}
+          width={320}
+          height={400}
+          onClose={() => togglePanel('symmetry')}
+          onToggleFloat={() => togglePanelFloat('symmetry')}
+        >
+          <SymmetryPanel
+            config={symmetryConfig}
+            onChangeConfig={(patch) => setSymmetryConfig(c => ({ ...c, ...patch }))}
+            onSymmetrize={handleSymmetrize}
+            activeLayerName={layers.find(l => l.id === activeLayerId)?.name || 'Active Layer'}
+          />
+        </DockablePanelFrame>
+      )}
+
+      {panelFloating.masking && activePanels.masking && (
+        <DockablePanelFrame
+          id="masking"
+          title="Mask Painting Docker"
+          icon={<SquareIcon className="w-3.5 h-3.5 text-[#f97316]" />}
+          isFloating={true}
+          initialPos={{ x: 300, y: 160 }}
+          width={320}
+          height={440}
+          onClose={() => togglePanel('masking')}
+          onToggleFloat={() => togglePanelFloat('masking')}
+        >
+          <MaskPanel
+            selectionMask={selectionMask}
+            onUpdateSelectionMask={setSelectionMask}
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            layers={layers}
+            activeLayerId={activeLayerId}
+            undoBuffer={undoBuffer}
+            onTextureUpdated={notifyTextureUpdated}
+            primaryColor={primaryColor}
           />
         </DockablePanelFrame>
       )}
@@ -1280,6 +1480,14 @@ export default function App() {
         layers={layers}
         selectedLayerId={exportDialogLayerId}
         defaultMode={exportDialogMode}
+      />
+
+      {/* 11. Undo & Redo Preferences Settings Modal */}
+      <UndoSettingsDialog
+        isOpen={isUndoSettingsOpen}
+        onClose={() => setIsUndoSettingsOpen(false)}
+        undoBuffer={undoBuffer}
+        layerCount={layers.length}
       />
     </div>
   );

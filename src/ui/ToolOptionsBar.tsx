@@ -28,6 +28,7 @@ interface ToolOptionsBarProps {
   onSelectViewLayout?: (layout: 'perspective' | 'quad') => void;
   isSymmetryX?: boolean;
   onToggleSymmetryX?: () => void;
+  onOpenSymmetryPanel?: () => void;
 }
 
 export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
@@ -49,6 +50,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   onSelectViewLayout,
   isSymmetryX = false,
   onToggleSymmetryX,
+  onOpenSymmetryPanel,
 }) => {
   return (
     <div className="h-8 bg-[#3c3c3c] border-b border-[#242424] px-2 flex items-center justify-between text-xs text-[#c8c8c8] select-none z-40 overflow-x-auto">
@@ -208,15 +210,19 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
         {onToggleSymmetryX && (
           <button
             onClick={onToggleSymmetryX}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              if (onOpenSymmetryPanel) onOpenSymmetryPanel();
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1.5 transition-colors border ${
               isSymmetryX
                 ? 'bg-[#3d7fb8] text-white border-[#5ca2db] shadow-xs'
                 : 'bg-[#2a2a2a] hover:bg-[#383838] text-[#aaa] border-[#555]'
             }`}
-            title="Toggle Bilateral Symmetry Painting (X-Axis Mirror)"
+            title="Symmetry Mirroring: Left-click toggles real-time painting (ON/OFF). Right-click opens Symmetrize & Axis Locator panel."
           >
             <SplitSquareVertical className={`w-3.5 h-3.5 ${isSymmetryX ? 'text-white' : 'text-[#888]'}`} />
-            <span>Symmetry [X]: {isSymmetryX ? 'ON' : 'OFF'}</span>
+            <span>Symmetry: {isSymmetryX ? 'ON' : 'OFF'}</span>
           </button>
         )}
 
