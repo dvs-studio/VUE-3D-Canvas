@@ -40,6 +40,13 @@ import { UndoHistoryPanel } from './ui/panels/UndoHistoryPanel';
 import { CircularCarousel } from './ui/CircularCarousel';
 import { NumpadOverlay } from './ui/NumpadOverlay';
 import { TriplanarDialog } from './ui/TriplanarDialog';
+import { GaussianBlurDialog } from './ui/GaussianBlurDialog';
+import { StochasticScatterDialog } from './ui/StochasticScatterDialog';
+import { StitchStudioDialog } from './ui/StitchStudioDialog';
+import { LayerConversions } from './tools/layerConversions';
+import { GaussianBlurOptions } from './tools/gaussianBlur';
+import { StochasticScatterConfig } from './tools/stochasticScatter';
+import { StitchConfig } from './tools/stitchStudio';
 import { ProjectionModal } from './ui/ProjectionModal';
 import { AboutModal } from './ui/AboutModal';
 import { ProjectSettingsModal } from './ui/ProjectSettingsModal';
@@ -138,8 +145,16 @@ export default function App() {
   const [showGizmo, setShowGizmo] = useState<boolean>(true);
   const [viewLayout, setViewLayout] = useState<'perspective' | 'quad'>('perspective');
 
-  // Live Composite Canvas for 3D Supervisor Clone Navigator
-  const [compositeCanvas, setCompositeCanvas] = useState<HTMLCanvasElement | null>(null);
+  // Live Canonical Composite Canvas for 3D Viewport & Navigator Clone
+  const [compositeCanvas] = useState<HTMLCanvasElement>(() => {
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024;
+    cvs.height = 1024;
+    const ctx = cvs.getContext('2d')!;
+    ctx.fillStyle = '#9c9c9c';
+    ctx.fillRect(0, 0, 1024, 1024);
+    return cvs;
+  });
 
   // CorelDraw-style Texture & Alpha Mask Export Dialog State
   const [exportDialogOpen, setExportDialogOpen] = useState<boolean>(false);
@@ -160,6 +175,9 @@ export default function App() {
   // UI Dialogs
   const [isCarouselOpen, setIsCarouselOpen] = useState<boolean>(false);
   const [isTriplanarOpen, setIsTriplanarOpen] = useState<boolean>(false);
+  const [isGaussianBlurOpen, setIsGaussianBlurOpen] = useState<boolean>(false);
+  const [isStochasticScatterOpen, setIsStochasticScatterOpen] = useState<boolean>(false);
+  const [isStitchStudioOpen, setIsStitchStudioOpen] = useState<boolean>(false);
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState<boolean>(false);
 
@@ -185,9 +203,36 @@ export default function App() {
   });
 
   const [textureVersion, setTextureVersion] = useState(0);
+
+  // Synchronously composites all visible layers into canonical compositeCanvas
+  const syncCompositeCanvas = useCallback(() => {
+    const ctx = compositeCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#2b2b2b';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    layers.forEach(layer => {
+      if (!layer.visible) return;
+      ctx.save();
+      ctx.globalAlpha = layer.opacity / 100;
+      ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
+        : layer.blendMode === 'screen' ? 'screen'
+        : layer.blendMode === 'overlay' ? 'overlay'
+        : 'source-over';
+      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
+      ctx.restore();
+    });
+  }, [layers, compositeCanvas]);
+
   const notifyTextureUpdated = useCallback(() => {
+    syncCompositeCanvas();
     setTextureVersion(v => v + 1);
-  }, []);
+  }, [syncCompositeCanvas]);
+
+  // Initial Composite Sync
+  useEffect(() => {
+    syncCompositeCanvas();
+  }, [syncCompositeCanvas]);
 
   // Record initial state in undo buffer
   useEffect(() => {
@@ -454,6 +499,52 @@ export default function App() {
     }
   };
 
+  // Gaussian Blur Execution
+  const handleApplyGaussianBlur = (opts: GaussianBlurOptions) => {
+    undoBuffer.pushState(`Gaussian Blur (${opts.radius}px)`, layers);
+    notifyTextureUpdated();
+  };
+
+  // Stochastic Layer Scattering Execution
+  const handleApplyStochasticScatter = (cfg: StochasticScatterConfig) => {
+    undoBuffer.pushState(`Scatter ${cfg.stampType}`, layers);
+    notifyTextureUpdated();
+  };
+
+  // Jenny Stitch Studio Execution
+  const handleApplyStitchStudio = (cfg: StitchConfig) => {
+    undoBuffer.pushState(`Stitch Studio (${cfg.stitchStyle})`, layers);
+    notifyTextureUpdated();
+  };
+
+  // Layer Conversion Handlers
+  const handleConvertToBump = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (target) {
+      LayerConversions.convertToBumpMap(target);
+      undoBuffer.pushState('Convert Layer to Bump Map', layers);
+      notifyTextureUpdated();
+    }
+  };
+
+  const handleConvertToNormal = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (target) {
+      LayerConversions.convertToNormalMap(target);
+      undoBuffer.pushState('Convert Layer to Normal Map', layers);
+      notifyTextureUpdated();
+    }
+  };
+
+  const handleConvertToClipMask = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (target) {
+      LayerConversions.convertToAlphaClipMask(target);
+      undoBuffer.pushState('Convert Layer to Alpha Clip Mask', layers);
+      notifyTextureUpdated();
+    }
+  };
+
   // Bake procedural node tree to active layer
   const handleBakeNodeTree = (bakeCanvas: HTMLCanvasElement) => {
     const targetLayer = layers.find(l => l.id === activeLayerId);
@@ -655,6 +746,12 @@ export default function App() {
         canRedo={undoBuffer.canRedo()}
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenTriplanarDialog={() => setIsTriplanarOpen(true)}
+        onOpenGaussianBlur={() => setIsGaussianBlurOpen(true)}
+        onOpenStochasticScatter={() => setIsStochasticScatterOpen(true)}
+        onOpenStitchStudio={() => setIsStitchStudioOpen(true)}
+        onConvertToBump={() => handleConvertToBump(activeLayerId)}
+        onConvertToNormal={() => handleConvertToNormal(activeLayerId)}
+        onConvertToClipMask={() => handleConvertToClipMask(activeLayerId)}
         onTogglePanel={togglePanel}
         activePanels={activePanels}
         onNumpadKey={handleNumpadKey}
@@ -716,7 +813,8 @@ export default function App() {
                 zoomFactor={zoomFactor}
                 touchNavEnabled={touchNavEnabled}
                 onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
-                onCompositeCanvasReady={setCompositeCanvas}
+                compositeCanvas={compositeCanvas}
+                textureVersion={textureVersion}
                 showGizmo={showGizmo}
                 viewLayout={viewLayout}
                 onSelectViewLayout={setViewLayout}
@@ -796,6 +894,12 @@ export default function App() {
                             onMoveLayer={handleMoveLayer}
                             onOpenExportDialog={handleOpenExportDialog}
                             onExportAlphaMaskDirect={handleExportAlphaMaskDirect}
+                            onOpenGaussianBlur={() => setIsGaussianBlurOpen(true)}
+                            onOpenStochasticScatter={() => setIsStochasticScatterOpen(true)}
+                            onOpenStitchStudio={() => setIsStitchStudioOpen(true)}
+                            onConvertToBump={handleConvertToBump}
+                            onConvertToNormal={handleConvertToNormal}
+                            onConvertToClipMask={handleConvertToClipMask}
                           />
                         </div>
                       ),
@@ -921,6 +1025,12 @@ export default function App() {
                       onMoveLayer={handleMoveLayer}
                       onOpenExportDialog={handleOpenExportDialog}
                       onExportAlphaMaskDirect={handleExportAlphaMaskDirect}
+                      onOpenGaussianBlur={() => setIsGaussianBlurOpen(true)}
+                      onOpenStochasticScatter={() => setIsStochasticScatterOpen(true)}
+                      onOpenStitchStudio={() => setIsStitchStudioOpen(true)}
+                      onConvertToBump={handleConvertToBump}
+                      onConvertToNormal={handleConvertToNormal}
+                      onConvertToClipMask={handleConvertToClipMask}
                     />
                   </DockablePanelFrame>
                 </div>
@@ -1091,6 +1201,36 @@ export default function App() {
         onClose={() => setIsTriplanarOpen(false)}
         onConfirm={handleConfirmTriplanar}
         defaultColor={primaryColor}
+      />
+
+      {/* 6b. Gaussian Blur (Selected Layer Only) */}
+      <GaussianBlurDialog
+        isOpen={isGaussianBlurOpen}
+        onClose={() => setIsGaussianBlurOpen(false)}
+        activeLayer={layers.find(l => l.id === activeLayerId)}
+        onApply={handleApplyGaussianBlur}
+        onPreviewUpdate={notifyTextureUpdated}
+      />
+
+      {/* 6c. Stochastic Layer Scattering */}
+      <StochasticScatterDialog
+        isOpen={isStochasticScatterOpen}
+        onClose={() => setIsStochasticScatterOpen(false)}
+        activeLayer={layers.find(l => l.id === activeLayerId)}
+        defaultColor={primaryColor}
+        onApply={handleApplyStochasticScatter}
+        onPreviewUpdate={notifyTextureUpdated}
+      />
+
+      {/* 6d. Jenny Stitch Studio (Topology Edge Stitching) */}
+      <StitchStudioDialog
+        isOpen={isStitchStudioOpen}
+        onClose={() => setIsStitchStudioOpen(false)}
+        activeLayer={layers.find(l => l.id === activeLayerId)}
+        modelKey={modelKey}
+        customOBJText={customOBJText}
+        onApply={handleApplyStitchStudio}
+        onPreviewUpdate={notifyTextureUpdated}
       />
 
       {/* 7. Screenshot Projection & External Editor Bridge Modal (Strict Nav Lock) */}

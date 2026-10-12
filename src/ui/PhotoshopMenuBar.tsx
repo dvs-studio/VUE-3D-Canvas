@@ -23,6 +23,12 @@ interface PhotoshopMenuBarProps {
   canRedo: boolean;
   onOpenAbout: () => void;
   onOpenTriplanarDialog: () => void;
+  onOpenGaussianBlur?: () => void;
+  onOpenStochasticScatter?: () => void;
+  onOpenStitchStudio?: () => void;
+  onConvertToBump?: () => void;
+  onConvertToNormal?: () => void;
+  onConvertToClipMask?: () => void;
   onTogglePanel: (panelName: string) => void;
   activePanels: Record<string, boolean>;
   onNumpadKey: (key: string, ctrl: boolean) => void;
@@ -45,6 +51,12 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   canRedo,
   onOpenAbout,
   onOpenTriplanarDialog,
+  onOpenGaussianBlur,
+  onOpenStochasticScatter,
+  onOpenStitchStudio,
+  onConvertToBump,
+  onConvertToNormal,
+  onConvertToClipMask,
   onTogglePanel,
   activePanels,
   onNumpadKey,
@@ -286,16 +298,78 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           </button>
           {openMenu === 'filter' && (
             <div 
-              className="absolute top-full left-0 mt-0.5 w-52 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
+              className="absolute top-full left-0 mt-0.5 w-60 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
               onMouseLeave={close}
             >
               <button
                 onClick={() => { onOpenTriplanarDialog(); close(); }}
                 className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
               >
-                <span>Triplanar Box Mapping Fill...</span>
+                <span>Triplanar Box Filter &amp; Masking...</span>
                 <span className="text-[#888] font-mono text-[10px]">Shift+T</span>
               </button>
+
+              {onOpenGaussianBlur && (
+                <button
+                  onClick={() => { onOpenGaussianBlur(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#eee]"
+                >
+                  <span>Gaussian Blur (Selected Layer)...</span>
+                  <span className="text-[#888] font-mono text-[10px]">Ctrl+F</span>
+                </button>
+              )}
+
+              {onOpenStochasticScatter && (
+                <button
+                  onClick={() => { onOpenStochasticScatter(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#eee]"
+                >
+                  <span>Stochastic Layer Scattering...</span>
+                  <span className="text-[#888] font-mono text-[10px]">Alt+S</span>
+                </button>
+              )}
+
+              {onOpenStitchStudio && (
+                <button
+                  onClick={() => { onOpenStitchStudio(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#a6e3a1]"
+                >
+                  <span>Jenny Stitch Studio (Path Stitches)...</span>
+                  <span className="text-[#a6e3a1] font-mono text-[10px]">Mesh</span>
+                </button>
+              )}
+
+              <div className="my-1 border-t border-[#444]" />
+              <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider">
+                LAYER CONVERSIONS
+              </div>
+
+              {onConvertToBump && (
+                <button
+                  onClick={() => { onConvertToBump(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+                >
+                  Convert to Bump Map (Height)
+                </button>
+              )}
+
+              {onConvertToNormal && (
+                <button
+                  onClick={() => { onConvertToNormal(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+                >
+                  Convert to Normal Map (Sobel RGB)
+                </button>
+              )}
+
+              {onConvertToClipMask && (
+                <button
+                  onClick={() => { onConvertToClipMask(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+                >
+                  Convert to Alpha Clip Mask
+                </button>
+              )}
             </div>
           )}
         </div>

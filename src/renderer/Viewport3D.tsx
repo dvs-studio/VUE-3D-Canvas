@@ -38,6 +38,8 @@ interface Viewport3DProps {
   onZoomChange?: (z: number) => void;
   touchNavEnabled: boolean;
   onToggleTouchNav: () => void;
+  compositeCanvas?: HTMLCanvasElement;
+  textureVersion?: number;
   onCompositeCanvasReady?: (canvas: HTMLCanvasElement) => void;
   showGizmo?: boolean;
   viewLayout?: 'perspective' | 'quad';
@@ -64,6 +66,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   onZoomChange,
   touchNavEnabled,
   onToggleTouchNav,
+  compositeCanvas,
+  textureVersion,
   onCompositeCanvasReady,
   showGizmo = true,
   viewLayout: controlledViewLayout,
@@ -122,13 +126,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   // Composite texture generator
   const updateCompositeTexture = useCallback(() => {
-    let compCanvas = compositeCanvasRef.current;
-    if (!compCanvas) {
-      compCanvas = document.createElement('canvas');
-      compCanvas.width = 1024;
-      compCanvas.height = 1024;
-      compositeCanvasRef.current = compCanvas;
-    }
+    const compCanvas = compositeCanvas || compositeCanvasRef.current;
+    if (!compCanvas) return;
 
     const ctx = compCanvas.getContext('2d');
     if (!ctx) return;
@@ -154,8 +153,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (onCompositeCanvasReady) {
       onCompositeCanvasReady(compCanvas);
     }
-    onTextureUpdated();
-  }, [layers, onTextureUpdated, onCompositeCanvasReady]);
+  }, [layers, compositeCanvas, onCompositeCanvasReady]);
 
   // Initialize Three.js scene
   useEffect(() => {
@@ -222,11 +220,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     rimLight.position.set(0, 5, -6);
     scene.add(rimLight);
 
-    const compCanvas = document.createElement('canvas');
-    compCanvas.width = 1024;
-    compCanvas.height = 1024;
-    compositeCanvasRef.current = compCanvas;
-    const tex = new THREE.CanvasTexture(compCanvas);
+    const targetComp = compositeCanvas || document.createElement('canvas');
+    if (targetComp.width !== 1024) targetComp.width = 1024;
+    if (targetComp.height !== 1024) targetComp.height = 1024;
+    compositeCanvasRef.current = targetComp;
+    const tex = new THREE.CanvasTexture(targetComp);
     tex.colorSpace = THREE.SRGBColorSpace;
     dynamicTextureRef.current = tex;
 
@@ -369,6 +367,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         metalness: 0.05,
         flatShading: surfaceMode === 'hard',
       });
+    } else if (shadingMode === 'uv_check') {
+      const uvCvs = document.createElement('canvas');
+      uvCvs.width = 512;
+      uvCvs.height = 512;
+      const uctx = uvCvs.getContext('2d')!;
+      for (let cy = 0; cy < 16; cy++) {
+        for (let cx = 0; cx < 16; cx++) {
+          uctx.fillStyle = (cx + cy) % 2 === 0 ? '#e6e6e6' : '#252525';
+          uctx.fillRect(cx * 32, cy * 32, 32, 32);
+        }
+      }
+      const uvTex = new THREE.CanvasTexture(uvCvs);
+      meshRef.current.material = new THREE.MeshBasicMaterial({ map: uvTex });
     } else {
       meshRef.current.material = new THREE.MeshStandardMaterial({
         map: dynamicTextureRef.current,
@@ -381,7 +392,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   useEffect(() => {
     updateCompositeTexture();
-  }, [layers, updateCompositeTexture]);
+    if (dynamicTextureRef.current) {
+      dynamicTextureRef.current.needsUpdate = true;
+    }
+  }, [layers, textureVersion, updateCompositeTexture]);
 
   const updateCameraPosition = () => {
     const { radius, theta, phi, target } = orbitState.current;
@@ -694,6 +708,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     updateCompositeTexture();
+    onTextureUpdated();
   };
 
   const drawStabilizerTether = (

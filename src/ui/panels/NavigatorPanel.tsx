@@ -171,9 +171,21 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
 
   // Update Texture from main painting canvas
   useEffect(() => {
-    if (!textureRef.current || !compositeCanvas) return;
-    textureRef.current.image = compositeCanvas;
-    textureRef.current.needsUpdate = true;
+    if (!meshRef.current) return;
+    if (compositeCanvas) {
+      if (!textureRef.current || textureRef.current.image !== compositeCanvas) {
+        const tex = new THREE.CanvasTexture(compositeCanvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        textureRef.current = tex;
+        const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+        if (mat) {
+          mat.map = tex;
+          mat.needsUpdate = true;
+        }
+      } else {
+        textureRef.current.needsUpdate = true;
+      }
+    }
   }, [compositeCanvas, textureVersion]);
 
   // Update Material

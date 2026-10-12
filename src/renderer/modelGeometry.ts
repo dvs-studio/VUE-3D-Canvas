@@ -59,7 +59,7 @@ function createSuzanneGeometry(): THREE.BufferGeometry {
 
   geom.computeVertexNormals();
   // Ensure cylindrical spherical UV mapping for texture painting
-  ensureUVs(geom);
+  ensureUVs(geom, true);
   return geom;
 }
 
@@ -95,15 +95,15 @@ function createHelmetGeometry(): THREE.BufferGeometry {
   }
 
   geom.computeVertexNormals();
-  ensureUVs(geom);
+  ensureUVs(geom, false);
   return geom;
 }
 
 /**
  * Calculates seamless UV coordinates if missing or irregular
  */
-function ensureUVs(geom: THREE.BufferGeometry) {
-  if (geom.attributes.uv) return;
+export function ensureUVs(geom: THREE.BufferGeometry, force = false) {
+  if (geom.attributes.uv && !force) return;
 
   const pos = geom.attributes.position;
   const uvs = new Float32Array(pos.count * 2);
@@ -113,12 +113,13 @@ function ensureUVs(geom: THREE.BufferGeometry) {
     const y = pos.getY(i);
     const z = pos.getZ(i);
 
-    // Spherical polar mapping
+    // Spherical polar mapping: u in [0, 1], v in [0, 1]
     const u = 0.5 + Math.atan2(z, x) / (2 * Math.PI);
-    const v = 0.5 - Math.asin(Math.max(-1, Math.min(1, y / 2.0))) / Math.PI;
+    const normalizedY = Math.max(-1.0, Math.min(1.0, y / 2.0));
+    const v = 0.5 - Math.asin(normalizedY) / Math.PI;
 
-    uvs[i * 2] = u;
-    uvs[i * 2 + 1] = v;
+    uvs[i * 2] = Math.max(0.001, Math.min(0.999, u));
+    uvs[i * 2 + 1] = Math.max(0.001, Math.min(0.999, v));
   }
 
   geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));

@@ -37,6 +37,12 @@ interface LayersPanelProps {
   onMoveLayer: (id: string, dir: 'up' | 'down') => void;
   onOpenExportDialog: (layerId: string, mode: 'merged' | 'alpha_mask') => void;
   onExportAlphaMaskDirect: (layerId: string) => void;
+  onOpenGaussianBlur?: (layerId: string) => void;
+  onOpenStochasticScatter?: (layerId: string) => void;
+  onOpenStitchStudio?: (layerId: string) => void;
+  onConvertToBump?: (layerId: string) => void;
+  onConvertToNormal?: (layerId: string) => void;
+  onConvertToClipMask?: (layerId: string) => void;
 }
 
 const BLEND_MODES: BlendMode[] = [
@@ -65,6 +71,12 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onMoveLayer,
   onOpenExportDialog,
   onExportAlphaMaskDirect,
+  onOpenGaussianBlur,
+  onOpenStochasticScatter,
+  onOpenStitchStudio,
+  onConvertToBump,
+  onConvertToNormal,
+  onConvertToClipMask,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -281,6 +293,91 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             <ImageIcon className="w-3.5 h-3.5 text-[#e5a038]" />
             <span>Export UV Alpha Mask Only (Named PNG)</span>
           </button>
+
+          <div className="border-t border-[#444] my-1" />
+          <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider">
+            FILTERS &amp; TOOLS
+          </div>
+
+          {onOpenGaussianBlur && (
+            <button
+              onClick={() => {
+                onOpenGaussianBlur(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center justify-between"
+            >
+              <span>Gaussian Blur...</span>
+              <span className="text-[10px] text-[#888] font-mono">Radius</span>
+            </button>
+          )}
+
+          {onOpenStochasticScatter && (
+            <button
+              onClick={() => {
+                onOpenStochasticScatter(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center justify-between"
+            >
+              <span>Stochastic Scattering...</span>
+              <span className="text-[10px] text-[#888] font-mono">Stamps</span>
+            </button>
+          )}
+
+          {onOpenStitchStudio && (
+            <button
+              onClick={() => {
+                onOpenStitchStudio(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center justify-between"
+            >
+              <span>Jenny Stitch Studio...</span>
+              <span className="text-[10px] text-[#a6e3a1] font-mono">Mesh</span>
+            </button>
+          )}
+
+          <div className="border-t border-[#444] my-1" />
+          <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider">
+            LAYER CONVERSIONS
+          </div>
+
+          {onConvertToBump && (
+            <button
+              onClick={() => {
+                onConvertToBump(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+            >
+              Convert to Bump Map (Height)
+            </button>
+          )}
+
+          {onConvertToNormal && (
+            <button
+              onClick={() => {
+                onConvertToNormal(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+            >
+              Convert to Normal Map (Sobel RGB)
+            </button>
+          )}
+
+          {onConvertToClipMask && (
+            <button
+              onClick={() => {
+                onConvertToClipMask(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+            >
+              Convert to Alpha Clip Mask
+            </button>
+          )}
 
           <div className="border-t border-[#444] my-1" />
 
