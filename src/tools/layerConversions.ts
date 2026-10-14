@@ -165,4 +165,29 @@ export class LayerConversions {
       layer.name = `${layer.name} (ClipMask)`;
     }
   }
+
+  /**
+   * Converts target layer into an Emissive glowing texture layer
+   */
+  public static convertToEmissive(layer: Layer, boost = 1.5): void {
+    const ctx = layer.ctx;
+    const w = layer.canvas.width;
+    const h = layer.canvas.height;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue;
+      data[i] = Math.min(255, Math.round(data[i] * boost));
+      data[i + 1] = Math.min(255, Math.round(data[i + 1] * boost));
+      data[i + 2] = Math.min(255, Math.round(data[i + 2] * boost));
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    layer.channel = 'emission';
+    if (!layer.name.includes('(Emission)')) {
+      layer.name = `${layer.name} (Emission)`;
+    }
+  }
 }

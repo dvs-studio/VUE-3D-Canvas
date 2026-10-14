@@ -7,6 +7,7 @@
 
 export type ToolType = 
   | 'brush'
+  | 'mask_brush'
   | 'eraser'
   | 'blur'
   | 'clone'
@@ -52,7 +53,14 @@ export interface Layer {
   locked: boolean;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  channel: 'color' | 'roughness' | 'metallic' | 'normal' | 'height';
+  channel: 'color' | 'roughness' | 'metallic' | 'normal' | 'height' | 'emission';
+}
+
+export interface BloomSettings {
+  enabled: boolean;
+  strength: number;
+  radius: number;
+  threshold: number;
 }
 
 export type BrushStrokeType = 'space' | 'airbrush' | 'dot' | 'dragged-dot' | 'curve';
@@ -146,10 +154,11 @@ export interface VectorPath {
 
 export interface SelectionMask {
   active: boolean;
-  type: 'rect' | 'ellipse' | 'polygon' | 'lasso';
+  type: 'rect' | 'ellipse' | 'polygon' | 'lasso' | 'brush' | 'bitmap';
   points: { x: number; y: number }[];
   bounds: { x: number; y: number; width: number; height: number };
   inverted: boolean;
+  maskCanvas?: HTMLCanvasElement;
 }
 
 export interface UndoSnapshot {
@@ -177,6 +186,7 @@ export type ShaderNodeType =
   | 'brick'
   | 'checker'
   | 'mapping'
+  | 'vector_transform'
   | 'color_ramp'
   | 'mix_rgb'
   | 'math'
@@ -276,3 +286,17 @@ export interface ProjectionState {
   width: number;
   height: number;
 }
+
+export type ThemeMode = 'cs5' | 'bw78' | 'modern' | 'ps2022';
+
+export interface HDRISettings {
+  enabled: boolean;
+  preset: 'studio' | 'sunset' | 'cyberpunk' | 'outdoor' | 'custom';
+  customUrl?: string;
+  lightViewport: boolean; // Checkbox to light main viewport vs reflections only
+  blurredBackground: boolean;
+  backgroundBlur: number; // 0.0 to 1.0
+  intensity: number; // 0.1 to 3.0
+  roughnessFilter: number; // 0.0 to 1.0
+}
+

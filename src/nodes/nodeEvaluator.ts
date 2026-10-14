@@ -23,6 +23,7 @@ export class NodeEvaluator {
 
     // Identify active nodes
     const mappingNode = nodes.find(n => n.type === 'mapping');
+    const vectorTransformNode = nodes.find(n => n.type === 'vector_transform');
     const noiseNode = nodes.find(n => n.type === 'noise');
     const voronoiNode = nodes.find(n => n.type === 'voronoi');
     const musgraveNode = nodes.find(n => n.type === 'musgrave');
@@ -38,6 +39,11 @@ export class NodeEvaluator {
     const scaleX = mappingNode?.properties.scaleX ?? 1;
     const scaleY = mappingNode?.properties.scaleY ?? 1;
 
+    // Vector Transform coordinate space conversions
+    const vTransType = vectorTransformNode?.properties.transform_type || 'Vector';
+    const vTransFrom = vectorTransformNode?.properties.convert_from || 'World';
+    const vTransTo = vectorTransformNode?.properties.convert_to || 'Object';
+
     // ColorRamp stops
     const stops = rampNode?.properties.stops || [
       { pos: 0.0, color: '#000000' },
@@ -48,6 +54,40 @@ export class NodeEvaluator {
       let v = (y / h) * scaleY + locY;
       for (let x = 0; x < w; x++) {
         let u = (x / w) * scaleX + locX;
+
+        // Apply Vector Transform if node is present
+        if (vectorTransformNode) {
+          // Point / Vector / Normal coordinate transformation
+          let tx = u - 0.5;
+          let ty = v - 0.5;
+          let tz = 0.0;
+
+          if (vTransFrom !== vTransTo) {
+            // Coordinate frame change matrix simulation:
+            // World <-> Object: 45-deg rotation / scale
+            // World <-> Camera: view rotation (X-Y tilt)
+            const angle = (vTransFrom === 'World' && vTransTo === 'Camera') ? 0.7853 : 
+                          (vTransFrom === 'Camera' && vTransTo === 'World') ? -0.7853 : 
+                          (vTransFrom === 'World' && vTransTo === 'Object') ? 1.5708 : -1.5708;
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            const rx = tx * cosA - ty * sinA;
+            const ry = tx * sinA + ty * cosA;
+            tx = rx;
+            ty = ry;
+
+            if (vTransType === 'Point') {
+              tx += (vTransTo === 'Object' ? 0.25 : -0.25);
+            } else if (vTransType === 'Normal') {
+              const len = Math.hypot(tx, ty, 0.5) || 1.0;
+              tx /= len;
+              ty /= len;
+            }
+          }
+          u = tx + 0.5;
+          v = ty + 0.5;
+        }
+
         const idx = (y * w + x) * 4;
 
         let val = 0;

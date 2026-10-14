@@ -18,7 +18,8 @@ import {
   SelectionMask, 
   GraphNode, 
   NodeConnection, 
-  MeshModelAsset 
+  MeshModelAsset,
+  BloomSettings,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
 import { UndoRingBuffer } from './core/history';
@@ -197,6 +198,11 @@ export default function App() {
     locatorValue: 0,
     activeRealtimeMirror: false,
     showVirtualCursorPlane: false,
+    axes: {
+      X: true,
+      Y: false,
+      Z: false,
+    },
   });
 
   // Floating & Docked Panels Visibility
@@ -209,7 +215,6 @@ export default function App() {
     masking: false,
     nodeGraph: false,
     history: true,
-    numpad: true,
   });
 
   const [panelFloating, setPanelFloating] = useState<Record<string, boolean>>({
@@ -221,7 +226,14 @@ export default function App() {
     masking: false,
     nodeGraph: true,
     history: false,
-    numpad: false,
+  });
+
+  // 3D Viewport UnrealBloomPass Post-Processing Settings
+  const [bloomSettings, setBloomSettings] = useState<BloomSettings>({
+    enabled: true,
+    strength: 1.4,
+    radius: 0.45,
+    threshold: 0.15,
   });
 
   const [textureVersion, setTextureVersion] = useState(0);
@@ -602,6 +614,15 @@ export default function App() {
     }
   };
 
+  const handleConvertToEmissive = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (target) {
+      LayerConversions.convertToEmissive(target);
+      undoBuffer.pushState('Convert Layer to Emissive (Glow)', layers);
+      notifyTextureUpdated();
+    }
+  };
+
   // Bake procedural node tree to active layer
   const handleBakeNodeTree = (bakeCanvas: HTMLCanvasElement) => {
     const targetLayer = layers.find(l => l.id === activeLayerId);
@@ -809,6 +830,7 @@ export default function App() {
         onConvertToBump={() => handleConvertToBump(activeLayerId)}
         onConvertToNormal={() => handleConvertToNormal(activeLayerId)}
         onConvertToClipMask={() => handleConvertToClipMask(activeLayerId)}
+        onConvertToEmissive={() => handleConvertToEmissive(activeLayerId)}
         onOpenUndoSettings={() => setIsUndoSettingsOpen(true)}
         onOpenHelpPDF={handleOpenHelpPDF}
         onOpenTutorialPDF={handleOpenTutorialPDF}
@@ -891,6 +913,8 @@ export default function App() {
                 isSymmetryX={symmetryConfig.activeRealtimeMirror}
                 selectionMask={selectionMask}
                 symmetryConfig={symmetryConfig}
+                bloomSettings={bloomSettings}
+                onUpdateBloomSettings={(patch) => setBloomSettings(b => ({ ...b, ...patch }))}
               />
             </div>
           )}
@@ -973,6 +997,7 @@ export default function App() {
                             onConvertToBump={handleConvertToBump}
                             onConvertToNormal={handleConvertToNormal}
                             onConvertToClipMask={handleConvertToClipMask}
+                            onConvertToEmissive={handleConvertToEmissive}
                           />
                         </div>
                       ),
@@ -1087,19 +1112,6 @@ export default function App() {
                         </div>
                       ),
                     },
-                    {
-                      id: 'numpad',
-                      title: 'Numpad',
-                      icon: <Hash className="w-3 h-3 text-[#a6e3a1]" />,
-                      content: (
-                        <div className="p-2 flex justify-center bg-[#333]">
-                          <NumpadOverlay
-                            onNumpadKey={handleNumpadKey}
-                            isOrtho={isOrtho}
-                          />
-                        </div>
-                      ),
-                    },
                   ]}
                   activeTabId={dockerGroup2Tab}
                   onSelectTab={setDockerGroup2Tab}
@@ -1139,6 +1151,7 @@ export default function App() {
                       onConvertToBump={handleConvertToBump}
                       onConvertToNormal={handleConvertToNormal}
                       onConvertToClipMask={handleConvertToClipMask}
+                      onConvertToEmissive={handleConvertToEmissive}
                     />
                   </DockablePanelFrame>
                 </div>
@@ -1228,16 +1241,6 @@ export default function App() {
                       onToggleGizmo={() => setShowGizmo(g => !g)}
                     />
                   </DockablePanelFrame>
-                </div>
-              )}
-
-              {/* Simulated Numpad Panel */}
-              {activePanels.numpad && !panelFloating.numpad && (
-                <div className="p-2 border-b border-[#444] shrink-0 flex justify-center">
-                  <NumpadOverlay
-                    onNumpadKey={handleNumpadKey}
-                    isOrtho={isOrtho}
-                  />
                 </div>
               )}
 

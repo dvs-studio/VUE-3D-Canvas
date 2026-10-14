@@ -27,6 +27,24 @@ export class SelectionTool {
       const normX = (x - cx) / rx;
       const normY = (y - cy) / ry;
       inside = normX * normX + normY * normY <= 1;
+    } else if (mask.type === 'brush' || mask.type === 'bitmap') {
+      if (mask.maskCanvas) {
+        try {
+          const mctx = mask.maskCanvas.getContext('2d');
+          if (mctx) {
+            const px = Math.max(0, Math.min(mask.maskCanvas.width - 1, Math.floor(x)));
+            const py = Math.max(0, Math.min(mask.maskCanvas.height - 1, Math.floor(y)));
+            const p = mctx.getImageData(px, py, 1, 1).data;
+            inside = p[3] > 20 || p[0] > 20;
+          }
+        } catch {
+          const b = mask.bounds;
+          inside = x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+        }
+      } else {
+        const b = mask.bounds;
+        inside = x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+      }
     } else {
       // Polygon / Lasso Raycasting algorithm
       const pts = mask.points;

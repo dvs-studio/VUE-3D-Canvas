@@ -454,6 +454,10 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
               <div className="px-3 py-1 text-[9px] font-mono text-[#89b4fa] font-bold uppercase tracking-wider bg-[#222]">
                 VECTOR NODES
               </div>
+              <button onClick={() => handleAddNode('vector_transform')} className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between text-[#89b4fa]">
+                <span>Vector Transform</span>
+                <span className="text-[9px] font-mono text-[#89b4fa]/70">3D</span>
+              </button>
               <button onClick={() => handleAddNode('mapping')} className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white">
                 Vector Mapping
               </button>
@@ -809,6 +813,48 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
                         <option value="Overlay">Overlay</option>
                         <option value="Add">Add</option>
                         <option value="Subtract">Subtract</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. VECTOR TRANSFORM SPECIAL WIDGET */}
+                {node.type === 'vector_transform' && (
+                  <div className="space-y-1.5 bg-[#202020] p-1.5 rounded border border-[#404040] text-[9px] font-mono">
+                    <div className="flex items-center justify-between text-[#89b4fa]">
+                      <span className="text-[#aaa]">Type:</span>
+                      <select
+                        value={node.properties.transform_type || 'Vector'}
+                        onChange={(e) => updateNodeProperty(node.id, { transform_type: e.target.value })}
+                        className="bg-[#111] border border-[#555] text-white px-1 py-0.5 rounded text-[9px]"
+                      >
+                        <option value="Vector">Vector</option>
+                        <option value="Point">Point</option>
+                        <option value="Normal">Normal</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between text-[#a6e3a1]">
+                      <span className="text-[#aaa]">Convert From:</span>
+                      <select
+                        value={node.properties.convert_from || 'World'}
+                        onChange={(e) => updateNodeProperty(node.id, { convert_from: e.target.value })}
+                        className="bg-[#111] border border-[#555] text-white px-1 py-0.5 rounded text-[9px]"
+                      >
+                        <option value="World">World</option>
+                        <option value="Object">Object</option>
+                        <option value="Camera">Camera</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between text-[#fab387]">
+                      <span className="text-[#aaa]">Convert To:</span>
+                      <select
+                        value={node.properties.convert_to || 'Object'}
+                        onChange={(e) => updateNodeProperty(node.id, { convert_to: e.target.value })}
+                        className="bg-[#111] border border-[#555] text-white px-1 py-0.5 rounded text-[9px]"
+                      >
+                        <option value="World">World</option>
+                        <option value="Object">Object</option>
+                        <option value="Camera">Camera</option>
                       </select>
                     </div>
                   </div>

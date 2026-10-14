@@ -23,7 +23,8 @@ import {
   Check, 
   Sparkles,
   RefreshCw,
-  Scissors
+  Scissors,
+  Paintbrush
 } from 'lucide-react';
 
 interface MaskPanelProps {
@@ -53,7 +54,9 @@ export const MaskPanel: React.FC<MaskPanelProps> = ({
   const [expandRadius, setExpandRadius] = useState(6);
   const [shrinkRadius, setShrinkRadius] = useState(6);
   const [overlayOpacity, setOverlayOpacity] = useState(45);
-  const [overlayColor, setOverlayColor] = useState('#e63946');
+  const [maskBrushMode, setMaskBrushMode] = useState<'paint' | 'erase'>('paint');
+  const [maskBrushSize, setMaskBrushSize] = useState<number>(32);
+  const [maskBrushHardness, setMaskBrushHardness] = useState<number>(50);
 
   const activeLayer = layers.find(l => l.id === activeLayerId);
 
@@ -248,7 +251,107 @@ export const MaskPanel: React.FC<MaskPanelProps> = ({
         )}
       </div>
 
-      {/* 2. Selection Physical Tools in Viewport 2D/3D */}
+      {/* Physical Shading Feature Guide */}
+      <div className="bg-[#262626] p-2.5 rounded border border-[#444] space-y-1.5">
+        <div className="flex items-center justify-between text-[10px] font-bold text-[#aaa] uppercase tracking-wider">
+          <span>Physical Shading Feature</span>
+          <span className="text-[#89b4fa] font-mono text-[9px]">ACTIVE IN 2D &amp; 3D</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-[10px]">
+          <div className="p-1.5 rounded bg-[#1e2d24] border border-[#3e6b48] flex flex-col items-center text-center">
+            <span className="font-bold text-[#a6e3a1]">SHADED LIGHT</span>
+            <span className="text-[9px] text-[#ccc]">Editable Area</span>
+            <span className="text-[8px] text-[#a6e3a1]/80 font-mono mt-0.5">Unlocked / Can Paint</span>
+          </div>
+          <div className="p-1.5 rounded bg-[#1f1722] border border-[#6b3848] flex flex-col items-center text-center">
+            <span className="font-bold text-[#f38ba8]">SHADED DARK</span>
+            <span className="text-[9px] text-[#ccc]">Protected Area</span>
+            <span className="text-[8px] text-[#f38ba8]/80 font-mono mt-0.5">Shielded / Cannot Edit</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Masking Brush Tool */}
+      <div className="space-y-2 bg-[#333] p-2.5 rounded border border-[#444]">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-bold text-[#aaa] block uppercase tracking-wider">
+            Masking Brush
+          </label>
+          <button
+            type="button"
+            onClick={() => onSelectTool(activeTool === 'mask_brush' ? 'brush' : 'mask_brush')}
+            className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeTool === 'mask_brush'
+                ? 'bg-[#3d7fb8] text-white border-[#5ca2db] shadow-xs'
+                : 'bg-[#262626] text-[#bbb] border-[#444] hover:text-white'
+            }`}
+          >
+            <Paintbrush className="w-3.5 h-3.5" />
+            <span>{activeTool === 'mask_brush' ? 'BRUSH ACTIVE' : 'ACTIVATE BRUSH'}</span>
+          </button>
+        </div>
+
+        {activeTool === 'mask_brush' && (
+          <div className="space-y-2 pt-1 border-t border-[#444]">
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setMaskBrushMode('paint')}
+                className={`py-1 rounded text-[10px] font-bold border text-center transition-colors cursor-pointer ${
+                  maskBrushMode === 'paint'
+                    ? 'bg-[#2e5d38] text-white border-[#488e57]'
+                    : 'bg-[#262626] text-[#aaa] border-[#444]'
+                }`}
+              >
+                + Paint on Mask
+              </button>
+              <button
+                type="button"
+                onClick={() => setMaskBrushMode('erase')}
+                className={`py-1 rounded text-[10px] font-bold border text-center transition-colors cursor-pointer ${
+                  maskBrushMode === 'erase'
+                    ? 'bg-[#8b2626] text-white border-[#b33a3a]'
+                    : 'bg-[#262626] text-[#aaa] border-[#444]'
+                }`}
+              >
+                - Erase from Mask
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-[#bbb]">Brush Size:</span>
+                <span className="font-mono text-[#89b4fa]">{maskBrushSize}px</span>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="128"
+                value={maskBrushSize}
+                onChange={(e) => setMaskBrushSize(Number(e.target.value))}
+                className="w-full accent-[#3d7fb8] h-1.5 cursor-pointer"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-[#bbb]">Hardness (Feather):</span>
+                <span className="font-mono text-[#e5a038]">{maskBrushHardness}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={maskBrushHardness}
+                onChange={(e) => setMaskBrushHardness(Number(e.target.value))}
+                className="w-full accent-[#e5a038] h-1.5 cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3. Selection Physical Tools in Viewport 2D/3D */}
       <div className="space-y-1.5 bg-[#333] p-2.5 rounded border border-[#444]">
         <label className="text-[10px] font-bold text-[#aaa] block uppercase tracking-wider">
           Viewport Physical Selectors

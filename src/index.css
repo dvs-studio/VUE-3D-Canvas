@@ -14,13 +14,57 @@
     --cs5-accent-hover: #5097d6;
   }
 
+  body.theme-bw78 {
+    --cs5-bg: #141414;
+    --cs5-panel: #202020;
+    --cs5-panel-dark: #181818;
+    --cs5-panel-light: #2c2c2c;
+    --cs5-border: #383838;
+    --cs5-border-dark: #111111;
+    --cs5-text: #d8d8d8;
+    --cs5-text-bright: #ffffff;
+    --cs5-accent: #e0e0e0;
+    --cs5-accent-hover: #ffffff;
+  }
+
+  body.theme-modern {
+    --cs5-bg: #13161d;
+    --cs5-panel: #1e2430;
+    --cs5-panel-dark: #161b24;
+    --cs5-panel-light: #272f3d;
+    --cs5-border: #2d3647;
+    --cs5-border-dark: #0f131a;
+    --cs5-text: #cbd5e1;
+    --cs5-text-bright: #f8fafc;
+    --cs5-accent: #6366f1;
+    --cs5-accent-hover: #818cf8;
+  }
+
+  body.theme-ps2022 {
+    --cs5-bg: #1f1f1f;
+    --cs5-panel: #2b2b2b;
+    --cs5-panel-dark: #242424;
+    --cs5-panel-light: #333333;
+    --cs5-border: #3c3c3c;
+    --cs5-border-dark: #181818;
+    --cs5-text: #cccccc;
+    --cs5-text-bright: #ffffff;
+    --cs5-accent: #1473e6;
+    --cs5-accent-hover: #2680eb;
+  }
+
   body {
     background-color: var(--cs5-bg);
     color: var(--cs5-text);
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     user-select: none;
     -webkit-user-select: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
+}
+
+.theme-bw78-viewport-shadow {
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 /* Custom scrollbars matching CS5 dark gray */

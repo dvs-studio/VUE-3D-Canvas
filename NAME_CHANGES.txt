@@ -1,0 +1,103 @@
+================================================================================
+VUE 3D CANVAS - SYSTEM NAME CHANGES & PROFESSIONAL CORRECTIONS LOG
+================================================================================
+Author / Creator: Victory Ukpong
+Date: October 2026
+Target Architecture: Rust (Core/Logic) + WASM-first + Native Windows (DX11/GL2)
+
+This reference document tracks all clean, professional name updates across the
+application UI, menus, dockers, and tool dialogs. Use this reference when authoring
+and editing the user manual (help.pdf) and walkthrough tutorial (tutorial.pdf).
+
+NOTE: None of these naming corrections alter or break underlying functionality,
+file format compatibility (.xblend), or engine logic.
+
+--------------------------------------------------------------------------------
+1. DOCKER PANELS & WORKSPACE TITLES
+--------------------------------------------------------------------------------
+Previous / Raw Name                     Clean Professional Name
+--------------------------------------------------------------------------------
+Blender 2.83 LTS Shader Node Graph  --> Node Editor (Blender 2.8+)
+Symmetry & Symmetrize Docker         --> Symmetry & Cloning Studio
+Mask Painting Docker                --> Masking & Selection Studio
+Brushes & Dynamics                   --> Brush Engine & Presets
+3D Viewport (Navigator)              --> Viewport Navigator
+Color Wheel                          --> Color Palette & Wheel
+History Docker                       --> Undo History Ring Buffer
+Layers Docker                        --> Texture Layers Manager
+Simulated Numpad Panel               --> Viewport Numpad Controller
+
+--------------------------------------------------------------------------------
+2. PROCEDURAL & LAYER SUITE DIALOGS
+--------------------------------------------------------------------------------
+Previous / Raw Name                     Clean Professional Name
+--------------------------------------------------------------------------------
+Jenny Stitch Studio                  --> Stitch & Embroidery Studio
+Triplanar Box Filter Fill Suite     --> Triplanar Texture Projection
+Stochastic Scatter Generator         --> Stochastic Texture Scatter
+Layer Grayscale Bump Map             --> Height / Bump Map Converter
+Layer Sobel Normal Map               --> Sobel RGB Normal Map Generator
+Alpha Clip Mask                      --> Alpha Clip Mask Converter
+Gaussian Blur Pass                   --> Separable Gaussian Blur Filter
+
+--------------------------------------------------------------------------------
+3. TOOLS & VIEWPORT LABELS
+--------------------------------------------------------------------------------
+Previous / Raw Name                     Clean Professional Name
+--------------------------------------------------------------------------------
+Virtual Origin 3D Cursor Plane       --> 3D Symmetry Cursor ([Axis]-Axis)
+Physical Selector in 2D Plane        --> Temporary Viewport Canvas Selector
+Pen Vector Tool                      --> Bezier Curve Fill & Erasure Tool
+Marquee Rect / Ellipse               --> Rectangular / Elliptical Marquee
+Lasso / Poly Lasso                   --> Freehand / Polygonal Lasso Selector
+Mask Brush Mode                      --> Paint / Erase Masking Brush
+
+--------------------------------------------------------------------------------
+4. MENU BAR & HELP SYSTEM CORRECTIONS
+--------------------------------------------------------------------------------
+Previous Menu Item                      Update / Correction
+--------------------------------------------------------------------------------
+Help Document Source (help.docx)     --> Removed from Help menu for clean release;
+                                         source document maintained on disk as
+                                         help.docx for author reference.
+Help Documentation (help.pdf)        --> Targets compiled user manual (help.pdf)
+Tutorial Guide (tutorial.pdf)        --> Targets step-by-step guide (tutorial.pdf)
+Edit > Undo / Redo Settings...       --> Preferences: Undo History Ring Buffer
+Projection Screenshot (F8)           --> Projection Painting [F8] Bridge
+
+--------------------------------------------------------------------------------
+5. NEW SHADER NODES & GRAPH OPERATORS
+--------------------------------------------------------------------------------
+New Shader Node Name                 Node Type Identifier & Spec
+--------------------------------------------------------------------------------
+Vector Transform                     ShaderNodeVectorTransform
+                                     - Inputs: Vector (Vector3)
+                                     - Outputs: Vector (Vector3)
+                                     - Types: Vector, Point, Normal
+                                     - Coordinate Spaces: World, Object, Camera
+
+--------------------------------------------------------------------------------
+6. HDRI LIGHTING & REFLECTION ENGINE
+--------------------------------------------------------------------------------
+Feature                              Specification & Mathematics
+--------------------------------------------------------------------------------
+HDRI Reflections Only                Samples equirectangular HDRI map using view
+                                     reflection vector: R = reflect(-V, N)
+                                     R = 2.0 * dot(V, N) * N - V
+Use HDRI to Light Viewport           Checkbox to enable full image-based lighting
+                                     (IBL) irradiance across the 3D scene.
+Blurred Background                   Equirectangular environment display with
+                                     customizable background blurriness.
+
+--------------------------------------------------------------------------------
+7. INTERFACE THEMES (SELECTABLE AFTER PROJECTION [F8])
+--------------------------------------------------------------------------------
+Theme Identifier                     Description
+--------------------------------------------------------------------------------
+Photoshop CS5 Dark (Default)         Classic dark gray studio palette (#333/#2b2b)
+78% Black & White Minimal            Clean distraction-free 78% grayscale contrast
+                                     with prominent viewport shadow framing
+Modern Studio                        Refined dark slate with electric indigo accents
+Photoshop 2022 Skin                  Deep flat graphite (#1f1f1f) with Adobe blue
+                                     highlights and rounded UI controls
+================================================================================

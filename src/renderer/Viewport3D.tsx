@@ -12,16 +12,25 @@ import {
   BrushPreset, 
   Layer, 
   ViewportShadingMode,
-  SelectionMask
+  SelectionMask,
+  HDRISettings,
+  ThemeMode,
+  BloomSettings,
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
 import { SelectionTool } from '../tools/selectionTool';
-import { SymmetryConfig, SymmetryEngine } from '../tools/symmetryEngine';
+import { SymmetryConfig, SymmetryEngine, SymmetryAxis } from '../tools/symmetryEngine';
+import { MaskEngine } from '../tools/maskEngine';
+import { HDRIManager, HDRIPreset } from './hdriManager';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Sun, Sparkles, Sliders, Image, Check, Zap } from 'lucide-react';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 interface Viewport3DProps {
   layers: Layer[];
@@ -50,7 +59,13 @@ interface Viewport3DProps {
   surfaceMode?: 'smooth' | 'hard' | 'default';
   isSymmetryX?: boolean;
   selectionMask?: SelectionMask | null;
+  onUpdateSelectionMask?: (mask: SelectionMask | null) => void;
   symmetryConfig?: SymmetryConfig;
+  hdriSettings?: HDRISettings;
+  onUpdateHDRISettings?: (settings: Partial<HDRISettings>) => void;
+  bloomSettings?: BloomSettings;
+  onUpdateBloomSettings?: (settings: Partial<BloomSettings>) => void;
+  currentTheme?: ThemeMode;
 }
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
@@ -80,7 +95,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   surfaceMode = 'default',
   isSymmetryX = false,
   selectionMask = null,
+  onUpdateSelectionMask,
   symmetryConfig,
+  hdriSettings: controlledHdriSettings,
+  onUpdateHDRISettings,
+  bloomSettings: controlledBloomSettings,
+  onUpdateBloomSettings,
+  currentTheme = 'cs5',
 }) => {
   const [internalViewLayout, setInternalViewLayout] = useState<'perspective' | 'quad'>('perspective');
   const viewLayout = controlledViewLayout || internalViewLayout;
@@ -131,7 +152,61 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
 
-  // Composite texture generator
+  // HDRI Reflections & Viewport Lighting Settings
+  const [internalHdri, setInternalHdri] = useState<HDRISettings>({
+    enabled: true,
+    preset: 'studio',
+    lightViewport: true, // Checkbox to light main viewport vs reflections only
+    blurredBackground: false,
+    backgroundBlur: 0.35,
+    intensity: 1.0,
+    roughnessFilter: 0.35,
+  });
+  const hdri = controlledHdriSettings || internalHdri;
+  const updateHdri = (patch: Partial<HDRISettings>) => {
+    if (onUpdateHDRISettings) {
+      onUpdateHDRISettings(patch);
+    } else {
+      setInternalHdri(h => ({ ...h, ...patch }));
+    }
+  };
+  const [showHdriPopover, setShowHdriPopover] = useState(false);
+
+  // Bloom Post-Processing Pass State & Controls
+  const [internalBloom, setInternalBloom] = useState<BloomSettings>({
+    enabled: true,
+    strength: 1.4,
+    radius: 0.45,
+    threshold: 0.15,
+  });
+  const bloom = controlledBloomSettings || internalBloom;
+  const updateBloom = (patch: Partial<BloomSettings>) => {
+    if (onUpdateBloomSettings) {
+      onUpdateBloomSettings(patch);
+    } else {
+      setInternalBloom(b => ({ ...b, ...patch }));
+    }
+  };
+  const [showBloomPopover, setShowBloomPopover] = useState(false);
+
+  // Post-processing composer & passes refs
+  const composerRef = useRef<EffectComposer | null>(null);
+  const renderPassRef = useRef<RenderPass | null>(null);
+  const bloomPassRef = useRef<UnrealBloomPass | null>(null);
+  const bloomSettingsRef = useRef<BloomSettings>(bloom);
+  bloomSettingsRef.current = bloom;
+
+  // Emissive canvas & texture for glowing materials
+  const emissiveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const emissiveTextureRef = useRef<THREE.CanvasTexture | null>(null);
+
+  // Light refs for HDRI light toggling
+  const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const keyLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const rimLightRef = useRef<THREE.DirectionalLight | null>(null);
+
+  // Composite texture generator (diffuse + emissive channels)
   const updateCompositeTexture = useCallback(() => {
     const compCanvas = compositeCanvas || compositeCanvasRef.current;
     if (!compCanvas) return;
@@ -139,9 +214,24 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const ctx = compCanvas.getContext('2d');
     if (!ctx) return;
 
+    // Initialize or prepare emissive canvas
+    if (!emissiveCanvasRef.current) {
+      const emCvs = document.createElement('canvas');
+      emCvs.width = compCanvas.width;
+      emCvs.height = compCanvas.height;
+      emissiveCanvasRef.current = emCvs;
+    }
+    const emCanvas = emissiveCanvasRef.current;
+    const emCtx = emCanvas.getContext('2d');
+    if (emCtx) {
+      emCtx.fillStyle = '#000000';
+      emCtx.fillRect(0, 0, emCanvas.width, emCanvas.height);
+    }
+
     ctx.fillStyle = '#2b2b2b';
     ctx.fillRect(0, 0, compCanvas.width, compCanvas.height);
 
+    let hasEmissive = false;
     layers.forEach(layer => {
       if (!layer.visible) return;
       ctx.save();
@@ -152,11 +242,38 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         : 'source-over';
       ctx.drawImage(layer.canvas, 0, 0, compCanvas.width, compCanvas.height);
       ctx.restore();
+
+      // If layer is converted to emission, composite onto emissive map
+      if (layer.channel === 'emission' && emCtx) {
+        hasEmissive = true;
+        emCtx.save();
+        emCtx.globalAlpha = layer.opacity / 100;
+        emCtx.drawImage(layer.canvas, 0, 0, emCanvas.width, emCanvas.height);
+        emCtx.restore();
+      }
     });
 
     if (dynamicTextureRef.current) {
       dynamicTextureRef.current.needsUpdate = true;
     }
+    if (emissiveTextureRef.current) {
+      emissiveTextureRef.current.needsUpdate = true;
+    }
+
+    if (meshRef.current && meshRef.current.material) {
+      const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+      if (hasEmissive) {
+        if (!mat.emissiveMap && emissiveTextureRef.current) {
+          mat.emissiveMap = emissiveTextureRef.current;
+        }
+        mat.emissive.set(0xffffff);
+        mat.emissiveIntensity = 2.2;
+        mat.needsUpdate = true;
+      } else {
+        mat.emissiveIntensity = 0.0;
+      }
+    }
+
     if (onCompositeCanvasReady) {
       onCompositeCanvasReady(compCanvas);
     }
@@ -214,18 +331,22 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // 3-Point Studio Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
+    ambientLightRef.current = ambientLight;
 
     const keyLight = new THREE.DirectionalLight(0xfff8eb, 1.6);
     keyLight.position.set(4, 6, 5);
     scene.add(keyLight);
+    keyLightRef.current = keyLight;
 
     const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.8);
     fillLight.position.set(-5, 2, -3);
     scene.add(fillLight);
+    fillLightRef.current = fillLight;
 
     const rimLight = new THREE.DirectionalLight(0xffffff, 1.2);
     rimLight.position.set(0, 5, -6);
     scene.add(rimLight);
+    rimLightRef.current = rimLight;
 
     const targetComp = compositeCanvas || document.createElement('canvas');
     if (targetComp.width !== 1024) targetComp.width = 1024;
@@ -235,15 +356,47 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     tex.colorSpace = THREE.SRGBColorSpace;
     dynamicTextureRef.current = tex;
 
+    // Emissive Canvas Texture
+    const emCanvas = emissiveCanvasRef.current || document.createElement('canvas');
+    if (emCanvas.width !== 1024) emCanvas.width = 1024;
+    if (emCanvas.height !== 1024) emCanvas.height = 1024;
+    emissiveCanvasRef.current = emCanvas;
+    const emTex = new THREE.CanvasTexture(emCanvas);
+    emTex.colorSpace = THREE.SRGBColorSpace;
+    emissiveTextureRef.current = emTex;
+
     const modelPreset = BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]() : BUILTIN_MODELS.suzanne();
     const material = new THREE.MeshStandardMaterial({
       map: tex,
+      emissiveMap: emTex,
+      emissive: new THREE.Color(0xffffff),
+      emissiveIntensity: 0.0,
       roughness: materialProps.roughness,
       metalness: materialProps.metallic,
     });
     const mesh = new THREE.Mesh(modelPreset.geometry, material);
     scene.add(mesh);
     meshRef.current = mesh;
+
+    // UnrealBloomPass Post-Processing Composer Setup
+    const composer = new EffectComposer(renderer);
+    composerRef.current = composer;
+
+    const renderPass = new RenderPass(scene, perspCam);
+    renderPassRef.current = renderPass;
+    composer.addPass(renderPass);
+
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(width, height),
+      bloom.strength,
+      bloom.radius,
+      bloom.threshold
+    );
+    bloomPassRef.current = bloomPass;
+    composer.addPass(bloomPass);
+
+    const outputPass = new OutputPass();
+    composer.addPass(outputPass);
 
     let animId: number;
     const animate = () => {
@@ -288,7 +441,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         r.setScissorTest(false);
         r.setViewport(0, 0, r.domElement.clientWidth || width, r.domElement.clientHeight || height);
         const activeCam = currentIsOrtho ? orthoCam : perspCam;
-        r.render(scene, activeCam);
+        if (bloomSettingsRef.current.enabled && composerRef.current && renderPassRef.current) {
+          renderPassRef.current.camera = activeCam;
+          composerRef.current.render();
+        } else {
+          r.render(scene, activeCam);
+        }
       }
     };
     animate();
@@ -322,6 +480,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
 
       renderer.setSize(w, h);
+      if (composerRef.current) {
+        composerRef.current.setSize(w, h);
+      }
+      if (bloomPassRef.current) {
+        bloomPassRef.current.resolution.set(w, h);
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -329,9 +493,22 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
+      if (composerRef.current) {
+        composerRef.current.dispose();
+      }
       renderer.dispose();
     };
   }, []);
+
+  // Sync bloom settings dynamically
+  useEffect(() => {
+    bloomSettingsRef.current = bloom;
+    if (bloomPassRef.current) {
+      bloomPassRef.current.strength = bloom.strength;
+      bloomPassRef.current.radius = bloom.radius;
+      bloomPassRef.current.threshold = bloom.threshold;
+    }
+  }, [bloom]);
 
   // Update Geometry
   useEffect(() => {
@@ -397,6 +574,60 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
   }, [shadingMode, materialProps, surfaceMode]);
 
+  // HDRI Reflection & Viewport Lighting Controller
+  useEffect(() => {
+    if (!sceneRef.current || !meshRef.current) return;
+    const scene = sceneRef.current;
+    const mesh = meshRef.current;
+
+    if (!hdri.enabled) {
+      scene.environment = null;
+      scene.background = new THREE.Color('#242424');
+      (scene as any).backgroundBlurriness = 0;
+      if (mesh.material instanceof THREE.MeshStandardMaterial) {
+        mesh.material.envMap = null;
+        mesh.material.needsUpdate = true;
+      }
+      return;
+    }
+
+    const hdriTex = HDRIManager.getHDRITexture(hdri.preset, hdri.customUrl);
+
+    // 1. Checkbox: Use HDRI to light main viewport vs 3-point studio lighting with reflections only
+    if (hdri.lightViewport) {
+      scene.environment = hdriTex;
+      if (ambientLightRef.current) ambientLightRef.current.intensity = 0.45;
+      if (keyLightRef.current) keyLightRef.current.intensity = 0.85;
+      if (fillLightRef.current) fillLightRef.current.intensity = 0.4;
+      if (rimLightRef.current) rimLightRef.current.intensity = 0.5;
+    } else {
+      // Reflections only! Main viewport lit by standard 3-point studio lighting
+      scene.environment = null;
+      if (ambientLightRef.current) ambientLightRef.current.intensity = 0.85;
+      if (keyLightRef.current) keyLightRef.current.intensity = 1.6;
+      if (fillLightRef.current) fillLightRef.current.intensity = 0.8;
+      if (rimLightRef.current) rimLightRef.current.intensity = 1.2;
+    }
+
+    // 2. Sample HDRI using view reflection vector R = reflect(-V, N) for reflective surface rendering only
+    if (mesh.material instanceof THREE.MeshStandardMaterial) {
+      mesh.material.envMap = hdriTex;
+      mesh.material.envMapIntensity = hdri.intensity;
+      mesh.material.roughness = THREE.MathUtils.clamp(materialProps.roughness, 0.04, 1.0);
+      mesh.material.metalness = THREE.MathUtils.clamp(materialProps.metallic, 0.0, 1.0);
+      mesh.material.needsUpdate = true;
+    }
+
+    // 3. Blurred background equirectangular panorama
+    if (hdri.blurredBackground) {
+      scene.background = hdriTex;
+      (scene as any).backgroundBlurriness = hdri.backgroundBlur;
+    } else {
+      scene.background = new THREE.Color('#242424');
+      (scene as any).backgroundBlurriness = 0;
+    }
+  }, [hdri, shadingMode, materialProps, surfaceMode]);
+
   useEffect(() => {
     updateCompositeTexture();
     if (dynamicTextureRef.current) {
@@ -404,7 +635,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
   }, [layers, textureVersion, updateCompositeTexture]);
 
-  // Virtual 3D Origin Cursor / Plane Helper for Symmetry
+  // Virtual 3D Origin Cursor / Plane Helper for Symmetry with X-Ray Overlay and Axis Label
   const virtualSymmetryHelperRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
@@ -416,30 +647,95 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     if (symmetryConfig?.showVirtualCursorPlane) {
       const group = new THREE.Group();
+      const loc = symmetryConfig.locatorValue;
       
-      // Semi-transparent slice plane
-      const planeGeom = new THREE.PlaneGeometry(5, 5);
+      // 1. Semi-transparent mirror slice plane with X-Ray overlay (visible through mesh)
+      const planeGeom = new THREE.PlaneGeometry(5.5, 5.5);
       const planeMat = new THREE.MeshBasicMaterial({
         color: 0x3d7fb8,
         transparent: true,
         opacity: 0.22,
         side: THREE.DoubleSide,
+        depthTest: false,
         depthWrite: false,
       });
       const planeMesh = new THREE.Mesh(planeGeom, planeMat);
+      planeMesh.renderOrder = 9996;
       group.add(planeMesh);
 
-      // 3D Axis Crosshair Locator
-      const lineMat = new THREE.LineBasicMaterial({ color: 0x89b4fa, transparent: true, opacity: 0.75 });
+      // 2. 3D Axis Crosshair Locator with X-Ray overlay
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0x89b4fa,
+        transparent: true,
+        opacity: 0.9,
+        depthTest: false,
+        depthWrite: false,
+      });
       const pts = [
-        new THREE.Vector3(-2.5, 0, 0), new THREE.Vector3(2.5, 0, 0),
-        new THREE.Vector3(0, -2.5, 0), new THREE.Vector3(0, 2.5, 0),
+        new THREE.Vector3(-2.8, 0, 0), new THREE.Vector3(2.8, 0, 0),
+        new THREE.Vector3(0, -2.8, 0), new THREE.Vector3(0, 2.8, 0),
       ];
       const lineGeom = new THREE.BufferGeometry().setFromPoints(pts);
       const cross = new THREE.LineSegments(lineGeom, lineMat);
+      cross.renderOrder = 9998;
       group.add(cross);
 
-      const loc = symmetryConfig.locatorValue;
+      // 3. 3D Cursor Target Ring (Blender style 3D cursor visible through mesh)
+      const ringPts: THREE.Vector3[] = [];
+      const segs = 36;
+      const ringRadius = 0.5;
+      for (let i = 0; i <= segs; i++) {
+        const a = (i / segs) * Math.PI * 2;
+        ringPts.push(new THREE.Vector3(Math.cos(a) * ringRadius, Math.sin(a) * ringRadius, 0));
+      }
+      const ringGeom = new THREE.BufferGeometry().setFromPoints(ringPts);
+      const ringMat = new THREE.LineBasicMaterial({
+        color: 0xff3b3b,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.95,
+      });
+      const ring = new THREE.LineLoop(ringGeom, ringMat);
+      ring.renderOrder = 9998;
+      group.add(ring);
+
+      // 4. Dynamic Text Sprite Bearing the Name of the Axis
+      const canvas = document.createElement('canvas');
+      canvas.width = 340;
+      canvas.height = 84;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = 'rgba(16, 26, 42, 0.92)';
+      ctx.roundRect ? ctx.roundRect(4, 4, 332, 76, 12) : ctx.rect(4, 4, 332, 76);
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#3d7fb8';
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${symmetryConfig.axis}-Axis 3D Cursor`, 170, 32);
+
+      ctx.fillStyle = '#a6e3a1';
+      ctx.font = '18px monospace';
+      ctx.fillText(`Loc: ${loc.toFixed(2)} [X-Ray Overlay]`, 170, 58);
+
+      const spriteTex = new THREE.CanvasTexture(canvas);
+      spriteTex.colorSpace = THREE.SRGBColorSpace;
+      const spriteMat = new THREE.SpriteMaterial({
+        map: spriteTex,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+      });
+      const labelSprite = new THREE.Sprite(spriteMat);
+      labelSprite.scale.set(1.4, 0.35, 1.0);
+      labelSprite.position.set(0, 0.9, 0);
+      labelSprite.renderOrder = 9999;
+      group.add(labelSprite);
+
       if (symmetryConfig.axis === 'X') {
         group.rotation.y = Math.PI / 2;
         group.position.set(loc, 0, 0);
@@ -578,12 +874,33 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       isPaintingRef.current = true;
       const pixelX = uv.x * targetLayer.canvas.width;
       const pixelY = (1 - uv.y) * targetLayer.canvas.height;
+
+      if (activeTool === 'mask_brush') {
+        const baseMask = selectionMask || {
+          active: true,
+          type: 'brush' as const,
+          points: [],
+          bounds: { x: pixelX, y: pixelY, width: brush.size, height: brush.size },
+          inverted: false,
+        };
+        const updated = MaskEngine.paintMaskDab(
+          baseMask,
+          pixelX,
+          pixelY,
+          brush.size,
+          brush.hardness || 50,
+          false,
+          targetLayer.canvas.width,
+          targetLayer.canvas.height
+        );
+        if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
+        updateCompositeTexture();
+        onTextureUpdated();
+        return;
+      }
+
       brushEngine.beginStroke(pixelX, pixelY, e.pressure || 1.0);
       executePaintTool(targetLayer, pixelX, pixelY, e.pressure || 1.0);
-      if (isSymmetryX) {
-        const mirrorX = targetLayer.canvas.width - pixelX;
-        executePaintTool(targetLayer, mirrorX, pixelY, e.pressure || 1.0);
-      }
     }
   };
 
@@ -651,12 +968,32 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const targetX = uv.x * targetLayer.canvas.width;
         const targetY = (1 - uv.y) * targetLayer.canvas.height;
 
+        if (activeTool === 'mask_brush') {
+          const baseMask = selectionMask || {
+            active: true,
+            type: 'brush' as const,
+            points: [],
+            bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
+            inverted: false,
+          };
+          const updated = MaskEngine.paintMaskDab(
+            baseMask,
+            targetX,
+            targetY,
+            brush.size,
+            brush.hardness || 50,
+            false,
+            targetLayer.canvas.width,
+            targetLayer.canvas.height
+          );
+          if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
+          updateCompositeTexture();
+          onTextureUpdated();
+          return;
+        }
+
         const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
         executePaintTool(targetLayer, stabilized.x, stabilized.y, e.pressure || 1.0);
-        if (isSymmetryX) {
-          const mirrorX = targetLayer.canvas.width - stabilized.x;
-          executePaintTool(targetLayer, mirrorX, stabilized.y, e.pressure || 1.0);
-        }
         drawStabilizerTether(e, stabilized, targetLayer);
       }
     }
@@ -777,21 +1114,47 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // Primary stroke dab
     applyDabAt(x, y);
 
-    // 2. Real-time Symmetry Mirror Stroke Dab
-    const isMirrorActive = symmetryConfig ? symmetryConfig.activeRealtimeMirror : isSymmetryX;
+    // 2. Real-time Multi-Axis Symmetry Mirror Stroke Dab
+    const axes = symmetryConfig?.axes || (isSymmetryX ? { X: true, Y: false, Z: false } : { X: false, Y: false, Z: false });
+    const hasAnyAxis = Boolean(axes.X || axes.Y || axes.Z);
+    const isMirrorActive = symmetryConfig ? (symmetryConfig.activeRealtimeMirror && hasAnyAxis) : (isSymmetryX && hasAnyAxis);
+
     if (isMirrorActive) {
-      const activeSymConfig = symmetryConfig || {
-        axis: 'X' as const,
-        direction: '+ to -' as const,
-        originMode: 'mesh_origin' as const,
-        locatorValue: 0,
-        activeRealtimeMirror: true,
-        showVirtualCursorPlane: false,
-      };
-      const mirrored = SymmetryEngine.getMirroredCoord(x, y, activeSymConfig, layer.canvas.width, layer.canvas.height);
-      if (!selectionMask || !selectionMask.active || SelectionTool.isPointInSelection(mirrored.x, mirrored.y, selectionMask)) {
-        applyDabAt(mirrored.x, mirrored.y);
+      const activeAxes: SymmetryAxis[] = [];
+      if (axes.X) activeAxes.push('X');
+      if (axes.Y) activeAxes.push('Y');
+      if (axes.Z) activeAxes.push('Z');
+
+      const mirroredCoords: { x: number; y: number }[] = [];
+
+      activeAxes.forEach(ax => {
+        const subCfg: SymmetryConfig = {
+          axis: ax,
+          direction: symmetryConfig?.direction || '+ to -',
+          originMode: symmetryConfig?.originMode || 'mesh_origin',
+          locatorValue: symmetryConfig?.locatorValue ?? 0,
+          activeRealtimeMirror: true,
+          showVirtualCursorPlane: false,
+          axes: axes,
+        };
+        const pt = SymmetryEngine.getMirroredCoord(x, y, subCfg, layer.canvas.width, layer.canvas.height);
+        mirroredCoords.push(pt);
+      });
+
+      // Diagonal cross-mirror if both X and Y are checked
+      if (axes.X && axes.Y) {
+        const xCfg = { ...symmetryConfig, axis: 'X' as const } as SymmetryConfig;
+        const yCfg = { ...symmetryConfig, axis: 'Y' as const } as SymmetryConfig;
+        const ptX = SymmetryEngine.getMirroredCoord(x, y, xCfg, layer.canvas.width, layer.canvas.height);
+        const ptXY = SymmetryEngine.getMirroredCoord(ptX.x, ptX.y, yCfg, layer.canvas.width, layer.canvas.height);
+        mirroredCoords.push(ptXY);
       }
+
+      mirroredCoords.forEach(m => {
+        if (!selectionMask || !selectionMask.active || SelectionTool.isPointInSelection(m.x, m.y, selectionMask)) {
+          applyDabAt(m.x, m.y);
+        }
+      });
     }
 
     updateCompositeTexture();
@@ -876,18 +1239,290 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         />
       )}
 
-      {/* Viewport Camera & Layout Selector (Perspective vs Quad View) */}
-      <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 bg-[#252525]/90 px-2 py-1 rounded border border-[#444] shadow-md backdrop-blur-xs select-none">
-        <LayoutGrid className="w-3.5 h-3.5 text-[#3d7fb8]" />
-        <select
-          value={viewLayout}
-          onChange={(e) => onSelectViewLayout ? onSelectViewLayout(e.target.value as any) : setInternalViewLayout(e.target.value as any)}
-          className="bg-[#1e1e1e] border border-[#555] text-white text-[11px] rounded px-1.5 py-0.5 outline-none font-medium cursor-pointer"
-          title="Viewport Layout: Perspective View vs Quad View (Blender 4-way)"
-        >
-          <option value="perspective">Perspective View</option>
-          <option value="quad">Quad View (4-Way)</option>
-        </select>
+      {/* Top Controls: Viewport Layout & HDRI Environment Settings */}
+      <div className="absolute top-3 left-3 z-30 flex items-center gap-1.5 select-none">
+        <div className="flex items-center gap-1.5 bg-[#252525]/90 px-2 py-1 rounded border border-[#444] shadow-md backdrop-blur-xs">
+          <LayoutGrid className="w-3.5 h-3.5 text-[#3d7fb8]" />
+          <select
+            value={viewLayout}
+            onChange={(e) => onSelectViewLayout ? onSelectViewLayout(e.target.value as any) : setInternalViewLayout(e.target.value as any)}
+            className="bg-[#1e1e1e] border border-[#555] text-white text-[11px] rounded px-1.5 py-0.5 outline-none font-medium cursor-pointer"
+            title="Viewport Layout: Perspective View vs Quad View (Blender 4-way)"
+          >
+            <option value="perspective">Perspective View</option>
+            <option value="quad">Quad View (4-Way)</option>
+          </select>
+        </div>
+
+        {/* HDRI Environment & Reflection Controls Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowHdriPopover(p => !p)}
+            className={`px-2 py-1 rounded border text-[11px] font-medium flex items-center gap-1.5 transition-colors shadow-md backdrop-blur-xs ${
+              hdri.enabled
+                ? 'bg-[#1b3a5a] text-[#89b4fa] border-[#3d7fb8]'
+                : 'bg-[#252525]/90 text-[#aaa] border-[#444] hover:text-white'
+            }`}
+            title="HDRI Reflections, Equirectangular Environment & Viewport Lighting"
+          >
+            <Sun className={`w-3.5 h-3.5 ${hdri.enabled ? 'text-[#ffc83b]' : 'text-[#888]'}`} />
+            <span>HDRI {hdri.enabled ? (hdri.lightViewport ? 'Light+Refl' : 'Refl Only') : 'Off'}</span>
+          </button>
+
+          {showHdriPopover && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-[#282828] border border-[#555] rounded-md shadow-2xl p-2.5 z-50 text-[11px] text-[#ccc] space-y-2 cs5-outset">
+              <div className="flex items-center justify-between pb-1.5 border-b border-[#444]">
+                <span className="font-bold text-[#eee] flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#3d7fb8]" />
+                  HDRI Environment
+                </span>
+                <label className="flex items-center gap-1 text-[10px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hdri.enabled}
+                    onChange={(e) => updateHdri({ enabled: e.target.checked })}
+                    className="accent-[#3d7fb8]"
+                  />
+                  <span>Active</span>
+                </label>
+              </div>
+
+              {/* Equirectangular Map Preset */}
+              <div className="space-y-1">
+                <label className="text-[10px] text-[#aaa] block">Environment Map:</label>
+                <select
+                  value={hdri.preset}
+                  onChange={(e) => updateHdri({ preset: e.target.value as any })}
+                  className="w-full bg-[#1e1e1e] border border-[#555] text-white px-1.5 py-0.5 rounded text-[10px]"
+                >
+                  <option value="studio">Studio Neutral Softbox</option>
+                  <option value="sunset">Warm Golden Sunset</option>
+                  <option value="cyberpunk">Cyberpunk Neon Horizon</option>
+                  <option value="outdoor">Daylight Sky &amp; Horizon</option>
+                  <option value="custom">Custom Image Upload</option>
+                </select>
+              </div>
+
+              {hdri.preset === 'custom' && (
+                <div className="space-y-1 pt-1">
+                  <label className="text-[10px] text-[#aaa] block">Upload Panorama Image:</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          if (ev.target?.result) {
+                            updateHdri({ customUrl: ev.target.result as string });
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="w-full text-[10px] text-[#888]"
+                  />
+                </div>
+              )}
+
+              {/* Checkbox: Use HDRI to light main viewport vs reflections only */}
+              <label className="flex items-center gap-2 p-1.5 bg-[#202020] rounded border border-[#3c3c3c] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hdri.lightViewport}
+                  onChange={(e) => updateHdri({ lightViewport: e.target.checked })}
+                  className="accent-[#3d7fb8]"
+                />
+                <span className="text-[10px] text-[#eee] leading-tight">
+                  Use HDRI to light main viewport
+                  <span className="block text-[9px] text-[#888]">
+                    {hdri.lightViewport ? 'Full scene irradiance lighting' : 'Reflections only (3-point lights active)'}
+                  </span>
+                </span>
+              </label>
+
+              {/* Checkbox: Blurred Panoramic Background */}
+              <label className="flex items-center gap-2 p-1.5 bg-[#202020] rounded border border-[#3c3c3c] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hdri.blurredBackground}
+                  onChange={(e) => updateHdri({ blurredBackground: e.target.checked })}
+                  className="accent-[#3d7fb8]"
+                />
+                <span className="text-[10px] text-[#eee]">Blurred Background Map</span>
+              </label>
+
+              {/* Sliders: Blur & Reflection Intensity */}
+              {hdri.blurredBackground && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-[#aaa]">Background Blur:</span>
+                    <span className="font-mono text-[#89b4fa]">{Math.round(hdri.backgroundBlur * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={hdri.backgroundBlur}
+                    onChange={(e) => updateHdri({ backgroundBlur: Number(e.target.value) })}
+                    className="w-full accent-[#3d7fb8] h-1.5 cursor-pointer"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-[#aaa]">Reflection Intensity:</span>
+                  <span className="font-mono text-[#a6e3a1]">{hdri.intensity.toFixed(1)}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="2.5"
+                  step="0.1"
+                  value={hdri.intensity}
+                  onChange={(e) => updateHdri({ intensity: Number(e.target.value) })}
+                  className="w-full accent-[#a6e3a1] h-1.5 cursor-pointer"
+                />
+              </div>
+
+              <div className="text-[9px] text-[#777] font-mono border-t border-[#444] pt-1 leading-tight">
+                Reflections sampled via R = reflect(-V, N)
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bloom Post-Processing Pass Controls Button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowBloomPopover(p => !p)}
+            className={`px-2 py-1 rounded border text-[11px] font-medium flex items-center gap-1.5 transition-colors shadow-md backdrop-blur-xs cursor-pointer ${
+              bloom.enabled
+                ? 'bg-[#40192e] text-[#f49bb8] border-[#ec4899]'
+                : 'bg-[#252525]/90 text-[#aaa] border-[#444] hover:text-white'
+            }`}
+            title="UnrealBloomPass Post-Processing: Enhance glowing emissive materials"
+          >
+            <Zap className={`w-3.5 h-3.5 ${bloom.enabled ? 'text-[#ec4899] animate-pulse' : 'text-[#888]'}`} />
+            <span>Bloom {bloom.enabled ? `${bloom.strength.toFixed(1)}x` : 'Off'}</span>
+          </button>
+
+          {showBloomPopover && (
+            <div className="absolute top-full left-0 mt-1 w-64 bg-[#282828] border border-[#555] rounded-md shadow-2xl p-2.5 z-50 text-[11px] text-[#ccc] space-y-2 cs5-outset">
+              <div className="flex items-center justify-between pb-1.5 border-b border-[#444]">
+                <span className="font-bold text-[#eee] flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-[#ec4899]" />
+                  Bloom Post-Processing
+                </span>
+                <label className="flex items-center gap-1 text-[10px] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={bloom.enabled}
+                    onChange={(e) => updateBloom({ enabled: e.target.checked })}
+                    className="accent-[#ec4899]"
+                  />
+                  <span>Active</span>
+                </label>
+              </div>
+
+              {/* Bloom Strength */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-[#aaa]">Bloom Strength:</span>
+                  <span className="font-mono text-[#ec4899]">{bloom.strength.toFixed(2)}x</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="3.0"
+                  step="0.05"
+                  value={bloom.strength}
+                  onChange={(e) => updateBloom({ strength: Number(e.target.value) })}
+                  className="w-full accent-[#ec4899] h-1.5 cursor-pointer"
+                />
+              </div>
+
+              {/* Bloom Radius */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-[#aaa]">Bloom Radius:</span>
+                  <span className="font-mono text-[#89b4fa]">{bloom.radius.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="1.5"
+                  step="0.05"
+                  value={bloom.radius}
+                  onChange={(e) => updateBloom({ radius: Number(e.target.value) })}
+                  className="w-full accent-[#3d7fb8] h-1.5 cursor-pointer"
+                />
+              </div>
+
+              {/* Bloom Threshold */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="text-[#aaa]">Luminance Threshold:</span>
+                  <span className="font-mono text-[#a6e3a1]">{bloom.threshold.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.0"
+                  max="1.0"
+                  step="0.02"
+                  value={bloom.threshold}
+                  onChange={(e) => updateBloom({ threshold: Number(e.target.value) })}
+                  className="w-full accent-[#a6e3a1] h-1.5 cursor-pointer"
+                />
+              </div>
+
+              {/* Quick Presets */}
+              <div className="pt-1.5 border-t border-[#444] space-y-1">
+                <span className="text-[9px] text-[#888] uppercase tracking-wider block font-bold">Presets:</span>
+                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                  <button
+                    onClick={() => updateBloom({ enabled: true, strength: 1.4, radius: 0.45, threshold: 0.15 })}
+                    className="px-1.5 py-0.5 bg-[#333] hover:bg-[#444] text-[#eee] rounded border border-[#555] text-left cursor-pointer"
+                  >
+                    Radiant Neon
+                  </button>
+                  <button
+                    onClick={() => updateBloom({ enabled: true, strength: 0.8, radius: 0.3, threshold: 0.3 })}
+                    className="px-1.5 py-0.5 bg-[#333] hover:bg-[#444] text-[#eee] rounded border border-[#555] text-left cursor-pointer"
+                  >
+                    Soft Glow
+                  </button>
+                  <button
+                    onClick={() => updateBloom({ enabled: true, strength: 2.5, radius: 0.8, threshold: 0.05 })}
+                    className="px-1.5 py-0.5 bg-[#333] hover:bg-[#444] text-[#eee] rounded border border-[#555] text-left cursor-pointer"
+                  >
+                    Cyberpunk Max
+                  </button>
+                  <button
+                    onClick={() => updateBloom({ enabled: true, strength: 0.4, radius: 0.2, threshold: 0.5 })}
+                    className="px-1.5 py-0.5 bg-[#333] hover:bg-[#444] text-[#eee] rounded border border-[#555] text-left cursor-pointer"
+                  >
+                    Subtle Shimmer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Physical Selection Shading Status in 3D Viewport */}
+        {selectionMask && selectionMask.active && (
+          <div className="bg-[#141824]/90 text-[#89b4fa] font-mono text-[10px] px-2 py-1 rounded border border-[#3d7fb8] shadow-md flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#a6e3a1] animate-pulse" />
+            <span className="font-bold text-[#eee]">Selection Mask:</span>
+            <span className="text-[#a6e3a1]">Shaded Light (Editable)</span>
+            <span className="text-[#666]">|</span>
+            <span className="text-[#aaa]">Shaded Dark (Protected)</span>
+          </div>
+        )}
       </div>
 
       {/* Quad Viewport Overlays when in Quad View Mode */}

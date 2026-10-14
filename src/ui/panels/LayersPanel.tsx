@@ -43,6 +43,7 @@ interface LayersPanelProps {
   onConvertToBump?: (layerId: string) => void;
   onConvertToNormal?: (layerId: string) => void;
   onConvertToClipMask?: (layerId: string) => void;
+  onConvertToEmissive?: (layerId: string) => void;
 }
 
 const BLEND_MODES: BlendMode[] = [
@@ -77,6 +78,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onConvertToBump,
   onConvertToNormal,
   onConvertToClipMask,
+  onConvertToEmissive,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -376,6 +378,19 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
             >
               Convert to Alpha Clip Mask
+            </button>
+          )}
+
+          {onConvertToEmissive && (
+            <button
+              onClick={() => {
+                onConvertToEmissive(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#ffb86c] flex items-center justify-between"
+            >
+              <span>Convert to Emissive (Glow)</span>
+              <span className="text-[9px] font-mono text-[#ffb86c]/80">BLOOM</span>
             </button>
           )}
 

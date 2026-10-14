@@ -94,6 +94,27 @@ export function createShaderNode(type: string, id: string, x = 120, y = 120): Gr
         },
       };
 
+    case 'vector_transform':
+      return {
+        id,
+        type: 'vector_transform',
+        title: 'Vector Transform',
+        x,
+        y,
+        inputs: [
+          { id: 'vector', name: 'Vector', type: 'vector', value: [0, 0, 0] },
+        ],
+        outputs: [
+          { id: 'vector_out', name: 'Vector', type: 'vector' },
+        ],
+        properties: {
+          transform_type: 'Vector',
+          convert_from: 'World',
+          convert_to: 'Object',
+          blender_type: 'ShaderNodeVectorTransform',
+        },
+      };
+
     case 'color_ramp':
       return {
         id,

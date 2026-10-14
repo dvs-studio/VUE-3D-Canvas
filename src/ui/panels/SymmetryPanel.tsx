@@ -49,26 +49,74 @@ export const SymmetryPanel: React.FC<SymmetryPanelProps> = ({
         </span>
       </div>
 
-      {/* Axis Selection (X, Y, Z) */}
-      <div className="space-y-1.5 bg-[#333] p-2.5 rounded border border-[#444]">
-        <label className="text-[11px] font-medium text-[#aaa] block uppercase tracking-wider text-[10px]">
-          Symmetry Axis
-        </label>
-        <div className="grid grid-cols-3 gap-1.5">
-          {(['X', 'Y', 'Z'] as SymmetryAxis[]).map((ax) => (
+      {/* Brush Symmetry Multi-Axis Checkboxes */}
+      <div className="space-y-2 bg-[#333] p-2.5 rounded border border-[#444]">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-medium text-[#aaa] block uppercase tracking-wider text-[10px]">
+            Brush Symmetry Axes
+          </label>
+          <div className="flex gap-1">
             <button
-              key={ax}
               type="button"
-              onClick={() => onChangeConfig({ axis: ax })}
-              className={`py-1.5 rounded text-xs font-bold border transition-colors cursor-pointer text-center ${
-                config.axis === ax
-                  ? 'bg-[#3d7fb8] text-white border-[#5ca2db] shadow-xs'
-                  : 'bg-[#262626] text-[#aaa] border-[#444] hover:bg-[#303030] hover:text-white'
-              }`}
+              onClick={() => {
+                const allOn = { X: true, Y: true, Z: true };
+                onChangeConfig({ axes: allOn, activeRealtimeMirror: true });
+              }}
+              className="text-[9px] px-1.5 py-0.5 bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#89b4fa] rounded border border-[#444]"
             >
-              {ax}-Axis
+              All
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => {
+                const allOff = { X: false, Y: false, Z: false };
+                onChangeConfig({ axes: allOff, activeRealtimeMirror: false });
+              }}
+              className="text-[9px] px-1.5 py-0.5 bg-[#2a2a2a] hover:bg-[#3a3a3a] text-[#f38ba8] rounded border border-[#444]"
+            >
+              None (Off)
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
+          {(['X', 'Y', 'Z'] as SymmetryAxis[]).map((ax) => {
+            const isChecked = Boolean(config.axes?.[ax]);
+            return (
+              <label
+                key={ax}
+                className={`py-1.5 px-2 rounded text-xs font-bold border flex items-center justify-center gap-1.5 transition-colors cursor-pointer select-none ${
+                  isChecked
+                    ? 'bg-[#1e3a5f] text-[#89b4fa] border-[#3d7fb8] shadow-xs'
+                    : 'bg-[#262626] text-[#777] border-[#444] hover:bg-[#303030] hover:text-[#bbb]'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    const newAxes = { ...(config.axes || { X: true, Y: false, Z: false }), [ax]: e.target.checked };
+                    const hasAny = newAxes.X || newAxes.Y || newAxes.Z;
+                    onChangeConfig({
+                      axes: newAxes,
+                      activeRealtimeMirror: hasAny,
+                      axis: ax,
+                    });
+                  }}
+                  className="accent-[#3d7fb8] rounded"
+                />
+                <span>{ax}-Axis</span>
+              </label>
+            );
+          })}
+        </div>
+
+        <div className="text-[10px] text-[#888] font-mono leading-tight">
+          {(!config.axes?.X && !config.axes?.Y && !config.axes?.Z) ? (
+            <span className="text-[#f38ba8]">● SYMMETRY DISABLED (All axes unchecked)</span>
+          ) : (
+            <span className="text-[#a6e3a1]">● Active mirroring on: {[config.axes?.X && 'X', config.axes?.Y && 'Y', config.axes?.Z && 'Z'].filter(Boolean).join(', ')}</span>
+          )}
         </div>
       </div>
 

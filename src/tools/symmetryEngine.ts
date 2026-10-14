@@ -18,6 +18,11 @@ export interface SymmetryConfig {
   locatorValue: number; // -2.0 to 2.0 (slider / number coordinate along the axis)
   activeRealtimeMirror: boolean; // Bilateral mirror painting
   showVirtualCursorPlane: boolean; // Visual 3D slice plane
+  axes: {
+    X: boolean;
+    Y: boolean;
+    Z: boolean;
+  };
 }
 
 export class SymmetryEngine {
@@ -143,5 +148,52 @@ export class SymmetryEngine {
       const mirrorY = w - 1 - x;
       return { x: mirrorX, y: mirrorY };
     }
+  }
+
+  /**
+   * Calculates all mirrored UV coordinates based on checked axes in config.axes.
+   * If all symmetry axes are unchecked, returns an empty array (turning symmetry off completely).
+   */
+  public static getMirroredCoords(
+    x: number,
+    y: number,
+    config: SymmetryConfig,
+    w = 1024,
+    h = 1024
+  ): Array<{ x: number; y: number }> {
+    const coords: Array<{ x: number; y: number }> = [];
+    const axes = config.axes || {
+      X: config.axis === 'X',
+      Y: config.axis === 'Y',
+      Z: config.axis === 'Z',
+    };
+
+    // If all axes are unchecked, symmetry is turned off completely
+    if (!axes.X && !axes.Y && !axes.Z) {
+      return coords;
+    }
+
+    const pivotX = (0.5 + config.locatorValue * 0.25) * w;
+    const pivotY = (0.5 + config.locatorValue * 0.25) * h;
+
+    const mirrorX = Math.max(0, Math.min(w - 1, 2 * pivotX - x));
+    const mirrorY = Math.max(0, Math.min(h - 1, 2 * pivotY - y));
+
+    if (axes.X) {
+      coords.push({ x: mirrorX, y });
+    }
+    if (axes.Y) {
+      coords.push({ x, y: mirrorY });
+    }
+    if (axes.X && axes.Y) {
+      coords.push({ x: mirrorX, y: mirrorY });
+    }
+    if (axes.Z) {
+      const zX = Math.max(0, Math.min(w - 1, h - 1 - y));
+      const zY = Math.max(0, Math.min(h - 1, w - 1 - x));
+      coords.push({ x: zX, y: zY });
+    }
+
+    return coords;
   }
 }

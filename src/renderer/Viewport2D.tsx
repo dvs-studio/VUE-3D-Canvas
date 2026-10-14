@@ -17,6 +17,7 @@ import {
 import { BrushEngine } from '../tools/brushEngine';
 import { PenVectorTool } from '../tools/penVectorTool';
 import { SelectionTool } from '../tools/selectionTool';
+import { MaskEngine } from '../tools/maskEngine';
 import { FillSuite } from '../tools/fillSuite';
 import { UndoRingBuffer } from '../core/history';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
@@ -221,12 +222,101 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       }
     }
 
-    // 2. Render Selection Marching Ants
+    // 2. Physical Selection Shading (Protected area shaded dark, Editable area shaded light)
     if (selectionMask && selectionMask.active) {
       ctx.save();
+
+      // Draw dark protective tint on uneditable area
+      if ((selectionMask.type === 'brush' || selectionMask.type === 'bitmap') && selectionMask.maskCanvas) {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 1024;
+        offCanvas.height = 1024;
+        const offCtx = offCanvas.getContext('2d');
+        if (offCtx) {
+          offCtx.fillStyle = 'rgba(8, 12, 22, 0.65)';
+          offCtx.fillRect(0, 0, 1024, 1024);
+
+          if (!selectionMask.inverted) {
+            // Cut out the painted mask area (light = editable)
+            offCtx.globalCompositeOperation = 'destination-out';
+            offCtx.drawImage(selectionMask.maskCanvas, 0, 0, 1024, 1024);
+          } else {
+            // Keep only inside the mask as dark (protected)
+            offCtx.globalCompositeOperation = 'destination-in';
+            offCtx.drawImage(selectionMask.maskCanvas, 0, 0, 1024, 1024);
+          }
+          ctx.drawImage(offCanvas, 0, 0);
+        }
+      } else {
+        // Geometric selections: rect, ellipse, lasso
+        ctx.fillStyle = 'rgba(8, 12, 22, 0.65)';
+        ctx.beginPath();
+        ctx.rect(0, 0, 1024, 1024); // Full canvas
+
+        if (!selectionMask.inverted) {
+          // Cut out editable area using evenodd fill rule (inside becomes light, outside is dark)
+          if (selectionMask.type === 'rect') {
+            ctx.rect(
+              selectionMask.bounds.x,
+              selectionMask.bounds.y,
+              selectionMask.bounds.width,
+              selectionMask.bounds.height
+            );
+          } else if (selectionMask.type === 'ellipse') {
+            const rx = selectionMask.bounds.width / 2;
+            const ry = selectionMask.bounds.height / 2;
+            ctx.ellipse(
+              selectionMask.bounds.x + rx,
+              selectionMask.bounds.y + ry,
+              Math.max(1, rx),
+              Math.max(1, ry),
+              0, 0, Math.PI * 2
+            );
+          } else if (selectionMask.points.length > 2) {
+            ctx.moveTo(selectionMask.points[0].x, selectionMask.points[0].y);
+            for (let i = 1; i < selectionMask.points.length; i++) {
+              ctx.lineTo(selectionMask.points[i].x, selectionMask.points[i].y);
+            }
+            ctx.closePath();
+          }
+          ctx.fill('evenodd');
+        } else {
+          // Inverted: inside is uneditable (dark)
+          if (selectionMask.type === 'rect') {
+            ctx.fillRect(
+              selectionMask.bounds.x,
+              selectionMask.bounds.y,
+              selectionMask.bounds.width,
+              selectionMask.bounds.height
+            );
+          } else if (selectionMask.type === 'ellipse') {
+            const rx = selectionMask.bounds.width / 2;
+            const ry = selectionMask.bounds.height / 2;
+            ctx.beginPath();
+            ctx.ellipse(
+              selectionMask.bounds.x + rx,
+              selectionMask.bounds.y + ry,
+              Math.max(1, rx),
+              Math.max(1, ry),
+              0, 0, Math.PI * 2
+            );
+            ctx.fill();
+          } else if (selectionMask.points.length > 2) {
+            ctx.beginPath();
+            ctx.moveTo(selectionMask.points[0].x, selectionMask.points[0].y);
+            for (let i = 1; i < selectionMask.points.length; i++) {
+              ctx.lineTo(selectionMask.points[i].x, selectionMask.points[i].y);
+            }
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+      }
+
+      // High contrast marching ants border
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
+      ctx.setLineDash([5, 5]);
 
       if (selectionMask.type === 'rect') {
         ctx.strokeRect(selectionMask.bounds.x, selectionMask.bounds.y, selectionMask.bounds.width, selectionMask.bounds.height);
@@ -242,7 +332,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         for (let i = 1; i < selectionMask.points.length; i++) {
           ctx.lineTo(selectionMask.points[i].x, selectionMask.points[i].y);
         }
-        ctx.closePath();
+        if (selectionMask.points.length > 2) ctx.closePath();
         ctx.stroke();
       }
       ctx.restore();
@@ -357,7 +447,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       return;
     }
 
-    // Selection Drag Creation
+    // Selection Drag Creation (Rect Marquee)
     if (activeTool === 'marquee_rect') {
       onUpdateSelectionMask({
         active: true,
@@ -367,6 +457,73 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         inverted: false,
       });
       isPaintingRef.current = true;
+      return;
+    }
+
+    // Freehand Lasso Selection
+    if (activeTool === 'lasso') {
+      onUpdateSelectionMask({
+        active: true,
+        type: 'lasso',
+        points: [{ x, y }],
+        bounds: { x, y, width: 1, height: 1 },
+        inverted: false,
+      });
+      isPaintingRef.current = true;
+      return;
+    }
+
+    // Polygon Lasso Selection
+    if (activeTool === 'polygon_lasso') {
+      const currentPts = (selectionMask && selectionMask.type === 'lasso' && selectionMask.points) ? selectionMask.points : [];
+      if (currentPts.length > 2) {
+        const d0 = Math.hypot(x - currentPts[0].x, y - currentPts[0].y);
+        if (d0 < 18) {
+          // Close polygon lasso
+          drawOverlay();
+          return;
+        }
+      }
+      const pts = [...currentPts, { x, y }];
+      const minX = Math.min(...pts.map(p => p.x));
+      const maxX = Math.max(...pts.map(p => p.x));
+      const minY = Math.min(...pts.map(p => p.y));
+      const maxY = Math.max(...pts.map(p => p.y));
+      onUpdateSelectionMask({
+        active: true,
+        type: 'lasso',
+        points: pts,
+        bounds: { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) },
+        inverted: false,
+      });
+      drawOverlay();
+      return;
+    }
+
+    // Direct Mask Brush Painting
+    if (activeTool === 'mask_brush') {
+      isPaintingRef.current = true;
+      lastPointRef.current = { x, y };
+      lastPressureRef.current = pressure;
+      const baseMask = selectionMask || {
+        active: true,
+        type: 'brush' as const,
+        points: [],
+        bounds: { x: x - brush.size / 2, y: y - brush.size / 2, width: brush.size, height: brush.size },
+        inverted: false,
+      };
+      const updated = MaskEngine.paintMaskDab(
+        baseMask,
+        x,
+        y,
+        brush.size,
+        brush.hardness || 50,
+        false,
+        1024,
+        1024
+      );
+      onUpdateSelectionMask(updated);
+      drawOverlay();
       return;
     }
 
@@ -425,6 +582,41 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
 
+    // Mask Brush Dragging
+    if (activeTool === 'mask_brush' && lastPointRef.current) {
+      const dist = Math.hypot(x - lastPointRef.current.x, y - lastPointRef.current.y);
+      const stepSize = Math.max(2, brush.size * 0.25);
+      const steps = Math.max(1, Math.floor(dist / stepSize));
+      let currentMask = selectionMask || {
+        active: true,
+        type: 'brush' as const,
+        points: [],
+        bounds: { x: x - brush.size / 2, y: y - brush.size / 2, width: brush.size, height: brush.size },
+        inverted: false,
+      };
+
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const ix = lastPointRef.current.x + (x - lastPointRef.current.x) * t;
+        const iy = lastPointRef.current.y + (y - lastPointRef.current.y) * t;
+        currentMask = MaskEngine.paintMaskDab(
+          currentMask,
+          ix,
+          iy,
+          brush.size,
+          brush.hardness || 50,
+          false,
+          1024,
+          1024
+        );
+      }
+      lastPointRef.current = { x, y };
+      lastPressureRef.current = pressure;
+      onUpdateSelectionMask(currentMask);
+      drawOverlay();
+      return;
+    }
+
     if (activeTool === 'marquee_rect' && selectionMask) {
       const w = x - selectionMask.bounds.x;
       const h = y - selectionMask.bounds.y;
@@ -436,6 +628,21 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           width: Math.abs(w),
           height: Math.abs(h),
         },
+      });
+      drawOverlay();
+      return;
+    }
+
+    if (activeTool === 'lasso' && selectionMask) {
+      const pts = [...selectionMask.points, { x, y }];
+      const minX = Math.min(...pts.map(p => p.x));
+      const maxX = Math.max(...pts.map(p => p.x));
+      const minY = Math.min(...pts.map(p => p.y));
+      const maxY = Math.max(...pts.map(p => p.y));
+      onUpdateSelectionMask({
+        ...selectionMask,
+        points: pts,
+        bounds: { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) },
       });
       drawOverlay();
       return;
@@ -642,6 +849,27 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
               title="UV Wireframe Overlay Opacity"
             />
             <span className="text-[9px] font-mono text-[#38bdf8]">{Math.round(uvOverlayOpacity * 100)}%</span>
+          </div>
+        )}
+
+        {/* Physical Selection Shading Status Badge */}
+        {selectionMask && selectionMask.active && (
+          <div className="flex items-center gap-1.5 bg-[#141824] px-2 py-0.5 rounded border border-[#3d7fb8] text-[10px] shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-[#a6e3a1] animate-pulse" />
+            <span className="font-bold text-[#89b4fa]">SELECTION:</span>
+            <span className="text-[#a6e3a1] font-mono">Light = Editable</span>
+            <span className="text-[#666]">|</span>
+            <span className="text-[#aaa] font-mono">Dark = Protected</span>
+          </div>
+        )}
+
+        {/* Mask Brush Active Mode Badge */}
+        {activeTool === 'mask_brush' && (
+          <div className="flex items-center gap-1.5 bg-[#2a1a12] px-2 py-0.5 rounded border border-[#e5a038] text-[10px] shadow-xs">
+            <span className="font-bold text-[#f5a942]">MASK BRUSH:</span>
+            <span className="text-[#eee]">Paint = Light (Editable)</span>
+            <span className="text-[#666]">|</span>
+            <span className="text-[#bbb]">Erase = Dark (Protected)</span>
           </div>
         )}
       </div>

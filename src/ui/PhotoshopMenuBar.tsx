@@ -6,7 +6,8 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye } from 'lucide-react';
+import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette } from 'lucide-react';
+import { ThemeMode } from '../core/types';
 
 interface PhotoshopMenuBarProps {
   onNewProject: () => void;
@@ -29,6 +30,7 @@ interface PhotoshopMenuBarProps {
   onConvertToBump?: () => void;
   onConvertToNormal?: () => void;
   onConvertToClipMask?: () => void;
+  onConvertToEmissive?: () => void;
   onOpenUndoSettings?: () => void;
   onOpenHelpPDF?: () => void;
   onOpenTutorialPDF?: () => void;
@@ -38,6 +40,8 @@ interface PhotoshopMenuBarProps {
   onNumpadKey: (key: string, ctrl: boolean) => void;
   selectedModelKey?: string;
   onSelectModelKey?: (key: string) => void;
+  currentTheme?: ThemeMode;
+  onChangeTheme?: (theme: ThemeMode) => void;
 }
 
 export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
@@ -61,6 +65,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onConvertToBump,
   onConvertToNormal,
   onConvertToClipMask,
+  onConvertToEmissive,
   onOpenUndoSettings,
   onOpenHelpPDF,
   onOpenTutorialPDF,
@@ -70,6 +75,8 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onNumpadKey,
   selectedModelKey = 'suzanne',
   onSelectModelKey,
+  currentTheme = 'cs5',
+  onChangeTheme,
 }) => {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -385,6 +392,16 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                   Convert to Alpha Clip Mask
                 </button>
               )}
+
+              {onConvertToEmissive && (
+                <button
+                  onClick={() => { onConvertToEmissive(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#ffb86c] flex items-center justify-between"
+                >
+                  <span>Convert to Emissive (Glow)</span>
+                  <span className="text-[9px] font-mono text-[#ffb86c]/80">BLOOM</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -401,17 +418,26 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           </button>
           {openMenu === 'window' && (
             <div 
-              className="absolute top-full left-0 mt-0.5 w-48 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
+              className="absolute top-full left-0 mt-0.5 w-56 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
               onMouseLeave={close}
             >
-              {['layers', 'colorWheel', 'brushes', 'navigator', 'symmetry', 'masking', 'nodeGraph', 'history', 'numpad'].map((panel) => (
+              {[
+                { id: 'layers', label: 'Texture Layers Manager' },
+                { id: 'colorWheel', label: 'Color Palette & Wheel' },
+                { id: 'brushes', label: 'Brush Engine & Presets' },
+                { id: 'navigator', label: 'Viewport Navigator' },
+                { id: 'symmetry', label: 'Symmetry & Cloning Studio' },
+                { id: 'masking', label: 'Masking & Selection Studio' },
+                { id: 'nodeGraph', label: 'Node Editor (Blender 2.8+)' },
+                { id: 'history', label: 'Undo History Ring Buffer' },
+              ].map((panel) => (
                 <button
-                  key={panel}
-                  onClick={() => { onTogglePanel(panel); close(); }}
+                  key={panel.id}
+                  onClick={() => { onTogglePanel(panel.id); close(); }}
                   className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between"
                 >
-                  <span className="capitalize">{panel === 'masking' ? 'Mask Painting' : panel.replace(/([A-Z])/g, ' $1')}</span>
-                  {activePanels[panel] && <span className="text-[#a6e3a1]">✓</span>}
+                  <span>{panel.label}</span>
+                  {activePanels[panel.id] && <span className="text-[#a6e3a1]">✓</span>}
                 </button>
               ))}
             </div>
@@ -446,13 +472,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               >
                 <span>Tutorial Guide (tutorial.pdf)</span>
                 <span className="text-[#89b4fa] font-mono text-[10px]">PDF</span>
-              </button>
-              <button
-                onClick={() => { if (onDownloadHelpDocx) onDownloadHelpDocx(); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#ffd175]"
-              >
-                <span>Help Document Source (help.docx)</span>
-                <span className="font-mono text-[10px]">DOCX</span>
               </button>
               <div className="my-1 border-t border-[#444]" />
               <button
@@ -501,6 +520,25 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           <Camera className="w-3 h-3 text-[#3d7fb8]" />
           <span>Projection [F8]</span>
         </button>
+
+        {/* Theme Selector Dropdown selectable in a drop down after projection [F8] button */}
+        {onChangeTheme && (
+          <div className="flex items-center gap-1 bg-[#262626] px-2 py-0.5 rounded border border-[#484848] cs5-inset">
+            <Palette className="w-3 h-3 text-[#e5a038]" />
+            <span className="text-[10px] text-[#aaa] font-medium">Theme:</span>
+            <select
+              value={currentTheme}
+              onChange={(e) => onChangeTheme(e.target.value as ThemeMode)}
+              className="bg-[#2e2e2e] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[10px] outline-none font-medium cursor-pointer"
+              title="Switch Visual Theme Skin"
+            >
+              <option value="cs5">Photoshop CS5 Dark</option>
+              <option value="bw78">78% Black &amp; White Minimal</option>
+              <option value="modern">Modern Studio</option>
+              <option value="ps2022">Photoshop 2022</option>
+            </select>
+          </div>
+        )}
 
         <button
           onClick={onOpenAbout}

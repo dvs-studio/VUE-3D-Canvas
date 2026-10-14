@@ -23,8 +23,11 @@ export class MaskEngine {
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
 
-    if (mask.type === 'rect') {
+    if ((mask.type === 'brush' || mask.type === 'bitmap') && mask.maskCanvas) {
+      ctx.drawImage(mask.maskCanvas, 0, 0, w, h);
+    } else if (mask.type === 'rect') {
       ctx.rect(mask.bounds.x, mask.bounds.y, mask.bounds.width, mask.bounds.height);
+      ctx.fill();
     } else if (mask.type === 'ellipse') {
       const rx = mask.bounds.width / 2;
       const ry = mask.bounds.height / 2;
@@ -35,14 +38,15 @@ export class MaskEngine {
         Math.max(1, ry),
         0, 0, Math.PI * 2
       );
+      ctx.fill();
     } else if (mask.points.length > 2) {
       ctx.moveTo(mask.points[0].x, mask.points[0].y);
       for (let i = 1; i < mask.points.length; i++) {
         ctx.lineTo(mask.points[i].x, mask.points[i].y);
       }
       ctx.closePath();
+      ctx.fill();
     }
-    ctx.fill();
 
     if (mask.inverted) {
       // Invert mask
@@ -152,14 +156,49 @@ export class MaskEngine {
   }
 
   /**
-   * Applies box/gaussian blur to soften mask edges (feathering)
+   * Directly paints or erases with a soft/hard brush on a SelectionMask bitmap
    */
-  public static blurMask(mask: SelectionMask, radius = 8): HTMLCanvasElement {
-    const cvs = this.rasterizeMask(mask);
+  public static paintMaskDab(
+    mask: SelectionMask,
+    x: number,
+    y: number,
+    size: number,
+    hardness: number,
+    erase = false,
+    w = 1024,
+    h = 1024
+  ): SelectionMask {
+    let cvs = mask.maskCanvas;
+    if (!cvs) {
+      cvs = this.rasterizeMask(mask, w, h);
+    }
     const ctx = cvs.getContext('2d')!;
-    ctx.filter = `blur(${Math.max(1, Math.min(50, radius))}px)`;
-    ctx.drawImage(cvs, 0, 0);
-    ctx.filter = 'none';
-    return cvs;
+    ctx.save();
+    ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+
+    const r = Math.max(1, size / 2);
+    const innerR = Math.max(0, r * (hardness / 100));
+    const grad = ctx.createRadialGradient(x, y, innerR, x, y, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    return {
+      active: true,
+      type: 'brush',
+      points: [],
+      bounds: {
+        x: Math.max(0, Math.min(mask.bounds.x, x - r)),
+        y: Math.max(0, Math.min(mask.bounds.y, y - r)),
+        width: Math.min(w, Math.max(mask.bounds.width, x + r - mask.bounds.x)),
+        height: Math.min(h, Math.max(mask.bounds.height, y + r - mask.bounds.y)),
+      },
+      inverted: mask.inverted,
+      maskCanvas: cvs,
+    };
   }
 }
