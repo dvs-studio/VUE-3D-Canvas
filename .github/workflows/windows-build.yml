@@ -1,0 +1,16 @@
+build-windows:
+  runs-on: windows-latest
+
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: dtolnay/rust-toolchain@stable
+
+    - name: Build Release EXE
+      run: cargo build --release
+
+    - name: Upload EXE
+      uses: actions/upload-artifact@v4
+      with:
+        name: vue-3d-canvas-windows
+        path: target/release/*.exe
