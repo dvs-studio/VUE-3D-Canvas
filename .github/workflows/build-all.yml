@@ -1,0 +1,255 @@
+name: Build VUE 3D Canvas - Windows and WASM
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vue-3d-canvas-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --------------------------------------------------
+  # WINDOWS NATIVE RELEASE
+  # --------------------------------------------------
+
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify Cargo manifest
+        shell: pwsh
+        run: |
+          if (!(Test-Path "Cargo.toml")) {
+            throw "Cargo.toml was not found in the repository root."
+          }
+
+      - name: Build Windows release
+        run: cargo build --release --bin vue_3d_canvas
+
+      - name: Prepare Windows artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "windows-output" | Out-Null
+
+          $exe = "target/release/vue_3d_canvas.exe"
+
+          if (!(Test-Path $exe)) {
+            throw "Windows executable was not generated: $exe"
+          }
+
+          Copy-Item $exe "windows-output/"
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-3d-canvas-windows-x64
+          path: windows-output/
+          if-no-files-found: error
+
+  # --------------------------------------------------
+  # WEBASSEMBLY BUILD
+  # --------------------------------------------------
+
+  build-wasm:
+    name: Build Browser WASM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust and WASM target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - name: Verify Cargo manifest
+        run: |
+          set -euo pipefail
+
+          test -f Cargo.toml || {
+            echo "::error::Cargo.toml is missing from the repository root."
+            exit 1
+          }
+
+          test -f src/lib.rs || {
+            echo "::error::src/lib.rs is missing. Check the library source path."
+            exit 1
+          }
+
+      - name: Build WASM package
+        run: |
+          set -euo pipefail
+
+          wasm-pack build . \
+            --target web \
+            --release \
+            --out-dir "$GITHUB_WORKSPACE/self-host/wasm_pkg"
+
+      - name: Upload WASM package
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-3d-canvas-wasm
+          path: self-host/wasm_pkg/
+          if-no-files-found: error
+
+  # --------------------------------------------------
+  # FRONTEND BUILD
+  # --------------------------------------------------
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install dependencies and build
+        run: |
+          set -euo pipefail
+
+          if [ ! -f package.json ]; then
+            echo "No root package.json found; frontend build skipped."
+            exit 0
+          fi
+
+          if [ ! -f package-lock.json ]; then
+            echo "::error::package-lock.json is missing."
+            exit 1
+          fi
+
+          npm ci
+          npm run build
+
+          if [ ! -d dist ]; then
+            echo "::error::Expected frontend output directory 'dist' was not found."
+            exit 1
+          fi
+
+      - name: Upload frontend
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-3d-canvas-frontend
+          path: dist/
+          if-no-files-found: error
+
+  # --------------------------------------------------
+  # ASSEMBLE ALL OUTPUTS
+  # --------------------------------------------------
+
+  assemble:
+    name: Assemble Combined Build
+    runs-on: ubuntu-latest
+
+    needs:
+      - build-windows
+      - build-wasm
+      - build-frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download Windows executable
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-3d-canvas-windows-x64
+          path: self-host/windows/
+
+      - name: Download WASM package
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-3d-canvas-wasm
+          path: self-host/wasm_pkg/
+
+      - name: Download frontend if available
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: vue-3d-canvas-frontend
+          path: self-host/frontend/
+
+      - name: Create build information
+        run: |
+          set -euo pipefail
+
+          cat > self-host/BUILD-INFO.txt <<EOF
+          Project: VUE 3D Canvas
+          Source branch: $GITHUB_REF_NAME
+          Source commit: $GITHUB_SHA
+          Build date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          Contents:
+          windows/    - Windows native executable
+          wasm_pkg/   - WebAssembly package
+          frontend/   - Frontend build, if configured
+          EOF
+
+      - name: Upload combined build
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-3d-canvas-complete-build
+          path: self-host/
+          if-no-files-found: error
+
+      # ------------------------------------------------
+      # PUBLISH GENERATED OUTPUT TO A DEDICATED BRANCH
+      # ------------------------------------------------
+
+      - name: Publish self-host build branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin ci/self-host-built || true
+
+          git checkout --orphan generated-build
+          git rm -rf . >/dev/null 2>&1 || true
+
+          mkdir -p self-host
+
+          # Restore the generated output from the original build.
+          git checkout "${GITHUB_SHA}" -- self-host
+
+          git add -A self-host
+
+          if git diff --cached --quiet; then
+            echo "No generated changes to publish."
+            exit 0
+          fi
+
+          git commit -m "CI: publish complete Windows and WASM build"
+
+          git push origin HEAD:refs/heads/ci/self-host-built --force
