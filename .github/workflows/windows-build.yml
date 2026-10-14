@@ -1,16 +1,27 @@
-build-windows:
-  runs-on: windows-latest
+name: Build Windows
 
-  steps:
-    - uses: actions/checkout@v4
+on:
+  workflow_dispatch:
 
-    - uses: dtolnay/rust-toolchain@stable
+jobs:
+  build-windows:
+    runs-on: windows-latest
 
-    - name: Build Release EXE
-      run: cargo build --release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Upload EXE
-      uses: actions/upload-artifact@v4
-      with:
-        name: vue-3d-canvas-windows
-        path: target/release/*.exe
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Release EXE
+        run: cargo build --release
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-3d-canvas-windows
+          path: target/release/*.exe
