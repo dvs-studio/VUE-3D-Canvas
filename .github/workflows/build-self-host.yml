@@ -1,0 +1,90 @@
+name: Build self-hosted WASM and frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-self-host:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust (stable)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+
+      - name: Add wasm target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked || true
+
+      - name: Build wasm with wasm-pack
+        run: |
+          mkdir -p self-host
+          wasm-pack build \
+            --target web \
+            --release \
+            --out-dir ./self-host/wasm_pkg || true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend deps
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          fi
+
+      - name: Build frontend
+        run: |
+          if [ -f package.json ]; then
+            npm run build
+          fi
+
+      - name: Assemble self-host folder
+        run: |
+          mkdir -p self-host
+
+          if [ -d dist ]; then
+            rm -rf self-host/frontend
+            mkdir -p self-host/frontend
+            cp -r dist/* self-host/frontend/
+          fi
+
+      - name: Commit and push self-host to branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          git config user.name "${GIT_COMMITTER_NAME}"
+          git config user.email "${GIT_COMMITTER_EMAIL}"
+
+          git fetch origin ci/self-host-built || true
+
+          git checkout -B ci/self-host-built
+
+          git add self-host
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "CI: update self-host build"
+            git push origin ci/self-host-built --force-with-lease
+          fi
+          
