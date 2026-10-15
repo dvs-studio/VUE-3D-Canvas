@@ -43,6 +43,31 @@ export class PenVectorTool {
   }
 
   /**
+   * Samples points along the vector path for smooth stroke and stitch rendering
+   */
+  public getSampledPoints(step = 14): { x: number; y: number }[] {
+    if (!this.activePath || this.activePath.points.length < 2) return [];
+    const pts = this.activePath.points;
+    const sampled: { x: number; y: number }[] = [];
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const steps = Math.max(1, Math.ceil(dist / step));
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps;
+        sampled.push({
+          x: p1.x + (p2.x - p1.x) * t,
+          y: p1.y + (p2.y - p1.y) * t,
+        });
+      }
+    }
+    sampled.push(pts[pts.length - 1]);
+    return sampled;
+  }
+
+  /**
    * Action 1: Distribute brush paint along the path with custom spacing
    */
   public distributeBrushAlongPath(

@@ -32,8 +32,8 @@ interface ToolBoxProps {
   onResetColors: () => void;
   onChangePrimaryColor: (color: string) => void;
   onChangeSecondaryColor: (color: string) => void;
-  surfaceMode?: 'smooth' | 'hard' | 'default';
-  onSelectSurfaceMode?: (mode: 'smooth' | 'hard' | 'default') => void;
+  surfaceMode?: 'default' | 'smooth' | 'flat' | 'hard';
+  onSelectSurfaceMode?: (mode: 'default' | 'smooth' | 'flat') => void;
 }
 
 export const ToolBox: React.FC<ToolBoxProps> = ({
@@ -48,11 +48,6 @@ export const ToolBox: React.FC<ToolBoxProps> = ({
   surfaceMode = 'default',
   onSelectSurfaceMode,
 }) => {
-  const handleCycleSurfaceMode = () => {
-    if (!onSelectSurfaceMode) return;
-    const next = surfaceMode === 'default' ? 'smooth' : surfaceMode === 'smooth' ? 'hard' : 'default';
-    onSelectSurfaceMode(next);
-  };
   const tools: { id: ToolType; label: string; shortcut: string; icon: React.ReactNode }[] = [
     { id: 'brush', label: 'Brush Tool', shortcut: 'B', icon: <Paintbrush className="w-4 h-4" /> },
     { id: 'eraser', label: 'Eraser Tool', shortcut: 'E', icon: <Eraser className="w-4 h-4" /> },
@@ -92,22 +87,34 @@ export const ToolBox: React.FC<ToolBoxProps> = ({
           );
         })}
 
-        {/* Surface Mode Button directly under Zoom: switches between smooth, hard, default */}
-        <div className="w-full pt-1.5 border-t border-[#484848] flex flex-col items-center">
-          <button
-            onClick={handleCycleSurfaceMode}
-            title={`Surface Mesh Mode: ${surfaceMode.toUpperCase()} (Click to switch between Smooth, Hard, Default)`}
-            className={`w-7 h-7 rounded flex flex-col items-center justify-center transition-colors border text-[8px] font-mono font-bold ${
-              surfaceMode === 'smooth'
-                ? 'bg-[#2b3a4a] text-[#89b4fa] border-[#3d7fb8]'
-                : surfaceMode === 'hard'
-                ? 'bg-[#3d2b2b] text-[#f38ba8] border-[#a64040]'
-                : 'bg-[#282828] text-[#a6e3a1] border-[#444] hover:bg-[#333]'
-            }`}
-          >
-            <span>{surfaceMode === 'smooth' ? 'SMO' : surfaceMode === 'hard' ? 'HRD' : 'DEF'}</span>
-            <span className="text-[6.5px] opacity-70 leading-none">SURF</span>
-          </button>
+        {/* Surface Shading: Def, Smooth, Flat Toggle Buttons */}
+        <div className="w-full pt-1.5 border-t border-[#484848] flex flex-col items-center gap-1">
+          <div className="text-[6.5px] text-[#888] font-mono uppercase tracking-wider">SHADE</div>
+          <div className="flex flex-col gap-0.5 w-full items-center">
+            {(['default', 'smooth', 'flat'] as const).map(mode => {
+              const label = mode === 'default' ? 'Def' : mode === 'smooth' ? 'Smooth' : 'Flat';
+              const short = mode === 'default' ? 'Def' : mode === 'smooth' ? 'Smooth' : 'Flat';
+              const isActive = (surfaceMode === mode) || (mode === 'flat' && surfaceMode === 'hard');
+              return (
+                <button
+                  key={mode}
+                  onClick={() => onSelectSurfaceMode && onSelectSurfaceMode(mode)}
+                  title={`Blender-style Surface Shading: ${label}`}
+                  className={`w-7 py-0.5 rounded text-[7px] font-mono font-bold transition-colors border flex items-center justify-center truncate ${
+                    isActive
+                      ? mode === 'default'
+                        ? 'bg-[#1b4332] text-[#a6e3a1] border-[#2d6a4f]'
+                        : mode === 'smooth'
+                        ? 'bg-[#1e3a5f] text-[#89b4fa] border-[#38bdf8]'
+                        : 'bg-[#4a2828] text-[#f38ba8] border-[#a64040]'
+                      : 'bg-[#2a2a2a] hover:bg-[#383838] text-[#888] border-[#444]'
+                  }`}
+                >
+                  {short}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
+import { SurfaceShadingEngine, SurfaceShadingType } from './surfaceShading';
 import { LayoutGrid, Sun, Sparkles, Sliders, Image, Check, Zap } from 'lucide-react';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -56,7 +57,8 @@ interface Viewport3DProps {
   showGizmo?: boolean;
   viewLayout?: 'perspective' | 'quad';
   onSelectViewLayout?: (layout: 'perspective' | 'quad') => void;
-  surfaceMode?: 'smooth' | 'hard' | 'default';
+  surfaceMode?: 'default' | 'smooth' | 'flat' | 'hard';
+  meshComponentVisibility?: string;
   isSymmetryX?: boolean;
   selectionMask?: SelectionMask | null;
   onUpdateSelectionMask?: (mask: SelectionMask | null) => void;
@@ -93,6 +95,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   viewLayout: controlledViewLayout,
   onSelectViewLayout,
   surfaceMode = 'default',
+  meshComponentVisibility = 'all',
   isSymmetryX = false,
   selectionMask = null,
   onUpdateSelectionMask,
@@ -199,6 +202,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   // Emissive canvas & texture for glowing materials
   const emissiveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const emissiveTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const hasEmissiveRef = useRef(false);
 
   // Light refs for HDRI light toggling
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
@@ -273,6 +277,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         mat.emissiveIntensity = 0.0;
       }
     }
+
+    hasEmissiveRef.current = hasEmissive;
 
     if (onCompositeCanvasReady) {
       onCompositeCanvasReady(compCanvas);
@@ -441,7 +447,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         r.setScissorTest(false);
         r.setViewport(0, 0, r.domElement.clientWidth || width, r.domElement.clientHeight || height);
         const activeCam = currentIsOrtho ? orthoCam : perspCam;
-        if (bloomSettingsRef.current.enabled && composerRef.current && renderPassRef.current) {
+        const shouldBloom = bloomSettingsRef.current.enabled && hasEmissiveRef.current;
+        if (shouldBloom && composerRef.current && renderPassRef.current) {
           renderPassRef.current.camera = activeCam;
           composerRef.current.render();
         } else {
@@ -510,7 +517,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
   }, [bloom]);
 
-  // Update Geometry
+  // Update Geometry & Surface Shading
   useEffect(() => {
     if (!meshRef.current) return;
     let newGeom: THREE.BufferGeometry;
@@ -523,33 +530,37 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       newGeom = BUILTIN_MODELS.suzanne().geometry;
     }
 
+    SurfaceShadingEngine.ensureDefaultNormalsCached(newGeom);
     meshRef.current.geometry.dispose();
     meshRef.current.geometry = newGeom;
+
+    // Apply Blender-style dynamic surface shading: Def, Smooth, or Flat
+    const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
+    SurfaceShadingEngine.applySurfaceShading(newGeom, meshRef.current.material, effMode);
   }, [modelKey, customOBJText]);
 
-  // Update Shading
+  // Update Shading and Dynamic Normals
   useEffect(() => {
     if (!meshRef.current || !dynamicTextureRef.current) return;
+    const mesh = meshRef.current;
+    const hasEmissive = layers.some(l => l.visible && l.channel === 'emission');
 
     if (shadingMode === 'wireframe') {
-      meshRef.current.material = new THREE.MeshBasicMaterial({
+      mesh.material = new THREE.MeshBasicMaterial({
         color: '#3d7fb8',
         wireframe: true,
       });
     } else if (shadingMode === 'normal') {
-      meshRef.current.material = new THREE.MeshNormalMaterial({
-        flatShading: surfaceMode === 'hard',
-      });
+      mesh.material = new THREE.MeshNormalMaterial();
     } else if (shadingMode === 'flat') {
-      meshRef.current.material = new THREE.MeshBasicMaterial({
+      mesh.material = new THREE.MeshBasicMaterial({
         map: dynamicTextureRef.current,
       });
     } else if (shadingMode === 'clay') {
-      meshRef.current.material = new THREE.MeshStandardMaterial({
+      mesh.material = new THREE.MeshStandardMaterial({
         color: '#b0a89f',
         roughness: 0.6,
         metalness: 0.05,
-        flatShading: surfaceMode === 'hard',
       });
     } else if (shadingMode === 'uv_check') {
       const uvCvs = document.createElement('canvas');
@@ -563,16 +574,59 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         }
       }
       const uvTex = new THREE.CanvasTexture(uvCvs);
-      meshRef.current.material = new THREE.MeshBasicMaterial({ map: uvTex });
+      mesh.material = new THREE.MeshBasicMaterial({ map: uvTex });
     } else {
-      meshRef.current.material = new THREE.MeshStandardMaterial({
+      mesh.material = new THREE.MeshStandardMaterial({
         map: dynamicTextureRef.current,
+        emissiveMap: hasEmissive ? emissiveTextureRef.current || undefined : undefined,
+        emissive: new THREE.Color(0xffffff),
+        emissiveIntensity: hasEmissive ? 2.2 : 0.0,
         roughness: materialProps.roughness,
         metalness: materialProps.metallic,
-        flatShading: surfaceMode === 'hard',
       });
     }
-  }, [shadingMode, materialProps, surfaceMode]);
+
+    // Apply Blender-style dynamic surface normal calculation
+    const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
+    SurfaceShadingEngine.applySurfaceShading(mesh.geometry, mesh.material, effMode);
+  }, [shadingMode, materialProps, surfaceMode, layers]);
+
+  // Mesh Component Visibility Controller
+  useEffect(() => {
+    if (!meshRef.current) return;
+    const mesh = meshRef.current;
+    const geom = mesh.geometry;
+
+    if (meshComponentVisibility === 'all' || !meshComponentVisibility) {
+      mesh.visible = true;
+      if (geom.userData?.fullIndex) {
+        geom.setIndex(geom.userData.fullIndex);
+      }
+      geom.setDrawRange(0, Infinity);
+      return;
+    }
+
+    if (meshComponentVisibility.startsWith('hide_')) {
+      const compKey = meshComponentVisibility.replace('hide_', '');
+      if (geom.userData?.excludeIndices && geom.userData.excludeIndices[compKey]) {
+        mesh.visible = true;
+        geom.setIndex(new THREE.BufferAttribute(geom.userData.excludeIndices[compKey], 1));
+        geom.setDrawRange(0, Infinity);
+      }
+    } else {
+      // Solo / isolate individual component
+      if (geom.userData?.componentIndices && geom.userData.componentIndices[meshComponentVisibility]) {
+        mesh.visible = true;
+        geom.setIndex(new THREE.BufferAttribute(geom.userData.componentIndices[meshComponentVisibility], 1));
+        geom.setDrawRange(0, Infinity);
+      } else if (geom.groups && geom.groups.length > 0) {
+        const groupIdx = parseInt(meshComponentVisibility, 10);
+        if (!isNaN(groupIdx) && geom.groups[groupIdx]) {
+          geom.setDrawRange(geom.groups[groupIdx].start, geom.groups[groupIdx].count);
+        }
+      }
+    }
+  }, [meshComponentVisibility]);
 
   // HDRI Reflection & Viewport Lighting Controller
   useEffect(() => {

@@ -44,6 +44,8 @@ export type ViewportShadingMode =
   | 'clay'
   | 'uv_check';
 
+export type SurfaceShadingMode = 'default' | 'smooth' | 'flat';
+
 export interface Layer {
   id: string;
   name: string;
@@ -54,6 +56,9 @@ export interface Layer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   channel: 'color' | 'roughness' | 'metallic' | 'normal' | 'height' | 'emission';
+  groupId?: string;
+  isGroup?: boolean;
+  collapsed?: boolean;
 }
 
 export interface BloomSettings {
@@ -174,7 +179,7 @@ export interface UndoSnapshot {
 export interface NodeSocket {
   id: string;
   name: string;
-  type: 'color' | 'float' | 'vector';
+  type: 'color' | 'float' | 'vector' | 'shader';
   value?: any;
 }
 
@@ -197,10 +202,12 @@ export type ShaderNodeType =
   | 'bump'
   | 'normal_map'
   | 'tex_coord'
+  | 'uv_map'
   | 'image_texture'
   | 'rgb'
   | 'value'
   | 'principled_bsdf'
+  | 'emission'
   | 'material_output';
 
 export interface GraphNode {

@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette } from 'lucide-react';
+import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check } from 'lucide-react';
 import { ThemeMode } from '../core/types';
 
 interface PhotoshopMenuBarProps {
@@ -40,6 +40,8 @@ interface PhotoshopMenuBarProps {
   onNumpadKey: (key: string, ctrl: boolean) => void;
   selectedModelKey?: string;
   onSelectModelKey?: (key: string) => void;
+  meshComponentVisibility?: string;
+  onSelectMeshComponentVisibility?: (comp: string) => void;
   currentTheme?: ThemeMode;
   onChangeTheme?: (theme: ThemeMode) => void;
 }
@@ -75,6 +77,8 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onNumpadKey,
   selectedModelKey = 'suzanne',
   onSelectModelKey,
+  meshComponentVisibility = 'all',
+  onSelectMeshComponentVisibility,
   currentTheme = 'cs5',
   onChangeTheme,
 }) => {
@@ -480,6 +484,37 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               >
                 About VUE 3D Canvas...
               </button>
+
+              {/* Themes Integration inside Help Menu */}
+              {onChangeTheme && (
+                <>
+                  <div className="my-1 border-t border-[#444]" />
+                  <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider flex items-center gap-1">
+                    <Palette className="w-3 h-3 text-[#e5a038]" />
+                    SELECT UI THEME
+                  </div>
+                  {[
+                    { id: 'cs5', label: 'Photoshop CS5 Dark' },
+                    { id: 'bw78', label: '78% Black & White Minimal' },
+                    { id: 'modern', label: 'Modern Studio Slate' },
+                    { id: 'ps2022', label: 'Photoshop 2022 Flat' },
+                  ].map((th) => (
+                    <button
+                      key={th.id}
+                      onClick={() => { onChangeTheme(th.id as ThemeMode); close(); }}
+                      className={`w-full text-left px-3 py-1 flex items-center justify-between text-[11px] ${
+                        currentTheme === th.id
+                          ? 'bg-[#3d7fb8] text-white font-medium'
+                          : 'hover:bg-[#444] text-[#eee]'
+                      }`}
+                    >
+                      <span>{th.label}</span>
+                      {currentTheme === th.id && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                  ))}
+                </>
+              )}
+
               <div className="my-1 border-t border-[#444]" />
               <div className="px-3 py-1 text-[10px] text-[#888]">
                 Author: Victory Ukpong
@@ -508,6 +543,62 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
             </select>
           </div>
         )}
+
+        {/* Mesh Component Visibility Dropdown */}
+        <div className="flex items-center gap-1.5 bg-[#262626] px-2 py-0.5 rounded border border-[#484848] ml-1 cs5-inset">
+          <Eye className="w-3.5 h-3.5 text-[#a6e3a1]" />
+          <span className="text-[10px] text-[#aaa] font-medium">Parts:</span>
+          <select
+            value={meshComponentVisibility}
+            onChange={(e) => onSelectMeshComponentVisibility && onSelectMeshComponentVisibility(e.target.value)}
+            className="bg-[#2e2e2e] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[10px] outline-none font-medium cursor-pointer"
+            title="Dynamically show all mesh components or isolate/hide individual components"
+          >
+            <option value="all">All Components (Show All)</option>
+            {selectedModelKey === 'suzanne' ? (
+              <>
+                <optgroup label="Solo Component">
+                  <option value="head">Solo: Main Head</option>
+                  <option value="eyes">Solo: Eyes</option>
+                  <option value="ears">Solo: Ears</option>
+                  <option value="muzzle">Solo: Muzzle</option>
+                </optgroup>
+                <optgroup label="Hide Component">
+                  <option value="hide_eyes">Hide: Eyes</option>
+                  <option value="hide_ears">Hide: Ears</option>
+                  <option value="hide_muzzle">Hide: Muzzle</option>
+                  <option value="hide_head">Hide: Main Head</option>
+                </optgroup>
+              </>
+            ) : selectedModelKey === 'helmet' ? (
+              <>
+                <optgroup label="Solo Component">
+                  <option value="dome">Solo: Dome Shell</option>
+                  <option value="visor">Solo: Visor Plate</option>
+                  <option value="chin">Solo: Chin Guard</option>
+                  <option value="sides">Solo: Side Mounts</option>
+                </optgroup>
+                <optgroup label="Hide Component">
+                  <option value="hide_visor">Hide: Visor Plate</option>
+                  <option value="hide_dome">Hide: Dome Shell</option>
+                  <option value="hide_chin">Hide: Chin Guard</option>
+                  <option value="hide_sides">Hide: Side Mounts</option>
+                </optgroup>
+              </>
+            ) : (
+              <>
+                <optgroup label="Solo Component">
+                  <option value="body">Solo: Main Body</option>
+                  <option value="caps">Solo: End Caps</option>
+                </optgroup>
+                <optgroup label="Hide Component">
+                  <option value="hide_caps">Hide: End Caps</option>
+                  <option value="hide_body">Hide: Main Body</option>
+                </optgroup>
+              </>
+            )}
+          </select>
+        </div>
       </div>
 
       {/* Right Quick Controls */}

@@ -242,6 +242,7 @@ export class XBlendManager {
       bump: 'ShaderNodeBump',
       normal_map: 'ShaderNodeNormalMap',
       mix_shader: 'ShaderNodeMixShader',
+      emission: 'ShaderNodeEmission',
       principled_bsdf: 'ShaderNodeBsdfPrincipled',
       material_output: 'ShaderNodeOutputMaterial',
     };

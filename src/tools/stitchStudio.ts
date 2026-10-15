@@ -13,15 +13,18 @@ import * as THREE from 'three';
 export interface StitchConfig {
   stitchSpacing: number; // 8 to 80 px
   stitchRotationOffset: number; // -90 to +90 degrees
-  displacementDepth: number; // 0.0 to 1.0 (leather/cloth depression & shadow)
+  displacementDepth?: number; // 0.0 to 1.0 (leather/cloth depression & shadow)
   stitchWidth: number; // 1 to 20 px
   stitchScale: number; // length multiplier: 0.5 to 3.0
   stitchDensity: number; // 0.5 to 2.0
-  pathSmoothing: number; // 0 to 4 iterations
+  pathSmoothing?: number; // 0 to 4 iterations
   stitchStyle: 'single_thread' | 'cross_stitch' | 'double_stitch' | 'baseball' | 'zigzag' | 'rope';
   threadColor: string;
-  shadowColor: string;
+  shadowColor?: string;
   seamPathPreset: 'seam_loop' | 'brow_contour' | 'muzzle_seam' | 'diagonal_cross' | 'custom_curve';
+  seamGrooveDepth?: number;
+  needleHoleSize?: number;
+  displacementIntensity?: number;
 }
 
 export interface StitchPoint {
@@ -186,9 +189,12 @@ export class StitchStudioEngine {
   public static renderStitches(
     ctx: CanvasRenderingContext2D,
     geom: THREE.BufferGeometry,
-    config: StitchConfig
+    config: StitchConfig,
+    customPath?: { x: number; y: number }[]
   ) {
-    const rawPath = this.generateSeamPath(geom, config.seamPathPreset, config.pathSmoothing);
+    const rawPath = customPath && customPath.length >= 2 
+      ? customPath 
+      : this.generateSeamPath(geom, config.seamPathPreset, config.pathSmoothing ?? 1);
     const effectiveSpacing = Math.max(4, config.stitchSpacing / Math.max(0.2, config.stitchDensity));
     const stitches = this.sampleStitchesAlongPath(rawPath, effectiveSpacing);
 
@@ -200,11 +206,13 @@ export class StitchStudioEngine {
 
     ctx.save();
 
+    const depth = config.displacementDepth ?? (config.displacementIntensity ? config.displacementIntensity / 100 : 0.6);
+
     // 1. DISPLACEMENT & PUNCH HOLE DEPTH (Drop shadow + needle punch holes)
-    if (config.displacementDepth > 0.05) {
+    if (depth > 0.05) {
       ctx.save();
       ctx.fillStyle = config.shadowColor || 'rgba(0,0,0,0.7)';
-      ctx.globalAlpha = Math.min(0.9, config.displacementDepth * 0.85);
+      ctx.globalAlpha = Math.min(0.9, depth * 0.85);
 
       stitches.forEach((st) => {
         const baseAngle = Math.atan2(st.tangentY, st.tangentX) + radOffset;

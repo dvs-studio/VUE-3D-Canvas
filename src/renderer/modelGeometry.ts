@@ -125,9 +125,92 @@ export function ensureUVs(geom: THREE.BufferGeometry, force = false) {
   geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 }
 
+export function tagModelComponents(geom: THREE.BufferGeometry, modelKey: string) {
+  const pos = geom.attributes.position;
+  if (!pos) return;
+
+  if (!geom.getIndex()) {
+    const indices: number[] = [];
+    for (let i = 0; i < pos.count; i++) indices.push(i);
+    geom.setIndex(indices);
+  }
+
+  const idxAttr = geom.getIndex()!;
+  geom.userData.fullIndex = idxAttr.clone();
+
+  const componentTriangles: Record<string, number[]> = {};
+
+  const addTriangle = (comp: string, i1: number, i2: number, i3: number) => {
+    if (!componentTriangles[comp]) componentTriangles[comp] = [];
+    componentTriangles[comp].push(i1, i2, i3);
+  };
+
+  const triCount = idxAttr.count / 3;
+  for (let t = 0; t < triCount; t++) {
+    const i1 = idxAttr.getX(t * 3);
+    const i2 = idxAttr.getX(t * 3 + 1);
+    const i3 = idxAttr.getX(t * 3 + 2);
+
+    const cx = (pos.getX(i1) + pos.getX(i2) + pos.getX(i3)) / 3;
+    const cy = (pos.getY(i1) + pos.getY(i2) + pos.getY(i3)) / 3;
+    const cz = (pos.getZ(i1) + pos.getZ(i2) + pos.getZ(i3)) / 3;
+
+    let comp = 'main';
+    if (modelKey === 'suzanne') {
+      if (Math.abs(cx) > 1.15 && cy > -0.2) {
+        comp = 'ears';
+      } else if (cy > 0.05 && cy < 0.65 && Math.abs(cx) > 0.35 && Math.abs(cx) < 1.15 && cz > 0.3) {
+        comp = 'eyes';
+      } else if (cy < 0.25 && cz > 0.3) {
+        comp = 'muzzle';
+      } else {
+        comp = 'head';
+      }
+    } else if (modelKey === 'helmet') {
+      if (cy > 0.1 && cy < 0.65 && cz > 0.45) {
+        comp = 'visor';
+      } else if (cy > 0.75) {
+        comp = 'dome';
+      } else if (cy < -0.35 && cz > 0.3) {
+        comp = 'chin';
+      } else {
+        comp = 'sides';
+      }
+    } else {
+      if (Math.abs(cy) > 0.75) {
+        comp = 'caps';
+      } else {
+        comp = 'body';
+      }
+    }
+
+    addTriangle(comp, i1, i2, i3);
+  }
+
+  const componentIndices: Record<string, Uint32Array> = {};
+  const excludeIndices: Record<string, Uint32Array> = {};
+
+  const allComps = Object.keys(componentTriangles);
+  allComps.forEach((comp) => {
+    componentIndices[comp] = new Uint32Array(componentTriangles[comp]);
+
+    const excludeList: number[] = [];
+    allComps.forEach((other) => {
+      if (other !== comp) {
+        excludeList.push(...componentTriangles[other]);
+      }
+    });
+    excludeIndices[comp] = new Uint32Array(excludeList);
+  });
+
+  geom.userData.componentIndices = componentIndices;
+  geom.userData.excludeIndices = excludeIndices;
+}
+
 export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   suzanne: () => {
     const geom = createSuzanneGeometry();
+    tagModelComponents(geom, 'suzanne');
     return {
       id: 'suzanne',
       name: 'Suzanne Monkey (Blender Mascot)',
@@ -139,6 +222,7 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   },
   helmet: () => {
     const geom = createHelmetGeometry();
+    tagModelComponents(geom, 'helmet');
     return {
       id: 'helmet',
       name: 'Cyber Armor Helmet',
@@ -150,6 +234,7 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   },
   sphere: () => {
     const geom = new THREE.SphereGeometry(1.5, 32, 24);
+    tagModelComponents(geom, 'sphere');
     return {
       id: 'sphere',
       name: 'Material Showcase Sphere',
@@ -161,6 +246,7 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   },
   cube: () => {
     const geom = new THREE.BoxGeometry(2.0, 2.0, 2.0, 8, 8, 8);
+    tagModelComponents(geom, 'cube');
     return {
       id: 'cube',
       name: 'Beveled Game Asset Box',
@@ -172,6 +258,7 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   },
   cylinder: () => {
     const geom = new THREE.CylinderGeometry(1.2, 1.2, 2.4, 32, 16);
+    tagModelComponents(geom, 'cylinder');
     return {
       id: 'cylinder',
       name: 'Sci-Fi Barrel Cylinder',
@@ -183,6 +270,7 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   },
   torus: () => {
     const geom = new THREE.TorusGeometry(1.4, 0.45, 24, 48);
+    tagModelComponents(geom, 'torus');
     return {
       id: 'torus',
       name: 'Plasma Arc Torus Ring',

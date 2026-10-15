@@ -426,6 +426,43 @@ export function createShaderNode(type: string, id: string, x = 120, y = 120): Gr
         properties: {},
       };
 
+    case 'uv_map':
+      return {
+        id,
+        type: 'uv_map',
+        title: 'UV Map (ShaderNodeUVMap)',
+        x,
+        y,
+        inputs: [],
+        outputs: [
+          { id: 'uv', name: 'UV', type: 'vector' },
+        ],
+        properties: {
+          uv_map: 'UVMap_0',
+          from_instancer: false,
+        },
+      };
+
+    case 'emission':
+      return {
+        id,
+        type: 'emission',
+        title: 'Emission (ShaderNodeEmission)',
+        x,
+        y,
+        inputs: [
+          { id: 'color', name: 'Color', type: 'color', value: '#ffffff' },
+          { id: 'strength', name: 'Strength', type: 'float', value: 2.5 },
+        ],
+        outputs: [
+          { id: 'emission', name: 'Emission', type: 'color' },
+        ],
+        properties: {
+          strength: 2.5,
+          color: '#ffffff',
+        },
+      };
+
     case 'image_texture':
       return {
         id,

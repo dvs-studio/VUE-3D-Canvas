@@ -23,7 +23,12 @@ import {
   ChevronDown,
   Layers,
   Smartphone,
-  Camera
+  Camera,
+  LayoutGrid,
+  Wand2,
+  X,
+  Check,
+  Edit3
 } from 'lucide-react';
 
 interface NodeGraphPanelProps {
@@ -48,6 +53,29 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showScreenshotMenu, setShowScreenshotMenu] = useState(false);
+
+  // Redesigned Touch-Friendly 3-Step Node Connection State
+  const [activeSocket, setActiveSocket] = useState<{
+    nodeId: string;
+    socketId: string;
+    socketType: 'input' | 'output';
+    dataType: string;
+    socketName: string;
+    nodeTitle: string;
+  } | null>(null);
+  const [targetNodeId, setTargetNodeId] = useState<string | null>(null);
+
+  // Touch Tap-to-Edit Value State
+  const [tapEditValue, setTapEditValue] = useState<{
+    nodeId: string;
+    key: string;
+    label: string;
+    type: 'number' | 'color' | 'text';
+    value: any;
+    min?: number;
+    max?: number;
+    step?: number;
+  } | null>(null);
 
   // Capture Entire Node Setup Screenshot (PNG / JPG)
   const handleExportScreenshot = (format: 'png' | 'jpeg') => {
@@ -391,6 +419,135 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
     }
   };
 
+  // Node Auto-Arranger and Sorting logic
+  const handleAutoArrange = () => {
+    if (nodes.length === 0) return;
+
+    // Rank / column groups:
+    // Col 0: Inputs & UV coordinates
+    // Col 1: Coordinates & Vector mappings
+    // Col 2: Procedural texture generators & math
+    // Col 3: Color ramps & converters
+    // Col 4: Shaders (BSDF / Emission)
+    // Col 5: Output
+    const columns: GraphNode[][] = [[], [], [], [], [], []];
+
+    nodes.forEach(n => {
+      if (['tex_coord', 'uv_map', 'image_texture', 'rgb', 'value'].includes(n.type)) {
+        columns[0].push(n);
+      } else if (['mapping', 'vector_transform', 'vector_math'].includes(n.type)) {
+        columns[1].push(n);
+      } else if (['noise', 'voronoi', 'musgrave', 'wave', 'brick', 'checker', 'math', 'bump', 'normal_map'].includes(n.type)) {
+        columns[2].push(n);
+      } else if (['color_ramp', 'mix_rgb', 'invert', 'separate_rgb', 'combine_rgb'].includes(n.type)) {
+        columns[3].push(n);
+      } else if (['principled_bsdf', 'emission'].includes(n.type)) {
+        columns[4].push(n);
+      } else if (n.type === 'material_output') {
+        columns[5].push(n);
+      } else {
+        columns[2].push(n);
+      }
+    });
+
+    const rearranged: GraphNode[] = [];
+    const startX = 60;
+    const colWidth = 280;
+    const startY = 80;
+
+    columns.forEach((colList, colIdx) => {
+      colList.forEach((node, rowIdx) => {
+        rearranged.push({
+          ...node,
+          x: startX + colIdx * colWidth,
+          y: startY + rowIdx * 250,
+        });
+      });
+    });
+
+    onUpdateNodes(rearranged);
+  };
+
+  // Touch-Friendly 3-Step Node Connection Workflow:
+  // (1) Tap a connector to make first connector active
+  // (2) Next tap target node to select target node to edit
+  // (3) Select specific target connector to initiate connection
+  const handleSocketClick = (
+    e: React.MouseEvent | React.PointerEvent,
+    node: GraphNode,
+    socketId: string,
+    socketType: 'input' | 'output',
+    dataType: string,
+    socketName: string
+  ) => {
+    e.stopPropagation();
+
+    if (!activeSocket) {
+      // Step 1: Tap first connector to make it active
+      setActiveSocket({
+        nodeId: node.id,
+        socketId,
+        socketType,
+        dataType,
+        socketName,
+        nodeTitle: node.title,
+      });
+      setTargetNodeId(null);
+      return;
+    }
+
+    // Tapping the same socket again cancels selection
+    if (activeSocket.nodeId === node.id && activeSocket.socketId === socketId) {
+      setActiveSocket(null);
+      setTargetNodeId(null);
+      return;
+    }
+
+    // Step 3: Tapping target connector on opposite side (input vs output)
+    if (activeSocket.socketType !== socketType) {
+      const fromNodeId = activeSocket.socketType === 'output' ? activeSocket.nodeId : node.id;
+      const fromSocketId = activeSocket.socketType === 'output' ? activeSocket.socketId : socketId;
+      const toNodeId = activeSocket.socketType === 'input' ? activeSocket.nodeId : node.id;
+      const toSocketId = activeSocket.socketType === 'input' ? activeSocket.socketId : socketId;
+
+      // Avoid connecting node to itself
+      if (fromNodeId === toNodeId) return;
+
+      // Filter out any existing connection leading to this same input socket
+      const filtered = connections.filter(c => !(c.toNodeId === toNodeId && c.toSocketId === toSocketId));
+      const newConnection: NodeConnection = {
+        id: `conn_${Date.now()}`,
+        fromNodeId,
+        fromSocketId,
+        toNodeId,
+        toSocketId,
+      };
+
+      onUpdateConnections([...filtered, newConnection]);
+      setActiveSocket(null);
+      setTargetNodeId(null);
+    } else {
+      // Swapped to another socket of the same type on another node
+      setActiveSocket({
+        nodeId: node.id,
+        socketId,
+        socketType,
+        dataType,
+        socketName,
+        nodeTitle: node.title,
+      });
+      setTargetNodeId(null);
+    }
+  };
+
+  const handleNodeClick = (node: GraphNode) => {
+    setSelectedNodeId(node.id);
+    if (activeSocket && activeSocket.nodeId !== node.id) {
+      // Step 2: Target node selected
+      setTargetNodeId(node.id);
+    }
+  };
+
   const updateNodeProperty = (nodeId: string, patch: any) => {
     onUpdateNodes(nodes.map(n => {
       if (n.id === nodeId) {
@@ -521,6 +678,14 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
               <div className="px-3 py-1 text-[9px] font-mono text-[#cba6f7] font-bold uppercase tracking-wider bg-[#222]">
                 INPUT &amp; SHADER
               </div>
+              <button onClick={() => handleAddNode('uv_map')} className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between text-[#89b4fa]">
+                <span>UV Map (ShaderNodeUVMap)</span>
+                <span className="text-[9px] font-mono text-[#89b4fa]/80">UV</span>
+              </button>
+              <button onClick={() => handleAddNode('emission')} className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between text-[#ffb86c]">
+                <span>Emission (ShaderNodeEmission)</span>
+                <span className="text-[9px] font-mono text-[#ffb86c]/80">GLOW</span>
+              </button>
               <button onClick={() => handleAddNode('tex_coord')} className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white">
                 Texture Coordinate
               </button>
@@ -536,6 +701,16 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* Node Auto-Arranger & Sorting Button */}
+        <button
+          onClick={handleAutoArrange}
+          className="px-2.5 py-1 bg-[#333] hover:bg-[#404040] text-[#a6e3a1] rounded text-[11px] font-medium flex items-center gap-1 border border-[#555] transition-colors"
+          title="Auto-arrange and sort nodes into clean hierarchical columns"
+        >
+          <LayoutGrid className="w-3.5 h-3.5 text-[#a6e3a1]" />
+          <span>Auto Arrange</span>
+        </button>
 
         {selectedNodeId && (
           <button

@@ -21,6 +21,8 @@ import { MaskEngine } from '../tools/maskEngine';
 import { FillSuite } from '../tools/fillSuite';
 import { UndoRingBuffer } from '../core/history';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
+import { SmartUVUnwrapEngine } from '../tools/smartUVUnwrap';
+import { StitchStudioEngine } from '../tools/stitchStudio';
 import { 
   Layers, 
   ZoomIn, 
@@ -36,7 +38,9 @@ import {
   Eye, 
   EyeOff,
   Sliders,
-  Paintbrush
+  Paintbrush,
+  Wand2,
+  Compass
 } from 'lucide-react';
 
 interface Viewport2DProps {
@@ -88,6 +92,13 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const [showUVOverlay, setShowUVOverlay] = useState<boolean>(true);
   const [uvOverlayOpacity, setUvOverlayOpacity] = useState<number>(0.65);
   const [uvWireColor, setUvWireColor] = useState<string>('#38bdf8'); // Cyan / Blue default
+
+  // Advanced UV Controls: UV Set Dropdown & Smart UV Unwrap State
+  const [activeUVSet, setActiveUVSet] = useState<'uv_0' | 'uv_1' | 'uv_2'>('uv_0');
+  const [showSmartUVModal, setShowSmartUVModal] = useState<boolean>(false);
+  const [smartUVAngleLimit, setSmartUVAngleLimit] = useState<number>(60);
+  const [smartUVMargin, setSmartUVMargin] = useState<number>(0.02);
+  const [smartUVMessage, setSmartUVMessage] = useState<string | null>(null);
 
   // Multi-touch Gestures tracking
   const activePointers = useRef<Map<number, { x: number; y: number; pointerType: string }>>(new Map());
@@ -731,6 +742,22 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       onColorSampled(hex);
     }
 
+    // Instant real-time live feedback without delay: Blit dab directly to display canvas
+    const displayCanvas = canvasRef.current;
+    if (displayCanvas) {
+      const dCtx = displayCanvas.getContext('2d');
+      if (dCtx) {
+        const rad = Math.ceil(brush.size * 2);
+        const bx = Math.max(0, Math.floor(x - rad));
+        const by = Math.max(0, Math.floor(y - rad));
+        const bw = Math.min(1024 - bx, rad * 2);
+        const bh = Math.min(1024 - by, rad * 2);
+        if (bw > 0 && bh > 0) {
+          dCtx.drawImage(activeLayer.canvas, bx, by, bw, bh, bx, by, bw, bh);
+        }
+      }
+    }
+
     onTextureUpdated();
   };
 
@@ -784,6 +811,67 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       drawOverlay();
     }
     setPenMenu(null);
+  };
+
+  const handleApplyJennyStitch = () => {
+    if (!activeLayer) return;
+    const curvePoints = penToolRef.current.getSampledPoints(14);
+    if (curvePoints.length < 2) return;
+
+    let geom: THREE.BufferGeometry;
+    if (customOBJText) {
+      geom = parseOBJ(customOBJText);
+    } else if (BUILTIN_MODELS[modelKey]) {
+      geom = BUILTIN_MODELS[modelKey]().geometry;
+    } else {
+      geom = BUILTIN_MODELS.suzanne().geometry;
+    }
+
+    StitchStudioEngine.renderStitches(activeLayer.ctx, geom, {
+      seamPathPreset: 'custom_curve',
+      stitchSpacing: 22,
+      stitchRotationOffset: 0,
+      stitchWidth: 4,
+      stitchScale: 1.2,
+      stitchDensity: 1.0,
+      stitchStyle: 'single_thread',
+      threadColor: primaryColor || '#e6e6e6',
+      seamGrooveDepth: 40,
+      needleHoleSize: 3,
+      displacementIntensity: 60,
+    }, curvePoints);
+
+    penToolRef.current.clearPath();
+    drawOverlay();
+    setPenMenu(null);
+    undoBuffer.pushState('Jenny Stitch along Vector Path', layers);
+    onTextureUpdated();
+  };
+
+  // Smart UV Generation Handler
+  const handleExecuteSmartUV = () => {
+    let geom: THREE.BufferGeometry;
+    if (customOBJText) {
+      geom = parseOBJ(customOBJText);
+    } else if (BUILTIN_MODELS[modelKey]) {
+      geom = BUILTIN_MODELS[modelKey]().geometry;
+    } else {
+      geom = BUILTIN_MODELS.suzanne().geometry;
+    }
+
+    const result = SmartUVUnwrapEngine.unwrapGeometry(geom, {
+      angleLimitDegrees: smartUVAngleLimit,
+      islandMargin: smartUVMargin,
+    });
+
+    setSmartUVMessage(`Smart UV Generated: ${result.islandCount} UV islands, ${result.facesProcessed} faces packed cleanly!`);
+    drawOverlay();
+    onTextureUpdated();
+
+    setTimeout(() => {
+      setShowSmartUVModal(false);
+      setSmartUVMessage(null);
+    }, 1500);
   };
 
   return (
@@ -851,6 +939,32 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
             <span className="text-[9px] font-mono text-[#38bdf8]">{Math.round(uvOverlayOpacity * 100)}%</span>
           </div>
         )}
+
+        {/* UV Set Dropdown */}
+        <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444]">
+          <Compass className="w-3 h-3 text-[#38bdf8]" />
+          <span className="text-[9px] text-[#888]">UV Set:</span>
+          <select
+            value={activeUVSet}
+            onChange={(e) => setActiveUVSet(e.target.value as any)}
+            className="bg-[#181818] border border-[#555] text-white px-1 py-0.5 rounded text-[9.5px] cursor-pointer outline-none font-mono"
+            title="Switch UV Map Set (Default UV is the one in topmost hierarchy)"
+          >
+            <option value="uv_0">UV Set 1: Default (UVMap_0)</option>
+            <option value="uv_1">UV Set 2: Lightmap (UVMap_1)</option>
+            <option value="uv_2">UV Set 3: Decals (UVMap_2)</option>
+          </select>
+        </div>
+
+        {/* Smart UV Generation Button (Exists ONLY inside 2D UV Map editor view) */}
+        <button
+          onClick={() => setShowSmartUVModal(true)}
+          className="px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-[#a6e3a1] border border-[#22c55e]/50 shadow-xs transition-colors"
+          title="Open Smart UV Projection and Automatic Unwrap Engine"
+        >
+          <Wand2 className="w-3 h-3 text-[#a6e3a1]" />
+          <span>Smart UV Unwrap...</span>
+        </button>
 
         {/* Physical Selection Shading Status Badge */}
         {selectionMask && selectionMask.active && (
@@ -982,6 +1096,13 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           >
             4. Convert Curve to Selector Mask
           </button>
+          <button
+            onClick={handleApplyJennyStitch}
+            className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white text-[#a6e3a1] flex items-center justify-between"
+          >
+            <span>5. Jenny Stitch Along Path...</span>
+            <span className="text-[9px] font-mono text-[#a6e3a1]/80">Mesh</span>
+          </button>
           <div className="border-t border-[#444] my-0.5" />
           <button
             onClick={() => { penToolRef.current.clearPath(); drawOverlay(); setPenMenu(null); }}
@@ -989,6 +1110,83 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           >
             Clear Vector Path
           </button>
+        </div>
+      )}
+
+      {/* Smart UV Projection Modal Dialog */}
+      {showSmartUVModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-[#2c2c2c] border border-[#555] rounded-lg shadow-2xl p-4 w-80 cs5-outset text-white space-y-3">
+            <div className="flex items-center justify-between border-b border-[#444] pb-2">
+              <div className="flex items-center gap-1.5 font-bold text-xs text-[#a6e3a1]">
+                <Wand2 className="w-3.5 h-3.5 text-[#a6e3a1]" />
+                <span>Smart UV Projection Engine</span>
+              </div>
+              <button onClick={() => setShowSmartUVModal(false)} className="p-1 hover:bg-[#444] rounded text-[#aaa]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-[11px] text-[#ccc] space-y-1">
+              <p>Analyzes mesh open edges &amp; sharp dihedral angles (&gt;60°), minimizes projection stretch, and packs UV islands into [0..1] map.</p>
+            </div>
+
+            {smartUVMessage && (
+              <div className="p-2 bg-[#1b4332] text-[#a6e3a1] rounded text-xs border border-[#2d6a4f] font-mono">
+                {smartUVMessage}
+              </div>
+            )}
+
+            <div className="space-y-3 bg-[#222] p-2.5 rounded border border-[#444] text-xs">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#aaa]">Angle Limit Threshold:</span>
+                  <span className="font-mono text-[#89b4fa] font-bold">{smartUVAngleLimit}°</span>
+                </div>
+                <input
+                  type="range"
+                  min="20"
+                  max="85"
+                  step="1"
+                  value={smartUVAngleLimit}
+                  onChange={(e) => setSmartUVAngleLimit(Number(e.target.value))}
+                  className="w-full accent-[#3d7fb8] h-1.5"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-[#aaa]">Island Margin Spacing:</span>
+                  <span className="font-mono text-[#a6e3a1] font-bold">{(smartUVMargin * 100).toFixed(1)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.005"
+                  max="0.06"
+                  step="0.005"
+                  value={smartUVMargin}
+                  onChange={(e) => setSmartUVMargin(Number(e.target.value))}
+                  className="w-full accent-[#2ea043] h-1.5"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setShowSmartUVModal(false)}
+                className="flex-1 py-1.5 bg-[#3a3a3a] hover:bg-[#484848] text-white text-xs rounded border border-[#555]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExecuteSmartUV}
+                className="flex-1 py-1.5 bg-[#2ea043] hover:bg-[#3fb950] text-white text-xs font-bold rounded flex items-center justify-center gap-1 shadow-sm"
+              >
+                <Check className="w-3.5 h-3.5" />
+                Unwrap Mesh
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

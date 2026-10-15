@@ -20,7 +20,11 @@ import {
   MoveDown,
   Download,
   MoreVertical,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Folder,
+  FolderPlus,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 
 interface LayersPanelProps {
@@ -28,6 +32,8 @@ interface LayersPanelProps {
   activeLayerId: string;
   onSelectLayer: (id: string) => void;
   onAddLayer: () => void;
+  onAddGroup?: () => void;
+  onToggleGroupCollapse?: (groupId: string) => void;
   onDeleteLayer: (id: string) => void;
   onDuplicateLayer: (id: string) => void;
   onToggleVisibility: (id: string) => void;
@@ -63,6 +69,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   activeLayerId,
   onSelectLayer,
   onAddLayer,
+  onAddGroup,
+  onToggleGroupCollapse,
   onDeleteLayer,
   onDuplicateLayer,
   onToggleVisibility,
@@ -141,12 +149,72 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         {layers.slice().reverse().map((layer) => {
           const isActive = layer.id === activeLayerId;
 
+          // If layer is inside a collapsed group, hide it from panel
+          if (layer.groupId) {
+            const parent = layers.find(l => l.id === layer.groupId);
+            if (parent && parent.collapsed) return null;
+          }
+
+          // Render Group Container Row
+          if (layer.isGroup) {
+            return (
+              <div
+                key={layer.id}
+                onClick={() => onSelectLayer(layer.id)}
+                className={`flex items-center gap-1.5 p-1.5 rounded cursor-pointer transition-colors border ${
+                  isActive
+                    ? 'bg-[#e5a038]/20 border-[#e5a038] text-white shadow-xs'
+                    : 'bg-[#292929] border-[#444] text-[#ddd] hover:bg-[#333]'
+                }`}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onToggleGroupCollapse) onToggleGroupCollapse(layer.id);
+                  }}
+                  className="p-0.5 text-[#aaa] hover:text-white"
+                  title={layer.collapsed ? 'Expand Group' : 'Collapse Group'}
+                >
+                  {layer.collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+
+                <Folder className="w-4 h-4 text-[#e5a038] shrink-0" />
+
+                <span className="font-semibold text-[11px] flex-1 truncate">{layer.name}</span>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleVisibility(layer.id);
+                  }}
+                  className="text-[#999] hover:text-white p-0.5"
+                  title={layer.visible ? 'Hide Group' : 'Show Group'}
+                >
+                  {layer.visible ? <Eye className="w-3.5 h-3.5 text-[#a6e3a1]" /> : <EyeOff className="w-3.5 h-3.5 text-[#666]" />}
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteLayer(layer.id);
+                  }}
+                  className="text-[#666] hover:text-red-400 p-0.5"
+                  title="Delete Group"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          }
+
           return (
             <div
               key={layer.id}
               onClick={() => onSelectLayer(layer.id)}
               onContextMenu={(e) => handleContextMenu(e, layer.id)}
               className={`flex items-center gap-1.5 p-1.5 rounded cursor-pointer transition-colors border relative ${
+                layer.groupId ? 'ml-4 border-l-2 border-l-[#e5a038]' : ''
+              } ${
                 isActive
                   ? 'bg-[#3d7fb8]/35 border-[#3d7fb8] text-white shadow-xs'
                   : 'bg-[#303030] border-[#444] text-[#ccc] hover:bg-[#393939]'
@@ -214,6 +282,15 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          {onAddGroup && (
+            <button
+              onClick={onAddGroup}
+              className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#e5a038] rounded border border-[#505050] transition-colors"
+              title="Create New Layer Group (Container)"
+            >
+              <FolderPlus className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={() => onDuplicateLayer(activeLayerId)}
             className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
@@ -295,50 +372,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             <ImageIcon className="w-3.5 h-3.5 text-[#e5a038]" />
             <span>Export UV Alpha Mask Only (Named PNG)</span>
           </button>
-
-          <div className="border-t border-[#444] my-1" />
-          <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider">
-            FILTERS &amp; TOOLS
-          </div>
-
-          {onOpenGaussianBlur && (
-            <button
-              onClick={() => {
-                onOpenGaussianBlur(contextMenu.layerId);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center justify-between"
-            >
-              <span>Gaussian Blur...</span>
-              <span className="text-[10px] text-[#888] font-mono">Radius</span>
-            </button>
-          )}
-
-          {onOpenStochasticScatter && (
-            <button
-              onClick={() => {
-                onOpenStochasticScatter(contextMenu.layerId);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center justify-between"
-            >
-              <span>Stochastic Scattering...</span>
-              <span className="text-[10px] text-[#888] font-mono">Stamps</span>
-            </button>
-          )}
-
-          {onOpenStitchStudio && (
-            <button
-              onClick={() => {
-                onOpenStitchStudio(contextMenu.layerId);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center justify-between"
-            >
-              <span>Jenny Stitch Studio...</span>
-              <span className="text-[10px] text-[#a6e3a1] font-mono">Mesh</span>
-            </button>
-          )}
 
           <div className="border-t border-[#444] my-1" />
           <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider">

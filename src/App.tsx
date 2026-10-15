@@ -20,6 +20,7 @@ import {
   NodeConnection, 
   MeshModelAsset,
   BloomSettings,
+  SurfaceShadingMode,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
 import { UndoRingBuffer } from './core/history';
@@ -188,7 +189,7 @@ export default function App() {
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState<boolean>(false);
   const [isUndoSettingsOpen, setIsUndoSettingsOpen] = useState<boolean>(false);
-  const [surfaceMode, setSurfaceMode] = useState<'smooth' | 'hard' | 'default'>('default');
+  const [surfaceMode, setSurfaceMode] = useState<SurfaceShadingMode>('default');
 
   // Symmetry Tool Configuration
   const [symmetryConfig, setSymmetryConfig] = useState<SymmetryConfig>({
@@ -246,13 +247,26 @@ export default function App() {
     ctx.fillRect(0, 0, 1024, 1024);
 
     layers.forEach(layer => {
-      if (!layer.visible) return;
+      if (!layer.visible || layer.isGroup) return;
+      if (layer.groupId) {
+        const parent = layers.find(l => l.id === layer.groupId);
+        if (parent && !parent.visible) return;
+      }
       ctx.save();
       ctx.globalAlpha = layer.opacity / 100;
-      ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
-        : layer.blendMode === 'screen' ? 'screen'
-        : layer.blendMode === 'overlay' ? 'overlay'
-        : 'source-over';
+      let gco: GlobalCompositeOperation = 'source-over';
+      switch (layer.blendMode) {
+        case 'multiply': gco = 'multiply'; break;
+        case 'screen': gco = 'screen'; break;
+        case 'overlay': gco = 'overlay'; break;
+        case 'darken': gco = 'darken'; break;
+        case 'lighten': gco = 'lighten'; break;
+        case 'hard_light': gco = 'hard-light'; break;
+        case 'soft_light': gco = 'soft-light'; break;
+        case 'difference': gco = 'difference'; break;
+        default: gco = 'source-over'; break;
+      }
+      ctx.globalCompositeOperation = gco;
       ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
       ctx.restore();
     });
@@ -614,10 +628,103 @@ export default function App() {
     }
   };
 
+  const handleAddGroup = () => {
+    const groupId = `group_${Date.now()}`;
+    const groupCount = layers.filter(l => l.isGroup).length + 1;
+    const newGroup: Layer = {
+      id: groupId,
+      name: `Group ${groupCount}`,
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas: document.createElement('canvas'),
+      ctx: document.createElement('canvas').getContext('2d')!,
+      channel: 'color',
+      isGroup: true,
+      collapsed: false,
+    };
+    newGroup.canvas.width = 1024;
+    newGroup.canvas.height = 1024;
+    const updated = [...layers, newGroup];
+    setLayers(updated);
+    setActiveLayerId(groupId);
+    undoBuffer.pushState('Create Layer Group', updated);
+  };
+
+  const handleToggleGroupCollapse = (groupId: string) => {
+    setLayers(prev => prev.map(l => l.id === groupId ? { ...l, collapsed: !l.collapsed } : l));
+  };
+
   const handleConvertToEmissive = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
     if (target) {
       LayerConversions.convertToEmissive(target);
+
+      // Sample color of target layer to drive lighting
+      const ctx = target.ctx;
+      let emissiveColor = '#ffffff';
+      try {
+        const p = ctx.getImageData(512, 512, 1, 1).data;
+        if (p[3] > 10) {
+          emissiveColor = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
+        } else {
+          const img = ctx.getImageData(0, 0, 1024, 1024).data;
+          for (let i = 0; i < img.length; i += 4 * 64) {
+            if (img[i + 3] > 30) {
+              emissiveColor = `#${((1 << 24) + (img[i] << 16) + (img[i + 1] << 8) + img[i + 2]).toString(16).slice(1)}`;
+              break;
+            }
+          }
+        }
+      } catch {
+        emissiveColor = '#ffffff';
+      }
+
+      // Emission Conversion: Replace every input with an emission node exclusively,
+      // using the colour value directly to drive the lighting of that layer.
+      const emissionNodeId = `node_emission_${Date.now()}`;
+      const outputNode = nodes.find(n => n.type === 'material_output') || {
+        id: 'node_output',
+        type: 'material_output' as const,
+        title: 'Material Output',
+        x: 600,
+        y: 200,
+        inputs: [{ id: 'surface', name: 'Surface', type: 'shader' }],
+        outputs: [],
+        properties: {},
+      };
+
+      const newEmissionNode: GraphNode = {
+        id: emissionNodeId,
+        type: 'emission',
+        title: 'Emission (ShaderNodeEmission)',
+        x: 320,
+        y: 200,
+        inputs: [
+          { id: 'color', name: 'Color', type: 'color', value: emissiveColor },
+          { id: 'strength', name: 'Strength', type: 'float', value: 2.5 },
+        ],
+        outputs: [
+          { id: 'emission', name: 'Emission', type: 'color' },
+        ],
+        properties: {
+          color: emissiveColor,
+          strength: 2.5,
+        },
+      };
+
+      setNodes([newEmissionNode, outputNode]);
+      setConnections([
+        {
+          id: `conn_emission_${Date.now()}`,
+          fromNodeId: emissionNodeId,
+          fromSocketId: 'emission',
+          toNodeId: outputNode.id,
+          toSocketId: 'surface',
+        },
+      ]);
+
       undoBuffer.pushState('Convert Layer to Emissive (Glow)', layers);
       notifyTextureUpdated();
     }
@@ -982,6 +1089,8 @@ export default function App() {
                             activeLayerId={activeLayerId}
                             onSelectLayer={setActiveLayerId}
                             onAddLayer={handleAddLayer}
+                            onAddGroup={handleAddGroup}
+                            onToggleGroupCollapse={handleToggleGroupCollapse}
                             onDeleteLayer={handleDeleteLayer}
                             onDuplicateLayer={handleDuplicateLayer}
                             onToggleVisibility={handleToggleVisibility}
@@ -1136,6 +1245,8 @@ export default function App() {
                       activeLayerId={activeLayerId}
                       onSelectLayer={setActiveLayerId}
                       onAddLayer={handleAddLayer}
+                      onAddGroup={handleAddGroup}
+                      onToggleGroupCollapse={handleToggleGroupCollapse}
                       onDeleteLayer={handleDeleteLayer}
                       onDuplicateLayer={handleDuplicateLayer}
                       onToggleVisibility={handleToggleVisibility}
