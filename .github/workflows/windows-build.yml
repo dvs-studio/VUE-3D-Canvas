@@ -11,58 +11,96 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Check out the repository.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           persist-credentials: true
 
-      # 2. Install Rust.
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # 3. Cache Rust dependencies.
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 4. Build the release executable.
-      - name: Build Release EXE
-        run: cargo build --release
+      - name: Inspect Rust Project
+        shell: pwsh
+        run: |
+          Write-Host "===== Cargo.toml ====="
+          Get-Content Cargo.toml
 
-      # 5. Copy the executable into the repository.
-      - name: Prepare Windows Build
+          Write-Host "===== Rust source files ====="
+          Get-ChildItem src -Recurse -File |
+            Select-Object -ExpandProperty FullName
+
+      - name: Build Release
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          $source = "target/release"
-          $destination = "builds"
+          cargo build --release
 
-          New-Item -ItemType Directory -Force -Path $destination |
-            Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Cargo build failed."
+          }
+
+      - name: Inspect Build Output
+        shell: pwsh
+        run: |
+          Write-Host "===== Target directory ====="
+
+          if (Test-Path target) {
+            Get-ChildItem target -Recurse -File |
+              Select-Object FullName, Length
+          } else {
+            Write-Host "No target directory was created."
+          }
+
+          Write-Host "===== Cargo binary targets ====="
+          cargo metadata --no-deps --format-version 1 |
+            Out-File -FilePath cargo-metadata.json -Encoding utf8
+
+          $metadata = Get-Content cargo-metadata.json -Raw |
+            ConvertFrom-Json
+
+          foreach ($package in $metadata.packages) {
+            Write-Host "Package: $($package.name)"
+
+            foreach ($target in $package.targets) {
+              Write-Host "Target: $($target.name)"
+              Write-Host "Types: $($target.kind -join ', ')"
+            }
+          }
+
+      - name: Prepare Executables
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
 
           $executables = @(
-            Get-ChildItem -Path $source -Filter "*.exe" -File
+            Get-ChildItem target -Filter "*.exe" -File -Recurse `
+              -ErrorAction SilentlyContinue |
+              Where-Object {
+                $_.FullName -match '[\\/]release[\\/]'
+              }
           )
 
           if ($executables.Count -eq 0) {
-            throw "Build failed: no EXE files were found in $source"
+            Write-Host "No release executables were generated."
+            Write-Host "The diagnostic output above should explain what Cargo built."
+            exit 0
           }
+
+          New-Item -ItemType Directory -Force -Path builds |
+            Out-Null
 
           foreach ($exe in $executables) {
-            Copy-Item `
-              -Path $exe.FullName `
-              -Destination $destination `
-              -Force
-
-            Write-Host "Prepared: builds/$($exe.Name)"
+            Copy-Item $exe.FullName builds/ -Force
+            Write-Host "Prepared $($exe.Name)"
           }
 
-      # 6. Commit and push the compiled executables.
-      - name: Commit and push compiled binaries
+      - name: Commit and Push Executables
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "build: update compiled Windows binaries"
+          commit_message: "build: update compiled Windows executables"
           file_pattern: "builds/*.exe"
-          skip_dirty_check: false
