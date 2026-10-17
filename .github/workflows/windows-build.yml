@@ -23,13 +23,33 @@ jobs:
       - name: Build release
         run: cargo build --release
 
-      - name: Upload Windows build files
+      - name: Package complete release output
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if (!(Test-Path "target/release")) {
+            throw "The target/release directory was not created."
+          }
+
+          if (!(Get-ChildItem "target/release" -Force | Select-Object -First 1)) {
+            throw "The target/release directory is empty."
+          }
+
+          Compress-Archive `
+            -Path "target/release/*" `
+            -DestinationPath "VUE-3D-Canvas-Windows.zip" `
+            -CompressionLevel Optimal `
+            -Force
+
+          Write-Host "Created VUE-3D-Canvas-Windows.zip"
+          Get-Item "VUE-3D-Canvas-Windows.zip" |
+            Select-Object Name, Length
+
+      - name: Upload complete Windows build
         uses: actions/upload-artifact@v4
         with:
           name: VUE-3D-Canvas-Windows
-          path: |
-            target/release/*.exe
-            target/release/*.dll
-            target/release/*.lib
-          if-no-files-found: warn
+          path: VUE-3D-Canvas-Windows.zip
+          if-no-files-found: error
           retention-days: 30
