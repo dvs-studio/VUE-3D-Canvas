@@ -6,101 +6,114 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: windows-build
+  cancel-in-progress: false
+
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
+      # 1. Check out the repository.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          ref: main
+          fetch-depth: 0
           persist-credentials: true
 
-      - name: Set up Rust toolchain
+      # 2. Install Rust.
+      - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
+      # 3. Cache Rust dependencies.
+      - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Inspect Rust Project
-        shell: pwsh
-        run: |
-          Write-Host "===== Cargo.toml ====="
-          Get-Content Cargo.toml
+      # 4. Install Bun.
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
-          Write-Host "===== Rust source files ====="
-          Get-ChildItem src -Recurse -File |
-            Select-Object -ExpandProperty FullName
+      # 5. Install frontend dependencies.
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
 
-      - name: Build Release
+      # 6. Build the Rust workspace.
+      - name: Build Rust release library
+        run: cargo build --release
+
+      # 7. Build the JavaScript frontend.
+      - name: Build frontend
+        run: bun run build
+
+      # 8. Collect generated files.
+      - name: Prepare build outputs
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
 
-          cargo build --release
+          $destination = "builds/windows"
 
-          if ($LASTEXITCODE -ne 0) {
-            throw "Cargo build failed."
-          }
+          New-Item -ItemType Directory -Force -Path $destination |
+            Out-Null
 
-      - name: Inspect Build Output
-        shell: pwsh
-        run: |
-          Write-Host "===== Target directory ====="
+          # Copy the frontend build if the project generated one.
+          $frontendDirectories = @(
+            "dist",
+            "build",
+            "out"
+          )
 
-          if (Test-Path target) {
-            Get-ChildItem target -Recurse -File |
-              Select-Object FullName, Length
-          } else {
-            Write-Host "No target directory was created."
-          }
+          $frontendFound = $false
 
-          Write-Host "===== Cargo binary targets ====="
-          cargo metadata --no-deps --format-version 1 |
-            Out-File -FilePath cargo-metadata.json -Encoding utf8
+          foreach ($directory in $frontendDirectories) {
+            if (Test-Path $directory -PathType Container) {
+              $target = Join-Path $destination "frontend"
 
-          $metadata = Get-Content cargo-metadata.json -Raw |
-            ConvertFrom-Json
+              New-Item -ItemType Directory -Force -Path $target |
+                Out-Null
 
-          foreach ($package in $metadata.packages) {
-            Write-Host "Package: $($package.name)"
+              Copy-Item "$directory/*" $target -Recurse -Force
 
-            foreach ($target in $package.targets) {
-              Write-Host "Target: $($target.name)"
-              Write-Host "Types: $($target.kind -join ', ')"
+              Write-Host "Copied frontend output from $directory"
+              $frontendFound = $true
+              break
             }
           }
 
-      - name: Prepare Executables
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
+          if (-not $frontendFound) {
+            throw "No frontend output directory found. Check the build script in package.json."
+          }
 
-          $executables = @(
-            Get-ChildItem target -Filter "*.exe" -File -Recurse `
-              -ErrorAction SilentlyContinue |
+          # Copy Rust library outputs, if generated.
+          $rustOutput = "target/release"
+
+          $libraryFiles = @(
+            Get-ChildItem $rustOutput -File |
               Where-Object {
-                $_.FullName -match '[\\/]release[\\/]'
+                $_.Extension -in @(".dll", ".lib", ".pdb")
               }
           )
 
-          if ($executables.Count -eq 0) {
-            Write-Host "No release executables were generated."
-            Write-Host "The diagnostic output above should explain what Cargo built."
-            exit 0
+          if ($libraryFiles.Count -gt 0) {
+            $rustDestination = Join-Path $destination "rust"
+
+            New-Item -ItemType Directory -Force -Path $rustDestination |
+              Out-Null
+
+            foreach ($file in $libraryFiles) {
+              Copy-Item $file.FullName $rustDestination -Force
+              Write-Host "Copied Rust output: $($file.Name)"
+            }
           }
 
-          New-Item -ItemType Directory -Force -Path builds |
-            Out-Null
+          Write-Host "Build outputs prepared in $destination"
 
-          foreach ($exe in $executables) {
-            Copy-Item $exe.FullName builds/ -Force
-            Write-Host "Prepared $($exe.Name)"
-          }
-
-      - name: Commit and Push Executables
+      # 9. Commit and push generated files.
+      - name: Commit and push build outputs
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "build: update compiled Windows executables"
-          file_pattern: "builds/*.exe"
+          branch: main
+          commit_message: "build: update Windows build outputs"
+          file_pattern: "builds/windows/**"
