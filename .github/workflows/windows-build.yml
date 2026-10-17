@@ -3,25 +3,66 @@ name: Build Windows
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
+      # 1. Check out the repository.
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
 
+      # 2. Install Rust.
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      # 3. Cache Rust dependencies.
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      # 4. Build the release executable.
       - name: Build Release EXE
         run: cargo build --release
 
-      - name: Upload EXE
-        uses: actions/upload-artifact@v4
+      # 5. Copy the executable into the repository.
+      - name: Prepare Windows Build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $source = "target/release"
+          $destination = "builds"
+
+          New-Item -ItemType Directory -Force -Path $destination |
+            Out-Null
+
+          $executables = @(
+            Get-ChildItem -Path $source -Filter "*.exe" -File
+          )
+
+          if ($executables.Count -eq 0) {
+            throw "Build failed: no EXE files were found in $source"
+          }
+
+          foreach ($exe in $executables) {
+            Copy-Item `
+              -Path $exe.FullName `
+              -Destination $destination `
+              -Force
+
+            Write-Host "Prepared: builds/$($exe.Name)"
+          }
+
+      # 6. Commit and push the compiled executables.
+      - name: Commit and push compiled binaries
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          name: vue-3d-canvas-windows
-          path: target/release/*.exe
+          commit_message: "build: update compiled Windows binaries"
+          file_pattern: "builds/*.exe"
+          skip_dirty_check: false
