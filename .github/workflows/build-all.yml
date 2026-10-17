@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          wasm-pack build . \
+          wasm-pack build crates/vue3d_core \
             --target web \
             --release \
             --out-dir "$GITHUB_WORKSPACE/self-host/wasm_pkg"
