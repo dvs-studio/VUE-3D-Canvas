@@ -4,116 +4,32 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: windows-build
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
-      # 1. Check out the repository.
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
 
-      # 2. Install Rust.
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 3. Cache Rust dependencies.
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      # 4. Install Bun.
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      # 5. Install frontend dependencies.
-      - name: Install frontend dependencies
-        run: bun install --frozen-lockfile
-
-      # 6. Build the Rust workspace.
-      - name: Build Rust release library
+      - name: Build release
         run: cargo build --release
 
-      # 7. Build the JavaScript frontend.
-      - name: Build frontend
-        run: bun run build
-
-      # 8. Collect generated files.
-      - name: Prepare build outputs
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $destination = "builds/windows"
-
-          New-Item -ItemType Directory -Force -Path $destination |
-            Out-Null
-
-          # Copy the frontend build if the project generated one.
-          $frontendDirectories = @(
-            "dist",
-            "build",
-            "out"
-          )
-
-          $frontendFound = $false
-
-          foreach ($directory in $frontendDirectories) {
-            if (Test-Path $directory -PathType Container) {
-              $target = Join-Path $destination "frontend"
-
-              New-Item -ItemType Directory -Force -Path $target |
-                Out-Null
-
-              Copy-Item "$directory/*" $target -Recurse -Force
-
-              Write-Host "Copied frontend output from $directory"
-              $frontendFound = $true
-              break
-            }
-          }
-
-          if (-not $frontendFound) {
-            throw "No frontend output directory found. Check the build script in package.json."
-          }
-
-          # Copy Rust library outputs, if generated.
-          $rustOutput = "target/release"
-
-          $libraryFiles = @(
-            Get-ChildItem $rustOutput -File |
-              Where-Object {
-                $_.Extension -in @(".dll", ".lib", ".pdb")
-              }
-          )
-
-          if ($libraryFiles.Count -gt 0) {
-            $rustDestination = Join-Path $destination "rust"
-
-            New-Item -ItemType Directory -Force -Path $rustDestination |
-              Out-Null
-
-            foreach ($file in $libraryFiles) {
-              Copy-Item $file.FullName $rustDestination -Force
-              Write-Host "Copied Rust output: $($file.Name)"
-            }
-          }
-
-          Write-Host "Build outputs prepared in $destination"
-
-      # 9. Commit and push generated files.
-      - name: Commit and push build outputs
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Upload Windows build files
+        uses: actions/upload-artifact@v4
         with:
-          branch: main
-          commit_message: "build: update Windows build outputs"
-          file_pattern: "builds/windows/**"
+          name: VUE-3D-Canvas-Windows
+          path: |
+            target/release/*.exe
+            target/release/*.dll
+            target/release/*.lib
+          if-no-files-found: warn
+          retention-days: 30
