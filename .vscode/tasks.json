@@ -1,0 +1,69 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Run Dev Server (Vite)",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*VITE.*ready.*",
+          "endsPattern": ".*Local:.*http.*"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "2. Build Web Production Client (Vite)",
+      "type": "shell",
+      "command": "npm run build",
+      "group": "build",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "3. Run Self-Hosted Server",
+      "type": "shell",
+      "command": "node self-host/server.js --port 3000",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "4. Cargo: Build Rust Core & Native CLI (Release)",
+      "type": "shell",
+      "command": "cargo build --release",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "5. Cargo: Build Browser WASM Package",
+      "type": "shell",
+      "command": "wasm-pack build crates/vue3d_core --target web --release --out-dir wasm_pkg",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "6. Package Self-Hosted Distribution (ZIP)",
+      "type": "shell",
+      "windows": {
+        "command": "Compress-Archive -Path self-host/* -DestinationPath vue-3d-canvas-self-hosted.zip -Force"
+      },
+      "linux": {
+        "command": "zip -r vue-3d-canvas-self-hosted.zip self-host/"
+      },
+      "osx": {
+        "command": "zip -r vue-3d-canvas-self-hosted.zip self-host/"
+      },
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

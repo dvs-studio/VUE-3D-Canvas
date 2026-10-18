@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  vue3d-canvas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vue3d-canvas:latest
+    container_name: vue3d-canvas-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+    volumes:
+      - vue3d_storage:/app/storage
+
+volumes:
+  vue3d_storage:
+    name: vue3d_canvas_data

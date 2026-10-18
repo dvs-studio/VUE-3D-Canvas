@@ -24,7 +24,10 @@ import {
   Folder,
   FolderPlus,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Sliders,
+  Contrast,
+  Settings
 } from 'lucide-react';
 
 interface LayersPanelProps {
@@ -50,6 +53,8 @@ interface LayersPanelProps {
   onConvertToNormal?: (layerId: string) => void;
   onConvertToClipMask?: (layerId: string) => void;
   onConvertToEmissive?: (layerId: string) => void;
+  onInvertLayerColor?: (layerId: string) => void;
+  onOpenLayerSettings?: (layerId: string) => void;
 }
 
 const BLEND_MODES: BlendMode[] = [
@@ -87,6 +92,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onConvertToNormal,
   onConvertToClipMask,
   onConvertToEmissive,
+  onInvertLayerColor,
+  onOpenLayerSettings,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -259,6 +266,20 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 {layer.locked ? <Lock className="w-3 h-3 text-[#e5a038]" /> : <Unlock className="w-3 h-3 text-[#666]" />}
               </button>
 
+              {/* Layer Settings & PBR Modal button */}
+              {onOpenLayerSettings && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenLayerSettings(layer.id);
+                  }}
+                  className="text-[#888] hover:text-[#3d7fb8] p-0.5 transition-colors"
+                  title="Layer Material & PBR Settings"
+                >
+                  <Sliders className="w-3 h-3" />
+                </button>
+              )}
+
               {/* Right-click Context Trigger Button */}
               <button
                 onClick={(e) => handleContextMenu(e, layer.id)}
@@ -424,6 +445,34 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             >
               <span>Convert to Emissive (Glow)</span>
               <span className="text-[9px] font-mono text-[#ffb86c]/80">BLOOM</span>
+            </button>
+          )}
+
+          {/* Invert Layer Color */}
+          {onInvertLayerColor && (
+            <button
+              onClick={() => {
+                onInvertLayerColor(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee] flex items-center gap-2"
+            >
+              <Contrast className="w-3.5 h-3.5 text-[#a6e3a1]" />
+              <span>Invert Layer Color</span>
+            </button>
+          )}
+
+          {/* Layer Material & PBR Settings */}
+          {onOpenLayerSettings && (
+            <button
+              onClick={() => {
+                onOpenLayerSettings(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#fab387] flex items-center gap-2"
+            >
+              <Sliders className="w-3.5 h-3.5 text-[#fab387]" />
+              <span>Layer Material &amp; PBR Settings...</span>
             </button>
           )}
 

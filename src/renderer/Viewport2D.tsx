@@ -12,9 +12,11 @@ import {
   BrushPreset, 
   Layer, 
   SelectionMask, 
-  VectorPath 
+  VectorPath,
+  PatternStampConfig 
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
+import { PatternStampEngine } from '../tools/patternStampTool';
 import { PenVectorTool } from '../tools/penVectorTool';
 import { SelectionTool } from '../tools/selectionTool';
 import { MaskEngine } from '../tools/maskEngine';
@@ -59,6 +61,7 @@ interface Viewport2DProps {
   customOBJText?: string;
   touchNavEnabled?: boolean;
   onToggleTouchNav?: () => void;
+  patternStampConfig?: PatternStampConfig;
 }
 
 export const Viewport2D: React.FC<Viewport2DProps> = ({
@@ -77,6 +80,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   customOBJText,
   touchNavEnabled = false,
   onToggleTouchNav,
+  patternStampConfig,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -736,6 +740,10 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       FillSuite.applyLinearGradient(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, primaryColor, secondaryColor, brush.opacity, selectionMask);
     } else if (activeTool === 'gradient_radial') {
       FillSuite.applyRadialGradient(ctx, x, y, x + brush.size * 3.5, y, primaryColor, secondaryColor, brush.opacity, selectionMask);
+    } else if (activeTool === 'pattern_stamp' || activeTool === 'stamp_decal') {
+      if (patternStampConfig) {
+        PatternStampEngine.stampOnCanvas(ctx, x / ctx.canvas.width, y / ctx.canvas.height, patternStampConfig);
+      }
     } else if (activeTool === 'eyedropper' && onColorSampled) {
       const p = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
       const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;

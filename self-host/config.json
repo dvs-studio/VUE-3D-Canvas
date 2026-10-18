@@ -1,0 +1,21 @@
+{
+  "appName": "VUE 3D Canvas",
+  "version": "0.1.0",
+  "creator": "Victory Ukpong",
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "cors": true,
+    "openBrowserOnStart": false
+  },
+  "storage": {
+    "projectsDir": "./storage/projects",
+    "texturesDir": "./storage/textures",
+    "autoSaveIntervalMs": 30000
+  },
+  "graphics": {
+    "maxUndoStates": 3,
+    "renderFallback": "OpenGL 2.0 / DirectX 11",
+    "targetArchitecture": "Rust WASM + WebGL"
+  }
+}

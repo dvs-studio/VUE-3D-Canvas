@@ -13,6 +13,7 @@ export type ToolType =
   | 'clone'
   | 'smudge'
   | 'pen'
+  | 'pattern_stamp'
   | 'marquee_rect'
   | 'marquee_ellipse'
   | 'lasso'
@@ -21,6 +22,7 @@ export type ToolType =
   | 'gradient_linear'
   | 'gradient_radial'
   | 'triplanar'
+  | 'stamp_decal'
   | 'eyedropper'
   | 'hand'
   | 'zoom';
@@ -46,6 +48,26 @@ export type ViewportShadingMode =
 
 export type SurfaceShadingMode = 'default' | 'smooth' | 'flat';
 
+export interface LayerPBRSettings {
+  roughness: number; // 0.0 to 1.0
+  metallic: number; // 0.0 to 1.0
+  bumpHeight: number; // 0.0 to 2.0
+  normalStrength: number; // 0.0 to 2.0
+  emissionStrength: number; // 0.0 to 10.0
+  emissionColor?: string;
+  opacity: number; // 0.0 to 1.0
+  // Bump & Color Toggle: allow bump to be enabled while colors are disabled
+  enableColor: boolean; // default true
+  enableBump: boolean; // default true
+  // Reflection driver: HDRI vs Matcap
+  reflectionSource: 'hdri' | 'matcap';
+  reflectionIntensity: number; // 0.0 to 2.0
+  matcapPreset?: 'chrome' | 'ceramic' | 'clay' | 'pearl' | 'gold' | 'custom';
+  customMatcapUrl?: string;
+  // Node editor integration
+  customNodeTreeActive?: boolean;
+}
+
 export interface Layer {
   id: string;
   name: string;
@@ -59,6 +81,7 @@ export interface Layer {
   groupId?: string;
   isGroup?: boolean;
   collapsed?: boolean;
+  pbrSettings?: LayerPBRSettings;
 }
 
 export interface BloomSettings {
@@ -123,6 +146,7 @@ export interface BrushPreset {
   stencilAngleJitter?: number;
   stencilContrast?: number;
   stencilInvert?: boolean;
+  stencilUrl?: string;
 
   // Pattern & Sub-Settings
   patternType?: BrushPatternType;
@@ -305,5 +329,88 @@ export interface HDRISettings {
   backgroundBlur: number; // 0.0 to 1.0
   intensity: number; // 0.1 to 3.0
   roughnessFilter: number; // 0.0 to 1.0
+}
+
+export interface TriplanarTextureItem {
+  id: string;
+  name: string;
+  dataUrl?: string;
+  isTransparentBlank?: boolean; // Blank alpha support for smooth blend with underlying surface
+  opacity?: number; // 0 - 100
+  scale?: number;
+  offsetX?: number;
+  offsetY?: number;
+  tintColor?: string;
+}
+
+export interface TriplanarConfig {
+  pattern?: 'checker' | 'noise' | 'carbon_fiber' | 'brushed_metal' | 'grid' | 'cellular';
+  scale: number;
+  blendSharpness: number;
+  primaryColor: string;
+  secondaryColor: string;
+  coordinateSpace?: 'object' | 'world';
+  // Multi-texture image mixer
+  textures?: TriplanarTextureItem[];
+  mixerPattern?: 'clouds' | 'fractal_noise' | 'cellular' | 'checker' | 'grid' | 'carbon_fiber' | 'brushed_metal';
+  mixerScale?: number;
+  mixingValue?: number; // 0.0 to 1.0
+  edgeNoiseValue?: number; // 0.0 to 1.0
+  bleedingValue?: number; // 0.0 to 1.0
+  tilingRandomization?: number; // 0.0 to 1.0
+  // Slope mask
+  enableSlopeMask?: boolean;
+  slopeThreshold?: number; // 0.0 to 1.0
+  slopeSmoothing?: number; // 0.01 to 0.5
+  slopeStrength?: number; // 0.0 to 1.0
+  slopeInvert?: boolean;
+  slopeUpAxis?: 'Y+' | 'Z+' | 'X+';
+  // Altitude mask
+  enableAltitudeMask?: boolean;
+  altitudeLower?: number; // -1.0 to 1.0
+  altitudeUpper?: number; // -1.0 to 1.0
+  altitudeSmoothing?: number; // 0.01 to 0.5
+  altitudeStrength?: number; // 0.0 to 1.0
+  altitudeInvert?: boolean;
+  // Height-aware blending
+  heightAwareBlending?: boolean;
+  heightContrast?: number; // 0.1 to 2.0
+  // Global offsets
+  offsetX?: number;
+  offsetY?: number;
+  offsetZ?: number;
+}
+
+export interface PatternStampConfig {
+  stampId: string;
+  stampName: string;
+  stampDataUrl: string;
+  size: number; // Stamp radius in pixels
+  rotation: number; // In degrees
+  opacity: number; // 0 - 100
+  // Imperfections and edge sharpness
+  sharpness: number; // 0.0 to 1.0
+  missingEdgeAmount: number; // 0.0 to 1.0 (torn/chipped mask)
+  edgeJitter: number; // 0.0 to 1.0
+  // Grunge Overlay
+  enableGrungeOverlay: boolean;
+  grungePreset: 'scratched' | 'dirty_spots' | 'cracked_paint' | 'worn_patina' | 'custom';
+  customGrungeUrl?: string;
+  grungeBlendMode: BlendMode;
+  grungeOpacity: number; // 0 - 100
+  grungeScale: number;
+}
+
+export interface EdgeWearConfig {
+  wearAmount: number; // 0.0 to 1.0
+  contrast: number; // 0.5 to 3.0
+  edgeNoise: number; // 0.0 to 1.0
+  cavityDarkening: number; // 0.0 to 1.0 (ambient occlusion crevices)
+  curvatureRadius: number; // 1 to 10
+  wearColor: string; // e.g. bare metal #8f8f8f or dirt #2b1f14
+  wearTextureUrl?: string;
+  blendMode: BlendMode;
+  applyToCavity: boolean;
+  applyToRidges: boolean;
 }
 

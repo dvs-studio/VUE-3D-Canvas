@@ -3,6 +3,7 @@
 **Author / Creator:** Victory Ukpong  
 **Target Architecture:** Rust Core + WASM-first (Browser Testing) + Native Windows Desktop (DirectX 11 / OpenGL 2.0 Fallback)  
 **Project Format:** `.xblend` (Linked 3D Assets Default + 3-State Undo Ring Buffer)  
+**Primary IDE:** Visual Studio Code (VS Code) — *No full Visual Studio Community Edition required*  
 
 ---
 
@@ -14,197 +15,160 @@ The software fuses the productivity paradigms of classic digital art suites:
 - **Photoshop CS5 Fusion:** Dark gray workspace palette (`#333333`, `#2b2b2b`, `#3c3c3c`), layer stack, blend modes, marquee selectors, and separable filter pipelines.
 - **Autodesk Sketchbook & MediBang:** Dockable Docker tab groups and a circular carousel brush wheel (`V` key).
 - **Blender 2.8+ Viewport:** Middle-mouse orbit/pan/zoom navigation, standard numpad camera hotkeys, quad split-view layout, and node graph evaluator.
+- **Self-Hosted Autonomy:** Complete offline-capable self-hosted server (`self-host/`) for running on localhost, home lab, or private network without cloud dependencies.
 
 ---
 
-## 2. Compiling for Windows Desktop (DirectX 11 & OpenGL)
+## 2. Compiling with Visual Studio Code (VS Code)
+
+This project is tailored specifically for **VS Code**. You do **not** need the full, heavyweight Visual Studio Community Edition (saving ~20-30 GB of disk space).
 
 ### Prerequisites
-1. **Rust Toolchain:** Install `rustup` from [https://rustup.rs](https://rustup.rs).
-2. **MSVC Build Tools:** Visual Studio 2019/2022 with **Desktop development with C++** and the Windows 10/11 SDK.
-3. **DirectX 11 SDK:** Included with the Windows SDK (provides `fxc.exe` for HLSL shader compilation).
-
-### Configuration & Build
-Open a Developer Command Prompt for VS or PowerShell:
-
-```powershell
-# Set default Rust target to MSVC 64-bit
-rustup default stable-x86_64-pc-windows-msvc
-
-# Navigate to project directory
-cd vue-3d-canvas
-
-# Build release executable
-cargo build --release --target x86_64-pc-windows-msvc
-
-# Run native Windows application
-cargo run --release
-```
-
-### Release Binary Location
-The compiled native executable will be located at:
-```
-target/x86_64-pc-windows-msvc/release/vue_3d_canvas.exe
-```
+1. **VS Code:** Install [Visual Studio Code](https://code.visualstudio.com/).
+2. **Recommended VS Code Extensions:**
+   - `rust-lang.rust-analyzer` (Rust code intelligence & compiler checks)
+   - `tamasfe.even-better-toml` (Cargo.toml support)
+   - `dbaeumer.vscode-eslint` (TypeScript / React linting)
+3. **Rust Toolchain:** Install `rustup` from [https://rustup.rs](https://rustup.rs).
+4. **C++ Compiler (Choose ONE — no VS Community needed):**
+   - **Option A (Lightweight MSVC Build Tools CLI):**
+     Run in Windows PowerShell:
+     ```powershell
+     winget install Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended"
+     ```
+   - **Option B (MinGW-w64 / GCC — 100% Free of Visual Studio):**
+     Install MinGW-w64 via MSYS2 or `winget install MSYS2.MSYS2`, then set target:
+     ```powershell
+     rustup target add x86_64-pc-windows-gnu
+     rustup default stable-x86_64-pc-windows-gnu
+     ```
+5. **Node.js:** v18.x or v20.x LTS from [https://nodejs.org](https://nodejs.org).
 
 ---
 
-## 3. Compiling for Linux & macOS
+## 3. Cargo & Native Compilation Instructions
 
-### Linux (Ubuntu / Debian / Fedora / Arch)
-Install required development libraries for OpenGL, X11, and ALSA:
+Open the project folder in **VS Code** and open the Integrated Terminal (`Ctrl + ~`):
 
+### A. Compile Rust Core & Native Host Binary (`vue_3d_canvas`)
 ```bash
-# Ubuntu / Debian
-sudo apt-get update
-sudo apt-get install -y build-essential pkg-config libx11-dev libasound2-dev libgl1-mesa-dev libxcursor-dev libxrandr-dev libxi-dev
-
-# Fedora
-sudo dnf install -y gcc pkgconf-pkg-config libX11-devel alsa-lib-devel mesa-libGL-devel libXcursor-devel libXrandr-devel libXi-devel
-
-# Compile release binary
+# Build optimized release binary
 cargo build --release
+
+# Or build explicitly for the native host binary
+cargo build --release --bin vue_3d_canvas
+```
+The compiled executable will be located at:
+- Windows: `target/release/vue_3d_canvas.exe`
+- Linux / macOS: `target/release/vue_3d_canvas`
+
+### B. Run Native Host Binary
+```bash
+# Run benchmark (tests 1,000,000 procedural triplanar evaluations with 0-allocation loop)
+cargo run --release -- --bench
+
+# Launch self-hosted native server on port 3000
+cargo run --release -- --serve 3000
+
+# Inspect and validate an .xblend project file
+cargo run --release -- --xblend path/to/project.xblend
 ```
 
-The native Linux binary will be located at `target/release/vue_3d_canvas`.
-
-### macOS (Apple Silicon & Intel)
-Ensure Xcode Command Line Tools are installed:
-
+### C. Compile WebAssembly (WASM) Module
 ```bash
-xcode-select --install
-
-# Apple Silicon (M1/M2/M3)
-cargo build --release --target aarch64-apple-darwin
-
-# Intel Mac
-cargo build --release --target x86_64-apple-darwin
-```
-
----
-
-## 4. WASM Compilation & Self-Hosting Guide
-
-VUE 3D Canvas is designed from the ground up for instantaneous browser testing and self-hosted deployment using WebAssembly and WebGL.
-
-### 1. Build WebAssembly Package with wasm-pack
-Install `wasm-pack`:
-```bash
+# Install wasm-pack if not already installed
 cargo install wasm-pack
+
+# Build WASM package targeting the browser
+wasm-pack build crates/vue3d_core --target web --release --out-dir wasm_pkg
 ```
 
-Build the optimized WASM output targeting web browsers:
+### D. Compile Web Frontend (Vite + React + Three.js)
 ```bash
-wasm-pack build --target web --release --out-dir wasm_pkg
-```
-
-### 2. Frontend Web Client Build
-The application uses Vite and React:
-```bash
+# Install NPM dependencies
 npm install
+
+# Run hot-reloading dev server on http://localhost:3000
+npm run dev
+
+# Build production static bundle in dist/
 npm run build
 ```
-This produces a static output directory in `dist/`.
-
-### 3. Self-Hosting with Nginx
-Create an Nginx configuration file (`/etc/nginx/conf.d/vue3dcanvas.conf`):
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    root /var/www/vue-3d-canvas/dist;
-    index index.html;
-
-    # Enable correct MIME types for WebAssembly
-    types {
-        application/wasm wasm;
-        application/javascript js;
-        text/css css;
-        text/html html;
-        image/svg+xml svg;
-        image/png png;
-        application/pdf pdf;
-        application/vnd.openxmlformats-officedocument.wordprocessingml.document docx;
-    }
-
-    # Cross-Origin Isolation headers for SharedArrayBuffer & high-performance timers
-    add_header Cross-Origin-Opener-Policy "same-origin";
-    add_header Cross-Origin-Embedder-Policy "require-corp";
-
-    # Gzip & Brotli compression for rapid initial load
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/wasm;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(wasm|js|css|png|jpg|jpeg|gif|ico|svg|obj)$ {
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
-}
-```
-
-### 4. Self-Hosting with Docker
-Create a `Dockerfile` in the repository root:
-
-```dockerfile
-# Stage 1: Build Frontend Assets
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# Stage 2: Serve with Nginx Alpine
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-Build and run the container:
-```bash
-docker build -t vue-3d-canvas:latest .
-docker run -d -p 3000:80 --name vue-3d-canvas-app vue-3d-canvas:latest
-```
-Access the application at `http://localhost:3000`.
-
-### 5. Offline Local Testing
-To test the web application locally without an external web server:
-```bash
-# Using Node.js
-npx serve dist -p 3000
-
-# Using Python 3
-python3 -m http.server 3000 --directory dist
-```
 
 ---
 
-## 5. Feature Architecture Breakdown
+## 4. Self-Hosted Full Programme (`self-host/`)
+
+A ready-to-run, zero-dependency self-hosted version of the complete programme is included in the `self-host/` directory.
+
+### Quick Start (Localhost or LAN):
+1. **Via Node.js in VS Code:**
+   ```bash
+   node self-host/server.js
+   ```
+   Or:
+   ```bash
+   npm run serve
+   ```
+2. **Via 1-Click Launchers:**
+   - Windows: Double-click `self-host/start.bat`
+   - Linux / macOS: Run `self-host/start.sh`
+3. **Via Docker Compose:**
+   ```bash
+   docker compose -f self-host/docker-compose.yml up -d
+   ```
+
+### Storage & Persistence
+- Projects (`.xblend` files) are saved automatically to `self-host/storage/projects/`.
+- Uploaded custom textures, decals, and brush tips are saved to `self-host/storage/textures/`.
+- The server automatically sets `Cross-Origin-Opener-Policy: same-origin` and `application/wasm` MIME headers required for WebGL and WASM.
+
+---
+
+## 5. VS Code Tasks Integration
+
+Built-in VS Code tasks are configured in `.vscode/tasks.json`. Press `Ctrl + Shift + B` or open `Terminal > Run Task...`:
+1. `1. Run Dev Server (Vite)` - Starts the interactive development server.
+2. `2. Build Web Production Client (Vite)` - Compiles `dist/` bundle.
+3. `3. Run Self-Hosted Server` - Starts `self-host/server.js`.
+4. `4. Cargo: Build Rust Core & Native CLI (Release)` - Runs `cargo build --release`.
+5. `5. Cargo: Build Browser WASM Package` - Compiles WebAssembly crate.
+6. `6. Package Self-Hosted Distribution (ZIP)` - Compresses the self-hosted distribution into a `.zip` archive.
+
+---
+
+## 6. GitHub Actions Workflows & ZIP Artifacts
+
+All GitHub Actions CI workflows (`.github/workflows/`) are configured to save build outputs directly into **ZIP format** artifacts for convenient one-click download:
+
+| Workflow File | Description | Output ZIP Artifact |
+|---|---|---|
+| `windows-build.yml` | Builds native Windows x64 `.exe` with MSVC toolchain | `vue-3d-canvas-windows-zip` (`vue-3d-canvas-windows-x64.zip`) |
+| `build-self-host.yml` | Builds WASM module, web frontend, and packages self-host directory | `vue-3d-canvas-self-hosted-zip` (`vue-3d-canvas-self-hosted.zip`) |
+| `build-all.yml` | Complete multi-stage build matrix (Windows, WASM, Frontend, Master Suite) | `vue-3d-canvas-windows-x64-zip`, `vue-3d-canvas-wasm-zip`, `vue-3d-canvas-frontend-zip`, `vue-3d-canvas-full-suite-zip` |
+
+---
+
+## 7. Feature Architecture Breakdown
 
 | Module | Location | Description |
 |---|---|---|
-| **Symmetry Tool Docker** | `src/ui/panels/SymmetryPanel.tsx` | Cloning across X/Y/Z, + to - or - to + side selection, Mesh Origin vs 3D Virtual Cursor Locator with coordinate slider, 3D visual slice plane, and real-time bilateral mirror painting. Right-clicking the symmetry button in the top bar pops up the docker. |
-| **Mask Painting Docker** | `src/ui/panels/MaskPanel.tsx` | Physical 2D selection masks on active texture that temporarily protect unselected pixels during 2D and 3D painting. Morphological feathering (blur), dilation (expand), and erosion (shrink). |
-| **Pen Curve Vector Tool** | `src/tools/penVectorTool.ts` | Vector curve point placement, path closure, fill area with color, erase curve loop area, stroke with active brush, and right-click menu to convert curve into selection mask. |
-| **Triplanar Box Filter** | `src/tools/fillSuite.ts` | UV-less XYZ box projection using YZ, XZ, XY coordinates, normal-based weighting with adjustable sharpness power, slope and altitude masks, and height-aware blending. |
-| **Gaussian Blur Tool** | `src/tools/gaussianBlur.ts` | Image-editor style separable 1D convolution passes strictly targeting the selected layer. Radius 0.1 to 250px with Low (7x7), Medium (15x15), and High (31x31) presets and premultiplied alpha. |
-| **Stochastic Layer Scattering** | `src/tools/stochasticScatter.ts` | Random stamp distribution with repeat mode (`number_of_repeats > 0`) or continuous stochastic non-repeating mode (`number_of_repeats = 0`), seed, density, scale, and blend modes. |
-| **Jenny Stitch Studio** | `src/tools/stitchStudio.ts` | Follows 3D mesh vertex edge topology with displacement depth, thread shaders, and stitch spacing. |
-| **Layer Conversions** | `src/tools/layerConversions.ts` | 1-click conversion to Bump Map (Grayscale height), Normal Map (Sobel RGB), or Alpha Clip Mask (Binary transparency). |
-| **Undo / Redo Preferences** | `src/ui/UndoSettingsDialog.tsx` | Integrated into `Edit > Undo & Redo Settings (Ctrl+K)` to customize in-memory undo buffer state limit (3 to 120 states) with live RAM estimation. |
-| **Help & Tutorial Docs** | `help.docx`, `public/help.pdf`, `public/tutorial.pdf` | Documentation and tutorial guides accessible from the `Help` menu. |
+| **Multi-Texture Triplanar Box Filter** | `src/tools/fillSuite.ts` & `src/ui/TriplanarDialog.tsx` | Triplanar projection with multi-texture mixing operator, noise/cloud blending, edge bleed, tiling randomization, and custom upload stack. |
+| **Pattern Stamp Decal Tool** | `src/tools/patternStampTool.ts` & `src/ui/PatternStampDialog.tsx` | 3D surface decal projection stamper with sharpness masks, edge jitter, and blendable grunge overlays. |
+| **Edge Wear & AO Filter** | `src/tools/edgeWearFilter.ts` & `src/ui/EdgeWearDialog.tsx` | Procedural curvature edge wear and ambient occlusion cavity dirt generator. |
+| **Per-Layer PBR Node Setup** | `src/ui/LayerSettingsModal.tsx` | Roughness, metallic, bump/height, normal strength, emission, and matcap reflection sliders with bump-only toggle. |
+| **Blender Material Converter** | `src/nodes/blenderMaterialImporter.ts` | Ingests Blender shader nodes and converts them into VUE 3D Canvas layers and node networks. |
+| **FBX & glTF Multi-Channel Exporter** | `src/core/modelExporters.ts` & `src/ui/ExportModelDialog.tsx` | Automated texture separation into Albedo, Emission, Displacement/Normal, Roughness, and Metallic maps. |
+| **Smart UV Unwrap Engine** | `src/tools/smartUVUnwrap.ts` | 2D UV editor automatic unwrap analyzing open edges and angles > 60° with island shelf packing. |
+| **Symmetry Tool Docker** | `src/ui/panels/SymmetryPanel.tsx` | Bilateral mirror painting across X/Y/Z with origin/cursor locator and 3D visual slice plane. |
+| **Gaussian Blur Tool** | `src/tools/gaussianBlur.ts` | Separable 1D convolution blur targeting active layer (0.1 to 250px radius). |
+| **Stochastic Scatter** | `src/tools/stochasticScatter.ts` | Random stamp distribution with deterministic PRNG and repeat/continuous modes. |
+| **Jenny Stitch Studio** | `src/tools/stitchStudio.ts` | Mesh vertex edge topology follower with displacement depth and thread shaders. |
+| **Undo / Redo Preferences** | `src/ui/UndoSettingsDialog.tsx` | Custom undo buffer state limit (3 to 120 states) with live RAM estimation. |
 
 ---
 
-## 6. Project Specifications & Memory Constraints
+## 8. Memory & System Constraints
 
 - **`.xblend` File Format:** Custom specification saving layer stack, blend modes, node graphs, and 3-state undo ring buffer. Mesh models remain linked by default to preserve minimal project size.
 - **Hardware Limits:** Compatible with DirectX 11 Feature Level 10_0 and WebGL 1.0/2.0 standard extensions without requiring DirectX 12 DXR hardware raytracing.

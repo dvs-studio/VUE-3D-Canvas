@@ -2,4 +2,7 @@
 members = [
     "crates/vue3d_core"
 ]
+default-members = [
+    "crates/vue3d_core"
+]
 resolver = "2"

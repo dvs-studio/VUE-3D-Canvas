@@ -1,55 +1,65 @@
-name: Build Windows
+name: Build Windows Native Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
+    name: Build Windows Executable (.exe) & Package ZIP
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Rust
+      - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
-      - name: Cache Rust dependencies
+      - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Build release
-        run: cargo build --release
-
-      - name: Package complete release output
+      - name: Verify Cargo Manifest
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-
-          if (!(Test-Path "target/release")) {
-            throw "The target/release directory was not created."
+          if (!(Test-Path "Cargo.toml")) {
+            throw "Cargo.toml was not found in repository root."
           }
 
-          if (!(Get-ChildItem "target/release" -Force | Select-Object -First 1)) {
-            throw "The target/release directory is empty."
+      - name: Build Release Executable
+        run: cargo build --release --bin vue_3d_canvas
+
+      - name: Prepare Windows Distribution & Package ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist-windows" | Out-Null
+          
+          $exe = "target/release/vue_3d_canvas.exe"
+          if (!(Test-Path $exe)) {
+            $exe = "target/x86_64-pc-windows-msvc/release/vue_3d_canvas.exe"
+          }
+          if (!(Test-Path $exe)) {
+            throw "Windows executable was not found at $exe"
           }
 
-          Compress-Archive `
-            -Path "target/release/*" `
-            -DestinationPath "VUE-3D-Canvas-Windows.zip" `
-            -CompressionLevel Optimal `
-            -Force
+          Copy-Item $exe "dist-windows/"
+          Copy-Item "README.md" "dist-windows/" -ErrorAction SilentlyContinue
+          Copy-Item "WINDOWS_BUILD_INSTRUCTIONS.md" "dist-windows/" -ErrorAction SilentlyContinue
 
-          Write-Host "Created VUE-3D-Canvas-Windows.zip"
-          Get-Item "VUE-3D-Canvas-Windows.zip" |
-            Select-Object Name, Length
+          # Compress into ZIP format as requested
+          Compress-Archive -Path "dist-windows/*" -DestinationPath "vue-3d-canvas-windows-x64.zip" -Force
+          Write-Host "ZIP artifact successfully generated: vue-3d-canvas-windows-x64.zip"
 
-      - name: Upload complete Windows build
+      - name: Upload Windows Executable ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: VUE-3D-Canvas-Windows
-          path: VUE-3D-Canvas-Windows.zip
+          name: vue-3d-canvas-windows-zip
+          path: vue-3d-canvas-windows-x64.zip
           if-no-files-found: error
-          retention-days: 30

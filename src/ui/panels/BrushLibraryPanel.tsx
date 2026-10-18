@@ -55,7 +55,14 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const [customStencils, setCustomStencils] = useState<{ id: string; name: string; url?: string }[]>([]);
-  const [customPatterns, setCustomPatterns] = useState<{ id: string; name: string; url?: string }[]>([]);
+  const [customPatterns, setCustomPatterns] = useState<{ id: string; name: string; url?: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem('vue3d_custom_textures');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const stencilFileInputRef = useRef<HTMLInputElement | null>(null);
   const patternFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -116,8 +123,15 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
     const reader = new FileReader();
     reader.onload = (evt) => {
       const url = evt.target?.result as string;
-      const newId = `custom_pattern_${Date.now()}`;
-      setCustomPatterns(prev => [...prev, { id: newId, name: file.name.slice(0, 10), url }]);
+      const newId = `custom_texture_${Date.now()}`;
+      const newItem = { id: newId, name: file.name.slice(0, 10), url };
+      setCustomPatterns(prev => {
+        const next = [...prev, newItem];
+        try {
+          localStorage.setItem('vue3d_custom_textures', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
       onUpdateBrush({ patternType: newId, patternScale: 1.0 });
     };
     reader.readAsDataURL(file);
@@ -414,20 +428,20 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
             )}
           </div>
 
-          {/* B. BRUSH PATTERN GALLERY SECTION */}
+          {/* B. BRUSH TEXTURE GALLERY SECTION */}
           <div className="bg-[#303030] p-2.5 rounded border border-[#484848] space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono text-[#fab387] font-bold uppercase tracking-wider flex items-center gap-1">
                 <Grid className="w-3 h-3 text-[#fab387]" />
-                BRUSH PATTERNS (GALLERY)
+                BRUSH TEXTURES (SURFACE PATTERN TILING)
               </span>
               <button
                 onClick={() => patternFileInputRef.current?.click()}
                 className="px-2 py-0.5 bg-[#e5a038] hover:bg-[#f0b555] text-black rounded text-[10px] font-semibold flex items-center gap-1 shadow-xs transition-colors"
-                title="Add custom pattern tile (PNG/JPG)"
+                title="Add custom texture image (PNG/JPG)"
               >
                 <Plus className="w-3 h-3" />
-                Add Pattern
+                Add Texture
               </button>
               <input
                 ref={patternFileInputRef}
@@ -437,6 +451,9 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
                 className="hidden"
               />
             </div>
+            <p className="text-[9px] text-[#888]">
+              The Texture setting acts as the continuous surface pattern painted inside brush strokes.
+            </p>
 
             {/* Visual Pattern Cards Gallery Grid */}
             <div className="grid grid-cols-3 gap-1.5">
@@ -463,11 +480,11 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
               })}
             </div>
 
-            {/* SUB-SETTINGS PANEL FOR PATTERN (Scale, Blend, Rotation, Offset Jitter, Bump Depth) */}
+            {/* SUB-SETTINGS PANEL FOR TEXTURE (Scale, Blend, Rotation, Offset Jitter, Bump Depth) */}
             {activeBrush.patternType && activeBrush.patternType !== 'none' && (
               <div className="mt-2.5 p-2 bg-[#262626] rounded border border-[#555] space-y-2 animate-fadeIn">
                 <div className="text-[9px] font-mono text-[#fab387] font-bold uppercase tracking-wider flex items-center justify-between border-b border-[#3e3e3e] pb-1">
-                  <span>PATTERN SUB-SETTINGS</span>
+                  <span>TEXTURE SUB-SETTINGS</span>
                   <span className="text-[#a6e3a1]">MODULATOR ACTIVE</span>
                 </div>
 

@@ -1,0 +1,17 @@
+{
+  "name": "vue3d-canvas-self-hosted",
+  "version": "0.1.0",
+  "description": "VUE 3D Canvas - Self-Hosted Standalone Distribution by Victory Ukpong",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "serve": "node server.js",
+    "host": "node server.js --host 0.0.0.0 --port 3000",
+    "dev": "node server.js --port 3000"
+  },
+  "author": "Victory Ukpong",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

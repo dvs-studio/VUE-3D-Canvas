@@ -1,0 +1,9 @@
+{
+  "rust-analyzer.cargo.buildScripts.enable": true,
+  "rust-analyzer.cargo.allFeatures": false,
+  "rust-analyzer.check.command": "check",
+  "files.associations": {
+    "*.xblend": "json"
+  },
+  "editor.formatOnSave": false
+}

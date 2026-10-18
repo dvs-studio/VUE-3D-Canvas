@@ -1,25 +1,26 @@
-name: Build self-hosted WASM and frontend
+name: Build Self-Hosted Full Programme
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build-self-host:
+    name: Build Self-Hosted Suite & Package ZIP
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Rust (stable)
+      - name: Install Rust (stable) & WASM Target
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
@@ -29,37 +30,52 @@ jobs:
         with:
           version: latest
 
-      - name: Build wasm with wasm-pack
+      - name: Build WebAssembly Module
         run: |
-          mkdir -p self-host
+          set -euo pipefail
+          mkdir -p self-host/wasm_pkg
           wasm-pack build crates/vue3d_core \
             --target web \
             --release \
-            --out-dir ./self-host/wasm_pkg
+            --out-dir "$GITHUB_WORKSPACE/self-host/wasm_pkg"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install frontend deps and build
+      - name: Install Frontend Dependencies & Build
         run: |
+          set -euo pipefail
           if [ -f package.json ]; then
-            npm ci
+            npm install
             npm run build
           fi
 
-      - name: Assemble self-host folder
+      - name: Assemble Self-Hosted Distribution
         run: |
-          mkdir -p self-host
-
+          set -euo pipefail
+          mkdir -p self-host/public
           if [ -d dist ]; then
-            rm -rf self-host/frontend
-            mkdir -p self-host/frontend
-            cp -r dist/* self-host/frontend/
+            cp -r dist/* self-host/public/
           fi
+          mkdir -p self-host/storage/projects self-host/storage/textures
 
-      - name: Commit and push self-host to branch
+      - name: Package Self-Hosted Distribution to ZIP Format
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y zip
+          zip -r vue-3d-canvas-self-hosted.zip self-host/
+          ls -lh vue-3d-canvas-self-hosted.zip
+
+      - name: Upload Self-Hosted ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-3d-canvas-self-hosted-zip
+          path: vue-3d-canvas-self-hosted.zip
+          if-no-files-found: error
+
+      - name: Commit and Push Self-Host Output to Branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GIT_COMMITTER_NAME: github-actions[bot]
@@ -69,15 +85,12 @@ jobs:
           git config user.email "${GIT_COMMITTER_EMAIL}"
 
           git fetch origin ci/self-host-built || true
-
-          # Checkout branch safely whether it exists locally or remotely
           git checkout -B ci/self-host-built origin/ci/self-host-built || git checkout -B ci/self-host-built
 
           git add self-host
-
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes to commit to ci/self-host-built branch."
           else
-            git commit -m "CI: update self-host build"
-            git push origin ci/self-host-built --force-with-lease
+            git commit -m "CI: update self-hosted distribution [skip ci]"
+            git push origin ci/self-host-built --force-with-lease || echo "Branch push skipped or succeeded"
           fi

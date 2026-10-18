@@ -16,8 +16,10 @@ import {
   HDRISettings,
   ThemeMode,
   BloomSettings,
+  PatternStampConfig,
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
+import { PatternStampEngine } from '../tools/patternStampTool';
 import { SelectionTool } from '../tools/selectionTool';
 import { SymmetryConfig, SymmetryEngine, SymmetryAxis } from '../tools/symmetryEngine';
 import { MaskEngine } from '../tools/maskEngine';
@@ -68,6 +70,7 @@ interface Viewport3DProps {
   bloomSettings?: BloomSettings;
   onUpdateBloomSettings?: (settings: Partial<BloomSettings>) => void;
   currentTheme?: ThemeMode;
+  patternStampConfig?: PatternStampConfig;
 }
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
@@ -105,6 +108,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   bloomSettings: controlledBloomSettings,
   onUpdateBloomSettings,
   currentTheme = 'cs5',
+  patternStampConfig,
 }) => {
   const [internalViewLayout, setInternalViewLayout] = useState<'perspective' | 'quad'>('perspective');
   const viewLayout = controlledViewLayout || internalViewLayout;
@@ -1158,6 +1162,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         FillSuite.applyLinearGradient(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, brush.color, '#1a1a1a', brush.opacity);
       } else if (activeTool === 'gradient_radial') {
         FillSuite.applyRadialGradient(ctx, dx, dy, dx + brush.size * 3.5, dy, brush.color, 'transparent', brush.opacity);
+      } else if (activeTool === 'pattern_stamp' || activeTool === 'stamp_decal') {
+        if (patternStampConfig) {
+          PatternStampEngine.stampOnCanvas(ctx, dx / ctx.canvas.width, dy / ctx.canvas.height, patternStampConfig);
+        }
       } else if (activeTool === 'eyedropper' && onColorSampled) {
         const p = ctx.getImageData(Math.floor(dx), Math.floor(dy), 1, 1).data;
         const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;

@@ -21,6 +21,9 @@ import {
   MeshModelAsset,
   BloomSettings,
   SurfaceShadingMode,
+  PatternStampConfig,
+  EdgeWearConfig,
+  LayerPBRSettings,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
 import { UndoRingBuffer } from './core/history';
@@ -45,6 +48,13 @@ import { TriplanarDialog } from './ui/TriplanarDialog';
 import { GaussianBlurDialog } from './ui/GaussianBlurDialog';
 import { StochasticScatterDialog } from './ui/StochasticScatterDialog';
 import { StitchStudioDialog } from './ui/StitchStudioDialog';
+import { LayerSettingsModal } from './ui/LayerSettingsModal';
+import { PatternStampDialog } from './ui/PatternStampDialog';
+import { EdgeWearDialog } from './ui/EdgeWearDialog';
+import { ExportModelDialog } from './ui/ExportModelDialog';
+import { PatternStampEngine } from './tools/patternStampTool';
+import { EdgeWearEngine } from './tools/edgeWearFilter';
+import { BlenderMaterialImporter } from './nodes/blenderMaterialImporter';
 import { LayerConversions } from './tools/layerConversions';
 import { GaussianBlurOptions } from './tools/gaussianBlur';
 import { StochasticScatterConfig } from './tools/stochasticScatter';
@@ -190,6 +200,36 @@ export default function App() {
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState<boolean>(false);
   const [isUndoSettingsOpen, setIsUndoSettingsOpen] = useState<boolean>(false);
   const [surfaceMode, setSurfaceMode] = useState<SurfaceShadingMode>('default');
+
+  // Layer Material & PBR Settings Modal
+  const [isLayerSettingsOpen, setIsLayerSettingsOpen] = useState<boolean>(false);
+  const [layerSettingsTargetId, setLayerSettingsTargetId] = useState<string | null>(null);
+
+  // Pattern Stamp Tool Config & Dialog
+  const [isPatternStampDialogOpen, setIsPatternStampDialogOpen] = useState<boolean>(false);
+  const [patternStampConfig, setPatternStampConfig] = useState<PatternStampConfig>({
+    stampId: 'hazard_stripes',
+    stampName: 'Hazard Caution',
+    stampDataUrl: '',
+    size: 80,
+    rotation: 0,
+    opacity: 100,
+    sharpness: 0.9,
+    missingEdgeAmount: 0.15,
+    edgeJitter: 0.1,
+    enableGrungeOverlay: false,
+    grungePreset: 'scratched',
+    grungeBlendMode: 'multiply',
+    grungeOpacity: 60,
+    grungeScale: 1.5,
+  });
+
+  // Edge Wear & AO Curvature Filter Dialog
+  const [isEdgeWearDialogOpen, setIsEdgeWearDialogOpen] = useState<boolean>(false);
+
+  // Model & Multi-Channel Exporter Dialog
+  const [isExportModelDialogOpen, setIsExportModelDialogOpen] = useState<boolean>(false);
+  const importBlenderFileInputRef = useRef<HTMLInputElement>(null);
 
   // Symmetry Tool Configuration
   const [symmetryConfig, setSymmetryConfig] = useState<SymmetryConfig>({
@@ -740,6 +780,93 @@ export default function App() {
     }
   };
 
+  // Invert Layer Color
+  const handleInvertLayerColor = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (target) {
+      LayerConversions.invertLayerColor(target);
+      undoBuffer.pushState('Invert Layer Color', layers);
+      notifyTextureUpdated();
+    }
+  };
+
+  // Layer PBR Settings Save
+  const handleSaveLayerPBR = (layerId: string, pbr: LayerPBRSettings) => {
+    setLayers(prev => prev.map(l => {
+      if (l.id === layerId) {
+        return {
+          ...l,
+          pbrSettings: pbr,
+          opacity: Math.round(pbr.opacity * 100),
+        };
+      }
+      return l;
+    }));
+    undoBuffer.pushState('Update Layer Material & PBR', layers);
+    notifyTextureUpdated();
+  };
+
+  // Edge Wear & Cavity Ambient Occlusion Filter
+  const handleApplyEdgeWear = (config: EdgeWearConfig) => {
+    const target = layers.find(l => l.id === activeLayerId);
+    if (target) {
+      EdgeWearEngine.applyEdgeWear(target, config);
+      undoBuffer.pushState('Edge Wear & Cavity AO Filter', layers);
+      notifyTextureUpdated();
+    }
+  };
+
+  // Pattern Stamp Decal at Center
+  const handleStampDecalAtCenter = () => {
+    const target = layers.find(l => l.id === activeLayerId);
+    if (target) {
+      PatternStampEngine.stampOnCanvas(target.ctx, 0.5, 0.5, patternStampConfig);
+      undoBuffer.pushState('Stamp Decal on Surface', layers);
+      notifyTextureUpdated();
+    }
+  };
+
+  // Blender Material Import
+  const handleImportBlenderMaterialFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (!content) return;
+
+      try {
+        const converted = BlenderMaterialImporter.parseAndConvert(content);
+
+        // Update active layer with converted PBR properties
+        setLayers(prev => prev.map(l => {
+          if (l.id === activeLayerId) {
+            return {
+              ...l,
+              name: converted.materialName,
+              pbrSettings: converted.pbrSettings,
+              channel: converted.hasEmission ? 'emission' : l.channel
+            };
+          }
+          return l;
+        }));
+
+        // Set node graph to converted nodes
+        if (converted.nodes && converted.nodes.length > 0) {
+          setNodes(converted.nodes);
+        }
+
+        undoBuffer.pushState(`Import Blender Material: ${converted.materialName}`, layers);
+        notifyTextureUpdated();
+      } catch (err) {
+        console.error('Failed to import Blender material:', err);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   // Save / Load .xblend Project
   const handleSaveXBlend = async () => {
     const modelAsset: MeshModelAsset = {
@@ -945,6 +1072,13 @@ export default function App() {
         onTogglePanel={togglePanel}
         activePanels={activePanels}
         onNumpadKey={handleNumpadKey}
+        onOpenEdgeWearFilter={() => setIsEdgeWearDialogOpen(true)}
+        onOpenPatternStampDialog={() => {
+          setActiveTool('pattern_stamp');
+          setIsPatternStampDialogOpen(true);
+        }}
+        onImportBlenderMaterial={() => importBlenderFileInputRef.current?.click()}
+        onExportMultiChannelModel={() => setIsExportModelDialogOpen(true)}
       />
 
       {/* 2. Tool Options Sub-Toolbar */}
@@ -1022,6 +1156,7 @@ export default function App() {
                 symmetryConfig={symmetryConfig}
                 bloomSettings={bloomSettings}
                 onUpdateBloomSettings={(patch) => setBloomSettings(b => ({ ...b, ...patch }))}
+                patternStampConfig={patternStampConfig}
               />
             </div>
           )}
@@ -1045,6 +1180,7 @@ export default function App() {
                 customOBJText={customOBJText}
                 touchNavEnabled={touchNavEnabled}
                 onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
+                patternStampConfig={patternStampConfig}
               />
             </div>
           )}
@@ -1107,6 +1243,11 @@ export default function App() {
                             onConvertToNormal={handleConvertToNormal}
                             onConvertToClipMask={handleConvertToClipMask}
                             onConvertToEmissive={handleConvertToEmissive}
+                            onInvertLayerColor={handleInvertLayerColor}
+                            onOpenLayerSettings={(id) => {
+                              setLayerSettingsTargetId(id);
+                              setIsLayerSettingsOpen(true);
+                            }}
                           />
                         </div>
                       ),
@@ -1602,6 +1743,53 @@ export default function App() {
         onClose={() => setIsUndoSettingsOpen(false)}
         undoBuffer={undoBuffer}
         layerCount={layers.length}
+      />
+
+      {/* 12. Layer Material & PBR Settings Modal */}
+      <LayerSettingsModal
+        isOpen={isLayerSettingsOpen}
+        onClose={() => setIsLayerSettingsOpen(false)}
+        layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
+        onSavePBR={handleSaveLayerPBR}
+        onOpenNodeEditor={() => {
+          setActivePanels(p => ({ ...p, nodeGraph: true }));
+        }}
+      />
+
+      {/* 13. Pattern Stamp Tool Configuration Dialog */}
+      <PatternStampDialog
+        isOpen={isPatternStampDialogOpen}
+        onClose={() => setIsPatternStampDialogOpen(false)}
+        config={patternStampConfig}
+        onChangeConfig={setPatternStampConfig}
+        onStampAtCenter={handleStampDecalAtCenter}
+      />
+
+      {/* 14. Edge Wear & Cavity Ambient Occlusion Filter Dialog */}
+      <EdgeWearDialog
+        isOpen={isEdgeWearDialogOpen}
+        onClose={() => setIsEdgeWearDialogOpen(false)}
+        activeLayer={layers.find(l => l.id === activeLayerId)}
+        onApply={handleApplyEdgeWear}
+        onPreviewUpdate={notifyTextureUpdated}
+      />
+
+      {/* 15. FBX & glTF Multi-Channel Model Exporter Dialog */}
+      <ExportModelDialog
+        isOpen={isExportModelDialogOpen}
+        onClose={() => setIsExportModelDialogOpen(false)}
+        layers={layers}
+        currentMesh={null}
+        activeModelName={modelKey}
+      />
+
+      {/* Hidden file input for Blender material import */}
+      <input
+        ref={importBlenderFileInputRef}
+        type="file"
+        accept=".json,.py,.txt,.blend"
+        onChange={handleImportBlenderMaterialFile}
+        className="hidden"
       />
     </div>
   );

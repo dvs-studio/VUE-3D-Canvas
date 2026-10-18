@@ -55,6 +55,7 @@ export const ToolBox: React.FC<ToolBoxProps> = ({
     { id: 'clone', label: 'Clone Stamp Tool (Alt+Click Source)', shortcut: 'S', icon: <Stamp className="w-4 h-4" /> },
     { id: 'smudge', label: 'Smudge Tool (Pixel Push)', shortcut: 'U', icon: <Fingerprint className="w-4 h-4" /> },
     { id: 'pen', label: 'Pen Tool (Vector Path)', shortcut: 'P', icon: <PenTool className="w-4 h-4" /> },
+    { id: 'pattern_stamp', label: 'Pattern Stamp Tool (Decal & Sticker)', shortcut: 'D', icon: <Stamp className="w-4 h-4 text-[#e5a038]" /> },
     { id: 'marquee_rect', label: 'Rectangular Marquee', shortcut: 'M', icon: <Square className="w-4 h-4" /> },
     { id: 'lasso', label: 'Lasso Selection', shortcut: 'L', icon: <Lasso className="w-4 h-4" /> },
     { id: 'polygon_lasso', label: 'Polygon Lasso', shortcut: 'Alt+L', icon: <Square className="w-4 h-4 transform rotate-45" /> },

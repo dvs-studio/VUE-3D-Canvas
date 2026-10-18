@@ -74,6 +74,16 @@ export const CircularCarousel: React.FC<CircularCarouselProps> = ({
           const y = Math.sin(angle) * radius;
           const isSelected = activeBrush.id === brush.id;
 
+          const getBrushIcon = (b: BrushPreset) => {
+            const cat = (b.category || '').toLowerCase();
+            const name = (b.name || '').toLowerCase();
+            if (name.includes('eraser')) return <Eraser className="w-3.5 h-3.5" />;
+            if (name.includes('airbrush') || cat.includes('inking')) return <Feather className="w-3.5 h-3.5" />;
+            if (name.includes('texture') || cat.includes('textures')) return <Sparkles className="w-3.5 h-3.5" />;
+            if (cat.includes('hard surface')) return <Shield className="w-3.5 h-3.5" />;
+            return <Paintbrush className="w-3.5 h-3.5" />;
+          };
+
           return (
             <button
               key={brush.id}
@@ -92,8 +102,8 @@ export const CircularCarousel: React.FC<CircularCarouselProps> = ({
                 top: `calc(50% + ${y}px)`,
               }}
             >
-              <span className="text-[10px] font-bold font-mono leading-none">{brush.size}</span>
-              <span className="text-[8px] text-[#aaa] truncate max-w-[36px]">{brush.tipShape || 'rnd'}</span>
+              {getBrushIcon(brush)}
+              <span className="text-[8px] font-mono leading-none mt-0.5">{brush.size}</span>
             </button>
           );
         })}

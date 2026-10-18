@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch VUE 3D Canvas in Chrome / Edge",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Debug Self-Hosted Server (Node.js)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/self-host/server.js",
+      "args": ["--port", "3000"],
+      "console": "integratedTerminal"
+    }
+  ]
+}

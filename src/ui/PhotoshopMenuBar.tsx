@@ -44,6 +44,10 @@ interface PhotoshopMenuBarProps {
   onSelectMeshComponentVisibility?: (comp: string) => void;
   currentTheme?: ThemeMode;
   onChangeTheme?: (theme: ThemeMode) => void;
+  onOpenEdgeWearFilter?: () => void;
+  onOpenPatternStampDialog?: () => void;
+  onImportBlenderMaterial?: () => void;
+  onExportMultiChannelModel?: () => void;
 }
 
 export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
@@ -81,6 +85,10 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onSelectMeshComponentVisibility,
   currentTheme = 'cs5',
   onChangeTheme,
+  onOpenEdgeWearFilter,
+  onOpenPatternStampDialog,
+  onImportBlenderMaterial,
+  onExportMultiChannelModel,
 }) => {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -171,6 +179,24 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               >
                 Export Blender .blend Material
               </button>
+              {onImportBlenderMaterial && (
+                <button
+                  onClick={() => { onImportBlenderMaterial(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#cba6f7]"
+                >
+                  <span>Import Blender Material (.json / dict)...</span>
+                  <span className="text-[#cba6f7] font-mono text-[10px]">PBR</span>
+                </button>
+              )}
+              {onExportMultiChannelModel && (
+                <button
+                  onClick={() => { onExportMultiChannelModel(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#3d7fb8] font-semibold"
+                >
+                  <span>Export Model (glTF / FBX + PBR Maps)...</span>
+                  <span className="text-[#3d7fb8] font-mono text-[10px]">3D</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -362,6 +388,26 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 >
                   <span>Jenny Stitch Studio (Path Stitches)...</span>
                   <span className="text-[#a6e3a1] font-mono text-[10px]">Mesh</span>
+                </button>
+              )}
+
+              {onOpenEdgeWearFilter && (
+                <button
+                  onClick={() => { onOpenEdgeWearFilter(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#a6e3a1]"
+                >
+                  <span>Edge Wear &amp; Cavity AO Filter...</span>
+                  <span className="text-[#a6e3a1] font-mono text-[10px]">Curv</span>
+                </button>
+              )}
+
+              {onOpenPatternStampDialog && (
+                <button
+                  onClick={() => { onOpenPatternStampDialog(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#fab387]"
+                >
+                  <span>Pattern Stamp Decal Setup...</span>
+                  <span className="text-[#fab387] font-mono text-[10px]">Decal</span>
                 </button>
               )}
 

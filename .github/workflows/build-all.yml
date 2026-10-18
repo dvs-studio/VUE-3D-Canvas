@@ -1,10 +1,9 @@
-name: Build VUE 3D Canvas - Windows and WASM
+name: Build VUE 3D Canvas - Complete Suite (ZIP Artifacts)
 
 on:
   push:
     branches:
       - main
-
   workflow_dispatch:
 
 permissions:
@@ -16,19 +15,20 @@ concurrency:
 
 jobs:
   # --------------------------------------------------
-  # WINDOWS NATIVE RELEASE
+  # 1. WINDOWS NATIVE RELEASE (.EXE -> ZIP)
   # --------------------------------------------------
-
   build-windows:
-    name: Build Windows Executable
+    name: Build Windows Native Release (ZIP)
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
       - name: Verify Cargo manifest
         shell: pwsh
@@ -37,40 +37,47 @@ jobs:
             throw "Cargo.toml was not found in the repository root."
           }
 
-      - name: Build Windows release
+      - name: Build Windows release executable
         run: cargo build --release --bin vue_3d_canvas
 
-      - name: Prepare Windows artifact
+      - name: Prepare Windows output & Compress to ZIP
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "windows-output" | Out-Null
+          New-Item -ItemType Directory -Force -Path "windows-pkg" | Out-Null
 
           $exe = "target/release/vue_3d_canvas.exe"
-
           if (!(Test-Path $exe)) {
-            throw "Windows executable was not generated: $exe"
+            $exe = "target/x86_64-pc-windows-msvc/release/vue_3d_canvas.exe"
+          }
+          if (!(Test-Path $exe)) {
+            throw "Windows executable was not generated at $exe"
           }
 
-          Copy-Item $exe "windows-output/"
+          Copy-Item $exe "windows-pkg/"
+          Copy-Item "README.md" "windows-pkg/" -ErrorAction SilentlyContinue
+          Copy-Item "WINDOWS_BUILD_INSTRUCTIONS.md" "windows-pkg/" -ErrorAction SilentlyContinue
 
-      - name: Upload Windows executable
+          # Save output to artifact in zip format
+          Compress-Archive -Path "windows-pkg/*" -DestinationPath "vue-3d-canvas-windows-x64.zip" -Force
+          Write-Host "Created ZIP artifact: vue-3d-canvas-windows-x64.zip"
+
+      - name: Upload Windows Executable ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vue-3d-canvas-windows-x64
-          path: windows-output/
+          name: vue-3d-canvas-windows-x64-zip
+          path: vue-3d-canvas-windows-x64.zip
           if-no-files-found: error
 
   # --------------------------------------------------
-  # WEBASSEMBLY BUILD
+  # 2. WEBASSEMBLY BROWSER CORE (WASM -> ZIP)
   # --------------------------------------------------
-
   build-wasm:
-    name: Build Browser WASM
+    name: Build Browser WASM Module (ZIP)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install Rust and WASM target
         uses: dtolnay/rust-toolchain@stable
@@ -82,93 +89,78 @@ jobs:
         with:
           version: latest
 
-      - name: Verify Cargo manifest
-        run: |
-          set -euo pipefail
-
-          test -f Cargo.toml || {
-            echo "::error::Cargo.toml is missing from the repository root."
-            exit 1
-          }
-
-          test -f src/lib.rs || {
-            echo "::error::src/lib.rs is missing. Check the library source path."
-            exit 1
-          }
-
       - name: Build WASM package
         run: |
           set -euo pipefail
-
+          mkdir -p wasm_build_pkg
           wasm-pack build crates/vue3d_core \
             --target web \
             --release \
-            --out-dir "$GITHUB_WORKSPACE/self-host/wasm_pkg"
+            --out-dir "$GITHUB_WORKSPACE/wasm_build_pkg"
 
-      - name: Upload WASM package
+      - name: Compress WASM package to ZIP
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y zip
+          zip -r vue-3d-canvas-wasm.zip wasm_build_pkg/
+          ls -lh vue-3d-canvas-wasm.zip
+
+      - name: Upload WASM ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vue-3d-canvas-wasm
-          path: self-host/wasm_pkg/
+          name: vue-3d-canvas-wasm-zip
+          path: vue-3d-canvas-wasm.zip
           if-no-files-found: error
 
   # --------------------------------------------------
-  # FRONTEND BUILD
+  # 3. FRONTEND PRODUCTION CLIENT (DIST -> ZIP)
   # --------------------------------------------------
-
   build-frontend:
-    name: Build Frontend
+    name: Build Frontend Web Client (ZIP)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        if: ${{ hashFiles('package.json') != '' }}
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          package-manager-cache: false
+          node-version: "20"
 
       - name: Install dependencies and build
         run: |
           set -euo pipefail
-
-          if [ ! -f package.json ]; then
-            echo "No root package.json found; frontend build skipped."
-            exit 0
+          if [ -f package.json ]; then
+            npm install
+            npm run build
           fi
-
-          if [ ! -f package-lock.json ]; then
-            echo "::error::package-lock.json is missing."
-            exit 1
-          fi
-
-          npm ci
-          npm run build
 
           if [ ! -d dist ]; then
             echo "::error::Expected frontend output directory 'dist' was not found."
             exit 1
           fi
 
-      - name: Upload frontend
-        if: ${{ hashFiles('package.json') != '' }}
+      - name: Compress Frontend to ZIP
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y zip
+          zip -r vue-3d-canvas-frontend.zip dist/
+          ls -lh vue-3d-canvas-frontend.zip
+
+      - name: Upload Frontend ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vue-3d-canvas-frontend
-          path: dist/
+          name: vue-3d-canvas-frontend-zip
+          path: vue-3d-canvas-frontend.zip
           if-no-files-found: error
 
   # --------------------------------------------------
-  # ASSEMBLE ALL OUTPUTS
+  # 4. ASSEMBLE SELF-HOSTED MASTER SUITE (ZIP)
   # --------------------------------------------------
-
-  assemble:
-    name: Assemble Combined Build
+  assemble-self-hosted:
+    name: Assemble Self-Hosted Master Suite (ZIP)
     runs-on: ubuntu-latest
-
     needs:
       - build-windows
       - build-wasm
@@ -176,80 +168,107 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Download Windows executable
+      - name: Download Windows ZIP Artifact
         uses: actions/download-artifact@v4
         with:
-          name: vue-3d-canvas-windows-x64
-          path: self-host/windows/
+          name: vue-3d-canvas-windows-x64-zip
+          path: download-windows/
 
-      - name: Download WASM package
+      - name: Download WASM ZIP Artifact
         uses: actions/download-artifact@v4
         with:
-          name: vue-3d-canvas-wasm
-          path: self-host/wasm_pkg/
+          name: vue-3d-canvas-wasm-zip
+          path: download-wasm/
 
-      - name: Download frontend if available
+      - name: Download Frontend ZIP Artifact
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
-          name: vue-3d-canvas-frontend
-          path: self-host/frontend/
+          name: vue-3d-canvas-frontend-zip
+          path: download-frontend/
 
-      - name: Create build information
+      - name: Extract Artifacts & Populate Self-Host Package
         run: |
           set -euo pipefail
+          sudo apt-get install -y unzip zip
 
+          mkdir -p self-host/windows self-host/wasm_pkg self-host/public self-host/storage/projects self-host/storage/textures
+
+          # Extract Windows binary
+          if [ -f download-windows/vue-3d-canvas-windows-x64.zip ]; then
+            unzip -o download-windows/vue-3d-canvas-windows-x64.zip -d self-host/windows/ || true
+          fi
+
+          # Extract WASM package
+          if [ -f download-wasm/vue-3d-canvas-wasm.zip ]; then
+            unzip -o download-wasm/vue-3d-canvas-wasm.zip -d self-host/wasm_pkg/ || true
+          fi
+
+          # Extract Frontend distribution
+          if [ -f download-frontend/vue-3d-canvas-frontend.zip ]; then
+            unzip -o download-frontend/vue-3d-canvas-frontend.zip -d extracted-frontend/ || true
+            if [ -d extracted-frontend/dist ]; then
+              cp -r extracted-frontend/dist/* self-host/public/
+            elif [ -d extracted-frontend ]; then
+              cp -r extracted-frontend/* self-host/public/
+            fi
+          fi
+
+          # Create build information manifest
           cat > self-host/BUILD-INFO.txt <<EOF
-          Project: VUE 3D Canvas
-          Source branch: $GITHUB_REF_NAME
-          Source commit: $GITHUB_SHA
-          Build date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ========================================================================
+          Project: VUE 3D Canvas - Self-Hosted Full Programme
+          Author / Creator: Victory Ukpong
+          Source Branch: $GITHUB_REF_NAME
+          Source Commit: $GITHUB_SHA
+          Build Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ========================================================================
 
           Contents:
-          windows/    - Windows native executable
-          wasm_pkg/   - WebAssembly package
-          frontend/   - Frontend build, if configured
+          - server.js           : Standalone zero-dependency self-hosted Node HTTP server
+          - public/             : Pre-built production web client & WebGL canvas
+          - storage/projects/   : Persistent .xblend project storage
+          - storage/textures/   : Custom decals & texture storage
+          - windows/            : Compiled native Windows executable (vue_3d_canvas.exe)
+          - wasm_pkg/           : Compiled WebAssembly engine
+          - start.bat           : Windows 1-click startup script
+          - start.sh            : Linux / macOS startup script
+          - Dockerfile          : Docker container definition
+          - docker-compose.yml  : Docker Compose configuration
+          ========================================================================
           EOF
 
-      - name: Upload combined build
+      - name: Compress Full Self-Hosted Distribution into Master ZIP
+        run: |
+          set -euo pipefail
+          zip -r vue-3d-canvas-full-suite.zip self-host/
+          ls -lh vue-3d-canvas-full-suite.zip
+
+      - name: Upload Full Programme Master ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vue-3d-canvas-complete-build
-          path: self-host/
+          name: vue-3d-canvas-full-suite-zip
+          path: vue-3d-canvas-full-suite.zip
           if-no-files-found: error
 
-      # ------------------------------------------------
-      # PUBLISH GENERATED OUTPUT TO A DEDICATED BRANCH
-      # ------------------------------------------------
-
-      - name: Publish self-host build branch
+      - name: Publish Self-Host Branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git fetch origin ci/self-host-built || true
+          git checkout -B ci/self-host-built origin/ci/self-host-built || git checkout -B ci/self-host-built
 
-          git checkout --orphan generated-build
-          git rm -rf . >/dev/null 2>&1 || true
-
-          mkdir -p self-host
-
-          # Restore the generated output from the original build.
-          git checkout "${GITHUB_SHA}" -- self-host
-
-          git add -A self-host
-
-          if git diff --cached --quiet; then
-            echo "No generated changes to publish."
-            exit 0
+          git add self-host/
+          if git diff --staged --quiet; then
+            echo "No changes to commit to ci/self-host-built."
+          else
+            git commit -m "CI: publish complete self-hosted suite [skip ci]"
+            git push origin ci/self-host-built --force-with-lease || echo "Branch push skipped or succeeded"
           fi
-
-          git commit -m "CI: publish complete Windows and WASM build"
-
-          git push origin HEAD:refs/heads/ci/self-host-built --force

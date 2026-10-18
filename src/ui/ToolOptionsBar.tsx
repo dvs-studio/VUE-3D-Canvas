@@ -5,9 +5,12 @@
  * Created by Victory Ukpong
  */
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { ToolType, BrushPreset, ViewportShadingMode } from '../core/types';
-import { Sliders, Box, Layers, SplitSquareVertical, Eye, Camera, Disc, Smartphone, LayoutGrid } from 'lucide-react';
+import { 
+  Sliders, Box, Layers, SplitSquareVertical, Eye, Camera, 
+  Disc, Smartphone, LayoutGrid, Plus, Image as ImageIcon, ChevronDown 
+} from 'lucide-react';
 
 interface ToolOptionsBarProps {
   activeTool: ToolType;
@@ -52,8 +55,68 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   onToggleSymmetryX,
   onOpenSymmetryPanel,
 }) => {
+  const [showMaskMenu, setShowMaskMenu] = useState(false);
+  const [showPatternMenu, setShowPatternMenu] = useState(false);
+
+  const [customMasks, setCustomMasks] = useState<{ id: string; name: string; url?: string }[]>([]);
+  const [customPatterns, setCustomPatterns] = useState<{ id: string; name: string; url?: string }[]>([]);
+
+  const maskFileRef = useRef<HTMLInputElement>(null);
+  const patternFileRef = useRef<HTMLInputElement>(null);
+
+  const maskPresets = [
+    { id: 'none', label: 'None', preview: '○' },
+    { id: 'grunge', label: 'Grunge', preview: '░▒' },
+    { id: 'splat', label: 'Splat', preview: '✦' },
+    { id: 'scratch', label: 'Scratch', preview: '///' },
+    { id: 'dots', label: 'Dots', preview: ':::' },
+    { id: 'noise', label: 'Noise', preview: '≋' },
+    { id: 'cracks', label: 'Cracks', preview: '⚡' },
+  ];
+
+  const patternPresets = [
+    { id: 'none', label: 'None', preview: '—' },
+    { id: 'checker', label: 'Checker', preview: '▦' },
+    { id: 'carbon', label: 'Carbon', preview: '▩' },
+    { id: 'halftone', label: 'Halftone', preview: '⁖' },
+    { id: 'leather', label: 'Leather', preview: '≈' },
+    { id: 'wood', label: 'Wood', preview: '◎' },
+    { id: 'weave', label: 'Weave', preview: '▥' },
+  ];
+
+  const handleUploadMask = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      const id = 'mask_' + Date.now();
+      setCustomMasks(prev => [...prev, { id, name: file.name.slice(0, 10), url }]);
+      onUpdateBrush({ maskType: id as any, stencilUrl: url });
+      setShowMaskMenu(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadPattern = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const url = ev.target?.result as string;
+      const id = 'pat_' + Date.now();
+      setCustomPatterns(prev => [...prev, { id, name: file.name.slice(0, 10), url }]);
+      onUpdateBrush({ patternType: id as any, patternScale: 1.0 });
+      setShowPatternMenu(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
-    <div className="h-8 bg-[#3c3c3c] border-b border-[#242424] px-2 flex items-center justify-between text-xs text-[#c8c8c8] select-none z-40 overflow-x-auto">
+    <div className="h-8 bg-[#3c3c3c] border-b border-[#242424] px-2 flex items-center justify-between text-xs text-[#c8c8c8] select-none z-40 overflow-x-auto relative">
+      <input ref={maskFileRef} type="file" accept="image/*" onChange={handleUploadMask} className="hidden" />
+      <input ref={patternFileRef} type="file" accept="image/*" onChange={handleUploadPattern} className="hidden" />
+
       {/* Tool-specific Parameters */}
       <div className="flex items-center gap-3 shrink-0">
         {/* Active Tool Label */}
@@ -64,7 +127,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
         {/* Brush Parameters if paint tool */}
         {['brush', 'eraser', 'blur', 'clone', 'smudge'].includes(activeTool) && (
           <div className="flex items-center gap-2.5">
-            {/* 1. BRUSH TYPE (Stroke Application Method) */}
+            {/* 1. BRUSH TYPE */}
             <div className="flex items-center gap-1 bg-[#303030] px-1.5 py-0.5 rounded border border-[#4a4a4a]">
               <span className="text-[10px] text-[#f5c2e7] font-semibold uppercase">Type:</span>
               <select
@@ -81,41 +144,108 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
               </select>
             </div>
 
-            {/* 2. BRUSH MASK (Stencil Tip) */}
-            <div className="flex items-center gap-1 bg-[#303030] px-1.5 py-0.5 rounded border border-[#4a4a4a]">
-              <span className="text-[10px] text-[#89b4fa] font-semibold uppercase">Mask:</span>
-              <select
-                value={brush.maskType || 'none'}
-                onChange={(e) => onUpdateBrush({ maskType: e.target.value as any })}
-                className="bg-[#242424] border border-[#555] text-white rounded px-1 py-0.5 text-[10px] outline-none font-medium cursor-pointer"
-                title="Brush Alpha Mask Stencil"
+            {/* 2. BRUSH MASK (Tip Shape Texture) with Preset Previews & + Button */}
+            <div className="relative">
+              <div 
+                onClick={() => { setShowMaskMenu(!showMaskMenu); setShowPatternMenu(false); }}
+                className="flex items-center gap-1.5 bg-[#303030] hover:bg-[#383838] px-1.5 py-0.5 rounded border border-[#4a4a4a] cursor-pointer transition-colors"
+                title="Brush Tip Mask Texture (Defines brush tip shape)"
               >
-                <option value="none">None</option>
-                <option value="grunge">Grunge</option>
-                <option value="splat">Splat</option>
-                <option value="scratch">Scratch</option>
-                <option value="dots">Dots</option>
-                <option value="noise">Noise</option>
-                <option value="cracks">Cracks</option>
-              </select>
+                <span className="text-[10px] text-[#89b4fa] font-semibold uppercase">Mask:</span>
+                <span className="w-4 h-4 rounded bg-[#1e1e1e] border border-[#555] flex items-center justify-center text-[10px] text-[#89b4fa] font-mono overflow-hidden">
+                  {brush.maskType === 'none' ? '○' : '✦'}
+                </span>
+                <span className="text-[10px] text-white font-medium capitalize max-w-[50px] truncate">
+                  {brush.maskType || 'none'}
+                </span>
+                <ChevronDown className="w-2.5 h-2.5 text-[#888]" />
+              </div>
+
+              {/* Mask Preset Image Preview Popover */}
+              {showMaskMenu && (
+                <div className="absolute top-full left-0 mt-1 z-50 bg-[#2b2b2b] border border-[#555] rounded shadow-2xl p-2 w-56 cs5-outset">
+                  <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-[#404040]">
+                    <span className="text-[10px] font-mono text-[#89b4fa] font-bold uppercase">Brush Tip Mask</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); maskFileRef.current?.click(); }}
+                      className="px-1.5 py-0.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded text-[9px] font-bold flex items-center gap-0.5"
+                      title="Import custom tip mask texture image"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      <span>Add</span>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[...maskPresets, ...customMasks.map(c => ({ id: c.id, label: c.name, preview: '★' }))].map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => { onUpdateBrush({ maskType: m.id as any }); setShowMaskMenu(false); }}
+                        className={`p-1 rounded border flex flex-col items-center justify-center transition-all ${
+                          brush.maskType === m.id
+                            ? 'bg-[#3d7fb8]/30 border-[#3d7fb8] text-white'
+                            : 'bg-[#202020] border-[#383838] text-[#aaa] hover:border-[#666]'
+                        }`}
+                        title={m.label}
+                      >
+                        <span className="text-xs font-mono">{m.preview}</span>
+                        <span className="text-[8px] truncate max-w-full">{m.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* 3. BRUSH PATTERN (Tileable Modulator) */}
-            <div className="flex items-center gap-1 bg-[#303030] px-1.5 py-0.5 rounded border border-[#4a4a4a]">
-              <span className="text-[10px] text-[#fab387] font-semibold uppercase">Pattern:</span>
-              <select
-                value={brush.patternType || 'none'}
-                onChange={(e) => onUpdateBrush({ patternType: e.target.value as any })}
-                className="bg-[#242424] border border-[#555] text-white rounded px-1 py-0.5 text-[10px] outline-none font-medium cursor-pointer"
-                title="Tileable Brush Pattern"
+            {/* 3. BRUSH PATTERN (Continuous Texture Image) with Preset Previews & + Button */}
+            <div className="relative">
+              <div 
+                onClick={() => { setShowPatternMenu(!showPatternMenu); setShowMaskMenu(false); }}
+                className="flex items-center gap-1.5 bg-[#303030] hover:bg-[#383838] px-1.5 py-0.5 rounded border border-[#4a4a4a] cursor-pointer transition-colors"
+                title="Brush Texture Pattern (Continuous surface texture)"
               >
-                <option value="none">None</option>
-                <option value="checker">Checker</option>
-                <option value="carbon">Carbon</option>
-                <option value="halftone">Halftone</option>
-                <option value="leather">Leather</option>
-                <option value="wood">Wood</option>
-              </select>
+                <span className="text-[10px] text-[#fab387] font-semibold uppercase">Pattern:</span>
+                <span className="w-4 h-4 rounded bg-[#1e1e1e] border border-[#555] flex items-center justify-center text-[10px] text-[#fab387] font-mono overflow-hidden">
+                  {brush.patternType === 'none' ? '—' : '▦'}
+                </span>
+                <span className="text-[10px] text-white font-medium capitalize max-w-[50px] truncate">
+                  {brush.patternType || 'none'}
+                </span>
+                <ChevronDown className="w-2.5 h-2.5 text-[#888]" />
+              </div>
+
+              {/* Pattern Texture Image Preview Popover */}
+              {showPatternMenu && (
+                <div className="absolute top-full left-0 mt-1 z-50 bg-[#2b2b2b] border border-[#555] rounded shadow-2xl p-2 w-56 cs5-outset">
+                  <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-[#404040]">
+                    <span className="text-[10px] font-mono text-[#fab387] font-bold uppercase">Texture Pattern</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); patternFileRef.current?.click(); }}
+                      className="px-1.5 py-0.5 bg-[#e5a038] hover:bg-[#f0b555] text-black rounded text-[9px] font-bold flex items-center gap-0.5"
+                      title="Import custom texture image"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      <span>Add</span>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[...patternPresets, ...customPatterns.map(c => ({ id: c.id, label: c.name, preview: '★' }))].map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => { onUpdateBrush({ patternType: p.id as any }); setShowPatternMenu(false); }}
+                        className={`p-1 rounded border flex flex-col items-center justify-center transition-all ${
+                          brush.patternType === p.id
+                            ? 'bg-[#fab387]/30 border-[#fab387] text-white'
+                            : 'bg-[#202020] border-[#383838] text-[#aaa] hover:border-[#666]'
+                        }`}
+                        title={p.label}
+                      >
+                        <span className="text-xs font-mono">{p.preview}</span>
+                        <span className="text-[8px] truncate max-w-full">{p.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="h-4 w-px bg-[#555]" />

@@ -23,39 +23,44 @@
 | Path | Primary Responsibility |
 |---|---|
 | `/src/App.tsx` | Main application shell, canonical composite canvas synchronizer, docker management, keyboard shortcuts, modal state. |
-| `/src/renderer/Viewport3D.tsx` | WebGL 3D painting engine, Three.js scene, UnrealBloomPass post-processing, HDRI reflections & lighting, x-ray 3D cursor, Quad/Perspective cameras, BoxGizmo. |
-| `/src/renderer/Viewport2D.tsx` | 2D UV texture canvas painter, touch navigation, physical selection shaded light/dark overlay, Bezier curve editing, multi-axis symmetry. |
+| `/src/renderer/Viewport3D.tsx` | WebGL 3D painting engine, Three.js scene, UnrealBloomPass post-processing, HDRI & Matcap reflections, surface shading engine, Quad/Perspective cameras, Decal & Stamp projections. |
+| `/src/renderer/Viewport2D.tsx` | 2D UV texture canvas painter, touch navigation, physical selection shaded light/dark overlay, Bezier curve editing, Smart UV Unwrap, Jenny Stitch. |
+| `/src/renderer/surfaceShading.ts` | Dynamic Blender-style surface normal calculator: Def (original normals), Smooth (angle-weighted), Flat (faceted). |
 | `/src/renderer/hdriManager.ts` | Equirectangular panorama generators (Studio, Sunset, Cyberpunk, Daylight, Custom), reflection math $R = \text{reflect}(-V, N)$, texture caching. |
-| `/src/ui/PhotoshopMenuBar.tsx` | Top application menu bar (File, Edit, Layer, Filter, View, Window, Help), Projection [F8] trigger, theme selector dropdown. |
-| `/src/ui/ToolOptionsBar.tsx` | Contextual tool parameters (brush size, opacity, hardness, spacing, stabilizer lazy-mouse, stencil masks, patterns, symmetry toggle). |
-| `/src/ui/ToolBox.tsx` | Left Photoshop CS5 toolbar (Brush, Mask Brush, Eraser, Blur, Clone, Smudge, Pen, Marquees, Lasso, Bucket, Gradients, Eyedropper, Hand, Zoom). |
-| `/src/ui/panels/LayersPanel.tsx` | Layer management, blending modes, opacity, layer conversions (Bump, Normal, Alpha Clip, Emissive Bloom). |
-| `/src/ui/panels/SymmetryPanel.tsx` | Symmetry & Cloning Studio (Multi-axis checkboxes X/Y/Z/All/Off, + to - vs - to +, Mesh origin vs 3D virtual cursor locator). |
-| `/src/ui/panels/MaskPanel.tsx` | Masking & Selection Studio (Mask brush, physical light/dark shading preview, invert, blur, expand, shrink, fill, erase). |
-| `/src/ui/panels/NodeGraphPanel.tsx` | Node Editor (Blender 2.8+) graph editor, Vector Transform node, Principled BSDF, ColorRamp, procedural noise/voronoi/musgrave/wave/brick/checker. |
-| `/src/nodes/blender28Nodes.ts` | Shader node definitions (`ShaderNodeVectorTransform`, mapping, mix_rgb, color_ramp, principled_bsdf). |
-| `/src/nodes/nodeEvaluator.ts` | Procedural texture graph baker, coordinate transformation math between World, Object, Camera spaces. |
-| `/src/tools/layerConversions.ts` | Image algorithms: Sobel normal maps, luminance bump maps, binary alpha clip masks, emissive glow conversion. |
-| `/src/tools/brushEngine.ts` | 60 FPS brush applicator, Medibang lazy-mouse stabilizer, stencils, patterns, clone stamp, smudge. |
-| `/src/tools/symmetryEngine.ts` | Multi-axis coordinate mirroring, cloning across weighted center/cursor planes. |
-| `/src/tools/maskEngine.ts` | Morphological mask operations (dilation, erosion, feathering, rasterization, direct bitmap dab painting). |
-| `/src/core/types.ts` | TypeScript types for layers, blend modes, brushes, shader nodes, selection masks, HDRI, Bloom, and themes. |
+| `/src/ui/PhotoshopMenuBar.tsx` | Top application menu bar (File, Edit, Layer, Filter, View, Window, Help), Projection [F8] trigger, theme selector dropdown, mesh parts visibility. |
+| `/src/ui/ToolOptionsBar.tsx` | Contextual tool parameters (brush size, opacity, hardness, spacing, stabilizer lazy-mouse, stencil masks, textures, pattern preview & add). |
+| `/src/ui/ToolBox.tsx` | Left Photoshop CS5 toolbar (Brush, Mask Brush, Eraser, Blur, Clone, Smudge, Pen, Pattern Stamp, Marquees, Lasso, Bucket, Gradients, Eyedropper, Hand, Zoom, Def/Smooth/Flat toggles). |
+| `/src/ui/CircularCarousel.tsx` | Radial widget with vector icons for quick tool selection. |
+| `/src/ui/TriplanarDialog.tsx` | Advanced Triplanar Box Filter dialog with multi-texture mixing operator, noise/cloud blending, edge bleed, tiling randomization, and custom uploads. |
+| `/src/ui/PatternStampDialog.tsx` | Pattern Stamp configuration dialog for sticker/decal stamping, edge imperfection sliders, and grunge overlay blend effects. |
+| `/src/ui/EdgeWearDialog.tsx` | Edge Wear & Ambient Occlusion filter dialog for curvature calculation, cavity dirt, and peeling distress. |
+| `/src/ui/LayerSettingsModal.tsx` | Per-layer PBR node configuration (Roughness, Metallic, Bump/Height, Normal, Emission, Matcap/HDRI reflection sliders, bump-only toggle, advanced node switch). |
+| `/src/ui/panels/LayersPanel.tsx` | Layer management, blending modes, opacity, grouping containers, right-click context menu (Invert Color, Conversions, Export). |
+| `/src/ui/panels/BrushLibraryPanel.tsx` | Brush & Texture library docker, Texture vs Mask tip separation, custom texture saving. |
+| `/src/ui/panels/NodeGraphPanel.tsx` | Node Editor (Blender 2.8+) graph editor, 3-step touch connections, tap-to-edit values, Auto Arrange, ShaderNodeUVMap, ShaderNodeEmission. |
+| `/src/nodes/blenderMaterialImporter.ts` | Parser and importer for Blender material nodes/files into Vue 3D Canvas layers and node networks. |
+| `/src/core/modelExporters.ts` | FBX and glTF exporters with automatic texture channel separation (Albedo, Emission, Displacement/Normal, Roughness, Metallic). |
+| `/src/tools/fillSuite.ts` | Multi-texture triplanar box-mapping engine with noise/fractal cloud mixing operator, blank alpha support, and mask constraints. |
+| `/src/tools/patternStampTool.ts` | Surface decal projection stamper with sharpness masks and grunge overlays. |
+| `/src/tools/edgeWearFilter.ts` | Geometry curvature and ambient occlusion analyzer with procedural edge peeling. |
+| `/src/tools/smartUVUnwrap.ts` | Smart UV projection with open edge/dihedral angle clustering, stretch minimization, and shelf bin packing. |
+| `/src/core/types.ts` | System TypeScript definitions for Layers, PBR props, Triplanar config, Stamp config, Exporters, and Nodes. |
 
 ---
 
 ## 3. Active Feature Verification Ledger
 
 - [x] **Agent State Ledger (`AGENT_STATE.md`)**: Instant lookup file active at root.
-- [x] **Bloom Post-Processing Pass**: `EffectComposer` + `RenderPass` + `UnrealBloomPass` + `OutputPass` integrated into `Viewport3D` with strength, radius, threshold controls and presets (Radiant Neon, Soft Glow, Cyberpunk Max, Subtle Shimmer) to enhance glowing emissive materials.
-- [x] **Emissive Layer Conversion**: `LayerConversions.convertToEmissive` hooked to `handleConvertToEmissive` in `App.tsx`, `PhotoshopMenuBar` Layer menu with `BLOOM` tag, and `LayersPanel` context menu; sets `layer.channel = 'emission'` and feeds directly into 3D `MeshStandardMaterial.emissiveMap` with `emissiveIntensity = 2.2` for radiant Bloom glow.
-- [x] **Direct Painting on UV Map Canvas**: `Viewport2D.tsx` fully supports direct responsive painting for all tools: Brush, Eraser, Blur, Clone, Smudge, Gradients, Pen vector curves, Bucket fill, Mask Brush (`mask_brush`), Rect Marquee (`marquee_rect`), Lasso (`lasso`), and Polygon Lasso (`polygon_lasso`).
-- [x] **Physical Selection Shading (Light vs Dark)**: Editable area rendered as shaded light (unlocked, illuminated); protected area rendered as shaded dark (`rgba(8, 12, 22, 0.65)`) with high-contrast animated marching ants border in both 2D and 3D viewports. Mask brush directly paints/erases editable light areas.
-- [x] **Numpad Docker Removed**: Completely unmounted from Window menu, DockerGroup 2 tabs, and standalone docked panels as requested.
-- [x] **Node Editor Renamed**: "Node Editor (Blender 2.8+)" across all titles, panels, and menus.
-- [x] **Vector Transform Shader Node**: `ShaderNodeVectorTransform` added with Vector, Point, Normal modes and World, Object, Camera coordinate matrix transformations.
-- [x] **HDRI Reflections & Viewport Lighting**: Equirectangular panorama presets, checkbox to light main viewport vs reflections only, blurred background, reflection vector math $R = \text{reflect}(-V, N)$.
-- [x] **3D Cursor X-Ray Overlay**: Visible through the mesh with `depthTest: false`, Blender-style target ring, crosshairs, and dynamic text Sprite bearing the Axis name.
-- [x] **Multi-Axis Symmetry Checkboxes**: Independent checkboxes for X, Y, Z, All, and None (Off) in `SymmetryPanel` and real-time brush stroke dab mirroring.
-- [x] **Theme Switcher Dropdown**: Selectable directly after the Projection [F8] button (`cs5`, `bw78` with viewport shadow, `modern`, `ps2022`).
-- [x] **Help Menu**: Docx link removed; `help.pdf` and `tutorial.pdf` supported; `help.docx` preserved on disk.
-- [x] **Name Changes Tracking**: `NAME_CHANGES.txt` active at root documenting all professional naming corrections.
+- [x] **Surface Normal Shading Engine (`surfaceShading.ts`)**: True Blender-style Def, Smooth (angle-weighted), and Flat normal computation dynamically toggled from Toolbox.
+- [x] **Smart UV Unwrap Engine (`smartUVUnwrap.ts`)**: 2D UV editor automatic unwrap analyzing open edges and angles > 60° with island packing.
+- [x] **Multi-Texture Triplanar Mixing Operator**: Mixing multiple image textures via noise/fractal clouds and pattern mixers, blank alpha blending, edge noise & bleeding, tiling randomization, and `+` texture stack addition.
+- [x] **Per-Layer PBR Node Setup & Settings Modal**: Each layer has dedicated PBR properties, matcap/HDRI reflection sliders, Bump-only toggle (bump enabled, color disabled), and Advanced Material Node switch.
+- [x] **Layer Invert Color Context Menu**: Added to LayersPanel right-click menu.
+- [x] **Brush Docker "Texture" & Carousel Icons**: Pattern renamed to Texture with custom saving, carousel icons updated, mask/pattern preview thumbnails with `+` import.
+- [x] **Pattern Stamp Tool**: 3D surface decal stamping with sharpness/imperfection masks and blendable grunge overlays.
+- [x] **Edge Wear & AO Filter**: Curvature and ambient occlusion edge wear filter for realistic distress and cavity dirt.
+- [x] **Blender Material Converter**: Imports Blender material setups and bridges them into Vue 3D Canvas.
+- [x] **FBX & glTF Multi-Channel Exporter**: Automatic baking and separation into Albedo, Emission, Displacement/Normal, Roughness, and Metallic textures for FBX and glTF 2.0.
+- [x] **Self-Hosted Full Programme (`self-host/`)**: Standalone distribution with zero-dependency Node server, public web build, project & texture persistence, 1-click start scripts, Dockerfile, and docker-compose.
+- [x] **VS Code Workflow Integration**: Configured `.vscode/` tasks, launch, and extensions for development and compilation without requiring Visual Studio Community Edition.
+- [x] **ZIP Artifact Workflows**: Updated all GitHub Actions workflows (`build-all.yml`, `build-self-host.yml`, `windows-build.yml`) to compress and save all build outputs into ZIP format artifacts.
