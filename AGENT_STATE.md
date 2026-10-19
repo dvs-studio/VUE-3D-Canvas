@@ -64,3 +64,10 @@
 - [x] **Self-Hosted Full Programme (`self-host/`)**: Standalone distribution with zero-dependency Node server, public web build, project & texture persistence, 1-click start scripts, Dockerfile, and docker-compose.
 - [x] **VS Code Workflow Integration**: Configured `.vscode/` tasks, launch, and extensions for development and compilation without requiring Visual Studio Community Edition.
 - [x] **ZIP Artifact Workflows**: Updated all GitHub Actions workflows (`build-all.yml`, `build-self-host.yml`, `windows-build.yml`) to compress and save all build outputs into ZIP format artifacts.
+- [x] **Movable Non-Blocking Pattern Stamp Dialog**: Draggable floating window with zero backdrop blur, allowing real-time 3D model rotation and inspection underneath without interface locking.
+- [x] **Clone Stamp Quick Launchers**: Double-clicking the Stamp/Clone tool opens the Pattern Stamp Studio; added quick launcher buttons in the Tool Options Bar and top Menu Bar.
+- [x] **Strictly Alpha-Aware Grunge Overlays**: Embedded high-fidelity grunge textures (Scratched Metal, Dirty Spots, Cracked Paint, Worn Patina, Concrete Weathering, Peeling Paint) and custom image upload, strictly clamped inside decal transparency without bleeding.
+- [x] **Mask & Torn Edge Alpha Engine**: Centered imported mask texture support with B/W and alpha values modulating the torn edge, rotation slider (0 = "Random", 1-360 = fixed angle), and randomization + scattering controls.
+- [x] **Visible Mesh Selector with Name IDs**: Displays submesh name IDs (`[ID: head]`, `[ID: eyes]`, `[ID: dome]`, etc.), "Show All", and a dedicated "Show only selected group" isolation checkbox.
+- [x] **Help Menu Theme Switcher**: Added UI theme selector directly inside the Help dropdown menu with checkmarks.
+- [x] **Native Windows Release Package (`release/windows/`)**: Standalone native Windows `.exe` architecture with direct DirectX 11 / OpenGL acceleration, MSVC & MinGW build scripts, and launcher batch files.

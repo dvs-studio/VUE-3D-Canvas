@@ -9,7 +9,7 @@ import React, { useState, useRef } from 'react';
 import { ToolType, BrushPreset, ViewportShadingMode } from '../core/types';
 import { 
   Sliders, Box, Layers, SplitSquareVertical, Eye, Camera, 
-  Disc, Smartphone, LayoutGrid, Plus, Image as ImageIcon, ChevronDown 
+  Disc, Smartphone, LayoutGrid, Plus, Image as ImageIcon, ChevronDown, Stamp 
 } from 'lucide-react';
 
 interface ToolOptionsBarProps {
@@ -32,6 +32,7 @@ interface ToolOptionsBarProps {
   isSymmetryX?: boolean;
   onToggleSymmetryX?: () => void;
   onOpenSymmetryPanel?: () => void;
+  onOpenPatternStampDialog?: () => void;
 }
 
 export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
@@ -54,6 +55,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   isSymmetryX = false,
   onToggleSymmetryX,
   onOpenSymmetryPanel,
+  onOpenPatternStampDialog,
 }) => {
   const [showMaskMenu, setShowMaskMenu] = useState(false);
   const [showPatternMenu, setShowPatternMenu] = useState(false);
@@ -333,6 +335,24 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
           </div>
         )}
       </div>
+
+      {/* Center Empty Space Quick Launcher: Decal & Pattern Stamp Filter */}
+      {onOpenPatternStampDialog && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenPatternStampDialog}
+            className={`px-2.5 py-0.5 rounded text-[10.5px] font-semibold flex items-center gap-1.5 transition-all border ${
+              activeTool === 'clone' || activeTool === 'pattern_stamp'
+                ? 'bg-[#e5a038] hover:bg-[#f0b555] text-black border-[#d18e2c] shadow-xs animate-pulse'
+                : 'bg-[#2a2a2a] hover:bg-[#383838] text-[#fab387] border-[#555]'
+            }`}
+            title="Open Pattern Stamp / Surface Decal Configuration Dialog"
+          >
+            <Stamp className="w-3 h-3" />
+            <span>Decal & Pattern Stamp Filter...</span>
+          </button>
+        </div>
+      )}
 
       {/* Global Viewport Controls & Shading */}
       <div className="flex items-center gap-3 shrink-0">

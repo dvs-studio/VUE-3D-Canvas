@@ -7,7 +7,9 @@
  * Provides independent sticker/decal stamping directly onto the 3D model surface:
  * 1. Independent decal logic and asset handling (distinct from pattern fill layers)
  * 2. Dedicated sharpness and imperfection masks (torn edges, missing fragments, edge jitter)
- * 3. Blendable grunge texture overlays (scratches, grease, peeling distress)
+ * 3. Mask & torn edge alpha-aware engine with centered imported texture support (B/W and alpha values)
+ * 4. Blendable grunge texture overlays strictly alpha-aware (never bleeding outside decal boundaries)
+ * 5. Randomization & scattering rotation (0 = Random angle per stamp)
  */
 
 import { PatternStampConfig, BlendMode } from '../core/types';
@@ -20,7 +22,7 @@ export interface DecalPreset {
 }
 
 export class PatternStampEngine {
-  private static stampCache = new Map<string, HTMLCanvasElement>();
+  private static imageCache = new Map<string, HTMLImageElement>();
 
   public static readonly BUILTIN_STAMPS: DecalPreset[] = [
     {
@@ -169,8 +171,19 @@ export class PatternStampEngine {
     }
   ];
 
+  private static getImage(url: string): HTMLImageElement | null {
+    if (!url) return null;
+    let img = this.imageCache.get(url);
+    if (!img) {
+      img = new Image();
+      img.src = url;
+      this.imageCache.set(url, img);
+    }
+    return img.complete && img.naturalWidth > 0 ? img : null;
+  }
+
   /**
-   * Generates or retrieves a rendered stamp canvas with imperfections & grunge overlay
+   * Generates a rendered stamp canvas with imperfections, torn edge mask, and strictly alpha-aware grunge
    */
   public static generateStampCanvas(config: PatternStampConfig, renderResolution = 256): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
@@ -180,8 +193,9 @@ export class PatternStampEngine {
 
     // 1. Draw Base Stamp Decal
     if (config.stampDataUrl && config.stampDataUrl.startsWith('data:')) {
-      const img = new Image();
-      img.src = config.stampDataUrl;
+      const img = this.getImage(config.stampDataUrl) || new Image();
+      if (!img.src) img.src = config.stampDataUrl;
+
       if (img.complete && img.naturalWidth > 0) {
         ctx.drawImage(img, 0, 0, renderResolution, renderResolution);
       } else {
@@ -191,20 +205,12 @@ export class PatternStampEngine {
       this.renderPresetDecal(ctx, config.stampId, renderResolution);
     }
 
-    // 2. Apply Sharpness & Imperfection Mask (torn edges / chipped mask)
-    this.applyImperfectionMask(ctx, renderResolution, config.sharpness, config.missingEdgeAmount, config.edgeJitter);
+    // 2. Apply Torn Edge & Mask Alpha Engine (B/W & Alpha Aware, Centered)
+    this.applyTornEdgeAndMask(ctx, renderResolution, config);
 
-    // 3. Apply Grunge Overlay with Blend Mode
+    // 3. Apply Grunge Overlay (Strictly Transparency & Alpha Aware - Never Exceeding Outer Boundary)
     if (config.enableGrungeOverlay) {
-      this.applyGrungeOverlay(
-        ctx,
-        renderResolution,
-        config.grungePreset,
-        config.grungeBlendMode,
-        config.grungeOpacity,
-        config.grungeScale,
-        config.customGrungeUrl
-      );
+      this.applyGrungeOverlay(ctx, renderResolution, config);
     }
 
     return canvas;
@@ -216,16 +222,21 @@ export class PatternStampEngine {
   }
 
   /**
-   * Chipping, tearing, and edge jitter imperfection algorithm
+   * Torn Edge & Mask Alpha Engine:
+   * - Influences edges around the alpha channel
+   * - Imported mask texture is centered and influences the torn part via B/W luminance or alpha values
+   * - Only modifies the decal alpha channel without altering underlying external canvas
    */
-  private static applyImperfectionMask(
+  private static applyTornEdgeAndMask(
     ctx: CanvasRenderingContext2D,
     size: number,
-    sharpness: number,
-    missingEdge: number,
-    edgeJitter: number
+    config: PatternStampConfig
   ) {
-    if (missingEdge <= 0.01 && edgeJitter <= 0.01 && sharpness >= 0.98) return;
+    const { sharpness, missingEdgeAmount, edgeJitter, tornMaskTextureUrl } = config;
+
+    if (missingEdgeAmount <= 0.01 && edgeJitter <= 0.01 && sharpness >= 0.98 && !tornMaskTextureUrl) {
+      return;
+    }
 
     const imgData = ctx.getImageData(0, 0, size, size);
     const data = imgData.data;
@@ -233,6 +244,20 @@ export class PatternStampEngine {
     const cx = size / 2;
     const cy = size / 2;
     const maxR = size * 0.48;
+
+    // Optional imported mask texture sampler
+    let maskData: Uint8ClampedArray | null = null;
+    if (tornMaskTextureUrl) {
+      const maskImg = this.getImage(tornMaskTextureUrl);
+      if (maskImg) {
+        const mCanvas = document.createElement('canvas');
+        mCanvas.width = size;
+        mCanvas.height = size;
+        const mCtx = mCanvas.getContext('2d')!;
+        mCtx.drawImage(maskImg, 0, 0, size, size);
+        maskData = mCtx.getImageData(0, 0, size, size).data;
+      }
+    }
 
     for (let y = 0; y < size; y++) {
       const dy = y - cy;
@@ -245,32 +270,52 @@ export class PatternStampEngine {
         const dist = Math.sqrt(dx * dx + dy * dy);
         const normDist = dist / maxR;
 
+        // Sample imported mask texture at center if present
+        let maskTearFactor = 1.0;
+        if (maskData) {
+          const mr = maskData[idx];
+          const mg = maskData[idx + 1];
+          const mb = maskData[idx + 2];
+          const ma = maskData[idx + 3] / 255;
+          // Calculate B/W luminance
+          const lum = (0.299 * mr + 0.587 * mg + 0.114 * mb) / 255;
+          maskTearFactor = lum * ma;
+        }
+
         // Procedural edge noise for chipping / tearing
         const noise = (Math.sin(x * 0.18 + Math.cos(y * 0.22) * 3.0) + Math.cos(x * 0.35 - y * 0.28)) * 0.5 + 0.5;
         const microNoise = (Math.sin(x * 1.5 + y * 1.2) * 43758.5453 % 1.0);
 
-        // Missing edge threshold
-        if (missingEdge > 0.05 && normDist > 0.65) {
-          const tearThresh = 1.0 - missingEdge * 0.6;
-          if (noise * 0.7 + microNoise * 0.3 > tearThresh) {
-            data[idx + 3] = 0; // Chipped / torn fragment
+        // Combined torn factor: procedural noise multiplied by mask texture
+        const combinedTear = (noise * 0.7 + microNoise * 0.3) * (maskData ? maskTearFactor : 1.0);
+
+        // Missing edge threshold (influences edges around the alpha channel)
+        if (missingEdgeAmount > 0.05 && normDist > 0.55) {
+          const tearThresh = 1.0 - missingEdgeAmount * 0.65;
+          if (combinedTear > tearThresh || (maskData && maskTearFactor < (missingEdgeAmount * 0.8))) {
+            data[idx + 3] = 0; // Torn edge eroded
             continue;
           }
         }
 
         // Edge jitter roughness
-        if (edgeJitter > 0.05 && normDist > 0.8) {
-          const jitterThresh = 1.0 - edgeJitter * 0.4;
+        if (edgeJitter > 0.05 && normDist > 0.75) {
+          const jitterThresh = 1.0 - edgeJitter * 0.45;
           if (microNoise > jitterThresh) {
-            data[idx + 3] = Math.round(alpha * 0.3);
+            data[idx + 3] = Math.round(alpha * 0.25);
             continue;
           }
         }
 
         // Softness / sharpness gradient
-        if (sharpness < 0.95 && normDist > 0.7) {
-          const falloff = 1.0 - (normDist - 0.7) / (0.3 * (1.05 - sharpness));
-          data[idx + 3] = Math.round(alpha * Math.max(0, Math.min(1, falloff)));
+        if (sharpness < 0.95 && normDist > 0.68) {
+          const falloff = 1.0 - (normDist - 0.68) / (0.32 * (1.05 - sharpness));
+          data[idx + 3] = Math.round(data[idx + 3] * Math.max(0, Math.min(1, falloff)));
+        }
+
+        // If imported mask texture is enabled, mask strictly adds/restricts alpha channel
+        if (maskData && config.tornInfluenceAlphaOnly) {
+          data[idx + 3] = Math.round(data[idx + 3] * maskTearFactor);
         }
       }
     }
@@ -279,48 +324,117 @@ export class PatternStampEngine {
   }
 
   /**
-   * Applies procedural or custom grunge overlay with blend modes
+   * Applies embedded image presets or custom imported grunge textures.
+   * STRICT GUARANTEE: Grunge NEVER exceeds or bleeds outside the decal alpha boundary!
    */
   private static applyGrungeOverlay(
     ctx: CanvasRenderingContext2D,
     size: number,
-    preset: string,
-    blendMode: BlendMode,
-    opacity: number,
-    scale: number,
-    customUrl?: string
+    config: PatternStampConfig
   ) {
+    const { grungePreset, grungeBlendMode, grungeOpacity, grungeScale, customGrungeUrl } = config;
+
+    // 1. Record initial decal alpha mask so grunge cannot bleed outside it
+    const preImgData = ctx.getImageData(0, 0, size, size);
+    const preData = preImgData.data;
+    const decalAlphaMask = new Uint8ClampedArray(size * size);
+    for (let i = 0; i < size * size; i++) {
+      decalAlphaMask[i] = preData[i * 4 + 3];
+    }
+
+    // 2. Render Grunge Image Texture
     const grungeCanvas = document.createElement('canvas');
     grungeCanvas.width = size;
     grungeCanvas.height = size;
     const gCtx = grungeCanvas.getContext('2d')!;
 
-    // Generate grunge texture pattern
+    let customImg: HTMLImageElement | null = null;
+    if (customGrungeUrl) {
+      customImg = this.getImage(customGrungeUrl);
+    }
+
+    if (customImg) {
+      gCtx.drawImage(customImg, 0, 0, size, size);
+    } else {
+      this.renderEmbeddedGrunge(gCtx, size, grungePreset, grungeScale || 1.0);
+    }
+
+    // 3. Composite Grunge onto decal using specified Blend Mode
+    ctx.save();
+    ctx.globalCompositeOperation = this.toCanvasComposite(grungeBlendMode);
+    ctx.globalAlpha = Math.max(0, Math.min(1, grungeOpacity / 100));
+    ctx.drawImage(grungeCanvas, 0, 0);
+    ctx.restore();
+
+    // 4. STRICT ALPHA RE-CONSTRAIN: Zero out or clamp any pixel outside original decal alpha!
+    const postImgData = ctx.getImageData(0, 0, size, size);
+    const postData = postImgData.data;
+
+    for (let i = 0; i < size * size; i++) {
+      const origA = decalAlphaMask[i];
+      const pIdx = i * 4;
+
+      if (origA === 0) {
+        // Completely transparent in original decal: enforce zero alpha
+        postData[pIdx] = 0;
+        postData[pIdx + 1] = 0;
+        postData[pIdx + 2] = 0;
+        postData[pIdx + 3] = 0;
+      } else {
+        // Pixel cannot exceed original decal opacity
+        postData[pIdx + 3] = Math.min(origA, postData[pIdx + 3]);
+      }
+    }
+
+    ctx.putImageData(postImgData, 0, 0);
+  }
+
+  /**
+   * High-fidelity embedded procedural grunge image textures
+   */
+  private static renderEmbeddedGrunge(
+    gCtx: CanvasRenderingContext2D,
+    size: number,
+    preset: string,
+    scale: number
+  ) {
     const imgData = gCtx.createImageData(size, size);
     const data = imgData.data;
 
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
         const idx = (y * size + x) * 4;
-        const sx = x * (scale || 1.0);
-        const sy = y * (scale || 1.0);
+        const sx = x * scale;
+        const sy = y * scale;
 
         let val = 128;
         if (preset === 'scratched') {
-          // Sharp directional scratches
-          const scratch = Math.abs(Math.sin(sx * 0.05 + sy * 0.05)) > 0.94 ? 0 : 255;
-          const fine = Math.abs(Math.sin(sx * 0.2 - sy * 0.15)) > 0.96 ? 0 : 255;
-          val = Math.min(scratch, fine);
+          // Sharp directional scratches and micro scrapes
+          const scratch = Math.abs(Math.sin(sx * 0.05 + sy * 0.05)) > 0.93 ? 30 : 240;
+          const fine = Math.abs(Math.sin(sx * 0.22 - sy * 0.18)) > 0.95 ? 20 : 255;
+          const cross = Math.abs(Math.sin(sx * 0.15 + sy * 0.28)) > 0.96 ? 40 : 250;
+          val = Math.min(scratch, fine, cross);
         } else if (preset === 'dirty_spots') {
-          // Organic grease stains
-          const blob = (Math.sin(sx * 0.04) * Math.cos(sy * 0.04) + Math.sin(sx * 0.08 + sy * 0.06)) * 0.5 + 0.5;
-          val = Math.round(blob * 255);
+          // Organic grease stains and dust spatter
+          const blob = (Math.sin(sx * 0.04) * Math.cos(sy * 0.04) + Math.sin(sx * 0.09 + sy * 0.07)) * 0.5 + 0.5;
+          const speckle = (Math.sin(sx * 1.8 + sy * 2.3) * 43758.5453) % 1.0;
+          val = Math.round((blob * 0.7 + (speckle > 0.85 ? 0.2 : 0.8) * 0.3) * 255);
         } else if (preset === 'cracked_paint') {
-          // Voronoi / cracked network
-          const gridX = Math.floor(sx * 0.1);
-          const gridY = Math.floor(sy * 0.1);
+          // Fractured peeling network
+          const gridX = Math.floor(sx * 0.08);
+          const gridY = Math.floor(sy * 0.08);
           const cell = (Math.sin(gridX * 12.9898 + gridY * 78.233) * 43758.5453) % 1.0;
-          val = cell > 0.85 ? 40 : 230;
+          val = cell > 0.82 ? 35 : 225;
+        } else if (preset === 'concrete_weather') {
+          // Pitted porous concrete weathering
+          const n1 = Math.sin(sx * 0.12) * Math.cos(sy * 0.14);
+          const n2 = Math.sin(sx * 0.45 + sy * 0.38) * 0.5;
+          const pore = (Math.sin(sx * 2.2 + sy * 1.9) * 31415.92) % 1.0;
+          val = Math.round(((n1 + n2 + 1.5) / 3.0 * 0.8 + (pore > 0.9 ? 0.1 : 0.9) * 0.2) * 255);
+        } else if (preset === 'peeling_paint') {
+          // Peeling flaked paint edges
+          const flake = Math.sin(sx * 0.06 + Math.sin(sy * 0.06) * 2.0);
+          val = flake > 0.3 ? 245 : 50;
         } else {
           // Worn patina grain
           const grain = (Math.sin(sx * 1.3 + sy * 1.7) * 23847.2) % 1.0;
@@ -330,18 +444,11 @@ export class PatternStampEngine {
         data[idx] = val;
         data[idx + 1] = val;
         data[idx + 2] = val;
-        data[idx + 3] = Math.round((opacity / 100) * 255);
+        data[idx + 3] = 255;
       }
     }
 
     gCtx.putImageData(imgData, 0, 0);
-
-    // Composite with specified blend mode
-    ctx.save();
-    ctx.globalCompositeOperation = this.toCanvasComposite(blendMode);
-    ctx.globalAlpha = opacity / 100;
-    ctx.drawImage(grungeCanvas, 0, 0);
-    ctx.restore();
   }
 
   private static toCanvasComposite(mode: BlendMode): GlobalCompositeOperation {
@@ -360,6 +467,7 @@ export class PatternStampEngine {
 
   /**
    * Stamps a decal onto target canvas at (u, v) UV coordinates with rotation and size
+   * Handles 0 = Random angle and randomization scattering
    */
   public static stampOnCanvas(
     targetCtx: CanvasRenderingContext2D,
@@ -375,9 +483,19 @@ export class PatternStampEngine {
     const cy = v * h;
     const stampRadius = config.size || 64;
 
+    // Determine final angle: 0 = Random angle per stamp
+    let finalAngle = config.rotation;
+    if (finalAngle === 0) {
+      finalAngle = Math.random() * 360;
+    }
+    if (config.enableRandomScattering) {
+      const variance = config.scatterAngleVariance ?? 45;
+      finalAngle += (Math.random() - 0.5) * variance * 2;
+    }
+
     targetCtx.save();
     targetCtx.translate(cx, cy);
-    targetCtx.rotate((config.rotation * Math.PI) / 180);
+    targetCtx.rotate((finalAngle * Math.PI) / 180);
     targetCtx.globalAlpha = (config.opacity ?? 100) / 100;
 
     targetCtx.drawImage(

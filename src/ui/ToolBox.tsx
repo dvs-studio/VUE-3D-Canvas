@@ -34,6 +34,7 @@ interface ToolBoxProps {
   onChangeSecondaryColor: (color: string) => void;
   surfaceMode?: 'default' | 'smooth' | 'flat' | 'hard';
   onSelectSurfaceMode?: (mode: 'default' | 'smooth' | 'flat') => void;
+  onOpenPatternStampDialog?: () => void;
 }
 
 export const ToolBox: React.FC<ToolBoxProps> = ({
@@ -47,6 +48,7 @@ export const ToolBox: React.FC<ToolBoxProps> = ({
   onChangeSecondaryColor,
   surfaceMode = 'default',
   onSelectSurfaceMode,
+  onOpenPatternStampDialog,
 }) => {
   const tools: { id: ToolType; label: string; shortcut: string; icon: React.ReactNode }[] = [
     { id: 'brush', label: 'Brush Tool', shortcut: 'B', icon: <Paintbrush className="w-4 h-4" /> },
@@ -71,12 +73,23 @@ export const ToolBox: React.FC<ToolBoxProps> = ({
       <div className="flex flex-col gap-1 items-center w-full px-1">
         {tools.map((t) => {
           const isActive = activeTool === t.id;
+          const isStampRelated = t.id === 'clone' || t.id === 'pattern_stamp';
 
           return (
             <button
               key={t.id}
               onClick={() => onSelectTool(t.id)}
-              title={`${t.label} (${t.shortcut})`}
+              onDoubleClick={() => {
+                if (isStampRelated && onOpenPatternStampDialog) {
+                  onSelectTool('pattern_stamp');
+                  onOpenPatternStampDialog();
+                }
+              }}
+              title={
+                isStampRelated
+                  ? `${t.label} (${t.shortcut}) — Double-click to open Decal/Pattern Stamp Studio`
+                  : `${t.label} (${t.shortcut})`
+              }
               className={`w-7 h-7 rounded flex items-center justify-center transition-colors border ${
                 isActive
                   ? 'bg-[#2b2b2b] text-[#3d7fb8] border-[#222] cs5-inset shadow-inner'

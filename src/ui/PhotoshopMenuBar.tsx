@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check } from 'lucide-react';
+import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check, Stamp } from 'lucide-react';
 import { ThemeMode } from '../core/types';
 
 interface PhotoshopMenuBarProps {
@@ -42,6 +42,8 @@ interface PhotoshopMenuBarProps {
   onSelectModelKey?: (key: string) => void;
   meshComponentVisibility?: string;
   onSelectMeshComponentVisibility?: (comp: string) => void;
+  isolateSelectedGroupOnly?: boolean;
+  onToggleIsolateSelectedGroupOnly?: (checked: boolean) => void;
   currentTheme?: ThemeMode;
   onChangeTheme?: (theme: ThemeMode) => void;
   onOpenEdgeWearFilter?: () => void;
@@ -83,6 +85,8 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onSelectModelKey,
   meshComponentVisibility = 'all',
   onSelectMeshComponentVisibility,
+  isolateSelectedGroupOnly = false,
+  onToggleIsolateSelectedGroupOnly,
   currentTheme = 'cs5',
   onChangeTheme,
   onOpenEdgeWearFilter,
@@ -590,65 +594,71 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           </div>
         )}
 
-        {/* Mesh Component Visibility Dropdown */}
-        <div className="flex items-center gap-1.5 bg-[#262626] px-2 py-0.5 rounded border border-[#484848] ml-1 cs5-inset">
+        {/* Mesh Component Visibility Dropdown with Name IDs & Checkbox */}
+        <div className="flex items-center gap-2 bg-[#262626] px-2 py-0.5 rounded border border-[#484848] ml-1 cs5-inset">
           <Eye className="w-3.5 h-3.5 text-[#a6e3a1]" />
           <span className="text-[10px] text-[#aaa] font-medium">Parts:</span>
           <select
             value={meshComponentVisibility}
             onChange={(e) => onSelectMeshComponentVisibility && onSelectMeshComponentVisibility(e.target.value)}
             className="bg-[#2e2e2e] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[10px] outline-none font-medium cursor-pointer"
-            title="Dynamically show all mesh components or isolate/hide individual components"
+            title="Dynamically show all mesh components or isolate individual components by Name ID"
           >
-            <option value="all">All Components (Show All)</option>
+            <option value="all">Show All (All Components Included)</option>
             {selectedModelKey === 'suzanne' ? (
-              <>
-                <optgroup label="Solo Component">
-                  <option value="head">Solo: Main Head</option>
-                  <option value="eyes">Solo: Eyes</option>
-                  <option value="ears">Solo: Ears</option>
-                  <option value="muzzle">Solo: Muzzle</option>
-                </optgroup>
-                <optgroup label="Hide Component">
-                  <option value="hide_eyes">Hide: Eyes</option>
-                  <option value="hide_ears">Hide: Ears</option>
-                  <option value="hide_muzzle">Hide: Muzzle</option>
-                  <option value="hide_head">Hide: Main Head</option>
-                </optgroup>
-              </>
+              <optgroup label="Components by Name ID">
+                <option value="head">[ID: head] Main Head</option>
+                <option value="eyes">[ID: eyes] Eyes</option>
+                <option value="ears">[ID: ears] Ears</option>
+                <option value="muzzle">[ID: muzzle] Muzzle</option>
+              </optgroup>
             ) : selectedModelKey === 'helmet' ? (
-              <>
-                <optgroup label="Solo Component">
-                  <option value="dome">Solo: Dome Shell</option>
-                  <option value="visor">Solo: Visor Plate</option>
-                  <option value="chin">Solo: Chin Guard</option>
-                  <option value="sides">Solo: Side Mounts</option>
-                </optgroup>
-                <optgroup label="Hide Component">
-                  <option value="hide_visor">Hide: Visor Plate</option>
-                  <option value="hide_dome">Hide: Dome Shell</option>
-                  <option value="hide_chin">Hide: Chin Guard</option>
-                  <option value="hide_sides">Hide: Side Mounts</option>
-                </optgroup>
-              </>
+              <optgroup label="Components by Name ID">
+                <option value="dome">[ID: dome] Dome Shell</option>
+                <option value="visor">[ID: visor] Visor Plate</option>
+                <option value="chin">[ID: chin] Chin Guard</option>
+                <option value="sides">[ID: sides] Side Mounts</option>
+              </optgroup>
             ) : (
-              <>
-                <optgroup label="Solo Component">
-                  <option value="body">Solo: Main Body</option>
-                  <option value="caps">Solo: End Caps</option>
-                </optgroup>
-                <optgroup label="Hide Component">
-                  <option value="hide_caps">Hide: End Caps</option>
-                  <option value="hide_body">Hide: Main Body</option>
-                </optgroup>
-              </>
+              <optgroup label="Components by Name ID">
+                <option value="body">[ID: body] Main Body</option>
+                <option value="caps">[ID: caps] End Caps</option>
+              </optgroup>
             )}
           </select>
+
+          {/* Checkbox: Show only selected group */}
+          <label 
+            className="flex items-center gap-1 cursor-pointer select-none text-[9.5px] text-[#ccc] hover:text-white pl-1.5 border-l border-[#444]"
+            title="When checked, isolates and displays only the currently selected component/group in the 3D viewport"
+          >
+            <input
+              type="checkbox"
+              checked={isolateSelectedGroupOnly}
+              onChange={(e) => onToggleIsolateSelectedGroupOnly && onToggleIsolateSelectedGroupOnly(e.target.checked)}
+              className="w-3 h-3 accent-[#3d7fb8] rounded cursor-pointer"
+            />
+            <span className={isolateSelectedGroupOnly ? "text-[#a6e3a1] font-semibold" : "text-[#aaa]"}>
+              Show only selected group
+            </span>
+          </label>
         </div>
       </div>
 
-      {/* Right Quick Controls */}
+      {/* Right Quick Controls & Empty Space Launchers */}
       <div className="flex items-center gap-2">
+        {/* Decal & Pattern Stamp Studio Button in Empty Space */}
+        {onOpenPatternStampDialog && (
+          <button
+            onClick={onOpenPatternStampDialog}
+            className="px-2 py-0.5 bg-[#e5a038] hover:bg-[#f0b555] text-black font-semibold rounded text-[10px] flex items-center gap-1 shadow-xs border border-[#c48528] cursor-pointer"
+            title="Open Pattern Stamp / Surface Decal Studio Dialog"
+          >
+            <Stamp className="w-3 h-3" />
+            <span>Decal Stamp Studio</span>
+          </button>
+        )}
+
         <button
           onClick={onTriggerProjectionScreenshot}
           className="px-2 py-0.5 bg-[#444] hover:bg-[#505050] text-[#eee] rounded border border-[#555] text-[10px] flex items-center gap-1.5 transition-colors"

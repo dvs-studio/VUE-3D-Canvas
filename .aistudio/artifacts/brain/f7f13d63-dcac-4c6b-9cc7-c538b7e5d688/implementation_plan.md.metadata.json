@@ -1,6 +1,6 @@
 {
-  "summary": "Updated implementation plan including Edge Wear filter utilizing mesh curvature and ambient occlusion/cavity calculations alongside all previous phases.",
-  "updatedAt": "2026-10-17T09:19:59.203992361Z",
+  "summary": "Revised implementation plan:\n1. Floating, moveable, non-blocking Pattern Stamp Tool filter dialog without background blur, enabling real-time 3D model observation.\n2. Clone stamp brush quick launch on double-click and button in the Tool Options Bar and top menu bar empty space.\n3. Alpha-aware embedded and custom grunge textures strictly contained within the decal mask.\n4. Mask & torn edge alpha-aware engine with imported B/W texture, centering, manual & random rotation (slider 0 = 'Random', 1-360 = angle), and randomization/scattering controls.\n5. Visible mesh selector showing isolated mesh name IDs with 'Show All' and 'Show only selected group' checkbox.\n6. Theme switcher in the Help menu.\n7. Dedicated native Windows release folder with native .exe build scripts, direct DirectX 11 / OpenGL parameters, and high-performance execution.",
+  "updatedAt": "2026-10-19T03:58:36.788380248Z",
   "requestFeedback": true,
   "userFacing": true
 }

@@ -24,6 +24,7 @@ import {
   PatternStampConfig,
   EdgeWearConfig,
   LayerPBRSettings,
+  ThemeMode,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
 import { UndoRingBuffer } from './core/history';
@@ -226,6 +227,15 @@ export default function App() {
 
   // Edge Wear & AO Curvature Filter Dialog
   const [isEdgeWearDialogOpen, setIsEdgeWearDialogOpen] = useState<boolean>(false);
+
+  // Theme & Mesh Component Visibility State
+  const [currentTheme, setCurrentTheme] = useState<ThemeMode>('cs5');
+  const [meshComponentVisibility, setMeshComponentVisibility] = useState<string>('all');
+  const [isolateSelectedGroupOnly, setIsolateSelectedGroupOnly] = useState<boolean>(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+  }, [currentTheme]);
 
   // Model & Multi-Channel Exporter Dialog
   const [isExportModelDialogOpen, setIsExportModelDialogOpen] = useState<boolean>(false);
@@ -1079,6 +1089,14 @@ export default function App() {
         }}
         onImportBlenderMaterial={() => importBlenderFileInputRef.current?.click()}
         onExportMultiChannelModel={() => setIsExportModelDialogOpen(true)}
+        selectedModelKey={modelKey}
+        onSelectModelKey={setModelKey}
+        meshComponentVisibility={meshComponentVisibility}
+        onSelectMeshComponentVisibility={setMeshComponentVisibility}
+        isolateSelectedGroupOnly={isolateSelectedGroupOnly}
+        onToggleIsolateSelectedGroupOnly={(checked) => setIsolateSelectedGroupOnly(checked)}
+        currentTheme={currentTheme}
+        onChangeTheme={setCurrentTheme}
       />
 
       {/* 2. Tool Options Sub-Toolbar */}
@@ -1105,6 +1123,10 @@ export default function App() {
           setDockerGroup2Tab('symmetry');
           setActivePanels(p => ({ ...p, symmetry: true }));
         }}
+        onOpenPatternStampDialog={() => {
+          setActiveTool('pattern_stamp');
+          setIsPatternStampDialogOpen(true);
+        }}
       />
 
       {/* 3. Main Workspace Area: Left ToolBox + Center Viewport(s) + Right Dockable Panels */}
@@ -1121,6 +1143,10 @@ export default function App() {
           onChangeSecondaryColor={setSecondaryColor}
           surfaceMode={surfaceMode}
           onSelectSurfaceMode={setSurfaceMode}
+          onOpenPatternStampDialog={() => {
+            setActiveTool('pattern_stamp');
+            setIsPatternStampDialogOpen(true);
+          }}
         />
 
         {/* Center Viewport Area (3D, 2D, or Split) */}
@@ -1157,6 +1183,7 @@ export default function App() {
                 bloomSettings={bloomSettings}
                 onUpdateBloomSettings={(patch) => setBloomSettings(b => ({ ...b, ...patch }))}
                 patternStampConfig={patternStampConfig}
+                meshComponentVisibility={isolateSelectedGroupOnly && meshComponentVisibility !== 'all' ? meshComponentVisibility : 'all'}
               />
             </div>
           )}

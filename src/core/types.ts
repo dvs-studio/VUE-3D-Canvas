@@ -386,15 +386,21 @@ export interface PatternStampConfig {
   stampName: string;
   stampDataUrl: string;
   size: number; // Stamp radius in pixels
-  rotation: number; // In degrees
+  rotation: number; // In degrees (0 = Random)
   opacity: number; // 0 - 100
   // Imperfections and edge sharpness
   sharpness: number; // 0.0 to 1.0
   missingEdgeAmount: number; // 0.0 to 1.0 (torn/chipped mask)
   edgeJitter: number; // 0.0 to 1.0
-  // Grunge Overlay
+  // Torn Edge & Mask Alpha Engine
+  enableTornEdgeMask?: boolean;
+  tornMaskTextureUrl?: string; // Custom imported B/W or transparent image texture for torn edge
+  tornInfluenceAlphaOnly?: boolean; // Masking image texture strictly influences alpha channel
+  enableRandomScattering?: boolean; // Randomization + scattering toggle
+  scatterAngleVariance?: number; // 0 to 360 degree jitter
+  // Grunge Overlay (Strictly Transparency & Alpha Aware)
   enableGrungeOverlay: boolean;
-  grungePreset: 'scratched' | 'dirty_spots' | 'cracked_paint' | 'worn_patina' | 'custom';
+  grungePreset: 'scratched' | 'dirty_spots' | 'cracked_paint' | 'worn_patina' | 'concrete_weather' | 'peeling_paint' | 'custom';
   customGrungeUrl?: string;
   grungeBlendMode: BlendMode;
   grungeOpacity: number; // 0 - 100

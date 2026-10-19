@@ -52,6 +52,9 @@ jobs:
           Copy-Item $exe "dist-windows/"
           Copy-Item "README.md" "dist-windows/" -ErrorAction SilentlyContinue
           Copy-Item "WINDOWS_BUILD_INSTRUCTIONS.md" "dist-windows/" -ErrorAction SilentlyContinue
+          if (Test-Path "release/windows") {
+            Copy-Item -Recurse "release/windows/*" "dist-windows/" -ErrorAction SilentlyContinue
+          }
 
           # Compress into ZIP format as requested
           Compress-Archive -Path "dist-windows/*" -DestinationPath "vue-3d-canvas-windows-x64.zip" -Force
