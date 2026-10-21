@@ -8,7 +8,8 @@ Target: Python 3.9+ with direct OpenGL 2.0+ & DirectX 11 Fallback Support
 import sys
 import os
 import time
-import numpy as np
+
+from vue3d.core.compat import np
 
 from vue3d.core.types import Layer, BrushPreset, Camera, ThemeMode, ToolType, ShadingMode, MaskType
 from vue3d.core.undo import UndoRingBuffer
@@ -92,49 +93,69 @@ class Vue3DDesktopApp:
 
         while True:
             try:
-                cmd = input("vue3d-py> ").strip()
+                line = input("vue3d-py> ").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nExiting VUE 3D Canvas.")
                 break
 
-            if not cmd:
+            if not line:
                 continue
+
+            parts = line.split()
+            cmd = parts[0].lower()
+            args = parts[1:]
 
             if cmd in ("exit", "quit", "q"):
                 print("Shutting down VUE 3D Canvas Desktop Python edition. Goodbye!")
                 break
             elif cmd in ("help", "?"):
                 print("\nCommands:")
-                print("  status    - View memory footprint, layers, and camera parameters")
-                print("  stroke    - Paint a brush stroke dab with lazy-mouse stabilizer")
-                print("  smudge    - Apply a smudge pixel smear with tip mask texture")
-                print("  erase     - Apply destination-out eraser dab")
-                print("  undo      - Undo 1 step (Ctrl+Z)")
-                print("  redo      - Redo 1 step (Ctrl+Y)")
-                print("  save      - Save project to .xblend with 3-state ring buffer")
-                print("  drone     - Toggle Blender drone flight navigation (WASD+QE)")
-                print("  theme     - Switch UI theme (cs5, bw78, modern, ps2022)")
-                print("  exit      - Safely close application\n")
+                print("  status                - View memory footprint, layers, and camera parameters")
+                print("  stroke [x1 y1 x2 y2]  - Paint brush stroke dab with lazy-mouse stabilizer")
+                print("  smudge [x1 y1 x2 y2]  - Apply smudge pixel smear with tip mask texture")
+                print("  erase [x y]           - Apply destination-out eraser dab")
+                print("  undo                  - Undo 1 step (Ctrl+Z)")
+                print("  redo                  - Redo 1 step (Ctrl+Y)")
+                print("  save [filename]       - Save project to .xblend with 3-state ring buffer")
+                print("  load <filename>       - Load project from .xblend")
+                print("  shading <def|smooth|flat> - Change surface normal shading mode")
+                print("  mesh <sphere|cube>    - Change active 3D geometry primitive")
+                print("  drone [on|off]        - Toggle Blender drone flight navigation (WASD+QE)")
+                print("  theme <cs5|bw78|modern|ps2022> - Switch UI theme")
+                print("  exit                  - Safely close application\n")
             elif cmd == "status":
                 eye = Viewport3DNavigation.get_eye_position(self.camera)
                 print(f"\nStatus Report:")
                 print(f"  Layers      : {len(self.layers)} active")
                 print(f"  Texture     : {self.tex_width}x{self.tex_height} RGBA")
+                print(f"  Mesh        : Vertices={len(self.vertices)}, Faces={len(self.indices)}")
+                print(f"  Shading     : {self.shading_mode.value.upper()}")
                 print(f"  Camera Eye  : X={eye[0]:.2f}, Y={eye[1]:.2f}, Z={eye[2]:.2f}")
                 print(f"  Drone Nav   : {'ACTIVE (WASD+QE)' if self.camera.is_drone_mode else 'INACTIVE'}")
                 print(f"  Undo Depth  : {len(self.undo_buffer.stack)} states (index: {self.undo_buffer.current_index})\n")
             elif cmd == "stroke":
                 target = self.layers[self.active_layer_idx]
-                self.brush_engine.paint_stroke(target, self.brush, 256.0, 256.0)
-                self.brush_engine.paint_stroke(target, self.brush, 320.0, 320.0)
+                x1, y1 = (float(args[0]), float(args[1])) if len(args) >= 2 else (256.0, 256.0)
+                x2, y2 = (float(args[2]), float(args[3])) if len(args) >= 4 else (x1 + 64.0, y1 + 64.0)
+                self.brush_engine.paint_stroke(target, self.brush, x1, y1)
+                self.brush_engine.paint_stroke(target, self.brush, x2, y2)
                 self.brush_engine.end_stroke()
                 self.undo_buffer.push_state("Paint Stroke (Python)", self.layers)
-                print(f"Painted brush stroke onto layer '{target.name}'.")
+                print(f"Painted brush stroke onto layer '{target.name}' from ({x1:.0f},{y1:.0f}) to ({x2:.0f},{y2:.0f}).")
             elif cmd == "smudge":
                 target = self.layers[self.active_layer_idx]
-                self.brush_engine.apply_smudge(target, self.brush, 256.0, 256.0, 280.0, 280.0)
+                x1, y1 = (float(args[0]), float(args[1])) if len(args) >= 2 else (256.0, 256.0)
+                x2, y2 = (float(args[2]), float(args[3])) if len(args) >= 4 else (x1 + 24.0, y1 + 24.0)
+                self.brush_engine.apply_smudge(target, self.brush, x1, y1, x2, y2)
                 self.undo_buffer.push_state("Smudge Dab (Python)", self.layers)
                 print(f"Applied smudge smear onto layer '{target.name}'.")
+            elif cmd == "erase":
+                target = self.layers[self.active_layer_idx]
+                x, y = (float(args[0]), float(args[1])) if len(args) >= 2 else (256.0, 256.0)
+                self.brush_engine.paint_stroke(target, self.brush, x, y, is_eraser=True)
+                self.brush_engine.end_stroke()
+                self.undo_buffer.push_state("Eraser Dab (Python)", self.layers)
+                print(f"Erased dab on layer '{target.name}' at ({x:.0f},{y:.0f}).")
             elif cmd == "undo":
                 if self.undo_buffer.undo(self.layers):
                     print(f"Undone 1 step. Current snapshot index: {self.undo_buffer.current_index}")
@@ -146,17 +167,71 @@ class Vue3DDesktopApp:
                 else:
                     print("Cannot redo: at newest state.")
             elif cmd == "save":
-                if XBlendManager.save("project_backup.xblend", self.layers, self.undo_buffer, theme=self.theme):
-                    print("Project saved to 'project_backup.xblend' (strictly adhering to 3-state ring buffer limit).")
+                target_path = args[0] if args else "project_backup.xblend"
+                if XBlendManager.save(target_path, self.layers, self.undo_buffer, theme=self.theme):
+                    print(f"Project saved to '{target_path}' (strictly adhering to 3-state ring buffer limit).")
                 else:
-                    print("Failed to save .xblend file.")
+                    print(f"Failed to save {target_path}.")
+            elif cmd == "load":
+                if not args:
+                    print("Usage: load <filename.xblend>")
+                else:
+                    data = XBlendManager.load(args[0])
+                    if data:
+                        print(f"Loaded '{args[0]}' successfully (undo states: {data.get('undoStateCount', 0)}).")
+                    else:
+                        print(f"Failed to load '{args[0]}'.")
+            elif cmd == "shading":
+                mode_str = args[0].lower() if args else "def"
+                if mode_str in ("def", "smooth", "flat"):
+                    self.shading_mode = ShadingMode(mode_str)
+                    self.normals = SurfaceShadingEngine.compute_normals(self.vertices, self.indices, self.shading_mode)
+                    print(f"Surface shading mode switched to: {self.shading_mode.value.upper()}")
+                else:
+                    print("Unknown mode. Valid options: def, smooth, flat")
+            elif cmd == "mesh":
+                primitive = args[0].lower() if args else "sphere"
+                if primitive == "cube":
+                    self.vertices, self.normals, self.uvs, self.indices = GeometryFactory.create_cube()
+                    print(f"Geometry primitive changed to Cube Box ({len(self.vertices)} vertices).")
+                else:
+                    self.vertices, self.normals, self.uvs, self.indices = GeometryFactory.create_uv_sphere()
+                    print(f"Geometry primitive changed to UV Sphere ({len(self.vertices)} vertices).")
             elif cmd == "drone":
-                self.camera.is_drone_mode = not self.camera.is_drone_mode
+                if args and args[0].lower() in ("on", "1", "true"):
+                    self.camera.is_drone_mode = True
+                elif args and args[0].lower() in ("off", "0", "false"):
+                    self.camera.is_drone_mode = False
+                else:
+                    self.camera.is_drone_mode = not self.camera.is_drone_mode
                 print(f"Blender Drone Navigation {'ENABLED (WASD+QE)' if self.camera.is_drone_mode else 'DISABLED'}.")
+            elif cmd == "theme":
+                target_theme = args[0].lower() if args else "cs5"
+                if target_theme in ("cs5", "bw78", "modern", "ps2022"):
+                    self.theme = ThemeMode(target_theme)
+                    print(f"UI theme set to {target_theme.upper()}.")
+                else:
+                    print("Available themes: cs5, bw78, modern, ps2022")
             else:
                 print(f"Unknown command '{cmd}'. Type 'help' for available commands.")
 
 def main():
+    force_cli = "--cli" in sys.argv or "--console" in sys.argv or "-c" in sys.argv
+    has_display = True
+    if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+        has_display = False
+
+    if not force_cli and has_display:
+        try:
+            import tkinter as tk
+            from vue3d.ui.desktop_gui import Vue3DDesktopGUI
+            root = tk.Tk()
+            gui = Vue3DDesktopGUI(root)
+            root.mainloop()
+            return
+        except Exception as e:
+            print(f"[Desktop GUI Warning] Unable to open native window ({e}). Falling back to interactive console shell.\n")
+
     app = Vue3DDesktopApp()
     app.run_interactive_shell()
 

@@ -4,7 +4,7 @@ Author: Victory Ukpong
 Full UV Range Assurance (0..1 spherical/cylindrical polar UV maps without overlapping gaps).
 """
 
-import numpy as np
+from ..core.compat import np
 from typing import Tuple
 
 class GeometryFactory:
@@ -44,7 +44,14 @@ class GeometryFactory:
         indices = np.array(faces, dtype=np.uint32)
 
         # Initial normals
-        normals = vertices / np.linalg.norm(vertices, axis=1, keepdims=True)
+        norm_list = []
+        for x, y, z in verts:
+            l = (x * x + y * y + z * z) ** 0.5
+            if l > 0.0001:
+                norm_list.append([x / l, y / l, z / l])
+            else:
+                norm_list.append([0.0, 1.0, 0.0])
+        normals = np.array(norm_list, dtype=np.float32)
         return vertices, normals, texcoords, indices
 
     @staticmethod

@@ -204,21 +204,26 @@ int main(int argc, char* argv[]) {
         cmd[strcspn(cmd, "\r\n")] = 0;
         if (strlen(cmd) == 0) continue;
 
-        if (strcmp(cmd, "exit") == 0 || strcmp(cmd, "quit") == 0 || strcmp(cmd, "q") == 0) {
+        char primary[32] = {0};
+        char arg1[96] = {0};
+        float f1 = 0, f2 = 0, f3 = 0, f4 = 0;
+        sscanf(cmd, "%31s %95s", primary, arg1);
+
+        if (strcmp(primary, "exit") == 0 || strcmp(primary, "quit") == 0 || strcmp(primary, "q") == 0) {
             printf("Exiting VUE 3D Canvas Native C runtime. Goodbye!\n");
             break;
-        } else if (strcmp(cmd, "help") == 0 || strcmp(cmd, "?") == 0) {
+        } else if (strcmp(primary, "help") == 0 || strcmp(primary, "?") == 0) {
             printf("\nCommands:\n");
-            printf("  status    - View memory usage, layer count, and active camera position\n");
-            printf("  stroke    - Simulate a brush stroke dab with lazy-mouse tether\n");
-            printf("  smudge    - Simulate a smudge/smear dab\n");
-            printf("  undo      - Undo exactly 1 step (Ctrl+Z)\n");
-            printf("  redo      - Redo exactly 1 step (Ctrl+Y)\n");
-            printf("  save      - Save active project to .xblend with 3-state ring buffer\n");
-            printf("  drone     - Toggle Blender drone flight navigation (WASD+QE)\n");
-            printf("  theme     - Switch UI theme (cs5, bw78, modern, ps2022)\n");
-            printf("  exit      - Terminate engine\n\n");
-        } else if (strcmp(cmd, "status") == 0) {
+            printf("  status                - View memory usage, layer count, and active camera position\n");
+            printf("  stroke [x1 y1 x2 y2]  - Simulate a brush stroke dab with lazy-mouse tether\n");
+            printf("  smudge                - Simulate a smudge/smear dab\n");
+            printf("  undo                  - Undo exactly 1 step (Ctrl+Z)\n");
+            printf("  redo                  - Redo exactly 1 step (Ctrl+Y)\n");
+            printf("  save [filename]       - Save active project to .xblend with 3-state ring buffer\n");
+            printf("  drone [on|off]        - Toggle Blender drone flight navigation (WASD+QE)\n");
+            printf("  theme <cs5|bw78|modern|ps2022> - Switch UI theme\n");
+            printf("  exit                  - Terminate engine\n\n");
+        } else if (strcmp(primary, "status") == 0) {
             printf("\nStatus Report:\n");
             printf("  Version      : %s\n", V3D_VERSION);
             printf("  Layers       : %d / %d active\n", ctx->layer_count, V3D_MAX_LAYERS);
@@ -226,15 +231,19 @@ int main(int argc, char* argv[]) {
             printf("  Camera Pos   : Radius=%.2f, Yaw=%.2f, Pitch=%.2f\n", ctx->camera.radius, ctx->camera.theta, ctx->camera.phi);
             printf("  Drone Mode   : %s\n", ctx->camera.is_drone_mode ? "ACTIVE (WASD+QE)" : "INACTIVE");
             printf("  Undo Depth   : %d snapshots (current: %d)\n\n", ctx->undo_buffer.count, ctx->undo_buffer.current_index);
-        } else if (strcmp(cmd, "stroke") == 0) {
+        } else if (strcmp(primary, "stroke") == 0) {
+            float sx = 256.0f, sy = 256.0f, ex = 320.0f, ey = 320.0f;
+            if (sscanf(cmd, "%*s %f %f %f %f", &f1, &f2, &f3, &f4) == 4) {
+                sx = f1; sy = f2; ex = f3; ey = f4;
+            }
             V3D_BrushState bs;
-            v3d_brush_begin_stroke(&bs, 256.0f, 256.0f);
-            v3d_brush_paint_stroke(&bs, &ctx->layers[ctx->active_layer_idx], &ctx->active_brush, 320.0f, 320.0f, false);
+            v3d_brush_begin_stroke(&bs, sx, sy);
+            v3d_brush_paint_stroke(&bs, &ctx->layers[ctx->active_layer_idx], &ctx->active_brush, ex, ey, false);
             v3d_brush_end_stroke(&bs);
             v3d_undo_push(&ctx->undo_buffer, "Paint Dab (C Engine)", ctx->layers, ctx->layer_count);
             v3d_composite_layers(ctx);
-            printf("Painted brush stroke dab onto layer '%s'.\n", ctx->layers[ctx->active_layer_idx].name);
-        } else if (strcmp(cmd, "smudge") == 0) {
+            printf("Painted brush stroke dab onto layer '%s' from (%.0f,%.0f) to (%.0f,%.0f).\n", ctx->layers[ctx->active_layer_idx].name, sx, sy, ex, ey);
+        } else if (strcmp(primary, "smudge") == 0) {
             V3D_BrushState bs;
             v3d_brush_begin_stroke(&bs, 256.0f, 256.0f);
             v3d_brush_apply_smudge(&bs, &ctx->layers[ctx->active_layer_idx], &ctx->active_brush, 256.0f, 256.0f, 290.0f, 290.0f);
@@ -242,31 +251,40 @@ int main(int argc, char* argv[]) {
             v3d_undo_push(&ctx->undo_buffer, "Smudge Dab (C Engine)", ctx->layers, ctx->layer_count);
             v3d_composite_layers(ctx);
             printf("Applied smudge smear onto layer '%s'.\n", ctx->layers[ctx->active_layer_idx].name);
-        } else if (strcmp(cmd, "undo") == 0) {
+        } else if (strcmp(primary, "undo") == 0) {
             if (v3d_undo_step(&ctx->undo_buffer, ctx->layers, &ctx->layer_count)) {
                 v3d_composite_layers(ctx);
                 printf("Undone 1 step successfully. Current index: %d\n", ctx->undo_buffer.current_index);
             } else {
                 printf("Cannot undo: at earliest snapshot.\n");
             }
-        } else if (strcmp(cmd, "redo") == 0) {
+        } else if (strcmp(primary, "redo") == 0) {
             if (v3d_redo_step(&ctx->undo_buffer, ctx->layers, &ctx->layer_count)) {
                 v3d_composite_layers(ctx);
                 printf("Redone 1 step successfully. Current index: %d\n", ctx->undo_buffer.current_index);
             } else {
                 printf("Cannot redo: at latest snapshot.\n");
             }
-        } else if (strcmp(cmd, "save") == 0) {
-            if (v3d_xblend_save("project_backup.xblend", ctx, "builtin:suzanne")) {
-                printf("Project saved successfully to 'project_backup.xblend' (adhering to 3-state ring buffer budget).\n");
+        } else if (strcmp(primary, "save") == 0) {
+            const char* out_path = strlen(arg1) > 0 ? arg1 : "project_backup.xblend";
+            if (v3d_xblend_save(out_path, ctx, "builtin:suzanne")) {
+                printf("Project saved successfully to '%s' (adhering to 3-state ring buffer budget).\n", out_path);
             } else {
                 printf("Failed to write .xblend file.\n");
             }
-        } else if (strcmp(cmd, "drone") == 0) {
-            ctx->camera.is_drone_mode = !ctx->camera.is_drone_mode;
+        } else if (strcmp(primary, "drone") == 0) {
+            if (strcmp(arg1, "on") == 0 || strcmp(arg1, "1") == 0) ctx->camera.is_drone_mode = true;
+            else if (strcmp(arg1, "off") == 0 || strcmp(arg1, "0") == 0) ctx->camera.is_drone_mode = false;
+            else ctx->camera.is_drone_mode = !ctx->camera.is_drone_mode;
             printf("Blender Drone Flight Mode %s.\n", ctx->camera.is_drone_mode ? "ENABLED (WASD+QE)" : "DISABLED");
+        } else if (strcmp(primary, "theme") == 0) {
+            if (strcmp(arg1, "bw78") == 0) ctx->theme = V3D_THEME_BW78;
+            else if (strcmp(arg1, "modern") == 0) ctx->theme = V3D_THEME_MODERN;
+            else if (strcmp(arg1, "ps2022") == 0) ctx->theme = V3D_THEME_PS2022;
+            else ctx->theme = V3D_THEME_CS5;
+            printf("UI Theme switched to %s.\n", arg1[0] ? arg1 : "cs5");
         } else {
-            printf("Unknown command: '%s'. Type 'help' for command list.\n", cmd);
+            printf("Unknown command: '%s'. Type 'help' for command list.\n", primary);
         }
     }
 

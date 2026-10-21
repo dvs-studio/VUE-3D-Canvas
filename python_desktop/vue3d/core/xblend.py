@@ -8,7 +8,7 @@ import json
 import base64
 import os
 from typing import List, Dict, Any, Optional
-import numpy as np
+from .compat import np
 from .types import Layer, ThemeMode
 from .undo import UndoRingBuffer
 

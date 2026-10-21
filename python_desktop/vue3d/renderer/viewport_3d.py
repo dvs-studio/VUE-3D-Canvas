@@ -3,7 +3,7 @@
 Author: Victory Ukpong
 """
 
-import numpy as np
+from ..core.compat import np
 from ..core.types import Camera
 
 class Viewport3DNavigation:

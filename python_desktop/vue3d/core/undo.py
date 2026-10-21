@@ -7,7 +7,7 @@ Constraint: Strictly 3 states persisted to .xblend file, normal 1-step undo in l
 import time
 import copy
 from typing import List, Dict, Any, Optional
-import numpy as np
+from .compat import np
 from .types import Layer
 
 class UndoRingBuffer:

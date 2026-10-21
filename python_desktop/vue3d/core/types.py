@@ -5,8 +5,8 @@ Author: Victory Ukpong
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Tuple
-import numpy as np
+from typing import List, Optional, Tuple, Any
+from .compat import np
 
 class ShadingMode(Enum):
     DEF = "default"      # Original file normals
