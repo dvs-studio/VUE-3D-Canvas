@@ -235,6 +235,9 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', currentTheme);
+    document.documentElement.className = `theme-${currentTheme}`;
+    document.body.setAttribute('data-theme', currentTheme);
+    document.body.className = `theme-${currentTheme}`;
   }, [currentTheme]);
 
   // Model & Multi-Channel Exporter Dialog
@@ -385,20 +388,22 @@ export default function App() {
         return;
       }
 
-      // Undo / Redo
+      // Undo / Redo (Strictly 1 state per press, preventing key-repeat cascades)
       if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'z') {
+        if (e.key === 'z' || e.key === 'Z') {
           e.preventDefault();
+          if (e.repeat) return;
           if (e.shiftKey) handleRedo();
           else handleUndo();
           return;
         }
-        if (e.key === 'y') {
+        if (e.key === 'y' || e.key === 'Y') {
           e.preventDefault();
+          if (e.repeat) return;
           handleRedo();
           return;
         }
-        if (e.key === 's') {
+        if (e.key === 's' || e.key === 'S') {
           e.preventDefault();
           handleSaveXBlend();
           return;
@@ -1041,7 +1046,10 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#333333] text-[#c8c8c8] overflow-hidden select-none font-sans">
+    <div 
+      className={`h-screen w-screen flex flex-col bg-[#333333] text-[#c8c8c8] overflow-hidden select-none font-sans theme-container theme-${currentTheme} ${currentTheme === 'bw78' ? 'theme-bw78-viewport-shadow' : ''}`}
+      data-theme={currentTheme}
+    >
       {/* 1. Authentic Photoshop CS5 Top Menu Bar */}
       <PhotoshopMenuBar
         onNewProject={() => {
@@ -1335,6 +1343,8 @@ export default function App() {
                           materialProps={materialProps}
                           showGizmo={showGizmo}
                           onToggleGizmo={() => setShowGizmo(g => !g)}
+                          surfaceMode={surfaceMode}
+                          shadingMode={shadingMode}
                         />
                       ),
                     },

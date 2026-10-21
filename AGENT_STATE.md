@@ -71,3 +71,9 @@
 - [x] **Visible Mesh Selector with Name IDs**: Displays submesh name IDs (`[ID: head]`, `[ID: eyes]`, `[ID: dome]`, etc.), "Show All", and a dedicated "Show only selected group" isolation checkbox.
 - [x] **Help Menu Theme Switcher**: Added UI theme selector directly inside the Help dropdown menu with checkmarks.
 - [x] **Native Windows Release Package (`release/windows/`)**: Standalone native Windows `.exe` architecture with direct DirectX 11 / OpenGL acceleration, MSVC & MinGW build scripts, and launcher batch files.
+- [x] **Dynamic UI Theme Synchronization**: Comprehensive CSS variables and Tailwind utility overrides across all panels, headers, dialogs, and toolbars for CS5, BW78, Modern, and PS2022 themes.
+- [x] **Navigator 3D Viewport Normals Synchronization**: Passing `surfaceMode` to NavigatorPanel and computing matching surface normals in real-time.
+- [x] **Blender Drone Navigation Engine**: Automatic middle-mouse and Alt navigation with camera-relative planar panning, unconstrained continuous trackball orbit, and WASD+QE drone flight controls.
+- [x] **Single-Step Undo/Redo Protection**: Strict 1-state undo (`Ctrl+Z`) and redo (`Ctrl+Y`) with keyboard repeat guard, ensuring no accidental 3-state skipping.
+- [x] **Universal Presets & Smudge/Eraser Masks**: Embedded thumbnail preset dropdown in the top options bar for all tools, with full tip mask textures and pattern overlays enabled for Brush, Eraser, and Smudge tools.
+- [x] **Dual Native Windows Binaries & Build Diagnostics**: Interactive console binary (`vue_3d_canvas_console.exe`) that stays open with interactive shell and diagnostic runner, alongside `vue_3d_canvas.exe` and `BUILD_DIAGNOSTICS.md`.

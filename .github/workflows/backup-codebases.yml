@@ -1,0 +1,143 @@
+name: Backup Codebases (Selective Media Exclusion)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backup-codebases:
+    name: Package Modular Language Backups (Icons Included)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Create Backup Directories
+        run: |
+          mkdir -p backups
+          mkdir -p staging/rust_web
+          mkdir -p staging/native_c
+          mkdir -p staging/python
+
+      - name: Stage Rust & Web Project (Excluding Heavy Media Except Icons)
+        run: |
+          rsync -av --progress ./ staging/rust_web/ \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude 'target' \
+            --exclude 'native_c' \
+            --exclude 'python_desktop' \
+            --exclude 'backups' \
+            --exclude 'staging' \
+            --exclude '*.mp4' \
+            --exclude '*.mov' \
+            --exclude '*.avi' \
+            --exclude '*.wav' \
+            --exclude '*.mp3' \
+            --exclude '*.raw' \
+            --exclude '*.fbx' \
+            --exclude '*.blend' \
+            --include '*/' \
+            --include '*.ico' \
+            --include '*.svg' \
+            --include '*favicon*' \
+            --include '*signature*' \
+            --include '*app_icon*' \
+            --include '*icon*.png' \
+            --include '*.ts' \
+            --include '*.tsx' \
+            --include '*.rs' \
+            --include '*.toml' \
+            --include '*.json' \
+            --include '*.md' \
+            --include '*.html' \
+            --include '*.css' \
+            --include '*.bat' \
+            --include '*.sh' \
+            --include '*.yml' \
+            --include '*.yaml'
+
+      - name: Stage Native C Project (Including Handoff & API Docs)
+        run: |
+          if [ -d "native_c" ]; then
+            rsync -av --progress ./native_c/ staging/native_c/ \
+              --exclude '*.o' \
+              --exclude '*.obj' \
+              --exclude '*.exe' \
+              --exclude '*.dll' \
+              --exclude '*.mp4' \
+              --exclude '*.wav' \
+              --include '*/' \
+              --include '*.c' \
+              --include '*.h' \
+              --include '*.md' \
+              --include '*.bat' \
+              --include '*.sh' \
+              --include 'Makefile' \
+              --include '*.ico' \
+              --include '*.svg' \
+              --include '*icon*.png'
+          fi
+
+      - name: Stage Python Desktop Project (Including Handoff & API Docs)
+        run: |
+          if [ -d "python_desktop" ]; then
+            rsync -av --progress ./python_desktop/ staging/python/ \
+              --exclude '__pycache__' \
+              --exclude '*.pyc' \
+              --exclude 'build' \
+              --exclude 'dist' \
+              --exclude '*.spec' \
+              --exclude '*.mp4' \
+              --exclude '*.wav' \
+              --include '*/' \
+              --include '*.py' \
+              --include '*.txt' \
+              --include '*.md' \
+              --include '*.bat' \
+              --include '*.sh' \
+              --include '*.ico' \
+              --include '*.svg' \
+              --include '*icon*.png'
+          fi
+
+      - name: Compress Modular Backups to ZIP
+        run: |
+          cd staging/rust_web && zip -r ../../backups/vue3d-backup-rust-web.zip . && cd ../..
+          if [ -d "native_c" ]; then
+            cd staging/native_c && zip -r ../../backups/vue3d-backup-native-c.zip . && cd ../..
+          fi
+          if [ -d "python_desktop" ]; then
+            cd staging/python && zip -r ../../backups/vue3d-backup-python.zip . && cd ../..
+          fi
+          ls -lh backups/
+
+      - name: Upload Rust & Web Backup ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-backup-rust-web
+          path: backups/vue3d-backup-rust-web.zip
+          retention-days: 90
+
+      - name: Upload Native C Backup ZIP
+        if: hashFiles('backups/vue3d-backup-native-c.zip') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-backup-native-c
+          path: backups/vue3d-backup-native-c.zip
+          retention-days: 90
+
+      - name: Upload Python Backup ZIP
+        if: hashFiles('backups/vue3d-backup-python.zip') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-backup-python
+          path: backups/vue3d-backup-python.zip
+          retention-days: 90

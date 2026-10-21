@@ -64,6 +64,17 @@
       },
       "group": "build",
       "problemMatcher": []
+    },
+    {
+      "label": "7. Run Native Windows Interactive Console",
+      "type": "shell",
+      "windows": {
+        "command": ".\\target\\release\\vue_3d_canvas_console.exe"
+      },
+      "linux": {
+        "command": "./target/release/vue_3d_canvas_console"
+      },
+      "problemMatcher": []
     }
   ]
 }

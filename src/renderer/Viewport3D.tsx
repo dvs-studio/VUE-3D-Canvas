@@ -29,7 +29,7 @@ import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
 import { SurfaceShadingEngine, SurfaceShadingType } from './surfaceShading';
-import { LayoutGrid, Sun, Sparkles, Sliders, Image, Check, Zap } from 'lucide-react';
+import { LayoutGrid, Sun, Sparkles, Sliders, Image, Check, Zap, Compass } from 'lucide-react';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -155,6 +155,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   });
 
   const [boxRotation, setBoxRotation] = useState({ x: 0, y: 0 });
+  const [isDroneNavActive, setIsDroneNavActive] = useState<boolean>(false);
   const isPaintingRef = useRef(false);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
@@ -870,8 +871,18 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   };
 
   const handlePanDelta = (dx: number, dy: number) => {
-    orbitState.current.target.x -= dx * 0.005;
-    orbitState.current.target.y += dy * 0.005;
+    const camera = cameraPerspRef.current;
+    if (camera) {
+      const panSpeed = (orbitState.current.radius / zoomFactor) * 0.0016;
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3();
+      camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
+      orbitState.current.target.addScaledVector(right, -dx * panSpeed);
+      orbitState.current.target.addScaledVector(up, dy * panSpeed);
+    } else {
+      orbitState.current.target.x -= dx * 0.005;
+      orbitState.current.target.y += dy * 0.005;
+    }
     updateCameraPosition();
   };
 
@@ -890,6 +901,63 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (onZoomChange) onZoomChange(1.0);
     updateCameraPosition();
   };
+
+  // Blender-style Drone Flight Navigator (WASD + QE + Shift boost)
+  useEffect(() => {
+    const handleDroneKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+
+      // Shift + ~ or Shift + ` toggles Blender Drone Navigator
+      if (e.shiftKey && (e.key === '~' || e.key === '`')) {
+        e.preventDefault();
+        setIsDroneNavActive(prev => !prev);
+        return;
+      }
+
+      const isNavigating = isDroneNavActive || orbitState.current.isOrbiting || orbitState.current.isPanning;
+      if (!isNavigating) return;
+
+      const camera = cameraPerspRef.current;
+      if (!camera) return;
+
+      const speed = (orbitState.current.radius / zoomFactor) * (e.shiftKey ? 0.08 : 0.035);
+      const right = new THREE.Vector3();
+      const up = new THREE.Vector3();
+      const forward = new THREE.Vector3();
+      camera.matrixWorld.extractBasis(right, up, forward);
+      forward.negate(); // In Three.js, camera looks along -Z
+
+      let moved = false;
+      const k = e.key.toLowerCase();
+      if (k === 'w') {
+        orbitState.current.target.addScaledVector(forward, speed);
+        moved = true;
+      } else if (k === 's') {
+        orbitState.current.target.addScaledVector(forward, -speed);
+        moved = true;
+      } else if (k === 'a') {
+        orbitState.current.target.addScaledVector(right, -speed);
+        moved = true;
+      } else if (k === 'd') {
+        orbitState.current.target.addScaledVector(right, speed);
+        moved = true;
+      } else if (k === 'e') {
+        orbitState.current.target.addScaledVector(up, speed);
+        moved = true;
+      } else if (k === 'q') {
+        orbitState.current.target.addScaledVector(up, -speed);
+        moved = true;
+      }
+
+      if (moved) {
+        e.preventDefault();
+        updateCameraPosition();
+      }
+    };
+
+    window.addEventListener('keydown', handleDroneKeyDown);
+    return () => window.removeEventListener('keydown', handleDroneKeyDown);
+  }, [isDroneNavActive, zoomFactor]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     activePointers.current.set(e.pointerId, { 
@@ -1009,11 +1077,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (orbitState.current.isPanning) {
       const dx = e.clientX - orbitState.current.lastMouseX;
       const dy = e.clientY - orbitState.current.lastMouseY;
-      orbitState.current.target.x -= dx * 0.005;
-      orbitState.current.target.y += dy * 0.005;
+      handlePanDelta(dx, dy);
       orbitState.current.lastMouseX = e.clientX;
       orbitState.current.lastMouseY = e.clientY;
-      updateCameraPosition();
       return;
     }
 
@@ -1623,6 +1689,22 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         </div>
       )}
 
+      {/* Drone Flight Mode Quick Toggle */}
+      <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5">
+        <button
+          onClick={() => setIsDroneNavActive(d => !d)}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-mono font-bold border transition-colors shadow-xs ${
+            isDroneNavActive
+              ? 'bg-[#fab387]/25 border-[#fab387] text-[#fab387]'
+              : 'bg-[#242424]/85 hover:bg-[#333] border-[#444] text-[#aaa]'
+          }`}
+          title="Blender Drone Navigation Mode (Shift + ~). Controls: WASD to fly, QE for elevation, Shift to boost, Alt / Middle-Mouse to freelook."
+        >
+          <Compass className="w-3 h-3" />
+          <span>Drone Nav {isDroneNavActive ? 'ON' : 'OFF'}</span>
+        </button>
+      </div>
+
       {/* Bottom Viewport Info Bar */}
       <div className="absolute bottom-2 left-2 z-20 flex items-center gap-2 text-[10px] text-[#888] font-mono bg-[#282828]/85 px-2.5 py-1 rounded border border-[#404040] pointer-events-none">
         <span>MODEL: {modelKey.toUpperCase()}</span>
@@ -1633,6 +1715,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         <span>·</span>
         <span className={touchNavEnabled ? 'text-[#3d7fb8] font-bold' : 'text-[#888]'}>
           {touchNavEnabled ? 'TOUCH NAV ACTIVE' : 'DIRECT PAINT'}
+        </span>
+        <span>·</span>
+        <span className={isDroneNavActive ? 'text-[#fab387] font-bold' : 'text-[#888]'}>
+          {isDroneNavActive ? 'DRONE: WASD+QE ACTIVE' : 'DRONE: ALT/MMB TO FLY'}
         </span>
         <span>·</span>
         <span className="text-[#a6e3a1]">{showGizmo ? 'GIZMO: ON' : 'GIZMO: HIDDEN'}</span>

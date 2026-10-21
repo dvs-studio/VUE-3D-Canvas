@@ -1,0 +1,87 @@
+name: Restore Codebase from Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_module:
+        description: 'Module to restore from backup ZIP'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - rust_web
+          - native_c
+          - python
+      backup_file_path:
+        description: 'Specific backup zip filename (leave blank for defaults in backups/)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  restore-backup:
+    name: Restore and Overwrite from Backup ZIP
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Restore Rust & Web Codebase
+        if: inputs.target_module == 'all' || inputs.target_module == 'rust_web'
+        run: |
+          ZIP_NAME="backups/vue3d-backup-rust-web.zip"
+          if [ -n "${{ inputs.backup_file_path }}" ]; then
+            ZIP_NAME="${{ inputs.backup_file_path }}"
+          fi
+          if [ -f "$ZIP_NAME" ]; then
+            echo "Unpacking $ZIP_NAME to root directory..."
+            unzip -o "$ZIP_NAME" -d ./
+            echo "Rust & Web codebase restored successfully."
+          else
+            echo "Warning: $ZIP_NAME not found. Skipping."
+          fi
+
+      - name: Restore Native C Codebase
+        if: inputs.target_module == 'all' || inputs.target_module == 'native_c'
+        run: |
+          ZIP_NAME="backups/vue3d-backup-native-c.zip"
+          if [ -n "${{ inputs.backup_file_path }}" ] && [ "${{ inputs.target_module }}" = "native_c" ]; then
+            ZIP_NAME="${{ inputs.backup_file_path }}"
+          fi
+          if [ -f "$ZIP_NAME" ]; then
+            mkdir -p native_c
+            echo "Unpacking $ZIP_NAME to native_c/..."
+            unzip -o "$ZIP_NAME" -d native_c/
+            echo "Native C codebase restored successfully."
+          else
+            echo "Warning: $ZIP_NAME not found. Skipping."
+          fi
+
+      - name: Restore Python Desktop Codebase
+        if: inputs.target_module == 'all' || inputs.target_module == 'python'
+        run: |
+          ZIP_NAME="backups/vue3d-backup-python.zip"
+          if [ -n "${{ inputs.backup_file_path }}" ] && [ "${{ inputs.target_module }}" = "python" ]; then
+            ZIP_NAME="${{ inputs.backup_file_path }}"
+          fi
+          if [ -f "$ZIP_NAME" ]; then
+            mkdir -p python_desktop
+            echo "Unpacking $ZIP_NAME to python_desktop/..."
+            unzip -o "$ZIP_NAME" -d python_desktop/
+            echo "Python Desktop codebase restored successfully."
+          else
+            echo "Warning: $ZIP_NAME not found. Skipping."
+          fi
+
+      - name: Verify Restored Codebase Integrity
+        run: |
+          echo "Verifying file listings..."
+          ls -la
+          if [ -d "native_c" ]; then ls -la native_c/; fi
+          if [ -d "python_desktop" ]; then ls -la python_desktop/; fi
+          echo "Restore completed successfully."

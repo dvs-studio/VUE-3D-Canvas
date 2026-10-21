@@ -25,8 +25,10 @@
 - **Synchronization Hook:** Whenever 2D painting, 3D painting, layer operations, filters, or undo/redo actions occur, `syncCompositeCanvas` updates the canonical canvas and increments `textureVersion`, immediately setting `needsUpdate = true` on Three.js canvas textures in both viewports.
 - **Full UV Range Assurance:** All procedural geometries (Suzanne, Helmet, Primitives) compute clean 0..1 spherical/cylindrical polar UV maps without overlapping gaps.
 
-## Handoff Instructions for AI Models (Google AI Studio / Grok)
-1. Maintain strict memory optimization guidelines; avoid heavy heap allocations in the painting loop.
-2. Ensure file format compatibility with `.xblend` specs (linked models + 3-state undo ring buffer).
-3. Verify that all UI components adhere to the Photoshop CS5 dark gray palette (`#333333`, `#2b2b2b`, `#3c3c3c`).
-4. Ensure all layer tools (Gaussian Blur, Stochastic Scattering, Jenny Stitch Studio, Layer Conversions) maintain preview/commit semantics with undo/redo support.
+## Mandatory Governance for AI Models (Google AI Studio, Grok, Claude, GPT)
+1. **Never Clear History**: You must **ADD**, never remove, overwrite, truncate, or wipe prior architectural decisions, feature ledgers, or commit history.
+2. **Pre-Task Check**: ALWAYS read `AGENT_STATE.md` and relevant `HANDOFF.md` before making edits to verify existing architecture.
+3. **Post-Task Ledger Update**: You MUST update `AGENT_STATE.md` and language-specific `HANDOFF.md` / `API.md` after completing your task, appending newly verified capabilities.
+4. **Strict Memory & State Limits**: Maintain low memory footprint, max 3 undo states in `.xblend` project files (normal 1-step undo in live session), linked 3D assets by default, no ray-tracing or D3D12 dependency.
+5. **Photoshop CS5 Dark Skin**: Adhere strictly to the CS5 palette (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`).
+6. **Multi-Language Parity**: Any new feature or shader upgrade should be mirrored across Rust/Web, Native C (`native_c/`), and Python Desktop (`python_desktop/`).

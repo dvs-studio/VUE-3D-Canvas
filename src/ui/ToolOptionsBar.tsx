@@ -7,6 +7,7 @@
 
 import React, { useState, useRef } from 'react';
 import { ToolType, BrushPreset, ViewportShadingMode } from '../core/types';
+import { DEFAULT_BRUSH_PRESETS } from '../tools/brushPresets';
 import { 
   Sliders, Box, Layers, SplitSquareVertical, Eye, Camera, 
   Disc, Smartphone, LayoutGrid, Plus, Image as ImageIcon, ChevronDown, Stamp 
@@ -57,6 +58,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   onOpenSymmetryPanel,
   onOpenPatternStampDialog,
 }) => {
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
   const [showMaskMenu, setShowMaskMenu] = useState(false);
   const [showPatternMenu, setShowPatternMenu] = useState(false);
 
@@ -126,8 +128,88 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
           <span>{activeTool.replace('_', ' ')}</span>
         </div>
 
+        {/* Universal Brush Presets Dropdown (for Brush, Eraser, Smudge, Mask Brush, etc.) */}
+        {['brush', 'eraser', 'blur', 'clone', 'smudge', 'mask_brush'].includes(activeTool) && (
+          <div className="relative">
+            <button
+              onClick={() => { setShowPresetMenu(!showPresetMenu); setShowMaskMenu(false); setShowPatternMenu(false); }}
+              className="flex items-center gap-1.5 bg-[#2a2a2a] hover:bg-[#343434] px-2 py-0.5 rounded border border-[#505050] text-[#eee] transition-colors cursor-pointer"
+              title="Universal Brush Presets (Usable across Brush, Eraser, Smudge, and all stroke tools)"
+            >
+              <span className="w-4 h-4 rounded-full bg-[#181818] border border-[#666] flex items-center justify-center text-[10px] text-[#a6e3a1] font-bold overflow-hidden shadow-inner">
+                {brush.name ? brush.name.slice(0, 1) : 'B'}
+              </span>
+              <span className="text-[11px] font-semibold truncate max-w-[85px]">
+                {brush.name || 'Custom'}
+              </span>
+              <ChevronDown className="w-3 h-3 text-[#888]" />
+            </button>
+
+            {/* Presets Popover with Visual Thumbnails */}
+            {showPresetMenu && (
+              <div className="absolute top-full left-0 mt-1 z-50 bg-[#252525] border border-[#555] rounded shadow-2xl p-2 w-64 cs5-outset max-h-80 overflow-y-auto">
+                <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-[#3c3c3c]">
+                  <span className="text-[10px] font-mono text-[#a6e3a1] font-bold uppercase tracking-wider">
+                    Universal Presets ({DEFAULT_BRUSH_PRESETS.length})
+                  </span>
+                  <span className="text-[9px] text-[#888]">All Tools</span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {DEFAULT_BRUSH_PRESETS.map((p) => {
+                    const isSelected = brush.name === p.name || brush.id === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          onUpdateBrush({
+                            name: p.name,
+                            size: p.size,
+                            opacity: p.opacity,
+                            flow: p.flow,
+                            hardness: p.hardness,
+                            spacing: p.spacing,
+                            scatter: p.scatter,
+                            stabilizer: p.stabilizer,
+                            tipShape: p.tipShape,
+                            strokeType: p.strokeType,
+                            maskType: p.maskType,
+                            patternType: p.patternType,
+                          });
+                          setShowPresetMenu(false);
+                        }}
+                        className={`flex items-center gap-1.5 p-1 rounded border text-left transition-all ${
+                          isSelected
+                            ? 'bg-[#3d7fb8]/35 border-[#3d7fb8] text-white'
+                            : 'bg-[#1e1e1e] border-[#383838] text-[#ccc] hover:bg-[#2c2c2c] hover:border-[#666]'
+                        }`}
+                        title={`${p.name} - ${p.category} (Size ${p.size}px)`}
+                      >
+                        <div className="w-5 h-5 rounded bg-[#111] border border-[#444] flex items-center justify-center shrink-0 overflow-hidden">
+                          <div 
+                            className="rounded-full bg-white"
+                            style={{
+                              width: `${Math.max(3, Math.min(14, p.size * 0.35))}px`,
+                              height: `${Math.max(3, Math.min(14, p.size * 0.35))}px`,
+                              opacity: p.opacity / 100,
+                              filter: p.hardness < 50 ? `blur(${Math.max(1, (100 - p.hardness) * 0.03)}px)` : 'none'
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] font-medium truncate text-white leading-tight">{p.name}</div>
+                          <div className="text-[8px] text-[#888]">{p.size}px</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Brush Parameters if paint tool */}
-        {['brush', 'eraser', 'blur', 'clone', 'smudge'].includes(activeTool) && (
+        {['brush', 'eraser', 'blur', 'clone', 'smudge', 'mask_brush'].includes(activeTool) && (
           <div className="flex items-center gap-2.5">
             {/* 1. BRUSH TYPE */}
             <div className="flex items-center gap-1 bg-[#303030] px-1.5 py-0.5 rounded border border-[#4a4a4a]">

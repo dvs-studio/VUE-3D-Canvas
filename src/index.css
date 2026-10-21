@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root,
+  [data-theme="cs5"],
+  .theme-cs5 {
     --cs5-bg: #333333;
-    --cs5-panel: #424242;
-    --cs5-panel-dark: #2c2c2c;
-    --cs5-panel-light: #4e4e4e;
-    --cs5-border: #555555;
-    --cs5-border-dark: #222222;
+    --cs5-panel: #2b2b2b;
+    --cs5-panel-dark: #222222;
+    --cs5-panel-light: #3c3c3c;
+    --cs5-border: #444444;
+    --cs5-border-dark: #1e1e1e;
     --cs5-text: #c8c8c8;
     --cs5-text-bright: #eeeeee;
     --cs5-accent: #3d7fb8;
     --cs5-accent-hover: #5097d6;
   }
 
-  body.theme-bw78 {
+  [data-theme="bw78"],
+  .theme-bw78 {
     --cs5-bg: #141414;
     --cs5-panel: #202020;
     --cs5-panel-dark: #181818;
@@ -27,7 +30,8 @@
     --cs5-accent-hover: #ffffff;
   }
 
-  body.theme-modern {
+  [data-theme="modern"],
+  .theme-modern {
     --cs5-bg: #13161d;
     --cs5-panel: #1e2430;
     --cs5-panel-dark: #161b24;
@@ -40,12 +44,13 @@
     --cs5-accent-hover: #818cf8;
   }
 
-  body.theme-ps2022 {
+  [data-theme="ps2022"],
+  .theme-ps2022 {
     --cs5-bg: #1f1f1f;
-    --cs5-panel: #2b2b2b;
-    --cs5-panel-dark: #242424;
-    --cs5-panel-light: #333333;
-    --cs5-border: #3c3c3c;
+    --cs5-panel: #282828;
+    --cs5-panel-dark: #202020;
+    --cs5-panel-light: #323232;
+    --cs5-border: #3a3a3a;
     --cs5-border-dark: #181818;
     --cs5-text: #cccccc;
     --cs5-text-bright: #ffffff;
@@ -59,8 +64,102 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     user-select: none;
     -webkit-user-select: none;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+}
+
+/* Comprehensive UI Theme Overrides for all panels, headers, and toolbars */
+[data-theme="bw78"] .bg-\[\#333333\],
+[data-theme="bw78"] .bg-\[\#2b2b2b\],
+[data-theme="bw78"] .bg-\[\#262626\],
+[data-theme="bw78"] .bg-\[\#1e1e1e\],
+[data-theme="bw78"] .bg-\[\#222222\] {
+  background-color: #141414 !important;
+}
+[data-theme="bw78"] .bg-\[\#3c3c3c\],
+[data-theme="bw78"] .bg-\[\#424242\],
+[data-theme="bw78"] .bg-\[\#303030\],
+[data-theme="bw78"] .bg-\[\#242424\],
+[data-theme="bw78"] .bg-\[\#202020\] {
+  background-color: #202020 !important;
+}
+[data-theme="bw78"] .border-\[\#444\],
+[data-theme="bw78"] .border-\[\#555\],
+[data-theme="bw78"] .border-\[\#484848\],
+[data-theme="bw78"] .border-\[\#4a4a4a\],
+[data-theme="bw78"] .border-\[\#383838\],
+[data-theme="bw78"] .border-\[\#242424\],
+[data-theme="bw78"] .border-\[\#222\] {
+  border-color: #383838 !important;
+}
+[data-theme="bw78"] .text-\[\#c8c8c8\],
+[data-theme="bw78"] .text-\[\#aaa\] {
+  color: #d8d8d8 !important;
+}
+[data-theme="bw78"] .text-\[\#3d7fb8\] {
+  color: #e0e0e0 !important;
+}
+
+[data-theme="modern"] .bg-\[\#333333\],
+[data-theme="modern"] .bg-\[\#2b2b2b\],
+[data-theme="modern"] .bg-\[\#262626\],
+[data-theme="modern"] .bg-\[\#1e1e1e\],
+[data-theme="modern"] .bg-\[\#222222\] {
+  background-color: #13161d !important;
+}
+[data-theme="modern"] .bg-\[\#3c3c3c\],
+[data-theme="modern"] .bg-\[\#424242\],
+[data-theme="modern"] .bg-\[\#303030\],
+[data-theme="modern"] .bg-\[\#242424\],
+[data-theme="modern"] .bg-\[\#202020\] {
+  background-color: #1e2430 !important;
+}
+[data-theme="modern"] .border-\[\#444\],
+[data-theme="modern"] .border-\[\#555\],
+[data-theme="modern"] .border-\[\#484848\],
+[data-theme="modern"] .border-\[\#4a4a4a\],
+[data-theme="modern"] .border-\[\#383838\],
+[data-theme="modern"] .border-\[\#242424\],
+[data-theme="modern"] .border-\[\#222\] {
+  border-color: #2d3647 !important;
+}
+[data-theme="modern"] .text-\[\#c8c8c8\],
+[data-theme="modern"] .text-\[\#aaa\] {
+  color: #cbd5e1 !important;
+}
+[data-theme="modern"] .text-\[\#3d7fb8\] {
+  color: #818cf8 !important;
+}
+
+[data-theme="ps2022"] .bg-\[\#333333\],
+[data-theme="ps2022"] .bg-\[\#2b2b2b\],
+[data-theme="ps2022"] .bg-\[\#262626\],
+[data-theme="ps2022"] .bg-\[\#1e1e1e\],
+[data-theme="ps2022"] .bg-\[\#222222\] {
+  background-color: #1f1f1f !important;
+}
+[data-theme="ps2022"] .bg-\[\#3c3c3c\],
+[data-theme="ps2022"] .bg-\[\#424242\],
+[data-theme="ps2022"] .bg-\[\#303030\],
+[data-theme="ps2022"] .bg-\[\#242424\],
+[data-theme="ps2022"] .bg-\[\#202020\] {
+  background-color: #282828 !important;
+}
+[data-theme="ps2022"] .border-\[\#444\],
+[data-theme="ps2022"] .border-\[\#555\],
+[data-theme="ps2022"] .border-\[\#484848\],
+[data-theme="ps2022"] .border-\[\#4a4a4a\],
+[data-theme="ps2022"] .border-\[\#383838\],
+[data-theme="ps2022"] .border-\[\#242424\],
+[data-theme="ps2022"] .border-\[\#222\] {
+  border-color: #3a3a3a !important;
+}
+[data-theme="ps2022"] .text-\[\#c8c8c8\],
+[data-theme="ps2022"] .text-\[\#aaa\] {
+  color: #cccccc !important;
+}
+[data-theme="ps2022"] .text-\[\#3d7fb8\] {
+  color: #1473e6 !important;
 }
 
 .theme-bw78-viewport-shadow {

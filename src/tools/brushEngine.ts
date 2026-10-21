@@ -34,12 +34,25 @@ export class BrushEngine {
 
   // Smudge pickup buffer
   private smudgeColor: { r: number; g: number; b: number; a: number } | null = null;
+  private imageMaskCache = new Map<string, HTMLImageElement>();
 
   public static getInstance(): BrushEngine {
     if (!BrushEngine.instance) {
       BrushEngine.instance = new BrushEngine();
     }
     return BrushEngine.instance;
+  }
+
+  public getImageMask(url: string): HTMLImageElement | null {
+    if (this.imageMaskCache.has(url)) {
+      const img = this.imageMaskCache.get(url)!;
+      return img.complete ? img : null;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    this.imageMaskCache.set(url, img);
+    return null;
   }
 
   public beginStroke(x: number, y: number, pressure = 1.0) {
@@ -257,18 +270,26 @@ export class BrushEngine {
       ctx.globalAlpha = (brush.opacity / 100) * (brush.flow / 100) * opacityFactor * 0.85;
     }
 
-    // 1. Procedural Mask Modulation (if active)
+    // 1. Custom Stencil Image Mask (if active)
+    if (brush.stencilUrl) {
+      const maskImg = this.getImageMask(brush.stencilUrl);
+      if (maskImg && maskImg.complete) {
+        ctx.drawImage(maskImg, -radius, -radius, size, size);
+      }
+    }
+
+    // 2. Procedural Mask Modulation (if active)
     if (brush.maskType && brush.maskType !== 'none') {
       this.applyMaskModulation(ctx, radius, brush.maskType, brush.maskScale || 1.0);
     }
 
-    // 2. Procedural Pattern Fill (if active)
+    // 3. Procedural Pattern Fill (if active)
     if (brush.patternType && brush.patternType !== 'none' && !isEraser) {
       this.applyPatternFill(ctx, radius, brush.color, brush.patternType, brush.patternScale || 1.0);
-    } else if (brush.hardness < 85 && !isEraser) {
-      // Soft radial gradient dab
+    } else if (brush.hardness < 85) {
+      // Soft radial gradient dab (works for both brush color and eraser destination-out)
       const grad = ctx.createRadialGradient(0, 0, radius * (brush.hardness / 100), 0, 0, radius);
-      grad.addColorStop(0, brush.color);
+      grad.addColorStop(0, isEraser ? '#000000' : brush.color);
       grad.addColorStop(1, 'transparent');
       ctx.fillStyle = grad;
       ctx.beginPath();
@@ -484,23 +505,61 @@ export class BrushEngine {
     brush: BrushPreset
   ) {
     const radius = Math.max(3, Math.floor(brush.size / 2));
-    const sX = Math.max(0, Math.floor(fromX - radius));
-    const sY = Math.max(0, Math.floor(fromY - radius));
     const size = radius * 2;
 
-    if (sX + size > ctx.canvas.width || sY + size > ctx.canvas.height) return;
+    const sampleX = Math.max(0, Math.min(ctx.canvas.width - 1, Math.floor(fromX)));
+    const sampleY = Math.max(0, Math.min(ctx.canvas.height - 1, Math.floor(fromY)));
 
     if (!this.smudgeColor) {
-      const sample = ctx.getImageData(Math.floor(fromX), Math.floor(fromY), 1, 1).data;
+      const sample = ctx.getImageData(sampleX, sampleY, 1, 1).data;
       this.smudgeColor = { r: sample[0], g: sample[1], b: sample[2], a: sample[3] };
+    } else {
+      const sample = ctx.getImageData(sampleX, sampleY, 1, 1).data;
+      if (sample[3] > 0) {
+        this.smudgeColor.r = Math.round(this.smudgeColor.r * 0.75 + sample[0] * 0.25);
+        this.smudgeColor.g = Math.round(this.smudgeColor.g * 0.75 + sample[1] * 0.25);
+        this.smudgeColor.b = Math.round(this.smudgeColor.b * 0.75 + sample[2] * 0.25);
+        this.smudgeColor.a = Math.round(this.smudgeColor.a * 0.75 + sample[3] * 0.25);
+      }
     }
 
     ctx.save();
-    ctx.globalAlpha = (brush.opacity / 100) * 0.4;
-    ctx.fillStyle = `rgba(${this.smudgeColor.r}, ${this.smudgeColor.g}, ${this.smudgeColor.b}, ${this.smudgeColor.a / 255})`;
-    ctx.beginPath();
-    ctx.arc(toX, toY, radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(toX, toY);
+    ctx.globalAlpha = (brush.opacity / 100) * 0.45;
+
+    const smudgeRgba = `rgba(${this.smudgeColor.r}, ${this.smudgeColor.g}, ${this.smudgeColor.b}, ${this.smudgeColor.a / 255})`;
+
+    // 1. Custom Image Stencil Mask for Smudge tip
+    if (brush.stencilUrl) {
+      const maskImg = this.getImageMask(brush.stencilUrl);
+      if (maskImg && maskImg.complete) {
+        ctx.drawImage(maskImg, -radius, -radius, size, size);
+      }
+    }
+
+    // 2. Procedural Mask Modulation for Smudge tip
+    if (brush.maskType && brush.maskType !== 'none') {
+      this.applyMaskModulation(ctx, radius, brush.maskType, brush.maskScale || 1.0);
+    }
+
+    // 3. Pattern Overlay on Smudge
+    if (brush.patternType && brush.patternType !== 'none') {
+      this.applyPatternFill(ctx, radius, smudgeRgba, brush.patternType, brush.patternScale || 1.0);
+    } else if (brush.hardness < 85) {
+      const grad = ctx.createRadialGradient(0, 0, radius * (brush.hardness / 100), 0, 0, radius);
+      grad.addColorStop(0, smudgeRgba);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = smudgeRgba;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.restore();
   }
 }

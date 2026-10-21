@@ -11,6 +11,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { BUILTIN_MODELS, parseOBJ } from '../../renderer/modelGeometry';
+import { SurfaceShadingEngine, SurfaceShadingType } from '../../renderer/surfaceShading';
 import { RotateCw, RefreshCw, ZoomIn, ZoomOut, Compass, Smartphone, Box } from 'lucide-react';
 
 interface NavigatorPanelProps {
@@ -21,6 +22,8 @@ interface NavigatorPanelProps {
   materialProps: { metallic: number; roughness: number; normalStrength: number };
   showGizmo?: boolean;
   onToggleGizmo?: () => void;
+  surfaceMode?: 'default' | 'smooth' | 'flat' | 'hard';
+  shadingMode?: string;
 }
 
 export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
@@ -31,6 +34,8 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
   materialProps,
   showGizmo = true,
   onToggleGizmo,
+  surfaceMode = 'default',
+  shadingMode,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -152,7 +157,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     };
   }, []);
 
-  // Update Geometry
+  // Update Geometry with Surface Normal Computation
   useEffect(() => {
     if (!meshRef.current) return;
     let newGeom: THREE.BufferGeometry;
@@ -165,9 +170,22 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
       newGeom = BUILTIN_MODELS.suzanne().geometry;
     }
 
+    const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
+    SurfaceShadingEngine.applySurfaceShading(newGeom, meshRef.current?.material || null, effMode);
+
     meshRef.current.geometry.dispose();
     meshRef.current.geometry = newGeom;
-  }, [modelKey, customOBJText]);
+  }, [modelKey, customOBJText, surfaceMode]);
+
+  // Synchronize dynamic surface normals (Def / Smooth / Flat / Hard)
+  useEffect(() => {
+    if (!meshRef.current) return;
+    const geom = meshRef.current.geometry;
+    if (!geom) return;
+
+    const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
+    SurfaceShadingEngine.applySurfaceShading(geom, meshRef.current.material, effMode);
+  }, [surfaceMode]);
 
   // Update Texture from main painting canvas
   useEffect(() => {
