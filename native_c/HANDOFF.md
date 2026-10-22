@@ -48,3 +48,6 @@ native_c/
 - [x] **Dynamic Surface Normals**: Runtime switching between Def (original), Smooth (angle-weighted), and Flat (faceted) normals.
 - [x] **.xblend Project Serialization**: JSON metadata + binary pixel chunks adhering to strict 3-state ring buffer limit.
 - [x] **Standalone Executable Output**: Zero-dependency compilation producing single `vue_3d_canvas_c.exe` via GCC or MSVC.
+- [x] **Navigation Axis Inversion & Direction Alignment**: `v3d_camera_orbit` supports natural Blender rotation direction and `invert_nav` toggle flag, controllable via `axis [nat|inv]` in interactive shell.
+- [x] **Dedicated Native C README & Workflows**: Full technical manual `native_c/README.md`, standalone GitHub Actions export workflow (`export-c.yml`), and native non-WebGL Windows compilation CI (`build-windows-c.yml`).
+

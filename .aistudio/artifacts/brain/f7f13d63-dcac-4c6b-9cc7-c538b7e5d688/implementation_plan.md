@@ -1,93 +1,88 @@
-# Revised Implementation Plan - Multi-Language Implementations, Backup/Restore Workflows, and AI Handoff Protocol
+# Complete Multi-Language Delivery: Workflows, Documentation, & Gizmo Navigation Flip
 
-Add dedicated GitHub Actions backup & restore workflows, strict AI handover protocols (add only, never wipe history, update MD files before and after tasks), and complete standalone C and Python implementations of VUE 3D Canvas.
+Clarification on Architecture & Execution Plan:
+- **Architecture Context**: The original primary project is a **hybrid**: **React + TypeScript (Vite)** provides the Photoshop CS5 user interface, dockers, and Three.js WebGL viewport in the browser, while **Rust** (`crates/`, `Cargo.toml`) defines native data structures. For zero-overhead native desktop deployment without WebGL/browser runtime, two complete standalone engines exist: **`python_desktop/`** (pure Python + Tkinter GUI + PyOpenGL/DirectX 11) and **`native_c/`** (pure ANSI C99/C11 + DirectX 11 / OpenGL 2.0+).
+- **Navigation Inversion & Gizmo Flip**: We will both correct the natural Blender mouse direction (so dragging right turns right and dragging up looks up) **and** add an interactive **"Flip / Invert Navigation" button directly on the 3D Viewport Gizmo HUD** in React, Python, and C, giving users immediate 1-click control to toggle standard vs. inverted axes.
 
----
-
-## 1. GitHub Actions Workflows
-
-### A. Backup Workflow (`.github/workflows/backup-codebases.yml`)
-- Triggers on push or manual dispatch (`workflow_dispatch`).
-- Filters out heavy media files (large `.mp4`, `.wav`, `.obj`, `.fbx`, heavy test bitmaps) while strictly **preserving icons and signatures** (`*.ico`, `*.svg`, `favicon.png`, `signature.png`, `signature.svg`, `app_icon.png`, `icon.png`).
-- Packages into separate modular ZIP archives:
-  1. `vue3d-backup-rust-web.zip`: Rust core + Web/TS frontend + configuration.
-  2. `vue3d-backup-native-c.zip`: Native C implementation + headers + build scripts + docs.
-  3. `vue3d-backup-python.zip`: Python desktop implementation + requirements + PyInstaller scripts.
-- Uploads ZIP archives via `actions/upload-artifact@v4`.
-
-### B. Restore / Import Workflow (`.github/workflows/restore-backup.yml`)
-- Triggered manually (`workflow_dispatch`) with target language selection (`all`, `rust`, `c`, `python`).
-- Extracts the requested backup ZIP from the `backups/` directory (or artifact) and overwrites code in-place.
-- Ensures file permissions and executes test compiles to verify integrity.
+> [!IMPORTANT]
+> **Summary of Deliverables:**
+> 1. **Gizmo Flip Button & Rotation Fix**: Natural orbit/drone direction + a dedicated `[FLIP AXIS]` button on the viewport navigation overlay (stored in state and togglable on the fly). Synchronized to Python and C navigation.
+> 2. **Dedicated Folder Documentation**: Comprehensive `python_desktop/README.md` and `native_c/README.md` detailing architecture, build instructions, and CLI/GUI controls.
+> 3. **Modular Export Workflows**: `export-rust.yml`, `export-python.yml`, and `export-c.yml` with optional copy to the repository `export/` directory.
+> 4. **Native Non-WebGL Windows CI Workflows**: `build-windows-rust.yml`, `build-windows-python.yml`, and `build-windows-c.yml` targeting native Windows executables (DirectX 11 / OpenGL 2.0+).
+> 5. **Guarded Import/Extract Workflow**: `import-extract.yml` with language dropdown, auto-detection or explicit filename selection from `import/`, post-extract cleanup checkbox, and strict scope guards preventing Rust root extraction from affecting other language folders.
 
 ---
 
-## 2. AI Handoff & Governance Protocol
+### 1. System Architecture Map
 
-Add a standardized **AI Handover Protocol** in:
-- `AGENT_STATE.md` (root ledger)
-- `AGENTS.md` (root instructions)
-- `native_c/HANDOFF.md` & `native_c/API.md`
-- `python_desktop/HANDOFF.md` & `python_desktop/API.md`
-
-### Mandatory Rules for Any Subsequent AI:
-1. **Never Clear History**: Subsequent AI models must **ADD**, never delete, replace, or wipe prior architectural decisions, feature ledgers, or commit history.
-2. **Pre-Task Check**: The AI must read and log active state in `AGENT_STATE.md` **before** writing code.
-3. **Post-Task Ledger Update**: The AI must update the verification ledger and module indices in `AGENT_STATE.md` and language-specific `HANDOFF.md` files **after** completing the task.
-4. **Preserve Memory & XBlend Constraints**: 3-state undo ring buffer for `.xblend`, linked 3D assets, no ray-tracing dependencies.
-
----
-
-## 3. C Implementation (`native_c/`)
-Targeting pure C99/C11 with direct access to OpenGL 2.0+ and DirectX 11 fallback, compiling to a single standalone executable via GCC or MSVC.
-
-- **Files**:
-  - `native_c/include/vue3d.h`: Core types (Canvas, Layer, Mesh, Brush, Camera, UndoRingBuffer, Theme).
-  - `native_c/include/surface_shading.h`: Default, Smooth, and Flat normal calculation.
-  - `native_c/include/brush_engine.h`: Dabs, lazy-mouse stabilizer, tip mask textures, pattern overlays, smudge, eraser.
-  - `native_c/include/xblend.h`: `.xblend` project serialization/deserialization (3-state save limit).
-  - `native_c/src/main.c`: Win32/GLFW window, message loop, input handling (middle-mouse / Alt drone navigation, WASD+QE), and UI rendering.
-  - `native_c/src/renderer_gl.c`: OpenGL 2.0+ / D3D11 rendering backend, shaders, reflections, 3D painting.
-  - `native_c/src/brush_engine.c`: Painting, tip masks, smudge smears, alpha-aware eraser.
-  - `native_c/src/xblend.c`: `.xblend` file parser and exporter.
-  - `native_c/build_gcc.bat` & `native_c/build_msvc.bat`: 1-click single-file compilation producing `vue_3d_canvas_c.exe`.
-  - `native_c/Makefile`: Cross-platform build script.
-  - `native_c/HANDOFF.md`: AI instructions, maintenance guide, and upgrade ledger.
-  - `native_c/API.md`: C API documentation for all functions and structs.
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              VUE 3D Canvas Multi-Engine CI                             │
+├────────────────────────────┬─────────────────────────────┬─────────────────────────────┤
+│   Rust & React (Browser)   │       Python Desktop        │          Native C           │
+│  • React UI + Three.js     │  • Native Tkinter Desktop   │  • Pure ANSI C99/C11        │
+│  • Rust core crates/       │  • DirectX 11 / PyOpenGL    │  • DirectX 11 / OpenGL 2.0+ │
+│  • Viewport Gizmo Flip Btn │  • Drone + Flip Axis Toggle │  • Fast C Math + Flip State │
+└─────────────┬──────────────┴──────────────┬──────────────┴──────────────┬──────────────┘
+              │                             │                             │
+              ▼                             ▼                             ▼
+┌────────────────────────────┐┌────────────────────────────┐┌────────────────────────────┐
+│ .github/workflows/         ││ .github/workflows/         ││ .github/workflows/         │
+│  - export-rust.yml         ││  - export-python.yml       ││  - export-c.yml            │
+│  - build-windows-rust.yml  ││  - build-windows-python.yml││  - build-windows-c.yml     │
+└─────────────┬──────────────┘└─────────────┬──────────────┘└─────────────┬──────────────┘
+              │                             │                             │
+              └──────────────────────┬──────┴─────────────────────────────┘
+                                     ▼
+                    ┌──────────────────────────────────┐
+                    │  .github/workflows/              │
+                    │   - import-extract.yml           │
+                    │  Safe Scoped Targets:            │
+                    │    • rust   -> Root (Guarded)    │
+                    │    • python -> python_desktop/   │
+                    │    • c      -> native_c/         │
+                    └──────────────────────────────────┘
+```
 
 ---
 
-## 4. Python Implementation (`python_desktop/`)
-Targeting Python 3.9+ with `PyOpenGL`, `GLFW`, and `NumPy`, packageable into a single standalone `.exe` via PyInstaller.
+### 2. Detailed Task Breakdown
 
-- **Files**:
-  - `python_desktop/vue3d/core/types.py`: Layer data structures, brush presets, undo history.
-  - `python_desktop/vue3d/core/xblend.py`: `.xblend` project serializer (3-state save limit).
-  - `python_desktop/vue3d/core/undo.py`: 1-step runtime undo/redo engine with key-repeat protection.
-  - `python_desktop/vue3d/renderer/viewport_3d.py`: 3D viewport, unconstrained orbit, WASD+QE drone navigation.
-  - `python_desktop/vue3d/renderer/surface_shading.py`: Def, Smooth, and Flat normal recalculations.
-  - `python_desktop/vue3d/renderer/geometry.py`: Suzanne, Helmet, Sphere, and OBJ mesh loading.
-  - `python_desktop/vue3d/tools/brush_engine.py`: Painting dabs, lazy-mouse stabilizer, tip mask modulation, pattern overlays, smudge smear.
-  - `python_desktop/vue3d/ui/photoshop_ui.py`: Photoshop CS5 dark gray theme, menu bar, options bar with embedded presets dropdown, and dockers.
-  - `python_desktop/main.py`: Main desktop entry point.
-  - `python_desktop/requirements.txt`: Dependencies (`glfw`, `PyOpenGL`, `numpy`, `Pillow`, `pyinstaller`).
-  - `python_desktop/build_exe.bat`: 1-click batch script running `pyinstaller --onefile --windowed --name vue_3d_canvas_py main.py`.
-  - `python_desktop/run.bat` & `python_desktop/run.sh`: Instant runner scripts.
-  - `python_desktop/HANDOFF.md`: AI instructions, architecture notes, and upgrade ledger.
-  - `python_desktop/API.md`: Python module and class API documentation.
+#### Task 1: Navigation Fix & Gizmo Flip Button
+- **`src/renderer/Viewport3D.tsx`**:
+  - Add `invertNav: boolean` state.
+  - Add an interactive `Flip Axis (Normal/Inverted)` toggle button right beside the Drone Mode button in the bottom-left viewport overlay.
+  - Adjust orbit/pan/flight delta signs so default navigation follows natural mouse motion, and flipping inverses the axes instantly.
+- **`python_desktop/vue3d/renderer/viewport_3d.py` & `desktop_gui.py`**:
+  - Add `invert_nav` toggle to the options bar and HUD, with natural directional motion.
+- **`native_c/src/renderer_gl.c` & `main.c`**:
+  - Add `invert_nav` flag to `V3D_Camera` and `flip` command to interactive shell.
 
----
+#### Task 2: Documentation (`README.md`)
+- **`python_desktop/README.md`**: Comprehensive technical and user guide (CS5 Dark theme, setup, PyInstaller `.exe` compilation, zero-dependency mode, CLI reference).
+- **`native_c/README.md`**: Architectural manual (ANSI C99/C11, GCC/MSVC build scripts, memory safety, `.xblend` serializer).
 
-## 5. Verification Plan
+#### Task 3: Folders & Export Workflows
+- Create `import/` and `export/` directories with `.gitkeep` and `README.md`.
+- Create `.github/workflows/export-rust.yml` (packages Rust core & root MDs, preserves icons).
+- Create `.github/workflows/export-python.yml` (packages `python_desktop/`, preserves icons).
+- Create `.github/workflows/export-c.yml` (packages `native_c/`, preserves icons).
+- Each workflow includes a checkbox input `save_to_export_folder` to mirror the zip into `export/`.
 
-1. **Workflows**:
-   - Verify `.github/workflows/backup-codebases.yml` correctly targets `.ico`, `.svg`, `favicon.png`, `signature.png`, `icon.png` and excludes other large media.
-   - Verify `.github/workflows/restore-backup.yml` unpacks archives accurately.
-2. **Handoff Documentation**:
-   - Inspect `AGENT_STATE.md`, `native_c/HANDOFF.md`, and `python_desktop/HANDOFF.md` for explicit AI rules (add never remove, update MD before and after task).
-3. **C Codebase Integrity**:
-   - Verify all C headers and source files compile cleanly with valid syntax and correct include guards.
-4. **Python Codebase Integrity**:
-   - Verify all Python scripts parse cleanly with zero syntax errors.
-5. **Applet Compilation**:
-   - Run `compile_applet` and `lint_applet` to confirm the existing React/WebGL applet remains 100% operational.
+#### Task 4: Native Windows CI Workflows (Non-WebGL)
+- Create `.github/workflows/build-windows-rust.yml` (native `cargo build --release` on `windows-latest`).
+- Create `.github/workflows/build-windows-python.yml` (PyInstaller single-file `.exe` build).
+- Create `.github/workflows/build-windows-c.yml` (MSVC / MinGW native `.exe` build).
+
+#### Task 5: Scoped Import & Extraction Workflow
+- Create `.github/workflows/import-extract.yml` with:
+  - Language selection dropdown (`rust`, `python`, `c`).
+  - Selection mode dropdown (`auto-detect`, `explicit-filename`).
+  - Zip filename text input.
+  - Optional `delete_after_extract` checkbox.
+  - Unpack safety checks: Rust extraction guards against overwriting `python_desktop/`, `native_c/`, `self-host/`, `export/`, or `import/`.
+
+#### Task 6: Ledger Update & Verification
+- Update `AGENT_STATE.md` with new features, strictly preserving historical entries.
+- Run `compile_applet` and `lint_applet` to confirm zero regressions.

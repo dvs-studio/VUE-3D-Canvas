@@ -153,6 +153,7 @@ typedef struct {
     bool is_orbiting;
     bool is_panning;
     bool is_drone_mode;     /* WASD+QE flight mode */
+    bool invert_nav;        /* Inverted axis toggle */
     float last_mouse_x;
     float last_mouse_y;
 } V3D_Camera;

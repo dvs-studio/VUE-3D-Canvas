@@ -156,6 +156,24 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   const [boxRotation, setBoxRotation] = useState({ x: 0, y: 0 });
   const [isDroneNavActive, setIsDroneNavActive] = useState<boolean>(false);
+  const [invertNav, setInvertNav] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('vue3d_invert_nav') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleInvertNav = useCallback(() => {
+    setInvertNav(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('vue3d_invert_nav', String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
   const isPaintingRef = useRef(false);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
@@ -1065,9 +1083,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (orbitState.current.isOrbiting) {
       const dx = e.clientX - orbitState.current.lastMouseX;
       const dy = e.clientY - orbitState.current.lastMouseY;
-      orbitState.current.theta += dx * 0.008;
+      // Natural Blender Navigation:
+      // Dragging right rotates the model clockwise (camera theta decreases).
+      // Inverted flips the axis.
+      const dirSign = invertNav ? 1 : -1;
+      orbitState.current.theta += dx * 0.008 * dirSign;
       // Allow unrestricted pitch rotation without gimbal lock at the poles
-      orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, orbitState.current.phi - dy * 0.008));
+      orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, orbitState.current.phi + dy * 0.008 * dirSign));
       orbitState.current.lastMouseX = e.clientX;
       orbitState.current.lastMouseY = e.clientY;
       updateCameraPosition();
@@ -1364,6 +1386,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           isOrtho={isOrtho}
           touchNavEnabled={touchNavEnabled}
           onToggleTouchNav={onToggleTouchNav}
+          invertNav={invertNav}
+          onToggleInvertNav={handleToggleInvertNav}
         />
       )}
 
@@ -1689,7 +1713,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         </div>
       )}
 
-      {/* Drone Flight Mode Quick Toggle */}
+      {/* Drone Flight Mode & Navigation Axis Quick Toggles */}
       <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5">
         <button
           onClick={() => setIsDroneNavActive(d => !d)}
@@ -1702,6 +1726,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         >
           <Compass className="w-3 h-3" />
           <span>Drone Nav {isDroneNavActive ? 'ON' : 'OFF'}</span>
+        </button>
+
+        <button
+          onClick={handleToggleInvertNav}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-mono font-bold border transition-colors shadow-xs ${
+            invertNav
+              ? 'bg-[#89b4fa]/25 border-[#89b4fa] text-[#89b4fa]'
+              : 'bg-[#242424]/85 hover:bg-[#333] border-[#444] text-[#aaa]'
+          }`}
+          title="Toggle Navigation Axis Direction (Inverts orbit and drone freelook)"
+        >
+          <span>⇄</span>
+          <span>Axis: {invertNav ? 'INVERTED' : 'NATURAL'}</span>
         </button>
       </div>
 
@@ -1719,6 +1756,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         <span>·</span>
         <span className={isDroneNavActive ? 'text-[#fab387] font-bold' : 'text-[#888]'}>
           {isDroneNavActive ? 'DRONE: WASD+QE ACTIVE' : 'DRONE: ALT/MMB TO FLY'}
+        </span>
+        <span>·</span>
+        <span className={invertNav ? 'text-[#89b4fa] font-bold' : 'text-[#888]'}>
+          AXIS: {invertNav ? 'INVERTED' : 'NATURAL'}
         </span>
         <span>·</span>
         <span className="text-[#a6e3a1]">{showGizmo ? 'GIZMO: ON' : 'GIZMO: HIDDEN'}</span>

@@ -8,9 +8,10 @@ from ..core.types import Camera
 
 class Viewport3DNavigation:
     @staticmethod
-    def orbit(cam: Camera, dx: float, dy: float):
-        cam.theta += dx * 0.008
-        cam.phi -= dy * 0.008
+    def orbit(cam: Camera, dx: float, dy: float, invert: bool = False):
+        sign = 1.0 if invert else -1.0
+        cam.theta += dx * 0.008 * sign
+        cam.phi += dy * 0.008 * sign
         # Continuous pitch without pole freeze
         cam.phi = max(0.001, min(np.pi - 0.001, cam.phi))
 

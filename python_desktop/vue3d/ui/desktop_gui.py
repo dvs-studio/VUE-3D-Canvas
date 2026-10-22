@@ -71,6 +71,7 @@ class Vue3DDesktopGUI:
         # Key state tracking for drone fly
         self.keys_down = set()
         self.is_alt_pressed = False
+        self.invert_nav = False
         self.last_mouse_x = 0
         self.last_mouse_y = 0
         self.is_mouse_down = False
@@ -165,6 +166,10 @@ class Vue3DDesktopGUI:
         self.mask_combo.current(0)
         self.mask_combo.bind("<<ComboboxSelected>>", self._on_mask_selected)
         self.mask_combo.pack(side=tk.LEFT, padx=(4, 10))
+
+        # Axis Flip Button
+        self.axis_btn = tk.Button(self.options_frame, text="Axis: NATURAL", bg=self.skin["panel_dark"], fg=self.skin["text"], font=("Helvetica", 8, "bold"), relief=tk.RAISED, command=self._toggle_axis_mode)
+        self.axis_btn.pack(side=tk.RIGHT, padx=4)
 
         # Drone Nav Toggle Button
         self.drone_btn = tk.Button(self.options_frame, text="Drone Nav: OFF", bg=self.skin["panel_dark"], fg=self.skin["text"], font=("Helvetica", 8, "bold"), relief=tk.RAISED, command=self._toggle_drone_mode)
@@ -324,7 +329,7 @@ class Vue3DDesktopGUI:
             if "shift_l" in self.keys_down or "shift_r" in self.keys_down:
                 Viewport3DNavigation.pan(self.camera, dx, dy)
             else:
-                Viewport3DNavigation.orbit(self.camera, dx, dy)
+                Viewport3DNavigation.orbit(self.camera, dx, dy, invert=self.invert_nav)
         elif self.mouse_button == 1 and not self.is_alt_pressed:
             # Painting / Smudging
             if self.active_tool in (ToolType.BRUSH, ToolType.ERASER, ToolType.SMUDGE):
@@ -358,6 +363,13 @@ class Vue3DDesktopGUI:
         self.drone_btn.config(
             text=f"Drone Nav: {'ON (WASD+QE)' if self.camera.is_drone_mode else 'OFF'}",
             fg=self.skin["accent"] if self.camera.is_drone_mode else self.skin["text"]
+        )
+
+    def _toggle_axis_mode(self):
+        self.invert_nav = not self.invert_nav
+        self.axis_btn.config(
+            text=f"Axis: {'INVERTED' if self.invert_nav else 'NATURAL'}",
+            fg=self.skin["accent"] if self.invert_nav else self.skin["text"]
         )
 
     def _select_tool(self, tool: ToolType):

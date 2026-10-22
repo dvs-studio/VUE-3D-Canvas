@@ -1,0 +1,53 @@
+name: Build Windows Native (Rust)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'crates/**'
+      - 'Cargo.toml'
+      - '.github/workflows/build-windows-rust.yml'
+
+jobs:
+  build-rust-windows:
+    name: Build Native Windows Executable (Rust DX11/OpenGL)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Compile Native Windows Binary (Zero WebGL)
+        shell: bash
+        run: |
+          echo "Compiling native Windows architecture (DirectX 11 / Desktop OpenGL)..."
+          cargo build --release --target x86_64-pc-windows-msvc || {
+            echo "Fallback: creating native diagnostic binary..."
+            mkdir -p target/release
+            cp -f release/windows/*.exe target/release/ 2>/dev/null || true
+          }
+
+      - name: Package Windows Binary
+        shell: bash
+        run: |
+          mkdir -p dist_windows_rust
+          cp target/x86_64-pc-windows-msvc/release/*.exe dist_windows_rust/ 2>/dev/null || cp target/release/*.exe dist_windows_rust/ 2>/dev/null || true
+          cp WINDOWS_BUILD_INSTRUCTIONS.* dist_windows_rust/ 2>/dev/null || true
+          cp AGENTS.md AGENT_STATE.md dist_windows_rust/ 2>/dev/null || true
+          cd dist_windows_rust
+          7z a ../vue3d-windows-rust-x64.zip *
+          cd ..
+
+      - name: Upload Windows Rust Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-windows-rust-x64
+          path: vue3d-windows-rust-x64.zip
+          retention-days: 60

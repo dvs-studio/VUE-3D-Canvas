@@ -205,6 +205,14 @@ class Vue3DDesktopApp:
                 else:
                     self.camera.is_drone_mode = not self.camera.is_drone_mode
                 print(f"Blender Drone Navigation {'ENABLED (WASD+QE)' if self.camera.is_drone_mode else 'DISABLED'}.")
+            elif cmd in ("axis", "flip"):
+                if args and args[0].lower() in ("inv", "1", "inverted"):
+                    self.invert_nav = True
+                elif args and args[0].lower() in ("nat", "0", "natural"):
+                    self.invert_nav = False
+                else:
+                    self.invert_nav = not getattr(self, "invert_nav", False)
+                print(f"Navigation Axis Direction: {'INVERTED' if self.invert_nav else 'STANDARD NATURAL'}.")
             elif cmd == "theme":
                 target_theme = args[0].lower() if args else "cs5"
                 if target_theme in ("cs5", "bw78", "modern", "ps2022"):

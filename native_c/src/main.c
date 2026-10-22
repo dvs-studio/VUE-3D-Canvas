@@ -277,6 +277,11 @@ int main(int argc, char* argv[]) {
             else if (strcmp(arg1, "off") == 0 || strcmp(arg1, "0") == 0) ctx->camera.is_drone_mode = false;
             else ctx->camera.is_drone_mode = !ctx->camera.is_drone_mode;
             printf("Blender Drone Flight Mode %s.\n", ctx->camera.is_drone_mode ? "ENABLED (WASD+QE)" : "DISABLED");
+        } else if (strcmp(primary, "axis") == 0 || strcmp(primary, "flip") == 0) {
+            if (strcmp(arg1, "inv") == 0 || strcmp(arg1, "1") == 0) ctx->camera.invert_nav = true;
+            else if (strcmp(arg1, "nat") == 0 || strcmp(arg1, "0") == 0) ctx->camera.invert_nav = false;
+            else ctx->camera.invert_nav = !ctx->camera.invert_nav;
+            printf("Navigation Axis Direction: %s.\n", ctx->camera.invert_nav ? "INVERTED" : "STANDARD NATURAL");
         } else if (strcmp(primary, "theme") == 0) {
             if (strcmp(arg1, "bw78") == 0) ctx->theme = V3D_THEME_BW78;
             else if (strcmp(arg1, "modern") == 0) ctx->theme = V3D_THEME_MODERN;

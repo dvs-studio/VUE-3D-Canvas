@@ -1,0 +1,47 @@
+name: Build Windows Native (C)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'native_c/**'
+      - '.github/workflows/build-windows-c.yml'
+
+jobs:
+  build-c-windows:
+    name: Build Native Windows Executable (Pure C99/C11 DirectX 11 / OpenGL)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile Native C Architecture (Zero WebGL)
+        working-directory: native_c
+        run: |
+          cl /O2 /W3 /Fe:vue3d_canvas_native.exe src\main.c src\brush_engine.c src\renderer_gl.c src\xblend.c /Iinclude opengl32.lib gdi32.lib user32.lib
+
+      - name: Validate Native C Executable via Smoke Test
+        working-directory: native_c
+        run: |
+          echo "status`nexit" | .\vue3d_canvas_native.exe
+
+      - name: Package Native C Windows Release
+        shell: bash
+        run: |
+          mkdir -p dist_windows_c
+          cp native_c/vue3d_canvas_native.exe dist_windows_c/
+          cp native_c/README.md native_c/HANDOFF.md native_c/API.md dist_windows_c/
+          cp AGENTS.md AGENT_STATE.md dist_windows_c/
+          cd dist_windows_c
+          7z a ../vue3d-windows-c-x64.zip *
+          cd ..
+
+      - name: Upload Windows C Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-windows-c-x64
+          path: vue3d-windows-c-x64.zip
+          retention-days: 60

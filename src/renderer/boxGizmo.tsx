@@ -28,6 +28,8 @@ interface BoxGizmoProps {
   isOrtho?: boolean;
   touchNavEnabled?: boolean;
   onToggleTouchNav?: () => void;
+  invertNav?: boolean;
+  onToggleInvertNav?: () => void;
 }
 
 export const BoxGizmo: React.FC<BoxGizmoProps> = ({
@@ -41,6 +43,8 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   isOrtho = false,
   touchNavEnabled = false,
   onToggleTouchNav,
+  invertNav = false,
+  onToggleInvertNav,
 }) => {
   // Convert spherical angles to 3D CSS transform matrix
   const degX = (rotation.x * 180) / Math.PI;
@@ -292,6 +296,22 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
             title="Toggle Android / Tablet Touch Navigation"
           >
             <Smartphone className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {/* Navigation Flip / Invert Axis Quick Button */}
+        {onToggleInvertNav && (
+          <button
+            onClick={onToggleInvertNav}
+            className={`px-1.5 py-1 rounded text-[10px] font-mono font-bold transition-colors flex items-center gap-1 shadow-xs ${
+              invertNav
+                ? 'bg-[#fab387] text-black font-extrabold'
+                : 'bg-[#2f2f2f] hover:bg-[#3d3d3d] text-[#ddd] border border-[#555]'
+            }`}
+            title={`Toggle Orbit & Drone Mouse Navigation Direction (Currently: ${invertNav ? 'Inverted' : 'Standard Natural'})`}
+          >
+            <span className="text-[11px] leading-none">⇄</span>
+            <span>{invertNav ? 'INV' : 'NAT'}</span>
           </button>
         )}
       </div>

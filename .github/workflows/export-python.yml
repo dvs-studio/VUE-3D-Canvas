@@ -1,0 +1,47 @@
+name: Export Python Codebase Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      save_to_export_folder:
+        description: 'Mirror ZIP archive directly into export/ directory in repository'
+        type: boolean
+        default: true
+
+jobs:
+  export-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Package Python Desktop & Documentation
+        run: |
+          mkdir -p export_staging_py
+          # Copy python_desktop source, scripts, and documentation
+          cp -r python_desktop/* export_staging_py/
+          # Include system handover ledgers
+          cp AGENTS.md AGENT_STATE.md export_staging_py/ 2>/dev/null || true
+
+          # Preserve all icons while excluding heavy video/audio/mesh media
+          mkdir -p export_staging_py/icons
+          find assets/ public/ -type f \( -name "*.ico" -o -name "*.svg" -o -name "*.png" \) -exec cp {} export_staging_py/icons/ \; 2>/dev/null || true
+
+          cd export_staging_py
+          zip -r ../vue3d-backup-python.zip . -x "*.mp4" "*.avi" "*.mov" "*.mkv" "*.blend" "*.hdr" "*.exr" "*.wav" "*.mp3" "*.pyc" "__pycache__/*"
+          cd ..
+          rm -rf export_staging_py
+
+      - name: Upload Python Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-backup-python
+          path: vue3d-backup-python.zip
+          retention-days: 90
+
+      - name: Copy Archive to Export Directory
+        if: ${{ inputs.save_to_export_folder }}
+        run: |
+          mkdir -p export
+          cp vue3d-backup-python.zip export/
+          echo "vue3d-backup-python.zip mirrored to export/ directory."

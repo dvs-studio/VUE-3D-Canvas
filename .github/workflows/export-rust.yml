@@ -1,0 +1,47 @@
+name: Export Rust Codebase Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      save_to_export_folder:
+        description: 'Mirror ZIP archive directly into export/ directory in repository'
+        type: boolean
+        default: true
+
+jobs:
+  export-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Package Rust Engine & Documentation
+        run: |
+          mkdir -p export_staging
+          # Copy Rust core crates, Cargo configuration, build instructions, and root MDs
+          cp -r Cargo.toml crates src .vscode WINDOWS_BUILD_INSTRUCTIONS.* XBLEND_FORMAT_SPECIFICATION.md AGENTS.md AGENT_STATE.md README.md export_staging/ 2>/dev/null || true
+          
+          # Copy icon and branding assets only (exclude heavy video/mesh media)
+          mkdir -p export_staging/assets export_staging/public
+          find assets/ -type f \( -name "*.ico" -o -name "*.svg" -o -name "*.png" \) -exec cp {} export_staging/assets/ \; 2>/dev/null || true
+          find public/ -type f \( -name "*.ico" -o -name "*.svg" -o -name "favicon.*" -o -name "*signature*" \) -exec cp {} export_staging/public/ \; 2>/dev/null || true
+
+          # Create zip archive excluding heavy non-icon media
+          cd export_staging
+          zip -r ../vue3d-backup-rust.zip . -x "*.mp4" "*.avi" "*.mov" "*.mkv" "*.blend" "*.hdr" "*.exr" "*.wav" "*.mp3"
+          cd ..
+          rm -rf export_staging
+
+      - name: Upload Rust Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-backup-rust
+          path: vue3d-backup-rust.zip
+          retention-days: 90
+
+      - name: Copy Archive to Export Directory
+        if: ${{ inputs.save_to_export_folder }}
+        run: |
+          mkdir -p export
+          cp vue3d-backup-rust.zip export/
+          echo "vue3d-backup-rust.zip mirrored to export/ directory."

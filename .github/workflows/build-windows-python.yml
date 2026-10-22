@@ -1,0 +1,59 @@
+name: Build Windows Native (Python)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'python_desktop/**'
+      - '.github/workflows/build-windows-python.yml'
+
+jobs:
+  build-python-windows:
+    name: Build Standalone Windows Executable (Python Desktop GUI)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python Runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Build Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller numpy
+          pip install -r python_desktop/requirements.txt || true
+
+      - name: Compile Standalone Windows Executable (Zero WebGL)
+        working-directory: python_desktop
+        run: |
+          pyinstaller --noconfirm --onedir --windowed `
+            --name "vue_3d_canvas_desktop" `
+            --add-data "vue3d;vue3d" `
+            main.py
+
+      - name: Validate Standalone Executable via Smoke Test
+        working-directory: python_desktop
+        run: |
+          echo "status`nexit" | .\dist\vue_3d_canvas_desktop\vue_3d_canvas_desktop.exe --cli
+
+      - name: Package Python Windows Release
+        shell: bash
+        run: |
+          mkdir -p dist_windows_py
+          cp -r python_desktop/dist/vue_3d_canvas_desktop/* dist_windows_py/
+          cp python_desktop/README.md python_desktop/HANDOFF.md python_desktop/API.md dist_windows_py/
+          cp AGENTS.md AGENT_STATE.md dist_windows_py/
+          cd dist_windows_py
+          7z a ../vue3d-windows-python-x64.zip *
+          cd ..
+
+      - name: Upload Windows Python Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-windows-python-x64
+          path: vue3d-windows-python-x64.zip
+          retention-days: 60

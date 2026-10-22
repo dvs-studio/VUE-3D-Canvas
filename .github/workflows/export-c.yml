@@ -1,0 +1,47 @@
+name: Export Native C Codebase Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      save_to_export_folder:
+        description: 'Mirror ZIP archive directly into export/ directory in repository'
+        type: boolean
+        default: true
+
+jobs:
+  export-c:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Package Native C Engine & Documentation
+        run: |
+          mkdir -p export_staging_c
+          # Copy native_c source, headers, build scripts, and documentation
+          cp -r native_c/* export_staging_c/
+          # Include system handover ledgers
+          cp AGENTS.md AGENT_STATE.md export_staging_c/ 2>/dev/null || true
+
+          # Preserve all icons while excluding heavy video/audio/mesh media
+          mkdir -p export_staging_c/icons
+          find assets/ public/ -type f \( -name "*.ico" -o -name "*.svg" -o -name "*.png" \) -exec cp {} export_staging_c/icons/ \; 2>/dev/null || true
+
+          cd export_staging_c
+          zip -r ../vue3d-backup-c.zip . -x "*.mp4" "*.avi" "*.mov" "*.mkv" "*.blend" "*.hdr" "*.exr" "*.wav" "*.mp3" "*.o" "*.obj" "*.exe"
+          cd ..
+          rm -rf export_staging_c
+
+      - name: Upload C Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue3d-backup-c
+          path: vue3d-backup-c.zip
+          retention-days: 90
+
+      - name: Copy Archive to Export Directory
+        if: ${{ inputs.save_to_export_folder }}
+        run: |
+          mkdir -p export
+          cp vue3d-backup-c.zip export/
+          echo "vue3d-backup-c.zip mirrored to export/ directory."

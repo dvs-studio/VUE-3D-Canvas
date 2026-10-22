@@ -24,6 +24,7 @@ void v3d_camera_init(V3D_Camera* cam) {
     cam->is_orbiting = false;
     cam->is_panning = false;
     cam->is_drone_mode = false;
+    cam->invert_nav = false;
     cam->last_mouse_x = 0.0f;
     cam->last_mouse_y = 0.0f;
 }
@@ -31,8 +32,9 @@ void v3d_camera_init(V3D_Camera* cam) {
 /* Unconstrained Trackball / Turntable Orbit (Zero Angle Locking) */
 void v3d_camera_orbit(V3D_Camera* cam, float dx, float dy) {
     if (!cam) return;
-    cam->theta += dx * 0.008f;
-    cam->phi -= dy * 0.008f;
+    float dir = cam->invert_nav ? 1.0f : -1.0f;
+    cam->theta += dx * 0.008f * dir;
+    cam->phi += dy * 0.008f * dir;
 
     /* Seamless continuous pitch without pole-locking freeze */
     if (cam->phi < 0.001f) cam->phi = 0.001f;

@@ -1,0 +1,152 @@
+name: Import & Scoped Codebase Extraction
+
+on:
+  workflow_dispatch:
+    inputs:
+      language:
+        description: 'Target programming language codebase to restore/overwrite'
+        type: choice
+        required: true
+        options:
+          - rust
+          - python
+          - c
+      selection_mode:
+        description: 'How to select the archive in the import/ folder'
+        type: choice
+        required: true
+        default: 'auto-detect'
+        options:
+          - 'auto-detect'
+          - 'explicit-filename'
+      zip_filename:
+        description: 'Exact zip filename in import/ (required if using explicit-filename)'
+        type: string
+        default: ''
+      delete_after_extract:
+        description: 'Delete the ZIP archive from import/ folder after successful extraction'
+        type: boolean
+        default: false
+
+jobs:
+  import-and-extract:
+    name: Guarded Extraction for ${{ inputs.language }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Locate & Validate ZIP Archive in import/
+        id: locate-zip
+        run: |
+          mkdir -p import
+          LANG="${{ inputs.language }}"
+          MODE="${{ inputs.selection_mode }}"
+          SPECIFIED="${{ inputs.zip_filename }}"
+          
+          ZIP_FILE=""
+          if [ "$MODE" = "explicit-filename" ] && [ -n "$SPECIFIED" ]; then
+            if [ -f "import/$SPECIFIED" ]; then
+              ZIP_FILE="import/$SPECIFIED"
+            else
+              echo "Error: Archive 'import/$SPECIFIED' not found!"
+              ls -la import/
+              exit 1
+            fi
+          else
+            # Auto-detect matching archive
+            case "$LANG" in
+              rust)
+                ZIP_FILE=$(find import/ -maxdepth 1 -name "*rust*.zip" | head -n 1)
+                ;;
+              python)
+                ZIP_FILE=$(find import/ -maxdepth 1 -name "*python*.zip" | head -n 1)
+                ;;
+              c)
+                ZIP_FILE=$(find import/ -maxdepth 1 -name "*c*.zip" | head -n 1)
+                ;;
+            esac
+
+            # Fallback to any zip if single file in import/
+            if [ -z "$ZIP_FILE" ]; then
+              ZIP_FILE=$(find import/ -maxdepth 1 -name "*.zip" | head -n 1)
+            fi
+          fi
+
+          if [ -z "$ZIP_FILE" ] || [ ! -f "$ZIP_FILE" ]; then
+            echo "Error: No matching ZIP file found in import/ for language '$LANG'!"
+            echo "Current files in import/:"
+            ls -la import/
+            exit 1
+          fi
+
+          echo "Found target archive: $ZIP_FILE"
+          echo "zip_path=$ZIP_FILE" >> $GITHUB_OUTPUT
+
+      - name: Inspect Archive Contents
+        run: |
+          ZIP_PATH="${{ steps.locate-zip.outputs.zip_path }}"
+          echo "================================================================="
+          echo "Archive Contents Inspection for $ZIP_PATH:"
+          echo "================================================================="
+          unzip -l "$ZIP_PATH"
+
+      - name: Execute Safe Scoped Extraction
+        run: |
+          ZIP_PATH="${{ steps.locate-zip.outputs.zip_path }}"
+          LANG="${{ inputs.language }}"
+          
+          echo "Starting extraction for: $LANG from $ZIP_PATH"
+          mkdir -p staging_extract
+          unzip -q -o "$ZIP_PATH" -d staging_extract
+
+          case "$LANG" in
+            python)
+              echo "Restoring Python Desktop codebase into python_desktop/..."
+              mkdir -p python_desktop
+              # If zip had top-level python_desktop/ folder, unpack its inner contents
+              if [ -d "staging_extract/python_desktop" ]; then
+                cp -r staging_extract/python_desktop/* python_desktop/
+              else
+                cp -r staging_extract/* python_desktop/
+              fi
+              echo "Python desktop extraction complete. Outside directories protected."
+              ;;
+
+            c)
+              echo "Restoring Native C codebase into native_c/..."
+              mkdir -p native_c
+              if [ -d "staging_extract/native_c" ]; then
+                cp -r staging_extract/native_c/* native_c/
+              else
+                cp -r staging_extract/* native_c/
+              fi
+              echo "Native C extraction complete. Outside directories protected."
+              ;;
+
+            rust)
+              echo "Restoring Rust core codebase into root workspace with boundary safeguards..."
+              # STRICT SAFETY GUARD: Do NOT allow rust zip to overwrite python_desktop, native_c, self-host, import, or export
+              rm -rf staging_extract/python_desktop staging_extract/native_c staging_extract/self-host staging_extract/import staging_extract/export staging_extract/node_modules staging_extract/dist 2>/dev/null || true
+
+              # Copy safe root files and crates
+              cp -r staging_extract/* ./
+              echo "Rust core extraction complete. Protected subsystem folders remained intact."
+              ;;
+          esac
+
+          rm -rf staging_extract
+
+      - name: Delete Archive from import/ Folder (Optional Cleanup)
+        if: ${{ inputs.delete_after_extract }}
+        run: |
+          ZIP_PATH="${{ steps.locate-zip.outputs.zip_path }}"
+          echo "Cleaning up archive: $ZIP_PATH"
+          rm -f "$ZIP_PATH"
+          echo "Archive successfully removed from import/."
+
+      - name: Post-Extraction Status Report
+        run: |
+          echo "Extraction finished successfully."
+          echo "Git status overview:"
+          git status --short

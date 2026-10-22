@@ -54,3 +54,6 @@ python_desktop/
 - [x] **Universal Presets & Smudge/Eraser Masks**: Embedded preset selector, tip mask stencils (`grunge`, `splat`, `scratch`, `dots`, `cracks`), pattern overlays, smudge pixel pushing, and destination-out eraser.
 - [x] **1-Step Undo with 3-State Save**: Strictly 1 snapshot undone/redone per press (`Ctrl+Z` / `Ctrl+Y`) with repeat guard; saves strictly up to 3 states into `.xblend`.
 - [x] **PyInstaller Standalone Executable**: Generates `dist/vue_3d_canvas_py.exe` via `build_exe.bat`.
+- [x] **Navigation Axis Inversion & Direction Alignment**: Added natural Blender orbit orientation and 1-click `Axis: NATURAL / INVERTED` toggle button (`self.axis_btn`) in desktop GUI options bar and CLI.
+- [x] **Dedicated Python README & Workflows**: Full technical manual `python_desktop/README.md`, standalone GitHub Actions export workflow (`export-python.yml`), and native non-WebGL Windows compilation CI (`build-windows-python.yml`).
+
