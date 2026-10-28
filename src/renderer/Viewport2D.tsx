@@ -25,6 +25,10 @@ import { UndoRingBuffer } from '../core/history';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
 import { SmartUVUnwrapEngine } from '../tools/smartUVUnwrap';
 import { StitchStudioEngine } from '../tools/stitchStudio';
+import { UVNPanel } from '../ui/UVNPanel';
+import { UVSculptEngine } from '../tools/uvSculptEngine';
+import { UVSculptMode } from '../core/types';
+import { UVChannelManager } from '../tools/uvChannelManager';
 import { 
   Layers, 
   ZoomIn, 
@@ -62,6 +66,12 @@ interface Viewport2DProps {
   touchNavEnabled?: boolean;
   onToggleTouchNav?: () => void;
   patternStampConfig?: PatternStampConfig;
+  geometry?: THREE.BufferGeometry;
+  onGeometryUpdated?: () => void;
+  activeUVChannel?: string;
+  onSelectUVChannel?: (id: string) => void;
+  selectedVertices?: Set<number>;
+  onRebakeTexture?: (from: string, to: string, res: number) => void;
 }
 
 export const Viewport2D: React.FC<Viewport2DProps> = ({
@@ -81,6 +91,12 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   touchNavEnabled = false,
   onToggleTouchNav,
   patternStampConfig,
+  geometry,
+  onGeometryUpdated,
+  activeUVChannel = 'uv_original',
+  onSelectUVChannel,
+  selectedVertices = new Set(),
+  onRebakeTexture,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -96,6 +112,30 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const [showUVOverlay, setShowUVOverlay] = useState<boolean>(true);
   const [uvOverlayOpacity, setUvOverlayOpacity] = useState<number>(0.65);
   const [uvWireColor, setUvWireColor] = useState<string>('#38bdf8'); // Cyan / Blue default
+
+  // 2D UV Viewport N-Panel & Interactive Sculpt State
+  const [isNPanelOpen, setIsNPanelOpen] = useState<boolean>(true);
+  const [isSculptModeActive, setIsSculptModeActive] = useState<boolean>(false);
+  const [sculptBrushMode, setSculptBrushMode] = useState<UVSculptMode>('smooth');
+  const [sculptRadius, setSculptRadius] = useState<number>(0.08); // normalized [0..1]
+  const [sculptStrength, setSculptStrength] = useState<number>(0.35);
+
+  const effectiveGeom = React.useMemo(() => {
+    if (geometry) return geometry;
+    if (customOBJText) return parseOBJ(customOBJText);
+    return BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]().geometry : BUILTIN_MODELS.suzanne().geometry;
+  }, [geometry, modelKey, customOBJText]);
+
+  // Toggle N-Panel with 'n' key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'n' || e.key === 'N') && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        setIsNPanelOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Advanced UV Controls: UV Set Dropdown & Smart UV Unwrap State
   const [activeUVSet, setActiveUVSet] = useState<'uv_0' | 'uv_1' | 'uv_2'>('uv_0');
@@ -167,15 +207,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     // 1. RENDER 3D MODEL UV WIREFRAME MESH OVERLAY
     if (showUVOverlay) {
       try {
-        let geom: THREE.BufferGeometry;
-        if (customOBJText) {
-          geom = parseOBJ(customOBJText);
-        } else if (BUILTIN_MODELS[modelKey]) {
-          geom = BUILTIN_MODELS[modelKey]().geometry;
-        } else {
-          geom = BUILTIN_MODELS.suzanne().geometry;
-        }
-
+        const geom = effectiveGeom;
         const uvAttr = geom.attributes.uv;
         if (uvAttr && uvAttr.count > 0) {
           ctx.save();
@@ -447,6 +479,25 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
 
+    // 2D UV Sculpt Brush Stroke Execution
+    if (isSculptModeActive) {
+      isPaintingRef.current = true;
+      const u = x / 1024.0;
+      const v = 1.0 - (y / 1024.0);
+      const modified = UVSculptEngine.applyStroke(effectiveGeom, {
+        u,
+        v,
+        radius: sculptRadius,
+        strength: sculptStrength,
+        mode: sculptBrushMode,
+      });
+      if (modified > 0) {
+        drawOverlay();
+        if (onGeometryUpdated) onGeometryUpdated();
+      }
+      return;
+    }
+
     // Pen Tool Point Addition
     if (activeTool === 'pen') {
       penToolRef.current.addPoint(x, y);
@@ -597,6 +648,24 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
 
+    // 2D UV Sculpt Brush Dragging
+    if (isSculptModeActive) {
+      const u = x / 1024.0;
+      const v = 1.0 - (y / 1024.0);
+      const modified = UVSculptEngine.applyStroke(effectiveGeom, {
+        u,
+        v,
+        radius: sculptRadius,
+        strength: sculptStrength,
+        mode: sculptBrushMode,
+      });
+      if (modified > 0) {
+        drawOverlay();
+        if (onGeometryUpdated) onGeometryUpdated();
+      }
+      return;
+    }
+
     // Mask Brush Dragging
     if (activeTool === 'mask_brush' && lastPointRef.current) {
       const dist = Math.hypot(x - lastPointRef.current.x, y - lastPointRef.current.y);
@@ -701,6 +770,11 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       if (isPaintingRef.current) {
         isPaintingRef.current = false;
         lastPointRef.current = null;
+        if (isSculptModeActive) {
+          undoBuffer.pushState(`UV Sculpt: ${sculptBrushMode}`, layers);
+          onTextureUpdated();
+          return;
+        }
         brushEngine.endStroke();
         undoBuffer.pushState(`${brush.name} 2D UV Paint`, layers);
         onTextureUpdated();
@@ -858,22 +932,18 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
   // Smart UV Generation Handler
   const handleExecuteSmartUV = () => {
-    let geom: THREE.BufferGeometry;
-    if (customOBJText) {
-      geom = parseOBJ(customOBJText);
-    } else if (BUILTIN_MODELS[modelKey]) {
-      geom = BUILTIN_MODELS[modelKey]().geometry;
-    } else {
-      geom = BUILTIN_MODELS.suzanne().geometry;
-    }
-
-    const result = SmartUVUnwrapEngine.unwrapGeometry(geom, {
+    const result = SmartUVUnwrapEngine.unwrapGeometry(effectiveGeom, {
       angleLimitDegrees: smartUVAngleLimit,
       islandMargin: smartUVMargin,
+      islandBleedPixels: 4,
     });
+
+    UVChannelManager.setActiveChannel(effectiveGeom, 'uv_tightmap');
+    if (onSelectUVChannel) onSelectUVChannel('uv_tightmap');
 
     setSmartUVMessage(`Smart UV Generated: ${result.islandCount} UV islands, ${result.facesProcessed} faces packed cleanly!`);
     drawOverlay();
+    if (onGeometryUpdated) onGeometryUpdated();
     onTextureUpdated();
 
     setTimeout(() => {
@@ -928,6 +998,20 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         >
           <Grid className="w-3 h-3" />
           <span>UV Overlay: {showUVOverlay ? 'ON' : 'OFF'}</span>
+        </button>
+
+        {/* Toggle UV Suite N-Panel */}
+        <button
+          onClick={() => setIsNPanelOpen(o => !o)}
+          className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors ${
+            isNPanelOpen
+              ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
+              : 'bg-[#222] hover:bg-[#333] text-[#aaa] border-[#555]'
+          }`}
+          title="Toggle UV Suite N-Panel (Key: N)"
+        >
+          <Sliders className="w-3 h-3 text-[#38bdf8]" />
+          <span>UV N-Panel (N)</span>
         </button>
 
         {/* UV Wireframe Opacity Adjuster when active */}
@@ -1197,6 +1281,40 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           </div>
         </div>
       )}
+      {/* 2D UV Viewport N-Panel */}
+      <UVNPanel
+        isOpen={isNPanelOpen}
+        onToggleOpen={() => setIsNPanelOpen(o => !o)}
+        geometry={effectiveGeom}
+        onGeometryUpdated={() => {
+          drawOverlay();
+          if (onGeometryUpdated) onGeometryUpdated();
+        }}
+        activeUVChannel={activeUVChannel}
+        onSelectUVChannel={(chId) => {
+          if (onSelectUVChannel) onSelectUVChannel(chId);
+          drawOverlay();
+        }}
+        onRebakeTexture={(from, to, res) => {
+          if (onRebakeTexture) {
+            onRebakeTexture(from, to, res);
+          } else {
+            UVChannelManager.rebakeTexture(effectiveGeom, activeLayer.canvas, from, to, res);
+            onTextureUpdated();
+          }
+          drawOverlay();
+        }}
+        isSculptModeActive={isSculptModeActive}
+        onToggleSculptMode={setIsSculptModeActive}
+        sculptBrushMode={sculptBrushMode}
+        onSelectSculptMode={setSculptBrushMode}
+        sculptRadius={sculptRadius}
+        onChangeSculptRadius={setSculptRadius}
+        sculptStrength={sculptStrength}
+        onChangeSculptStrength={setSculptStrength}
+        xrayVertexCount={selectedVertices ? selectedVertices.size : 0}
+        selectedVertexIndices={selectedVertices}
+      />
     </div>
   );
 };

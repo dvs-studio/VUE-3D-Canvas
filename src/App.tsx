@@ -31,6 +31,9 @@ import { UndoRingBuffer } from './core/history';
 import { WasmMemoryEngine } from './core/wasmMemoryEngine';
 import { XBlendManager } from './core/xblendFormat';
 import { FillSuite, TriplanarConfig } from './tools/fillSuite';
+import * as THREE from 'three';
+import { BUILTIN_MODELS, parseOBJ } from './renderer/modelGeometry';
+import { UVChannelManager } from './tools/uvChannelManager';
 import { INITIAL_NODES, INITIAL_CONNECTIONS } from './nodes/defaultNodes';
 
 import { PhotoshopMenuBar } from './ui/PhotoshopMenuBar';
@@ -128,6 +131,31 @@ export default function App() {
   // 3D Viewport State
   const [modelKey, setModelKey] = useState<string>('suzanne');
   const [customOBJText, setCustomOBJText] = useState<string | undefined>(undefined);
+  const [activeGeometry, setActiveGeometry] = useState<THREE.BufferGeometry>(() => {
+    const geom = BUILTIN_MODELS.suzanne().geometry;
+    UVChannelManager.ensureBaseChannels(geom);
+    return geom;
+  });
+  const [activeUVChannel, setActiveUVChannel] = useState<string>('uv_original');
+  const [isXRayBrushActive, setIsXRayBrushActive] = useState<boolean>(false);
+  const [xrayVertexSelection, setXrayVertexSelection] = useState<Set<number>>(new Set());
+
+  // Keep activeGeometry synchronized when model or OBJ changes
+  useEffect(() => {
+    let geom: THREE.BufferGeometry;
+    if (customOBJText) {
+      geom = parseOBJ(customOBJText);
+    } else if (BUILTIN_MODELS[modelKey]) {
+      geom = BUILTIN_MODELS[modelKey]().geometry;
+    } else {
+      geom = BUILTIN_MODELS.suzanne().geometry;
+    }
+    UVChannelManager.ensureBaseChannels(geom);
+    setActiveGeometry(geom);
+    setActiveUVChannel('uv_original');
+    setXrayVertexSelection(new Set());
+  }, [modelKey, customOBJText]);
+
   const [shadingMode, setShadingMode] = useState<ViewportShadingMode>('material');
   const [viewMode, setViewMode] = useState<'3d' | '2d' | 'split'>('3d');
   const [isOrtho, setIsOrtho] = useState<boolean>(false);
@@ -329,6 +357,23 @@ export default function App() {
     syncCompositeCanvas();
     setTextureVersion(v => v + 1);
   }, [syncCompositeCanvas]);
+
+  const handleRebakeTexture = useCallback((fromChannel: string, toChannel: string, resolution: number) => {
+    if (!activeGeometry) return;
+    const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
+    const bakedCanvas = UVChannelManager.rebakeTexture(activeGeometry, activeLayer.canvas, fromChannel, toChannel, resolution);
+    activeLayer.canvas.width = resolution;
+    activeLayer.canvas.height = resolution;
+    activeLayer.ctx.clearRect(0, 0, resolution, resolution);
+    activeLayer.ctx.drawImage(bakedCanvas, 0, 0);
+
+    UVChannelManager.setActiveChannel(activeGeometry, toChannel);
+    setActiveUVChannel(toChannel);
+
+    undoBuffer.pushState(`Re-Bake Texture [${fromChannel} -> ${toChannel}]`, layers);
+    syncCompositeCanvas();
+    setTextureVersion(v => v + 1);
+  }, [activeGeometry, layers, activeLayerId, undoBuffer, syncCompositeCanvas]);
 
   const handleSymmetrize = useCallback((allLayers = false) => {
     if (allLayers) {
@@ -1192,6 +1237,13 @@ export default function App() {
                 onUpdateBloomSettings={(patch) => setBloomSettings(b => ({ ...b, ...patch }))}
                 patternStampConfig={patternStampConfig}
                 meshComponentVisibility={isolateSelectedGroupOnly && meshComponentVisibility !== 'all' ? meshComponentVisibility : 'all'}
+                geometry={activeGeometry}
+                onGeometryUpdated={notifyTextureUpdated}
+                activeUVChannel={activeUVChannel}
+                isXRayBrushActive={isXRayBrushActive}
+                onToggleXRayBrush={() => setIsXRayBrushActive(v => !v)}
+                selectedVertices={xrayVertexSelection}
+                onUpdateSelectedVertices={setXrayVertexSelection}
               />
             </div>
           )}
@@ -1216,6 +1268,12 @@ export default function App() {
                 touchNavEnabled={touchNavEnabled}
                 onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
                 patternStampConfig={patternStampConfig}
+                geometry={activeGeometry}
+                onGeometryUpdated={notifyTextureUpdated}
+                activeUVChannel={activeUVChannel}
+                onSelectUVChannel={setActiveUVChannel}
+                selectedVertices={xrayVertexSelection}
+                onRebakeTexture={handleRebakeTexture}
               />
             </div>
           )}
@@ -1772,6 +1830,7 @@ export default function App() {
         layers={layers}
         selectedLayerId={exportDialogLayerId}
         defaultMode={exportDialogMode}
+        activeUVChannel={activeUVChannel}
       />
 
       {/* 11. Undo & Redo Preferences Settings Modal */}
@@ -1818,6 +1877,7 @@ export default function App() {
         layers={layers}
         currentMesh={null}
         activeModelName={modelKey}
+        activeUVChannel={activeUVChannel}
       />
 
       {/* Hidden file input for Blender material import */}

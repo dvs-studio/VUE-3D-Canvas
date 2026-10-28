@@ -19,6 +19,7 @@ interface ExportModelDialogProps {
   layers: Layer[];
   currentMesh: THREE.Mesh | null;
   activeModelName?: string;
+  activeUVChannel?: string;
 }
 
 export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
@@ -27,6 +28,7 @@ export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
   layers,
   currentMesh,
   activeModelName = 'Suzanne',
+  activeUVChannel = 'uv_original',
 }) => {
   const [format, setFormat] = useState<'gltf' | 'glb' | 'fbx'>('gltf');
   const [modelName, setModelName] = useState<string>(activeModelName);
@@ -78,13 +80,17 @@ export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
         ModelExporterEngine.triggerDownload(`${modelName}.fbx`, fbxAscii, 'text/plain');
       }
 
-      // Also trigger individual channel texture downloads if requested
-      if (channels.albedo) ModelExporterEngine.triggerImageDownload(`${modelName}_albedo.png`, separated.albedo);
-      if (channels.normal) ModelExporterEngine.triggerImageDownload(`${modelName}_normal.png`, separated.normal);
-      if (channels.emission) ModelExporterEngine.triggerImageDownload(`${modelName}_emission.png`, separated.emission);
-      if (channels.displacement) ModelExporterEngine.triggerImageDownload(`${modelName}_displacement.png`, separated.displacement);
-      if (channels.roughness) ModelExporterEngine.triggerImageDownload(`${modelName}_roughness.png`, separated.roughness);
-      if (channels.metallic) ModelExporterEngine.triggerImageDownload(`${modelName}_metallic.png`, separated.metallic);
+      // Also trigger individual channel texture downloads with active UV midfix
+      const uvTag = activeUVChannel === 'uv_tightmap' 
+        ? 'TightMap' 
+        : (activeUVChannel === 'uv_original' ? 'OriginalUV' : activeUVChannel.replace(/^uv_/, ''));
+
+      if (channels.albedo) ModelExporterEngine.triggerImageDownload(`${modelName}_albedo_${uvTag}.png`, separated.albedo);
+      if (channels.normal) ModelExporterEngine.triggerImageDownload(`${modelName}_normal_${uvTag}.png`, separated.normal);
+      if (channels.emission) ModelExporterEngine.triggerImageDownload(`${modelName}_emission_${uvTag}.png`, separated.emission);
+      if (channels.displacement) ModelExporterEngine.triggerImageDownload(`${modelName}_displacement_${uvTag}.png`, separated.displacement);
+      if (channels.roughness) ModelExporterEngine.triggerImageDownload(`${modelName}_roughness_${uvTag}.png`, separated.roughness);
+      if (channels.metallic) ModelExporterEngine.triggerImageDownload(`${modelName}_metallic_${uvTag}.png`, separated.metallic);
 
       setIsExporting(false);
       setExportComplete(true);

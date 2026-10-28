@@ -71,6 +71,13 @@ interface Viewport3DProps {
   onUpdateBloomSettings?: (settings: Partial<BloomSettings>) => void;
   currentTheme?: ThemeMode;
   patternStampConfig?: PatternStampConfig;
+  geometry?: THREE.BufferGeometry;
+  onGeometryUpdated?: () => void;
+  activeUVChannel?: string;
+  isXRayBrushActive?: boolean;
+  onToggleXRayBrush?: () => void;
+  selectedVertices?: Set<number>;
+  onUpdateSelectedVertices?: (verts: Set<number>) => void;
 }
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
@@ -109,6 +116,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   onUpdateBloomSettings,
   currentTheme = 'cs5',
   patternStampConfig,
+  geometry,
+  onGeometryUpdated,
+  activeUVChannel,
+  isXRayBrushActive = false,
+  onToggleXRayBrush,
+  selectedVertices,
+  onUpdateSelectedVertices,
 }) => {
   const [internalViewLayout, setInternalViewLayout] = useState<'perspective' | 'quad'>('perspective');
   const viewLayout = controlledViewLayout || internalViewLayout;
@@ -133,6 +147,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     right: THREE.OrthographicCamera;
   } | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
+  const xrayPointsRef = useRef<THREE.Points | null>(null);
+  const [internalSelectedVerts, setInternalSelectedVerts] = useState<Set<number>>(new Set());
+  const activeSelectedVerts = selectedVertices !== undefined ? selectedVertices : internalSelectedVerts;
   const dynamicTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const compositeCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -403,9 +420,25 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       roughness: materialProps.roughness,
       metalness: materialProps.metallic,
     });
-    const mesh = new THREE.Mesh(modelPreset.geometry, material);
+    const mesh = new THREE.Mesh(geometry || modelPreset.geometry, material);
     scene.add(mesh);
     meshRef.current = mesh;
+
+    // 3D Viewport X-Ray Vertex Highlight Helper
+    const xrayGeom = new THREE.BufferGeometry();
+    const xrayMat = new THREE.PointsMaterial({
+      color: 0x38bdf8,
+      size: 7,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,
+    });
+    const xrayPoints = new THREE.Points(xrayGeom, xrayMat);
+    xrayPoints.renderOrder = 999;
+    xrayPoints.visible = false;
+    scene.add(xrayPoints);
+    xrayPointsRef.current = xrayPoints;
 
     // UnrealBloomPass Post-Processing Composer Setup
     const composer = new EffectComposer(renderer);
@@ -545,7 +578,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (!meshRef.current) return;
     let newGeom: THREE.BufferGeometry;
 
-    if (customOBJText) {
+    if (geometry) {
+      newGeom = geometry;
+    } else if (customOBJText) {
       newGeom = parseOBJ(customOBJText);
     } else if (BUILTIN_MODELS[modelKey]) {
       newGeom = BUILTIN_MODELS[modelKey]().geometry;
@@ -554,13 +589,39 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     SurfaceShadingEngine.ensureDefaultNormalsCached(newGeom);
-    meshRef.current.geometry.dispose();
-    meshRef.current.geometry = newGeom;
+    if (meshRef.current.geometry !== newGeom) {
+      meshRef.current.geometry.dispose();
+      meshRef.current.geometry = newGeom;
+    }
 
     // Apply Blender-style dynamic surface shading: Def, Smooth, or Flat
     const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
     SurfaceShadingEngine.applySurfaceShading(newGeom, meshRef.current.material, effMode);
-  }, [modelKey, customOBJText]);
+  }, [modelKey, customOBJText, geometry, surfaceMode]);
+
+  // Sync X-Ray Selected Vertex Highlight Points in 3D
+  useEffect(() => {
+    if (!xrayPointsRef.current || !meshRef.current) return;
+    const geom = meshRef.current.geometry;
+    const posAttr = geom.getAttribute('position');
+    if (!posAttr) return;
+
+    if (!isXRayBrushActive || activeSelectedVerts.size === 0) {
+      xrayPointsRef.current.visible = false;
+      return;
+    }
+
+    const positions: number[] = [];
+    activeSelectedVerts.forEach((vIdx) => {
+      if (vIdx < posAttr.count) {
+        positions.push(posAttr.getX(vIdx), posAttr.getY(vIdx), posAttr.getZ(vIdx));
+      }
+    });
+
+    xrayPointsRef.current.geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    xrayPointsRef.current.geometry.attributes.position.needsUpdate = true;
+    xrayPointsRef.current.visible = true;
+  }, [activeSelectedVerts, isXRayBrushActive, geometry]);
 
   // Update Shading and Dynamic Normals
   useEffect(() => {
@@ -977,12 +1038,57 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     return () => window.removeEventListener('keydown', handleDroneKeyDown);
   }, [isDroneNavActive, zoomFactor]);
 
+  const performXRayVertexSelection = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !meshRef.current) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const geom = meshRef.current.geometry;
+    const pos = geom.getAttribute('position');
+    if (!pos) return;
+
+    const cam = isOrthoRef.current ? (cameraOrthoRef.current || cameraPerspRef.current!) : (cameraPerspRef.current || cameraOrthoRef.current!);
+    if (!cam) return;
+
+    const matrix = meshRef.current.matrixWorld;
+    const nextSet = new Set(activeSelectedVerts);
+    const isErase = e.shiftKey || e.altKey || e.button === 2 || e.buttons === 2;
+    const rPx = 28;
+    const rSq = rPx * rPx;
+
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(matrix).project(cam);
+      // In perspective, skip vertices behind the near plane
+      if (v.z > 1.0) continue;
+      const sx = ((v.x + 1) * 0.5) * rect.width;
+      const sy = ((-v.y + 1) * 0.5) * rect.height;
+      const dSq = (sx - mouseX) * (sx - mouseX) + (sy - mouseY) * (sy - mouseY);
+      if (dSq <= rSq) {
+        if (isErase) nextSet.delete(i);
+        else nextSet.add(i);
+      }
+    }
+
+    if (onUpdateSelectedVertices) {
+      onUpdateSelectedVertices(nextSet);
+    } else {
+      setInternalSelectedVerts(nextSet);
+    }
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     activePointers.current.set(e.pointerId, { 
       x: e.clientX, 
       y: e.clientY, 
       pointerType: e.pointerType 
     });
+
+    if (isXRayBrushActive && (e.button === 0 || e.button === 2)) {
+      performXRayVertexSelection(e);
+      return;
+    }
 
     if (activePointers.current.size >= 2) {
       isPaintingRef.current = false;
@@ -1055,6 +1161,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         y: e.clientY, 
         pointerType: e.pointerType 
       });
+    }
+
+    if (isXRayBrushActive && (e.buttons === 1 || e.buttons === 2)) {
+      performXRayVertexSelection(e);
+      return;
     }
 
     // Multi-touch gestures (Pinch-to-zoom & two-finger pan)
@@ -1404,6 +1515,37 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             <option value="perspective">Perspective View</option>
             <option value="quad">Quad View (4-Way)</option>
           </select>
+        </div>
+
+        {/* 3D X-Ray Vertex Selection Brush Toggle Button */}
+        <div className="flex items-center gap-1 bg-[#252525]/90 px-1.5 py-1 rounded border border-[#444] shadow-md backdrop-blur-xs">
+          <button
+            onClick={() => onToggleXRayBrush ? onToggleXRayBrush() : undefined}
+            className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1.5 transition-colors border ${
+              isXRayBrushActive
+                ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
+                : 'bg-[#333] hover:bg-[#3e3e3e] text-[#aaa] border-[#555]'
+            }`}
+            title="3D X-Ray Vertex Brush for UV Symmetrize (Drag across mesh to select vertices through depth)"
+          >
+            <Sparkles className="w-3 h-3 text-[#38bdf8]" />
+            <span>X-Ray Brush: {isXRayBrushActive ? 'ON' : 'OFF'}</span>
+          </button>
+          {activeSelectedVerts.size > 0 && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-mono text-[#38bdf8] px-1">{activeSelectedVerts.size}v</span>
+              <button
+                onClick={() => {
+                  if (onUpdateSelectedVertices) onUpdateSelectedVertices(new Set());
+                  else setInternalSelectedVerts(new Set());
+                }}
+                className="px-1 py-0.5 bg-[#444] hover:bg-[#555] text-[#ccc] rounded text-[9px]"
+                title="Clear selected vertices"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
 
         {/* HDRI Environment & Reflection Controls Button */}

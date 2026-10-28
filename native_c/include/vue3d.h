@@ -158,6 +158,14 @@ typedef struct {
     float last_mouse_y;
 } V3D_Camera;
 
+#define V3D_MAX_UV_CHANNELS 4
+
+typedef struct {
+    char name[32];
+    float* uvs;
+    bool is_generated;
+} V3D_UVChannel;
+
 /* 3D Mesh Geometry */
 typedef struct {
     float* vertices;
@@ -167,6 +175,9 @@ typedef struct {
     int vertex_count;
     int index_count;
     V3D_SurfaceShadingMode current_shading;
+    V3D_UVChannel uv_channels[V3D_MAX_UV_CHANNELS];
+    int uv_channel_count;
+    int active_uv_channel_idx;
 } V3D_Mesh;
 
 /* Application State */
@@ -204,6 +215,14 @@ void v3d_undo_init(V3D_UndoBuffer* ub, int max_states);
 void v3d_undo_push(V3D_UndoBuffer* ub, const char* desc, V3D_Layer* layers, int count);
 bool v3d_undo_step(V3D_UndoBuffer* ub, V3D_Layer* layers, int* count);
 bool v3d_redo_step(V3D_UndoBuffer* ub, V3D_Layer* layers, int* count);
+
+/* UV Unwrap, Symmetrize, Sculpt & Re-Bake Prototypes */
+void v3d_uv_smart_unwrap(V3D_Mesh* mesh, float angle_limit_deg, float margin, int bleed_px, uint32_t seed);
+void v3d_uv_symmetrize(V3D_Mesh* mesh, char axis, bool side_by_side, float midpoint_thresh, bool protect_ears);
+void v3d_uv_sculpt_stroke(V3D_Mesh* mesh, float u, float v, float radius, float strength, int mode);
+void v3d_uv_channel_add(V3D_Mesh* mesh, const char* name);
+void v3d_uv_channel_set_active(V3D_Mesh* mesh, int idx);
+void v3d_uv_rebake(V3D_AppContext* ctx, int from_channel_idx, int to_channel_idx);
 
 #ifdef __cplusplus
 }

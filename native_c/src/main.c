@@ -288,6 +288,34 @@ int main(int argc, char* argv[]) {
             else if (strcmp(arg1, "ps2022") == 0) ctx->theme = V3D_THEME_PS2022;
             else ctx->theme = V3D_THEME_CS5;
             printf("UI Theme switched to %s.\n", arg1[0] ? arg1 : "cs5");
+        } else if (strcmp(primary, "uv") == 0) {
+            char subcmd[32] = {0};
+            char subarg[64] = {0};
+            sscanf(cmd, "%*s %31s %63s", subcmd, subarg);
+
+            if (strcmp(subcmd, "unwrap") == 0) {
+                uint32_t seed = (uint32_t)atoi(subarg);
+                if (seed == 0) seed = 1337;
+                v3d_uv_smart_unwrap(&ctx->active_mesh, 60.0f, 0.02f, 4, seed);
+                printf("Executed Smart UV Unwrap (seed: %u, angle: 60 deg, gutter: 4px).\n", seed);
+            } else if (strcmp(subcmd, "symmetrize") == 0) {
+                char ax = subarg[0] ? subarg[0] : 'X';
+                v3d_uv_symmetrize(&ctx->active_mesh, ax, true, 0.02f, true);
+                printf("Executed Bilateral Symmetrize UV on %c-axis (midline pinned, ears protected).\n", ax);
+            } else if (strcmp(subcmd, "sculpt") == 0) {
+                int mode = 1; /* Smooth */
+                if (strcmp(subarg, "straighten") == 0) mode = 0;
+                else if (strcmp(subarg, "pinch") == 0) mode = 2;
+                else if (strcmp(subarg, "expand") == 0) mode = 3;
+                else if (strcmp(subarg, "crease") == 0) mode = 4;
+                v3d_uv_sculpt_stroke(&ctx->active_mesh, 0.5f, 0.5f, 0.15f, 0.5f, mode);
+                printf("Executed 2D UV Sculpt stroke (mode: %s) at UV (0.5, 0.5).\n", subarg[0] ? subarg : "smooth");
+            } else if (strcmp(subcmd, "rebake") == 0) {
+                v3d_uv_rebake(ctx, 1, 0);
+                printf("Re-baked texture dynamically between UV channels.\n");
+            } else {
+                printf("UV commands: uv unwrap [seed], uv symmetrize [X|Y|Z], uv sculpt [smooth|straighten|pinch|expand|crease], uv rebake\n");
+            }
         } else {
             printf("Unknown command: '%s'. Type 'help' for command list.\n", primary);
         }

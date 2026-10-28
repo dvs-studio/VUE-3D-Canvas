@@ -1,88 +1,68 @@
-# Complete Multi-Language Delivery: Workflows, Documentation, & Gizmo Navigation Flip
+# Implementation Plan: Next-Gen Smart UV Unwrap, Symmetrize UV & Sculpting Suite
 
-Clarification on Architecture & Execution Plan:
-- **Architecture Context**: The original primary project is a **hybrid**: **React + TypeScript (Vite)** provides the Photoshop CS5 user interface, dockers, and Three.js WebGL viewport in the browser, while **Rust** (`crates/`, `Cargo.toml`) defines native data structures. For zero-overhead native desktop deployment without WebGL/browser runtime, two complete standalone engines exist: **`python_desktop/`** (pure Python + Tkinter GUI + PyOpenGL/DirectX 11) and **`native_c/`** (pure ANSI C99/C11 + DirectX 11 / OpenGL 2.0+).
-- **Navigation Inversion & Gizmo Flip**: We will both correct the natural Blender mouse direction (so dragging right turns right and dragging up looks up) **and** add an interactive **"Flip / Invert Navigation" button directly on the 3D Viewport Gizmo HUD** in React, Python, and C, giving users immediate 1-click control to toggle standard vs. inverted axes.
-
-> [!IMPORTANT]
-> **Summary of Deliverables:**
-> 1. **Gizmo Flip Button & Rotation Fix**: Natural orbit/drone direction + a dedicated `[FLIP AXIS]` button on the viewport navigation overlay (stored in state and togglable on the fly). Synchronized to Python and C navigation.
-> 2. **Dedicated Folder Documentation**: Comprehensive `python_desktop/README.md` and `native_c/README.md` detailing architecture, build instructions, and CLI/GUI controls.
-> 3. **Modular Export Workflows**: `export-rust.yml`, `export-python.yml`, and `export-c.yml` with optional copy to the repository `export/` directory.
-> 4. **Native Non-WebGL Windows CI Workflows**: `build-windows-rust.yml`, `build-windows-python.yml`, and `build-windows-c.yml` targeting native Windows executables (DirectX 11 / OpenGL 2.0+).
-> 5. **Guarded Import/Extract Workflow**: `import-extract.yml` with language dropdown, auto-detection or explicit filename selection from `import/`, post-extract cleanup checkbox, and strict scope guards preventing Rust root extraction from affecting other language folders.
+## 1. Executive Summary & Architecture Overview
+This plan establishes a professional, non-repetitive, high-fidelity UV pipeline for VUE 3D Canvas. The upgrade introduces:
+1. **Dynamic Smart UV Unwrap Engine**: Seeded stochastic island packing with conformal angle relaxation, customizable island bleeding/gutters, and submesh ID component isolation to eliminate pattern repetition and seam edge artifacts.
+2. **Multi-UV Channel & Texture Re-baker**: Full support for adding, switching, and deleting UV channels (`uv_original`, `uv_tightmap`, custom slots), paired with an automated inverse-barycentric texture re-baker and export channel midfix tagging.
+3. **Symmetrize UV Tool with 3D X-Ray Vertex Selection**: Interactive viewport X-Ray vertex brush painter to define symmetry groups, paired with midpoint-aware symmetrical UV island folding and stacking.
+4. **2D UV Viewport N-Panel & UV Sculpt Brushes**: Interactive 2D sculpt tools (Straighten, Smooth, Crease, Pinch, Relax/Expand) inside a Photoshop CS5 style dockable N-panel.
+5. **Cross-Language Parity (Rust Core & Web -> Python Desktop -> Native C)**: Implemented and tested in Rust/Web first, then cleanly ported to `python_desktop/` and `native_c/`.
 
 ---
 
-### 1. System Architecture Map
+## 2. Technical Breakdown & Modules
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                              VUE 3D Canvas Multi-Engine CI                             │
-├────────────────────────────┬─────────────────────────────┬─────────────────────────────┤
-│   Rust & React (Browser)   │       Python Desktop        │          Native C           │
-│  • React UI + Three.js     │  • Native Tkinter Desktop   │  • Pure ANSI C99/C11        │
-│  • Rust core crates/       │  • DirectX 11 / PyOpenGL    │  • DirectX 11 / OpenGL 2.0+ │
-│  • Viewport Gizmo Flip Btn │  • Drone + Flip Axis Toggle │  • Fast C Math + Flip State │
-└─────────────┬──────────────┴──────────────┬──────────────┴──────────────┬──────────────┘
-              │                             │                             │
-              ▼                             ▼                             ▼
-┌────────────────────────────┐┌────────────────────────────┐┌────────────────────────────┐
-│ .github/workflows/         ││ .github/workflows/         ││ .github/workflows/         │
-│  - export-rust.yml         ││  - export-python.yml       ││  - export-c.yml            │
-│  - build-windows-rust.yml  ││  - build-windows-python.yml││  - build-windows-c.yml     │
-└─────────────┬──────────────┘└─────────────┬──────────────┘└─────────────┬──────────────┘
-              │                             │                             │
-              └──────────────────────┬──────┴─────────────────────────────┘
-                                     ▼
-                    ┌──────────────────────────────────┐
-                    │  .github/workflows/              │
-                    │   - import-extract.yml           │
-                    │  Safe Scoped Targets:            │
-                    │    • rust   -> Root (Guarded)    │
-                    │    • python -> python_desktop/   │
-                    │    • c      -> native_c/         │
-                    └──────────────────────────────────┘
-```
+### Phase 1: Smart UV Unwrap Engine & Non-Repetitive Tight Mapping (Rust / Web First)
+- **Seeded Variational Packing**:
+  - Implement a deterministic pseudo-random seed generator that alters island orientation angles (0°, 45°, 90°, 180°, or random jitter) and island placement hierarchy.
+  - Apply conformal angle relaxation minimizing geometric stretch while ensuring zero self-intersections or merged edges.
+- **Island Bleeding & Edge Gutter Dilation**:
+  - Implement configurable island padding (e.g. 2px - 16px gutter dilation) that dynamically expands boundary texture pixels, completely preventing mipmap edge bleeding and seam artifacts.
+- **Submesh Component ID Isolation**:
+  - Enhance the mesh ID selector so unwrapping a specific submesh (`[ID: body]`, `[ID: clothes]`, etc.) unwraps that specific geometry component either into its isolated UV partition or packs it into available UV real estate while strictly preserving unselected mesh UV coordinates.
+
+### Phase 2: Multi-UV Channels & Dynamic Texture Re-baker
+- **Multi-UV Channel System**:
+  - Extend mesh data structures to support multiple UV attribute sets: `uv_default` (original imported UVs), `uv_tightmap` (smart generated), and user-added custom channels.
+  - Add UI controls to create, rename, duplicate, switch active, and delete UV channels.
+- **Inverse Barycentric Texture Re-baker**:
+  - When painting on `uv_tightmap`, allow 1-click re-baking onto `uv_default` (or any target UV channel) using canvas/FBO fragment shader projection.
+- **Export Texture Midfix Tagging**:
+  - Formats exported maps with active UV channel midfixes (e.g., `model_diffuse_TightMap_2048.png` vs. `model_diffuse_OriginalUV_2048.png`).
+
+### Phase 3: Symmetrize UV Tool & 3D X-Ray Vertex Brush Painter
+- **3D Viewport X-Ray Vertex Selector**:
+  - An interactive paint brush mode in `Viewport3D` that casts rays through the mesh (with depth/x-ray pass-through) to paint-select vertices into a temporary/active vertex group.
+  - Visual feedback showing highlighted vertex points with translucent selection halos.
+- **Intelligent Symmetrize Engine**:
+  - Symmetrize options dropdown: Select axis (+X to -X, -X to +X, or vertex group).
+  - Midpoint protection: Centerline vertices and asymmetric features (such as ears or off-center details) retain non-overlapping spacing, while bilateral halves overlap and align with pixel-perfect precision.
+
+### Phase 4: 2D UV Viewport N-Panel & UV Sculpt Brushes
+- **Dockable N-Panel (CS5 Dark Theme)**:
+  - Toggleable sidebar in `Viewport2D` providing brush radius, falloff strength, and sculpt mode.
+- **Interactive UV Sculpt Brushes**:
+  1. **UV Smooth / Relax**: Relaxes UV vertex density to reduce local texture stretching.
+  2. **UV Straighten**: Projects UV edge loops along cardinal U/V axes for clean rectangular strips.
+  3. **UV Pinch**: Pulls UV vertices toward brush centroid to increase texture resolution in focal areas.
+  4. **UV Expand**: Pushes UV vertices away from cursor to reduce texture density.
+  5. **UV Crease**: Sharpens UV boundaries and preserves boundary angles while sculpting.
+
+### Phase 5: Multi-Language Migration (Python Desktop & Native C)
+- **`python_desktop/` Migration**:
+  - Implement multi-UV channels, stochastic unwrap relaxation, island bleeding, and symmetrize algorithms in `vue3d/renderer/geometry.py` and `vue3d/tools/`.
+  - Update `desktop_gui.py` with 2D UV sculpt brushes and UV channel management.
+- **`native_c/` Migration**:
+  - Add UV channel arrays, stochastic unwrap island binning, and UV symmetrize routines to `native_c/include/vue3d.h` and `native_c/src/renderer_gl.c`.
+  - Add interactive CLI commands (`uv unwrap [seed]`, `uv symmetrize [axis]`, `uv channel [add|del|bake]`).
+- **Ledger & Documentation Update**:
+  - Update `AGENT_STATE.md`, `python_desktop/HANDOFF.md`, and `native_c/HANDOFF.md` preserving all prior records.
 
 ---
 
-### 2. Detailed Task Breakdown
-
-#### Task 1: Navigation Fix & Gizmo Flip Button
-- **`src/renderer/Viewport3D.tsx`**:
-  - Add `invertNav: boolean` state.
-  - Add an interactive `Flip Axis (Normal/Inverted)` toggle button right beside the Drone Mode button in the bottom-left viewport overlay.
-  - Adjust orbit/pan/flight delta signs so default navigation follows natural mouse motion, and flipping inverses the axes instantly.
-- **`python_desktop/vue3d/renderer/viewport_3d.py` & `desktop_gui.py`**:
-  - Add `invert_nav` toggle to the options bar and HUD, with natural directional motion.
-- **`native_c/src/renderer_gl.c` & `main.c`**:
-  - Add `invert_nav` flag to `V3D_Camera` and `flip` command to interactive shell.
-
-#### Task 2: Documentation (`README.md`)
-- **`python_desktop/README.md`**: Comprehensive technical and user guide (CS5 Dark theme, setup, PyInstaller `.exe` compilation, zero-dependency mode, CLI reference).
-- **`native_c/README.md`**: Architectural manual (ANSI C99/C11, GCC/MSVC build scripts, memory safety, `.xblend` serializer).
-
-#### Task 3: Folders & Export Workflows
-- Create `import/` and `export/` directories with `.gitkeep` and `README.md`.
-- Create `.github/workflows/export-rust.yml` (packages Rust core & root MDs, preserves icons).
-- Create `.github/workflows/export-python.yml` (packages `python_desktop/`, preserves icons).
-- Create `.github/workflows/export-c.yml` (packages `native_c/`, preserves icons).
-- Each workflow includes a checkbox input `save_to_export_folder` to mirror the zip into `export/`.
-
-#### Task 4: Native Windows CI Workflows (Non-WebGL)
-- Create `.github/workflows/build-windows-rust.yml` (native `cargo build --release` on `windows-latest`).
-- Create `.github/workflows/build-windows-python.yml` (PyInstaller single-file `.exe` build).
-- Create `.github/workflows/build-windows-c.yml` (MSVC / MinGW native `.exe` build).
-
-#### Task 5: Scoped Import & Extraction Workflow
-- Create `.github/workflows/import-extract.yml` with:
-  - Language selection dropdown (`rust`, `python`, `c`).
-  - Selection mode dropdown (`auto-detect`, `explicit-filename`).
-  - Zip filename text input.
-  - Optional `delete_after_extract` checkbox.
-  - Unpack safety checks: Rust extraction guards against overwriting `python_desktop/`, `native_c/`, `self-host/`, `export/`, or `import/`.
-
-#### Task 6: Ledger Update & Verification
-- Update `AGENT_STATE.md` with new features, strictly preserving historical entries.
-- Run `compile_applet` and `lint_applet` to confirm zero regressions.
+## 3. Verification Plan
+1. **Unwrap Variety Test**: Run smart unwrap with multiple seeds and verify differing layouts without edge merging or overlapping faces.
+2. **Bleed & Seam Test**: Paint high-contrast colors across UV island borders and verify zero seam glitching or bleeding artifacts.
+3. **Re-bake Accuracy Test**: Paint on Tight Map UV, bake to Original UV, and inspect 1:1 visual fidelity.
+4. **X-Ray Brush & Symmetrize Test**: Paint-select a sub-region in 3D X-Ray mode, execute Symmetrize, and verify exact opposite-half symmetry without midline ear collision.
+5. **Compilation & Lint**: Run `compile_applet` and `lint_applet` across the full TypeScript codebase, and smoke test Python and C engines.

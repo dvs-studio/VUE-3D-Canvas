@@ -30,7 +30,8 @@ python_desktop/
 │   │   ├── surface_shading.py# Def, Smooth (angle-weighted), Flat normal recalculation
 │   │   └── geometry.py       # Procedural Sphere, Cube, and OBJ mesh generator
 │   ├── tools/
-│   │   └── brush_engine.py   # Dabs, lazy-mouse, tip masks, pattern overlays, smudge, eraser
+│   │   ├── brush_engine.py   # Dabs, lazy-mouse, tip masks, pattern overlays, smudge, eraser
+│   │   └── smart_uv.py       # Smart UV unwrap, channel manager, symmetrize, sculpt engine
 │   └── ui/
 │       ├── photoshop_ui.py   # Photoshop CS5 palette, embedded presets
 │       └── desktop_gui.py    # Native Windows Desktop GUI window (No WebGL needed)
@@ -56,4 +57,9 @@ python_desktop/
 - [x] **PyInstaller Standalone Executable**: Generates `dist/vue_3d_canvas_py.exe` via `build_exe.bat`.
 - [x] **Navigation Axis Inversion & Direction Alignment**: Added natural Blender orbit orientation and 1-click `Axis: NATURAL / INVERTED` toggle button (`self.axis_btn`) in desktop GUI options bar and CLI.
 - [x] **Dedicated Python README & Workflows**: Full technical manual `python_desktop/README.md`, standalone GitHub Actions export workflow (`export-python.yml`), and native non-WebGL Windows compilation CI (`build-windows-python.yml`).
+- [x] **Smart UV Unwrap Engine (`vue3d/tools/smart_uv.py`)**: Stochastic seeded island packing (Mulberry32 PRNG), submesh isolation, non-overlapping shelf packing, and island bleeding dilation.
+- [x] **Multi-UV Channel Manager & Re-Baker**: Managing UV slots (`uv_original`, `uv_tightmap`, custom slots) and inverse barycentric triangle rasterization re-baking from tight-map back to original UVs.
+- [x] **Symmetrize UV Engine**: Bilateral mirroring (+X/-X) with midline seam welding, ear feature preservation, and vertex group isolation.
+- [x] **2D UV Sculpt Engine**: Laplacian smoothing, straightening, pinching, expansion, and crease brush operators on 2D UV charts.
+
 

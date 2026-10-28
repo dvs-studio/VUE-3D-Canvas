@@ -15,6 +15,7 @@ interface ExportTextureDialogProps {
   layers: Layer[];
   selectedLayerId: string;
   defaultMode?: 'merged' | 'alpha_mask';
+  activeUVChannel?: string;
 }
 
 export const ExportTextureDialog: React.FC<ExportTextureDialogProps> = ({
@@ -23,6 +24,7 @@ export const ExportTextureDialog: React.FC<ExportTextureDialogProps> = ({
   layers,
   selectedLayerId,
   defaultMode = 'merged',
+  activeUVChannel = 'uv_original',
 }) => {
   const [exportMode, setExportMode] = useState<'merged' | 'alpha_mask'>(defaultMode);
   const [width, setWidth] = useState(1024);
@@ -152,11 +154,14 @@ export const ExportTextureDialog: React.FC<ExportTextureDialogProps> = ({
     // Scale to user's desired dimensions
     ctx.drawImage(fullCanvas, 0, 0, width, height);
 
-    // Build filename according to user specification
+    // Build filename with active UV channel midfix tag
     const layerCleanName = selectedLayer ? selectedLayer.name.replace(/\s+/g, '_') : 'Layer';
+    const uvMidfix = activeUVChannel === 'uv_tightmap' 
+      ? 'TightMap' 
+      : (activeUVChannel === 'uv_original' ? 'OriginalUV' : activeUVChannel.replace(/^uv_/, ''));
     const filename = exportMode === 'alpha_mask'
-      ? `${layerCleanName}_AlphaMask_${width}x${height}.png`
-      : `${layerCleanName}_UV_Texture_${width}x${height}.${format === 'image/jpeg' ? 'jpg' : 'png'}`;
+      ? `${layerCleanName}_AlphaMask_${uvMidfix}_${width}x${height}.png`
+      : `${layerCleanName}_Texture_${uvMidfix}_${width}x${height}.${format === 'image/jpeg' ? 'jpg' : 'png'}`;
 
     const link = document.createElement('a');
     link.download = filename;

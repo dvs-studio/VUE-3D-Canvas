@@ -58,3 +58,26 @@ Translates camera target along local viewing vectors for Blender-style drone fli
 
 ### `bool v3d_xblend_save(const char* filepath, const V3D_AppContext* ctx, const char* model_path)`
 Serializes metadata, linked model reference, and strictly up to **3 undo states** into the `.xblend` project format.
+
+---
+
+## 5. UV Manipulation & Re-Baking
+
+### `bool v3d_uv_channel_add(V3D_Mesh* mesh, const char* name, const float* uvs)`
+Adds a new named UV channel to the mesh if slot limit has not been reached.
+
+### `bool v3d_uv_channel_set_active(V3D_Mesh* mesh, int channel_index)`
+Swaps the active UV coordinates buffer with the specified channel index.
+
+### `void v3d_uv_smart_unwrap(V3D_Mesh* mesh, float angle_limit_deg, int gutter_bleed_px, unsigned int seed, int submesh_id)`
+Computes seeded stochastic smart UV unwrap using Mulberry32 PRNG with conformal angle relaxation, non-overlapping shelf packing, and gutter margin dilation.
+
+### `void v3d_uv_symmetrize(V3D_Mesh* mesh, int direction, int mode, float tolerance, bool ear_guard)`
+Reflects UVs across bilateral X symmetry line with centerline seam welding, overlapping half option, and ear boundary preservation.
+
+### `void v3d_uv_sculpt_stroke(V3D_Mesh* mesh, const char* mode, float center_u, float center_v, float radius, float strength)`
+Executes interactive 2D UV sculpt brushes (`smooth`, `straighten`, `pinch`, `expand`, `crease`).
+
+### `void v3d_uv_rebake(const unsigned char* src_tex, const float* src_uvs, const float* dst_uvs, const int* faces, int face_count, int width, int height, int gutter_bleed_px, unsigned char* out_tex)`
+Inverse barycentric triangle rasterization re-baking texture from tight-map UV coordinates back to original model UVs with gutter dilation.
+

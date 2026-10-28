@@ -43,8 +43,12 @@
 | `/src/tools/fillSuite.ts` | Multi-texture triplanar box-mapping engine with noise/fractal cloud mixing operator, blank alpha support, and mask constraints. |
 | `/src/tools/patternStampTool.ts` | Surface decal projection stamper with sharpness masks and grunge overlays. |
 | `/src/tools/edgeWearFilter.ts` | Geometry curvature and ambient occlusion analyzer with procedural edge peeling. |
-| `/src/tools/smartUVUnwrap.ts` | Smart UV projection with open edge/dihedral angle clustering, stretch minimization, and shelf bin packing. |
-| `/src/core/types.ts` | System TypeScript definitions for Layers, PBR props, Triplanar config, Stamp config, Exporters, and Nodes. |
+| `/src/tools/smartUVUnwrap.ts` | Smart UV projection with Mulberry32 seeded stochastic packing, conformal relaxation, submesh isolation, and edge bleed dilation. |
+| `/src/tools/uvChannelManager.ts` | Multi-UV channel manager (original, tight-map, custom) and inverse barycentric triangle re-baker with anti-glitch dilation. |
+| `/src/tools/symmetrizeUV.ts` | Bilateral UV mirroring engine (+X/-X) with centerline seam pinning, ear protection, and 3D X-Ray selection filtering. |
+| `/src/tools/uvSculptEngine.ts` | Interactive 2D UV sculpt brush engine (Straighten, Smooth Laplacian, Pinch, Expand, Crease). |
+| `/src/ui/UVNPanel.tsx` | Photoshop CS5 dark dockable N-Panel for Viewport2D (Unwrap, Channels/Re-bake, Symmetrize, Sculpt brushes). |
+| `/src/core/types.ts` | System TypeScript definitions for Layers, PBR props, Triplanar config, Stamp config, Exporters, Nodes, and UV tools. |
 
 ---
 
@@ -86,5 +90,12 @@
 - [x] **Native Non-WebGL Windows CI Workflows**: Standalone Windows runner workflows (`build-windows-rust.yml`, `build-windows-python.yml`, `build-windows-c.yml`) compiling native DirectX 11 / Desktop OpenGL binaries without WebGL overhead (WebGL is strictly reserved for the self-hosted web deployment).
 - [x] **Guarded Import & Scoped Extraction Workflow (`import-extract.yml`)**: Interactive dispatch workflow supporting language selection (`rust`, `python`, `c`), archive auto-detection or explicit filename picking from `import/`, optional post-extraction archive deletion, and strict scope safeguards preventing Rust root extraction from affecting `python_desktop/`, `native_c/`, or other subsystems.
 - [x] **Navigation Direction Fix & 3D Gizmo Axis Flip Toggle**: Aligned orbit and drone mouse movement to natural Blender directions (dragging right turns model right, dragging up looks up); added 1-click interactive `[INV / NAT]` toggle button to the Viewport 3D Gizmo overlay and HUD across React, Python, and C.
+- [x] **Smart UV Unwrap Suite & Stochastic Non-Repetitive Island Packing**: Mulberry32 seeded PRNG, rotation variation, edge non-overlap checks, conformal relaxation, submesh isolation by mesh ID, and configurable island bleeding/gutter dilation (2px-16px) preventing mipmap seams.
+- [x] **Multi-UV Channel System & Inverse Barycentric Re-Baker**: Dynamic channel management (`uv_original` preserved reference for material slots, `uv_tightmap`, custom slots) and inverse barycentric triangle re-baking from tight-map back to original UVs with 4px margin dilation.
+- [x] **Export Filename UV Channel Midfix**: Export Texture and Model dialogs include active UV channel tag (`[Model]_[Channel]_[UVTag]_[Resolution].png`).
+- [x] **3D X-Ray Vertex Selection Brush & Symmetrize UV Engine**: Interactive 3D X-Ray depth-penetrating vertex selection painter with glowing cyan halos for temporary symmetry groups; bilateral UV mirroring (+X/-X) with midline pinning and ear protection.
+- [x] **2D UV Viewport N-Panel & Sculpt Brushes**: Dockable Photoshop CS5 dark N-Panel (`UVNPanel.tsx`, shortcut 'N') with interactive 2D sculpt brushes: Straighten, Smooth (Laplacian relaxation), Pinch, Expand, and Crease.
+- [x] **Multi-Language Parity (Python & Native C)**: Full algorithmic parity in Python (`python_desktop/vue3d/tools/smart_uv.py`) and Native C (`native_c/include/vue3d.h`, `native_c/src/renderer_gl.c`, `native_c/src/main.c`) with CLI commands and verified syntax.
+
 
 

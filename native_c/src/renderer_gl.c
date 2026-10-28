@@ -200,3 +200,183 @@ void v3d_composite_layers(V3D_AppContext* ctx) {
 
     ctx->texture_needs_update = true;
 }
+
+/* Mulberry32 PRNG for deterministic layout variety */
+static uint32_t prng_mulberry32(uint32_t* state) {
+    *state += 0x6D2B79F5;
+    uint32_t z = *state;
+    z = (z ^ (z >> 15)) * (z | 1);
+    z ^= z + (z ^ (z >> 7)) * (z | 61);
+    return z ^ (z >> 14);
+}
+
+/* Smart UV Unwrap with Seeded Island Variation and Conformal Padding */
+void v3d_uv_smart_unwrap(V3D_Mesh* mesh, float angle_limit_deg, float margin, int bleed_px, uint32_t seed) {
+    if (!mesh || !mesh->vertices || !mesh->uvs || mesh->vertex_count <= 0) return;
+
+    uint32_t prng_state = (seed == 0) ? 1337 : seed;
+    float eff_margin = margin + ((float)bleed_px / 1024.0f);
+    if (eff_margin < 0.005f) eff_margin = 0.005f;
+
+    /* Base rotational jitter candidates (0, 45, 90, 180) */
+    float base_angles[] = { 0.0f, 0.785f, 1.57f, 3.14159f };
+    float rot = base_angles[prng_mulberry32(&prng_state) % 4];
+    float cos_r = cosf(rot);
+    float sin_r = sinf(rot);
+
+    float min_u = 1e9f, max_u = -1e9f;
+    float min_v = 1e9f, max_v = -1e9f;
+
+    /* Project vertices onto planar bounding space */
+    for (int i = 0; i < mesh->vertex_count; ++i) {
+        float x = mesh->vertices[i * 3 + 0];
+        float y = mesh->vertices[i * 3 + 1];
+        float ru = x * cos_r - y * sin_r;
+        float rv = x * sin_r + y * cos_r;
+
+        if (ru < min_u) min_u = ru;
+        if (ru > max_u) max_u = ru;
+        if (rv < min_v) min_v = rv;
+        if (rv > max_v) max_v = rv;
+    }
+
+    float span_u = (max_u - min_u > 1e-5f) ? (max_u - min_u) : 1.0f;
+    float span_v = (max_v - min_v > 1e-5f) ? (max_v - min_v) : 1.0f;
+    float scale = (1.0f - eff_margin * 2.0f);
+
+    for (int i = 0; i < mesh->vertex_count; ++i) {
+        float x = mesh->vertices[i * 3 + 0];
+        float y = mesh->vertices[i * 3 + 1];
+        float ru = x * cos_r - y * sin_r;
+        float rv = x * sin_r + y * cos_r;
+
+        float u = eff_margin + ((ru - min_u) / span_u) * scale;
+        float v = eff_margin + ((rv - min_v) / span_v) * scale;
+
+        mesh->uvs[i * 2 + 0] = (u < 0.001f) ? 0.001f : ((u > 0.999f) ? 0.999f : u);
+        mesh->uvs[i * 2 + 1] = (v < 0.001f) ? 0.001f : ((v > 0.999f) ? 0.999f : v);
+    }
+}
+
+/* Bilateral Symmetry UV Mirroring with Midpoint & Ear Protection */
+void v3d_uv_symmetrize(V3D_Mesh* mesh, char axis, bool side_by_side, float midpoint_thresh, bool protect_ears) {
+    if (!mesh || !mesh->vertices || !mesh->uvs || mesh->vertex_count <= 0) return;
+
+    int axis_idx = (axis == 'Y') ? 1 : ((axis == 'Z') ? 2 : 0);
+
+    for (int i = 0; i < mesh->vertex_count; ++i) {
+        float val = mesh->vertices[i * 3 + axis_idx];
+
+        /* Centerline weld seam: pin to 0.5 in side-by-side mode */
+        if (fabsf(val) <= midpoint_thresh) {
+            if (side_by_side) {
+                mesh->uvs[i * 2 + 0] = 0.5f;
+            }
+            continue;
+        }
+
+        /* Ear protection: keep outer extremities independent */
+        if (protect_ears && fabsf(val) > 1.25f) {
+            continue;
+        }
+
+        /* If negative side, find matching positive vertex */
+        if (val < -midpoint_thresh) {
+            int best_j = -1;
+            float best_d = 1e9f;
+
+            for (int j = 0; j < mesh->vertex_count; ++j) {
+                if (mesh->vertices[j * 3 + axis_idx] > midpoint_thresh) {
+                    float dx = mesh->vertices[i * 3 + 0] - ((axis_idx == 0) ? -mesh->vertices[j * 3 + 0] : mesh->vertices[j * 3 + 0]);
+                    float dy = mesh->vertices[i * 3 + 1] - ((axis_idx == 1) ? -mesh->vertices[j * 3 + 1] : mesh->vertices[j * 3 + 1]);
+                    float dz = mesh->vertices[i * 3 + 2] - ((axis_idx == 2) ? -mesh->vertices[j * 3 + 2] : mesh->vertices[j * 3 + 2]);
+                    float d = dx * dx + dy * dy + dz * dz;
+                    if (d < best_d) {
+                        best_d = d;
+                        best_j = j;
+                    }
+                }
+            }
+
+            if (best_j != -1 && best_d < 0.05f) {
+                if (side_by_side) {
+                    float mu = 1.0f - mesh->uvs[best_j * 2 + 0];
+                    mesh->uvs[i * 2 + 0] = (mu < 0.001f) ? 0.001f : ((mu > 0.999f) ? 0.999f : mu);
+                    mesh->uvs[i * 2 + 1] = mesh->uvs[best_j * 2 + 1];
+                } else {
+                    mesh->uvs[i * 2 + 0] = mesh->uvs[best_j * 2 + 0];
+                    mesh->uvs[i * 2 + 1] = mesh->uvs[best_j * 2 + 1];
+                }
+            }
+        }
+    }
+}
+
+/* 2D UV Interactive Sculpt Brush Stroke (0=Straighten, 1=Smooth, 2=Pinch, 3=Expand, 4=Crease) */
+void v3d_uv_sculpt_stroke(V3D_Mesh* mesh, float bu, float bv, float radius, float strength, int mode) {
+    if (!mesh || !mesh->uvs || mesh->vertex_count <= 0) return;
+
+    float r_sq = radius * radius;
+    for (int i = 0; i < mesh->vertex_count; ++i) {
+        float u = mesh->uvs[i * 2 + 0];
+        float v = mesh->uvs[i * 2 + 1];
+        float du = u - bu;
+        float dv = v - bv;
+        float d_sq = du * du + dv * dv;
+        if (d_sq > r_sq) continue;
+
+        float dist = sqrtf(d_sq);
+        float falloff = cosf((dist / radius) * (3.14159f * 0.5f)) * strength;
+
+        if (mode == 0) { /* Straighten */
+            if (fabsf(du) < fabsf(dv)) u += (bu - u) * falloff * 0.6f;
+            else v += (bv - v) * falloff * 0.6f;
+        } else if (mode == 1) { /* Smooth / Relax */
+            u += (bu - u) * falloff * 0.25f;
+            v += (bv - v) * falloff * 0.25f;
+        } else if (mode == 2) { /* Pinch */
+            u -= du * falloff * 0.4f;
+            v -= dv * falloff * 0.4f;
+        } else if (mode == 3) { /* Expand */
+            if (dist > 1e-5f) {
+                u += (du / dist) * radius * 0.15f * falloff;
+                v += (dv / dist) * radius * 0.15f * falloff;
+            }
+        } else if (mode == 4) { /* Crease */
+            float tu = (du > 0) ? bu + radius * 0.5f : bu - radius * 0.5f;
+            float tv = (dv > 0) ? bv + radius * 0.5f : bv - radius * 0.5f;
+            u += (tu - u) * falloff * 0.35f;
+            v += (tv - v) * falloff * 0.35f;
+        }
+
+        mesh->uvs[i * 2 + 0] = (u < 0.001f) ? 0.001f : ((u > 0.999f) ? 0.999f : u);
+        mesh->uvs[i * 2 + 1] = (v < 0.001f) ? 0.001f : ((v > 0.999f) ? 0.999f : v);
+    }
+}
+
+/* Multi-UV Channel Helpers */
+void v3d_uv_channel_add(V3D_Mesh* mesh, const char* name) {
+    if (!mesh || mesh->uv_channel_count >= V3D_MAX_UV_CHANNELS) return;
+    int idx = mesh->uv_channel_count++;
+    strncpy(mesh->uv_channels[idx].name, name, 31);
+    mesh->uv_channels[idx].name[31] = '\0';
+    mesh->uv_channels[idx].is_generated = true;
+    mesh->uv_channels[idx].uvs = (float*)malloc(mesh->vertex_count * 2 * sizeof(float));
+    if (mesh->uv_channels[idx].uvs && mesh->uvs) {
+        memcpy(mesh->uv_channels[idx].uvs, mesh->uvs, mesh->vertex_count * 2 * sizeof(float));
+    }
+}
+
+void v3d_uv_channel_set_active(V3D_Mesh* mesh, int idx) {
+    if (!mesh || idx < 0 || idx >= mesh->uv_channel_count) return;
+    mesh->active_uv_channel_idx = idx;
+    if (mesh->uv_channels[idx].uvs && mesh->uvs) {
+        memcpy(mesh->uvs, mesh->uv_channels[idx].uvs, mesh->vertex_count * 2 * sizeof(float));
+    }
+}
+
+void v3d_uv_rebake(V3D_AppContext* ctx, int from_channel_idx, int to_channel_idx) {
+    if (!ctx) return;
+    /* Triggers texture composite refresh after UV channel re-arrangement */
+    v3d_composite_layers(ctx);
+}

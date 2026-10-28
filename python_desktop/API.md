@@ -64,3 +64,27 @@ Native Windows GUI window built with `tkinter`, running directly on desktop with
 - Left CS5 toolbox.
 - Right dockers for layers and 3D model geometry selection.
 - Center 3D viewport canvas with live Blender drone navigation.
+
+---
+
+## 5. Smart UV, Re-Baking & Sculpt Modules
+
+### `vue3d.tools.smart_uv.SmartUVUnwrapEngine`
+- `unwrap(vertices, faces, angle_limit_deg, gutter_bleed_px, resolution, seed, submesh_id, component_ids)`:
+  Performs seeded stochastic smart UV projection using Mulberry32 PRNG. Clusters faces by dihedral normal angles, applies conformal relaxation, packs islands into non-overlapping shelf bins, and calculates gutter dilation.
+
+### `vue3d.tools.smart_uv.UVChannelManager`
+- `add_channel(name: str, uvs: np.ndarray) -> str`: Registers a new UV coordinate slot.
+- `set_active_channel(channel_id: str)`: Swaps active working UV coordinates.
+- `delete_channel(channel_id: str) -> bool`: Deletes custom channel (protects `uv_original`).
+- `rebake_texture(src_pixels, src_uvs, dst_uvs, faces, width, height, gutter_bleed_px)`:
+  Performs inverse barycentric triangle rasterization to transfer paint from `uv_tightmap` back to `uv_original` with seam dilation.
+
+### `vue3d.tools.smart_uv.SymmetrizeUVEngine`
+- `symmetrize(vertices, uvs, faces, direction, mode, tolerance, ear_guard, selected_vertices)`:
+  Reflects UV coordinates across the bilateral X axis with centerline seam pinning and ear feature safeguard.
+
+### `vue3d.tools.smart_uv.UVSculptEngine`
+- `apply_stroke(uvs, faces, mode, center_u, center_v, radius, strength)`:
+  Executes interactive 2D UV sculpt brushes (`smooth`, `straighten`, `pinch`, `expand`, `crease`).
+

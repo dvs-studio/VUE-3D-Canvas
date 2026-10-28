@@ -420,3 +420,22 @@ export interface EdgeWearConfig {
   applyToRidges: boolean;
 }
 
+export type UVSculptMode = 'straighten' | 'smooth' | 'pinch' | 'expand' | 'crease';
+
+export interface UVChannelInfo {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  isGenerated: boolean;
+  vertexCount: number;
+}
+
+export interface SymmetrizeUVConfig {
+  axis: 'X' | 'Y' | 'Z';
+  direction: '+ to -' | '- to +' | 'overlap_mirrored' | 'side_by_side';
+  midpointThreshold: number; // e.g. 0.02
+  protectAsymmetricFeatures: boolean; // e.g. ears
+  useVertexSelectionGroup: boolean;
+}
+
+

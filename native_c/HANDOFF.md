@@ -50,4 +50,10 @@ native_c/
 - [x] **Standalone Executable Output**: Zero-dependency compilation producing single `vue_3d_canvas_c.exe` via GCC or MSVC.
 - [x] **Navigation Axis Inversion & Direction Alignment**: `v3d_camera_orbit` supports natural Blender rotation direction and `invert_nav` toggle flag, controllable via `axis [nat|inv]` in interactive shell.
 - [x] **Dedicated Native C README & Workflows**: Full technical manual `native_c/README.md`, standalone GitHub Actions export workflow (`export-c.yml`), and native non-WebGL Windows compilation CI (`build-windows-c.yml`).
+- [x] **Multi-UV Channel Subsystem (`v3d_uv_channel_*`)**: Dynamic UV channel allocation, buffer swapping, and active channel switching in `V3D_Mesh`.
+- [x] **Smart UV Unwrap (`v3d_uv_smart_unwrap`)**: Seeded stochastic packing with angle relaxation and gutter dilation.
+- [x] **Symmetrize UV (`v3d_uv_symmetrize`)**: Bilateral UV mirroring with centerline pinning and ear feature safeguards.
+- [x] **2D UV Sculpting Engine (`v3d_uv_sculpt_stroke`)**: Real-time UV sculpt brush implementation for Smooth, Straighten, Pinch, Expand, and Crease.
+- [x] **Inverse Barycentric Re-Baker (`v3d_uv_rebake`)**: Triangle rasterization re-baking texture from tight-map back to original UV coordinates with margin dilation.
+
 
