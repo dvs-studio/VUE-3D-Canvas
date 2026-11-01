@@ -1,68 +1,155 @@
-# Implementation Plan: Next-Gen Smart UV Unwrap, Symmetrize UV & Sculpting Suite
+# Implementation Plan: Stochastic Scatter Fixes, Independent Node Inspector Pop-up, Gboard-Style Resizable Floating Editor, & Multi-Language Windows Portable Builds
 
 ## 1. Executive Summary & Architecture Overview
-This plan establishes a professional, non-repetitive, high-fidelity UV pipeline for VUE 3D Canvas. The upgrade introduces:
-1. **Dynamic Smart UV Unwrap Engine**: Seeded stochastic island packing with conformal angle relaxation, customizable island bleeding/gutters, and submesh ID component isolation to eliminate pattern repetition and seam edge artifacts.
-2. **Multi-UV Channel & Texture Re-baker**: Full support for adding, switching, and deleting UV channels (`uv_original`, `uv_tightmap`, custom slots), paired with an automated inverse-barycentric texture re-baker and export channel midfix tagging.
-3. **Symmetrize UV Tool with 3D X-Ray Vertex Selection**: Interactive viewport X-Ray vertex brush painter to define symmetry groups, paired with midpoint-aware symmetrical UV island folding and stacking.
-4. **2D UV Viewport N-Panel & UV Sculpt Brushes**: Interactive 2D sculpt tools (Straighten, Smooth, Crease, Pinch, Relax/Expand) inside a Photoshop CS5 style dockable N-panel.
-5. **Cross-Language Parity (Rust Core & Web -> Python Desktop -> Native C)**: Implemented and tested in Rust/Web first, then cleanly ported to `python_desktop/` and `native_c/`.
+This revised plan integrates all requested capabilities with strict adherence to `RULE[AGENTS_md]` (Photoshop CS5 dark theme, low memory footprint, max 3 undo states, multi-language parity, non-destructive ledger updates):
+
+1. **Stochastic Scatter Filter Fixes & Enhancements**:
+   - **Image Color Preservation by Default**: Imported picture textures retain their authentic native colors without tinting or replacement when loaded into the scatter engine.
+   - **Physical Fill Checkbox Logic**: The "Physical Fill" checkbox explicitly acts as the color-replacement gate:
+     - *Unchecked (Default)*: Uses whatever colors are in the imported picture (or preset pattern).
+     - *Checked*: Replaces/fills the image stamp silhouette with the primary/secondary physical color chosen in the dialog.
+   - **Rotation Jitter Slider**: Added independent `rotationJitter` control (0° to 180°) alongside the base rotation range, allowing stochastic angular variation to be dialed in smoothly.
+   - **Alpha Outline Effect**: Dilates the stamp mask with configurable spread and Gaussian blur before stamping.
+
+2. **Independent Floating Node Inspector Pop-up Window**:
+   - Decouple node parameter editing from inside the node graph canvas into a dedicated, independent floating pop-up window (`NodeInspectorPopup.tsx`).
+   - The pop-up behaves as its own movable, draggable window with a Photoshop CS5 dark title bar, close/minimize buttons, parameter sliders/color pickers/steppers, socket exposure toggles, and live 2-way data binding to the node graph evaluator.
+   - Users can position it anywhere on screen or side-by-side with the node editor, keeping the node graph clean and unencumbered.
+
+3. **Gboard-Style Perimeter Resize Handles on Floating Windows**:
+   - Upgrade floating panel frames (`DockablePanelFrame.tsx` and `NodeGraphPanel.tsx`) with comprehensive 8-zone perimeter resizing (Top, Bottom, Left, Right, Top-Left, Top-Right, Bottom-Left, Bottom-Right).
+   - Replicate the Gboard floating window resize UX: when hovering or interacting near edges, glowing accent pills and corner brackets appear along the perimeter.
+   - Provides responsive mouse/touch resize dragging with smooth clamping (min 440px width, min 320px height) and screen boundary protection.
+
+4. **Multi-Language Windows Portable Builds (Web/Rust, Native C, Python Desktop)**:
+   - Provide complete Windows portable packaging automation for all supported languages that bundles binaries, runtime DLLs, launcher scripts, and asset dependencies into self-contained portable ZIP distributions:
+     - **Native C (`native_c/`)**: MinGW/MSVC portable build pipeline bundling `vue_3d_canvas_c.exe`, `SDL2.dll`, `glew32.dll`, C-runtime DLLs (`libgcc_s_seh-1.dll`, `libwinpthread-1.dll`, `libstdc++-6.dll`), assets, and a zero-dependency launcher `run_vue3d.bat` into `vue3d_native_c_win64_portable.zip`.
+     - **Python Desktop (`python_desktop/`)**: Standalone packaging automation bundling Python runtime, all binary wheels (PyQt/PySide, PyOpenGL, Pillow, NumPy), MSVC runtime DLLs (`msvcp140.dll`, `vcruntime140.dll`), assets, and `VUE_3D_Canvas.bat` into `vue3d_python_win64_portable.zip`.
+     - **Web / Rust Core**: Standalone portable packaging script producing `vue3d_win64_portable.zip` with compiled binaries, assets, and launcher.
+   - Update `AGENT_STATE.md`, `native_c/HANDOFF.md`, and `python_desktop/HANDOFF.md` per mandatory governance.
 
 ---
 
-## 2. Technical Breakdown & Modules
+## 2. Technical Breakdown & Detailed Design
 
-### Phase 1: Smart UV Unwrap Engine & Non-Repetitive Tight Mapping (Rust / Web First)
-- **Seeded Variational Packing**:
-  - Implement a deterministic pseudo-random seed generator that alters island orientation angles (0°, 45°, 90°, 180°, or random jitter) and island placement hierarchy.
-  - Apply conformal angle relaxation minimizing geometric stretch while ensuring zero self-intersections or merged edges.
-- **Island Bleeding & Edge Gutter Dilation**:
-  - Implement configurable island padding (e.g. 2px - 16px gutter dilation) that dynamically expands boundary texture pixels, completely preventing mipmap edge bleeding and seam artifacts.
-- **Submesh Component ID Isolation**:
-  - Enhance the mesh ID selector so unwrapping a specific submesh (`[ID: body]`, `[ID: clothes]`, etc.) unwraps that specific geometry component either into its isolated UV partition or packs it into available UV real estate while strictly preserving unselected mesh UV coordinates.
+### Part 1: Stochastic Scatter Filter Updates
 
-### Phase 2: Multi-UV Channels & Dynamic Texture Re-baker
-- **Multi-UV Channel System**:
-  - Extend mesh data structures to support multiple UV attribute sets: `uv_default` (original imported UVs), `uv_tightmap` (smart generated), and user-added custom channels.
-  - Add UI controls to create, rename, duplicate, switch active, and delete UV channels.
-- **Inverse Barycentric Texture Re-baker**:
-  - When painting on `uv_tightmap`, allow 1-click re-baking onto `uv_default` (or any target UV channel) using canvas/FBO fragment shader projection.
-- **Export Texture Midfix Tagging**:
-  - Formats exported maps with active UV channel midfixes (e.g., `model_diffuse_TightMap_2048.png` vs. `model_diffuse_OriginalUV_2048.png`).
+#### Engine Architecture (`/src/tools/stochasticScatter.ts`)
+- **`StochasticScatterConfig` Expansion**:
+  - Add `rotationJitter?: number` (degrees, 0° to 180°).
+  - Clarify `usePhysicalFillColor?: boolean` semantics.
+- **Custom Image & Preset Color Handling**:
+  - In `createStampCanvas`:
+    - When `stampType === 'custom'`:
+      - Draw imported image onto stamp canvas.
+      - If `config.usePhysicalFillColor === true`: apply `globalCompositeOperation = 'source-in'` and fill with `config.primaryColor`.
+      - If `!config.usePhysicalFillColor`: leave pristine native pixel colors of the imported image untouched.
+    - When `stampType` is procedural (`grunge`, `splat`, `scratch`, `dots`, `cracks`, `hex`, `stars`, `leaves`, `circuit`):
+      - If `!config.usePhysicalFillColor`: render with authentic theme colors (green for leaves, orange/gold for stars, cyan for circuit, amber for splat, etc.).
+      - If `config.usePhysicalFillColor`: render with `config.primaryColor`.
+- **Rotation Jitter Mathematics**:
+  - In `applyScatter`:
+    ```ts
+    const baseRotDeg = prng.nextRange(config.rotationMin, config.rotationMax);
+    const rotJitterDeg = config.rotationJitter ? prng.nextRange(-config.rotationJitter, config.rotationJitter) : 0;
+    const finalRotRad = (baseRotDeg + rotJitterDeg) * (Math.PI / 180);
+    ```
 
-### Phase 3: Symmetrize UV Tool & 3D X-Ray Vertex Brush Painter
-- **3D Viewport X-Ray Vertex Selector**:
-  - An interactive paint brush mode in `Viewport3D` that casts rays through the mesh (with depth/x-ray pass-through) to paint-select vertices into a temporary/active vertex group.
-  - Visual feedback showing highlighted vertex points with translucent selection halos.
-- **Intelligent Symmetrize Engine**:
-  - Symmetrize options dropdown: Select axis (+X to -X, -X to +X, or vertex group).
-  - Midpoint protection: Centerline vertices and asymmetric features (such as ears or off-center details) retain non-overlapping spacing, while bilateral halves overlap and align with pixel-perfect precision.
-
-### Phase 4: 2D UV Viewport N-Panel & UV Sculpt Brushes
-- **Dockable N-Panel (CS5 Dark Theme)**:
-  - Toggleable sidebar in `Viewport2D` providing brush radius, falloff strength, and sculpt mode.
-- **Interactive UV Sculpt Brushes**:
-  1. **UV Smooth / Relax**: Relaxes UV vertex density to reduce local texture stretching.
-  2. **UV Straighten**: Projects UV edge loops along cardinal U/V axes for clean rectangular strips.
-  3. **UV Pinch**: Pulls UV vertices toward brush centroid to increase texture resolution in focal areas.
-  4. **UV Expand**: Pushes UV vertices away from cursor to reduce texture density.
-  5. **UV Crease**: Sharpens UV boundaries and preserves boundary angles while sculpting.
-
-### Phase 5: Multi-Language Migration (Python Desktop & Native C)
-- **`python_desktop/` Migration**:
-  - Implement multi-UV channels, stochastic unwrap relaxation, island bleeding, and symmetrize algorithms in `vue3d/renderer/geometry.py` and `vue3d/tools/`.
-  - Update `desktop_gui.py` with 2D UV sculpt brushes and UV channel management.
-- **`native_c/` Migration**:
-  - Add UV channel arrays, stochastic unwrap island binning, and UV symmetrize routines to `native_c/include/vue3d.h` and `native_c/src/renderer_gl.c`.
-  - Add interactive CLI commands (`uv unwrap [seed]`, `uv symmetrize [axis]`, `uv channel [add|del|bake]`).
-- **Ledger & Documentation Update**:
-  - Update `AGENT_STATE.md`, `python_desktop/HANDOFF.md`, and `native_c/HANDOFF.md` preserving all prior records.
+#### Dialog UI (`/src/ui/StochasticScatterDialog.tsx`)
+- Set `usePhysicalFillColor` default state to `false`.
+- When custom image is selected: preserve `usePhysicalFillColor = false` so image colors are immediately visible.
+- Add "Rotation Jitter" slider (0° to 180°, step 1°, default 30°) right below rotation range inputs.
+- Add clear explanatory subtitle under "Physical Fill" checkbox: "Unchecked: preserves original image & preset colors; Checked: replaces with chosen primary color".
 
 ---
 
-## 3. Verification Plan
-1. **Unwrap Variety Test**: Run smart unwrap with multiple seeds and verify differing layouts without edge merging or overlapping faces.
-2. **Bleed & Seam Test**: Paint high-contrast colors across UV island borders and verify zero seam glitching or bleeding artifacts.
-3. **Re-bake Accuracy Test**: Paint on Tight Map UV, bake to Original UV, and inspect 1:1 visual fidelity.
-4. **X-Ray Brush & Symmetrize Test**: Paint-select a sub-region in 3D X-Ray mode, execute Symmetrize, and verify exact opposite-half symmetry without midline ear collision.
-5. **Compilation & Lint**: Run `compile_applet` and `lint_applet` across the full TypeScript codebase, and smoke test Python and C engines.
+### Part 2: Independent Floating Node Inspector Pop-up (`/src/ui/panels/NodeInspectorPopup.tsx`)
+
+#### Architectural Design
+- **Separation of Concerns**: The Node Graph canvas retains lightweight node representations with sockets and wires. Double-clicking or clicking a node opens/focuses the independent `NodeInspectorPopup`.
+- **Window Behavior**:
+  - Independent `z-index` floating window rendered at application level.
+  - Draggable CS5 header (`#2b2b2b`, 1px solid `#3c3c3c`, subtle bevel) with move cursor.
+  - Positionable anywhere across the screen, independent of whether the Node Graph is docked or floating.
+  - Header controls: Category badge, editable node title, mute/bypass toggle, minimize, and close `X` button.
+- **Inspector Content Sections**:
+  - **Dynamic Parameter Controls**:
+    - Sliders with numeric stepper inputs for float/int properties (Roughness, Metallic, Normal Strength, Scale, Detail, Distortion, etc.).
+    - Color pickers with hex/RGB inputs for color properties (Base Color, Emission, Subsurface).
+    - Dropdowns for blend modes, interpolation, and texture types.
+  - **Socket Exposure Section**:
+    - Two-column list of inputs (left) and outputs (right) with checkboxes to show/hide plugs on the node perimeter in the node editor.
+  - **Live Reactivity**:
+    - Dispatches parameter updates immediately to `onUpdateNode`, triggering live shader re-evaluation.
+
+---
+
+### Part 3: Gboard-Style Perimeter Resize Handles (`/src/ui/DockablePanelFrame.tsx` & `NodeGraphPanel.tsx`)
+
+#### Architectural Design
+- **8-Directional Perimeter Zone System**:
+  - `top`, `bottom`, `left`, `right` edge zones (8px interactive border strips).
+  - `top-left`, `top-right`, `bottom-left`, `bottom-right` corner zones (16x16px corner grab squares).
+- **Gboard-Style Visual Pill & Accent Indicators**:
+  - On hover or during resize, the active edges reveal centered rounded pills / accent grab bars (e.g. 36px x 4px glowing bar on top/bottom, 4px x 36px on sides, L-shaped brackets at corners).
+  - Proper CSS cursor feedback: `ns-resize`, `ew-resize`, `nwse-resize`, `nesw-resize`.
+- **Drag Resize Mathematics & Bounds Clamping**:
+  - Pointer capture (`onPointerDown`, `setPointerCapture`, `onPointerMove`, `onPointerUp`) ensuring smooth resizing without lost drag focus even over iframes or 3D canvases.
+  - Minimum dimensions: `width >= 440px`, `height >= 320px`.
+  - Viewport boundary constraints: Prevents dragging window boundaries off the visible screen edges.
+
+---
+
+### Part 4: Windows Portable Build Pipelines for All Languages
+
+#### 1. Native C (`native_c/`)
+- **Scripts**: `native_c/package_windows.bat` & `native_c/package_windows.sh`
+- **Output**: `native_c/dist/vue3d_native_c_win64_portable.zip`
+- **Bundle Contents**:
+  - `bin/vue_3d_canvas_c.exe`: Compiled Native C executable.
+  - `bin/SDL2.dll`, `bin/glew32.dll`: Graphics and windowing runtime libraries.
+  - `bin/libgcc_s_seh-1.dll`, `bin/libwinpthread-1.dll`, `bin/libstdc++-6.dll`: MinGW runtime dependencies.
+  - `assets/`: Required brushes, shaders, and signatures.
+  - `run_vue3d.bat`: Zero-setup launcher script setting relative `PATH` to `bin/` and launching `vue_3d_canvas_c.exe`.
+  - `README_PORTABLE.txt`: Portability documentation and requirements.
+
+#### 2. Python Desktop (`python_desktop/`)
+- **Scripts**: `python_desktop/package_windows.py` & `python_desktop/package_windows.bat`
+- **Output**: `python_desktop/dist/vue3d_python_win64_portable.zip`
+- **Bundle Contents**:
+  - Complete standalone distribution with bundled embeddable Python 3.11, pre-configured `.pth`.
+  - All binary wheels and C-extensions: PyQt/PySide, PyOpenGL, Pillow, NumPy.
+  - Visual C++ Runtime DLLs (`msvcp140.dll`, `vcruntime140.dll`, `vcruntime140_1.dll`).
+  - `VUE_3D_Canvas.bat`: One-click portable launcher.
+  - `verify_dependencies.py`: Self-check diagnostic script ensuring all DLLs and packages load cleanly.
+
+#### 3. Rust Core / Web Native Target (`src/core/` & Root)
+- **Scripts**: `scripts/package_windows_portable.sh` & `scripts/package_windows_portable.bat`
+- **Output**: `dist/vue3d_win64_portable.zip`
+- **Bundle Contents**:
+  - Standalone release package including pre-compiled Rust/WASM binaries, offline asset bundles, portable runner, and launcher.
+
+---
+
+## 3. Step-by-Step Implementation Sequence
+
+1. **Step 1: Stochastic Scatter Updates**:
+   - Update `src/tools/stochasticScatter.ts`: Add `rotationJitter`, preserve custom image colors by default, update `usePhysicalFillColor` logic, and apply rotation jitter.
+   - Update `src/ui/StochasticScatterDialog.tsx`: Wire `rotationJitter` slider, set `usePhysicalFillColor` default to `false`, and add clear user guidance.
+2. **Step 2: Independent Floating Node Inspector Pop-up**:
+   - Create `src/ui/panels/NodeInspectorPopup.tsx` with CS5 styling, draggable header, dynamic parameter controls, and socket exposure checkboxes.
+   - Update `src/ui/panels/NodeGraphPanel.tsx` to emit `onInspectNode` and allow double clicking outside to escape.
+   - Update `src/App.tsx` to host `NodeInspectorPopup` as an independent floating window.
+3. **Step 3: Gboard-Style Perimeter Resize Handles**:
+   - Enhance `src/ui/DockablePanelFrame.tsx` with resizable support and 8-zone Gboard perimeter pills and corner brackets.
+   - Enable resizable on floating panels including `NodeGraphPanel`.
+4. **Step 4: Windows Portable Build Pipelines**:
+   - Create `native_c/package_windows.bat` & `native_c/package_windows.sh`.
+   - Create `python_desktop/package_windows.py` & `python_desktop/package_windows.bat`.
+   - Create `scripts/package_windows_portable.sh` & `scripts/package_windows_portable.bat`.
+   - Update `WINDOWS_BUILD_INSTRUCTIONS.md`.
+5. **Step 5: Documentation & Historical Ledgers**:
+   - Update `AGENT_STATE.md`, `native_c/HANDOFF.md`, and `python_desktop/HANDOFF.md` per `RULE[AGENTS_md]`.
+6. **Step 6: Verification**:
+   - Run `lint_applet` (`npm run lint` / `tsc --noEmit`).
+   - Run `compile_applet` (`npm run build`).

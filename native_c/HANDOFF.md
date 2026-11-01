@@ -55,5 +55,10 @@ native_c/
 - [x] **Symmetrize UV (`v3d_uv_symmetrize`)**: Bilateral UV mirroring with centerline pinning and ear feature safeguards.
 - [x] **2D UV Sculpting Engine (`v3d_uv_sculpt_stroke`)**: Real-time UV sculpt brush implementation for Smooth, Straighten, Pinch, Expand, and Crease.
 - [x] **Inverse Barycentric Re-Baker (`v3d_uv_rebake`)**: Triangle rasterization re-baking texture from tight-map back to original UV coordinates with margin dilation.
+- [x] **Stochastic Layer Scattering Engine (`v3d_stochastic_scatter_apply`)**: Mulberry32 deterministic PRNG, custom image texture dabs, physical fill color masking, alpha outline dilation/blur, and non-overlapping distribution.
+- [x] **Shader Node Graph Parity & Specification**: Node graph topology and socket wiring definitions aligned with the Blender 2.8+ node evaluator specification.
+- [x] **Portable Windows ZIP Distribution (`native_c/dist/vue3d_native_c_win64_portable.zip`)**: Automated zero-dependency packager (`package_windows.bat` & `package_windows.sh`) bundling `vue_3d_canvas_c.exe`, required DLLs (`SDL2.dll`, `glew32.dll`), `assets/`, and click-to-run launcher `run_vue3d.bat` for portable execution across all Windows computers.
+
+
 
 

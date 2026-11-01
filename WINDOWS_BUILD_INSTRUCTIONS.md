@@ -117,9 +117,40 @@ A turnkey, self-hosted distribution is located in `self-host/`:
 
 ## 4. GitHub Actions CI & ZIP Artifacts
 
-The repository includes automated CI workflows in `.github/workflows/`:
-- **`windows-build.yml`:** Compiles `vue_3d_canvas.exe` on Windows and packages `vue-3d-canvas-windows-x64.zip`.
-- **`build-self-host.yml`:** Builds WASM and web client, packaging `vue-3d-canvas-self-hosted.zip`.
-- **`build-all.yml`:** Multi-platform build matrix generating ZIP artifacts for Windows, WASM, Web, and the master suite.
-
 All workflow artifacts are zipped and ready for direct download.
+
+---
+
+## 5. Portable Multi-Language Windows Distributions (Binaries + DLLs in ZIP)
+
+For maximum portability across different Windows computers without requiring development runtimes, dedicated packaging tools create self-contained ZIP distributions bundling executables, runtime DLLs (`SDL2.dll`, `glew32.dll`, Qt platform runtimes), assets, and zero-dependency `.bat` launchers:
+
+### A. Native C Portable Windows ZIP (`native_c/`)
+- **One-Click Packager:** Run `native_c\package_windows.bat` (or `./native_c/package_windows.sh` in bash/CI).
+- **Output:** `native_c/dist/vue3d_native_c_win64_portable.zip`
+- **Contents:**
+  - `vue_3d_canvas_c.exe` (Stand-alone native C executable)
+  - `SDL2.dll` (Hardware windowing and multi-touch input)
+  - `glew32.dll` (OpenGL 2.0 / DirectX 11 GL driver)
+  - `assets/` (Open-source attribution and brush presets)
+  - `run_vue3d.bat` (Zero-dependency click-to-run launcher)
+
+### B. Python Desktop Portable Windows ZIP (`python_desktop/`)
+- **One-Click Packager:** Run `python_desktop\package_windows.bat` or `python python_desktop/package_windows.py`.
+- **Output:** `python_desktop/dist/vue3d_python_win64_portable.zip`
+- **Contents:**
+  - `vue_3d_canvas_py.exe` / standalone Python runtime
+  - Qt / PyQt platform DLLs and libraries
+  - PyOpenGL, NumPy, and Pillow modules
+  - `assets/` and `vue3d/` modules
+  - `VUE_3D_Canvas.bat` (One-click portable launcher)
+
+### C. Web / Rust Core Desktop Portable ZIP (`scripts/`)
+- **One-Click Packager:** Run `scripts\package_windows_portable.bat` (or `./scripts/package_windows_portable.sh`).
+- **Output:** `dist/vue3d_win64_portable.zip`
+- **Contents:**
+  - `vue_3d_canvas.exe` / production web application
+  - `app/` pre-compiled production client workspace
+  - `assets/`
+  - `start_vue3d.bat` (Zero-dependency instant launcher)
+

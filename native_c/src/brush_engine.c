@@ -207,3 +207,52 @@ void v3d_brush_apply_smudge(V3D_BrushState* state, V3D_Layer* layer, const V3D_B
     smudge_brush.color = state->smudge_color;
     render_dab(layer, &smudge_brush, to_x, to_y, false);
 }
+
+/* Mulberry32 PRNG for deterministic C runtime */
+static inline uint32_t c_mulberry32(uint32_t* state) {
+    *state = (*state + 0x6D2B79F5) & 0xFFFFFFFF;
+    uint32_t z = *state;
+    z = (z ^ (z >> 15)) * (z | 1);
+    z ^= z + (z ^ (z >> 7)) * (z | 61);
+    return z ^ (z >> 14);
+}
+
+static inline float c_prng_float(uint32_t* state) {
+    return (float)c_mulberry32(state) / 4294967296.0f;
+}
+
+static inline float c_prng_range(uint32_t* state, float min, float max) {
+    return min + (max - min) * c_prng_float(state);
+}
+
+void v3d_stochastic_scatter_apply(V3D_Layer* layer, const V3D_StochasticScatterConfig* config) {
+    if (!layer || !layer->pixels || !config) return;
+
+    uint32_t seed_state = config->random_seed;
+    int repeats = config->number_of_repeats;
+    int count = (repeats > 0) ? (repeats * 8) : (int)(30.0f * (config->stamp_density / 50.0f) * config->scatter_strength);
+    if (count < 4) count = 4;
+    if (count > 250) count = 250;
+
+    int lw = layer->width;
+    int lh = layer->height;
+    float base_radius = (float)(lw > lh ? lw : lh) * 0.06f;
+
+    V3D_Brush stamp_brush;
+    memset(&stamp_brush, 0, sizeof(V3D_Brush));
+    stamp_brush.mask_type = config->stamp_type;
+    stamp_brush.color = config->primary_color;
+    stamp_brush.opacity = config->opacity;
+    stamp_brush.flow = 100.0f;
+    stamp_brush.hardness = 85.0f;
+
+    for (int i = 0; i < count; i++) {
+        float px = c_prng_range(&seed_state, 0.0f, (float)lw);
+        float py = c_prng_range(&seed_state, 0.0f, (float)lh);
+        float scale = c_prng_range(&seed_state, config->scale_min, config->scale_max);
+        stamp_brush.size = base_radius * scale * 2.0f;
+
+        // Apply dab onto layer
+        render_dab(layer, &stamp_brush, px, py, false);
+    }
+}

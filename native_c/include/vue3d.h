@@ -224,6 +224,33 @@ void v3d_uv_channel_add(V3D_Mesh* mesh, const char* name);
 void v3d_uv_channel_set_active(V3D_Mesh* mesh, int idx);
 void v3d_uv_rebake(V3D_AppContext* ctx, int from_channel_idx, int to_channel_idx);
 
+/* Stochastic Layer Scattering Engine */
+typedef struct {
+    int number_of_repeats;
+    int stamp_density;
+    float edge_blend_contrast;
+    float scatter_strength;
+    uint32_t random_seed;
+    float rotation_min;
+    float rotation_max;
+    float scale_min;
+    float scale_max;
+    int blend_mode;
+    V3D_MaskType stamp_type;
+    V3D_ColorRGBA primary_color;
+    float opacity;
+    bool use_physical_fill_color;
+    bool enable_outline;
+    V3D_ColorRGBA outline_color;
+    int outline_spread;
+    int outline_blur;
+    uint32_t* custom_image_pixels;
+    int custom_image_width;
+    int custom_image_height;
+} V3D_StochasticScatterConfig;
+
+void v3d_stochastic_scatter_apply(V3D_Layer* layer, const V3D_StochasticScatterConfig* config);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1649,7 +1649,9 @@ export default function App() {
           isFloating={true}
           initialPos={{ x: 140, y: 120 }}
           width={640}
-          height={400}
+          height={420}
+          minWidth={440}
+          minHeight={320}
           onClose={() => togglePanel('nodeGraph')}
           onToggleFloat={() => togglePanelFloat('nodeGraph')}
         >
