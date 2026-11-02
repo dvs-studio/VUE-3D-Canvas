@@ -1,5 +1,7 @@
 # Continuation prompt — paste this into the next AI account
 
+Status: the desktop-window change is on `main`. Pre-execution note was commit `5c5d9f6`. Read `AGENTS.md` for the post-execution note before editing.
+
 You are continuing work on the private product repository https://github.com/dvs-studio/VUE-3D-Canvas (owner `dvs-studio`, default branch `main`). The author is Victory Ukpong. Read `AGENTS.md` and `AGENT_STATE.md` before you edit anything. When you finish a task, append the result to both files. Do not wipe the painting-feature ledger. Do not recreate the things this prompt retires.
 
 ## What the programme actually is

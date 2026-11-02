@@ -1,0 +1,84 @@
+name: Build Windows Application
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-app:
+    name: Compile the painting application
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build the painting interface
+        run: npm run build
+
+      - name: Refuse a package that is not the real interface
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist/index.html")) {
+            throw "dist/index.html is missing. npm run build did not produce the application."
+          }
+          $scripts = Get-ChildItem "dist/assets/*.js" -ErrorAction SilentlyContinue
+          if (-not $scripts) {
+            throw "dist/assets has no JavaScript bundle. Refusing to zip a hello-world executable."
+          }
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Compile the Windows window
+        run: cargo build --release --bin vue_3d_canvas
+
+      - name: Assemble the portable folder
+        shell: pwsh
+        run: |
+          $out = "VUE_3D_Canvas_Windows"
+          if (Test-Path $out) { Remove-Item $out -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path "$out/ui" | Out-Null
+
+          $exe = "target/release/vue_3d_canvas.exe"
+          if (!(Test-Path $exe)) {
+            throw "vue_3d_canvas.exe was not produced."
+          }
+          Copy-Item $exe "$out/vue_3d_canvas.exe"
+          Copy-Item "dist/*" "$out/ui/" -Recurse
+
+          if (!(Test-Path "$out/ui/index.html")) {
+            throw "The ui folder is missing index.html."
+          }
+
+          @"
+          VUE 3D Canvas
+          Author: Victory Ukpong
+
+          Double-click vue_3d_canvas.exe.
+          Keep this exe in the same folder as the ui folder. Do not move it out on its own.
+
+          The programme opens its own window. It does not start a web server and it does not print a diagnostic shell.
+          WebGL is sent to DirectX 11 through ANGLE. Launch with --opengl for the OpenGL path.
+
+          Windows 11 includes WebView2. If the window does not open on Windows 10, install the Evergreen WebView2 Runtime and read vue3d-startup-error.log beside the exe.
+          "@ | Set-Content -Encoding utf8 "$out/README.txt"
+
+          if (Test-Path "VUE_3D_Canvas_Windows.zip") { Remove-Item "VUE_3D_Canvas_Windows.zip" -Force }
+          Compress-Archive -Path "$out/*" -DestinationPath "VUE_3D_Canvas_Windows.zip" -Force
+
+      - name: Upload the Windows application
+        uses: actions/upload-artifact@v4
+        with:
+          name: VUE_3D_Canvas_Windows
+          path: VUE_3D_Canvas_Windows.zip
+          if-no-files-found: error

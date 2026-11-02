@@ -1,8 +1,11 @@
 node_modules/
 build/
 dist/
+target/
+webview2-data/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+

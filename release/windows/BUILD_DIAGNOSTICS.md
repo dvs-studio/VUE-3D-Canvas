@@ -1,8 +1,10 @@
 # VUE 3D Canvas - Windows Build Diagnostics & Native Execution Breakdown
 
+**Superseded for launching the app:** the exe no longer opens a console shell and no longer has a `--serve` command. Use `.github/workflows/build-windows-app.yml`. The notes below explain the old console failure and stay as history.
+
 **Author & Creator:** Victory Ukpong  
 **Project:** VUE 3D Canvas  
-**Architecture:** Rust Native Desktop Engine + DirectX 11 / OpenGL 2.0+ Core  
+**Architecture:** Windows window around the Vite/React/Three.js painter. WebGL uses ANGLE (DirectX 11 by default).
 
 ---
 

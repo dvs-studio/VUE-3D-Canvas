@@ -365,7 +365,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current || undefined,
       antialias: true,
-      powerPreference: 'default',
+      powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
     renderer.setSize(width, height);

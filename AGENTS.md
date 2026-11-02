@@ -42,8 +42,10 @@
 
 ## Handover log
 
-### 2026-11-02 — pre-execution (desktop window, before code)
-- Reviewed every markdown file, the eight workflow files, `crates/vue3d_core/src/main.rs`, `lib.rs`, and the Three.js renderer setup.
-- Confirmed the AI Studio app is `src/`. Confirmed the Rust bin only printed a diagnostic shell. Confirmed `python_desktop/` and `native_c/` are absent.
-- Next code change, and only this: replace the console bin with a WebView2 window that loads `dist/` through an in-process protocol, force ANGLE DirectX 11, request the high-performance GPU from WebGL, delete the old workflows and `native_runner/`, and add one `workflow_dispatch` workflow Victory can run by hand.
-- Continuation prompt for the second account: `HANDOFF_PROMPT.md`.
+### 2026-11-02 — post-execution (desktop window landed)
+- Pushed before the code change as `5c5d9f6`.
+- `crates/vue3d_core/src/main.rs` no longer prints a diagnostic shell. On Windows it opens a WebView2 window (`desktop.rs`) and loads `ui/index.html` through the in-process `vue://` protocol. `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` selects ANGLE DirectX 11, OpenGL (`--opengl`), or DirectX 11 plus WebGPU flags (`--modern`).
+- Help → GPU backend writes `gpu-backend.txt` and restarts the exe. `Viewport3D` and `NavigatorPanel` request `powerPreference: 'high-performance'`.
+- Old workflows and `native_runner/` are deleted. The only workflow is `.github/workflows/build-windows-app.yml`, and it runs only when Victory clicks Run workflow.
+- `cargo check --target x86_64-pc-windows-msvc --bin vue_3d_canvas` finished clean on the Linux sandbox. The exe was not run here, so the first real proof is that GitHub artifact.
+

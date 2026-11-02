@@ -53,12 +53,10 @@ Double-click `run_vue3d_native.bat` or run:
 ```
 
 ### CLI Command Flags:
-- `--dx11`: Direct3D 11 native hardware pipeline (Default on Windows 10/11).
-- `--opengl`: OpenGL 2.0+ native hardware pipeline.
-- `--high-perf`: Request dedicated high-performance discrete GPU clock rates.
-- `--bench`: Run procedural triplanar & node graph benchmark (1,000,000 vector tests).
-- `--xblend <FILE>`: Validate and inspect `.xblend` project files.
-- `--serve 3000`: Launch native local network bridge.
+- `--dx11`: Ask ANGLE to use DirectX 11 (default).
+- `--opengl`: Ask ANGLE to use OpenGL.
+- `--modern`: DirectX 11 plus WebGPU browser features. The painter itself is still WebGL.
+- There is no `--serve` server mode.
 
 ---
 

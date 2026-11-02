@@ -105,6 +105,22 @@
 - [x] **Serverless Standalone Desktop Workstation & DirectX 11/OpenGL Priority Architecture**: 100% offline relative-asset build (`base: './'`), runtime GPU hardware backend switcher in Menu Bar (DirectX 11 priority, OpenGL 2.0+ compatibility, Modern Auto-Detect), GPU Diagnostics Dialog, dual GUI and diagnostic launchers (`VUE_3D_Canvas.bat` & `VUE_3D_Canvas_Diagnostic.bat`), upgraded Rust desktop core launcher in `crates/vue3d_core`, pre-compiled distribution folder `dist/standalone_desktop/`, and zero-compiler portable release `release/VUE_3D_Canvas_Standalone_Desktop_Win64.zip`.
 - [x] **Native Windows 64-Bit Binary Integration & Zero-Blank Loopback Host (`vue_3d_canvas.exe`)**: Compiled native Windows PE32+ application runner (`native_runner/vue_3d_canvas.exe`) with embedded Winsock HTTP loopback streamer, MIME type handling, and chromeless desktop window launcher (`--app`), completely resolving the `file://` CORS null-origin blank screen; packaged alongside all core internal assets and launchers into `release/VUE_3D_Canvas_Standalone_Desktop_Win64.zip` and documented in `README.md` and `README_STANDALONE.txt`.
 
+---
+
+## 4. Superseding note — 2026-11-02 desktop window
+
+The ledger entries that describe `python_desktop/`, `native_c/`, `native_runner/`, a diagnostic `vue3d>` shell, `--serve`, or the old GitHub Actions (`build-all.yml`, `windows-build.yml`, `build-windows-rust.yml`, `build-self-host.yml`, `export-rust.yml`, `import-extract.yml`, `backup-codebases.yml`, `restore-backup.yml`) are historical. They are not current build targets. Do not rebuild them.
+
+Current Windows product:
+- Painter: `src/` (Vite, React, Three.js WebGL), the same programme that runs in AI Studio.
+- Window: `crates/vue3d_core/src/main.rs` + `desktop.rs`. WebView2 loads `ui/` through an in-process custom protocol. No listening server.
+- GPU: ANGLE DirectX 11 by default (`--use-angle=d3d11`). `--opengl` switches ANGLE to OpenGL. The Help menu restarts the process after writing `gpu-backend.txt`.
+- WebGL `powerPreference` is `high-performance` in `Viewport3D.tsx` and `NavigatorPanel.tsx`.
+- Package workflow (manual only): `.github/workflows/build-windows-app.yml`. Artifact `VUE_3D_Canvas_Windows.zip` contains `vue_3d_canvas.exe` and `ui/`.
+- Verified this session: `cargo check --target x86_64-pc-windows-msvc --bin vue_3d_canvas` succeeded. Not yet launched on a Windows desktop.
+- Continuation prompt: `HANDOFF_PROMPT.md`.
+
+
 
 
 

@@ -234,7 +234,11 @@ export default function App() {
   // Graphics Hardware Backend Selection (DirectX 11 Priority Default)
   const [gpuBackend, setGpuBackend] = useState<'dx11' | 'opengl' | 'modern'>(() => {
     try {
-      return (localStorage.getItem('vue3d_gpu_backend') as any) || 'dx11';
+      const fromWindow = (window as Window & { __VUE_GPU_BACKEND__?: string }).__VUE_GPU_BACKEND__;
+      if (fromWindow === 'dx11' || fromWindow === 'opengl' || fromWindow === 'modern') {
+        return fromWindow;
+      }
+      return (localStorage.getItem('vue3d_gpu_backend') as 'dx11' | 'opengl' | 'modern' | null) || 'dx11';
     } catch (_) {
       return 'dx11';
     }
@@ -246,6 +250,8 @@ export default function App() {
     try {
       localStorage.setItem('vue3d_gpu_backend', backend);
     } catch (_) {}
+    const desktop = window as Window & { ipc?: { postMessage: (message: string) => void } };
+    desktop.ipc?.postMessage(`gpu:${backend}`);
   };
 
   // Layer Material & PBR Settings Modal

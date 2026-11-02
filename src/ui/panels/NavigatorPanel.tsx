@@ -85,7 +85,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current || undefined,
       antialias: true,
-      powerPreference: 'low-power',
+      powerPreference: 'high-performance',
     });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.2));

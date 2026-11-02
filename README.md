@@ -7,36 +7,27 @@
 
 ---
 
-## 1. Quick Start: Standalone Offline Desktop (No Compiler Needed)
+## 1. Quick Start: Windows Application (No Server)
 
-The standalone desktop package (`VUE_3D_Canvas_Standalone_Desktop_Win64.zip` or folder `dist/standalone_desktop/`) is a **100% self-contained, pre-compiled Windows workstation**.
+Download the artifact from the **Build Windows Application** workflow, or build it on a Windows machine with `scripts\build_standalone_desktop.bat`.
 
-### Where to Extract:
-> [!IMPORTANT]
-> **You do NOT need to move this to your user home folder.**
-> The application is 100% portable. You can extract and run it from **any folder or drive of your choice**:
-> - Your **Desktop** (e.g., `C:\Users\<Name>\Desktop\VUE_3D_Canvas`)
-> - A **USB Flash Drive** (e.g., `E:\VUE_3D_Canvas`)
-> - An Applications directory (e.g., `C:\Apps\VUE_3D_Canvas`)
-> - A Secondary Drive (e.g., `D:\Tools\VUE_3D_Canvas`)
->
-> It does not write to the Windows Registry, does not pollute `%USERPROFILE%`, and requires no administrative privileges.
+Extract the whole zip. Keep `vue_3d_canvas.exe` and the `ui` folder side by side, then double-click the exe.
 
-### How to Launch:
-Inside the extracted folder, choose your preferred launcher:
+- The painting programme opens in its own window. There is no localhost server and no console menu.
+- WebGL runs through ANGLE on DirectX 11. Start the exe with `--opengl` for the OpenGL path.
+- Windows 11 includes WebView2. Windows 10 needs the Evergreen WebView2 Runtime if the window does not appear. Failures are written to `vue3d-startup-error.log` beside the exe.
 
-1. **Direct Executable (`vue_3d_canvas.exe`):**
-   - Double-click `vue_3d_canvas.exe`.
-   - The application starts its embedded zero-overhead loopback stream server and launches directly in a **clean, chromeless desktop window** (`--app` mode).
-   - No browser tabs, no address bar, and **zero blank screens** (completely bypasses `file://` CORS restrictions).
+You can extract it anywhere, including the Desktop or a USB drive. It does not write to the registry.
 
-2. **1-Click Batch Launcher (`VUE_3D_Canvas.bat`):**
-   - Double-click `VUE_3D_Canvas.bat`.
-   - Automatically executes `vue_3d_canvas.exe` (with a built-in background PowerShell streaming fallback).
+### Launch from a checkout on Windows
 
-3. **Diagnostic Launcher (`VUE_3D_Canvas_Diagnostic.bat`):**
-   - Double-click `VUE_3D_Canvas_Diagnostic.bat`.
-   - Opens a console window that checks graphics hardware accelerators, detects GPU adapter vendor & renderer, verifies DirectX 11 / OpenGL pipelines, checks core assets, and displays live runtime logs.
+```powershell
+npm install
+npm run build
+cargo build --release --bin vue_3d_canvas
+```
+
+Place `target\release\vue_3d_canvas.exe` next to a `ui` folder that contains `dist`'s `index.html` and `assets`. `scripts\build_standalone_desktop.bat` does that for you.
 
 ---
 
@@ -107,38 +98,30 @@ You can switch the graphics rendering backend at any time directly from the top 
 
 ---
 
-## 4. Package Contents (`VUE_3D_Canvas_Standalone_Desktop_Win64.zip`)
+## 4. Package Contents (`VUE_3D_Canvas_Windows.zip`)
 
 ```
-VUE_3D_Canvas_Standalone_Desktop_Win64/
-├── vue_3d_canvas.exe              # 64-bit Windows Native Application Runner
-├── VUE_3D_Canvas.bat              # 1-Click GUI Desktop Launcher
-├── VUE_3D_Canvas_Diagnostic.bat   # Hardware Diagnostics & Console Launcher
-├── README_STANDALONE.txt          # Offline Quick Start Manual
-├── index.html                     # Application Frontend Entry
-└── assets/
-    ├── index-*.js                 # Complete VUE 3D Canvas Application Bundle
-    ├── index-*.css                # Photoshop CS5 Dark Theme Stylesheet
-    └── signature.svg              # Open-Source Creator Attribution
+VUE_3D_Canvas_Windows/
+├── vue_3d_canvas.exe     # Native window. No server.
+├── README.txt
+└── ui/
+    ├── index.html        # Painting application entry
+    └── assets/           # The compiled React / Three.js programme
 ```
 
 ---
 
-## 5. Developer & Source Compilation (Optional)
-
-If modifying source code or compiling from scratch:
+## 5. Developer Build
 
 ```bash
-# 1. Compile web client assets
 npm install
 npm run build
+```
 
-# 2. Compile native Windows executable runner (via MinGW)
-x86_64-w64-mingw32-gcc -O3 native_runner/vue_3d_canvas.c \
-  -o native_runner/vue_3d_canvas.exe -lws2_32 -lshlwapi -mwindows
+The Windows window is compiled on Windows, or by the manual GitHub Action **Build Windows Application** (Actions → Run workflow). That job fails if `dist/index.html` or the JavaScript bundle is missing, so it cannot upload a console stub in their place.
 
-# 3. Build standalone distribution folder & ZIP
-./scripts/build_standalone_desktop.sh
+```powershell
+cargo build --release --bin vue_3d_canvas
 ```
 
 ---

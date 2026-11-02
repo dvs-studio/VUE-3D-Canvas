@@ -1,5 +1,7 @@
 # VUE 3D Canvas - Windows Compilation Guide (VS Code Edition)
 
+**The build that produces the application is the manual GitHub Action `Build Windows Application` (`.github/workflows/build-windows-app.yml`), or `scripts\build_standalone_desktop.bat` on Windows.** It compiles the painting UI and a native window. It does not zip a console demo. Sections below that mention `python_desktop/`, `native_c/`, or older Actions are retired and must not be followed.
+
 **Author / Creator:** Victory Ukpong  
 **Project:** VUE 3D Canvas  
 **Target Environment:** Visual Studio Code (VS Code)  
@@ -80,14 +82,8 @@ The resulting binary is located at:
 target\release\vue_3d_canvas.exe
 ```
 
-#### C. Run the Native Executable
-```powershell
-# Run benchmark
-.\target\release\vue_3d_canvas.exe --bench
-
-# Launch self-hosted native server on port 3000
-.\target\release\vue_3d_canvas.exe --serve 3000
-```
+#### C. Run the Windows application
+Copy `dist\index.html` and `dist\assets` into a `ui` folder beside `target\release\vue_3d_canvas.exe`, then double-click the exe. `scripts\build_standalone_desktop.bat` does this. There is no `--serve` mode.
 
 #### D. Compile WASM Module
 ```powershell
@@ -125,46 +121,20 @@ All workflow artifacts are zipped and ready for direct download.
 
 For maximum portability across different Windows computers without requiring development runtimes, dedicated packaging tools create self-contained ZIP distributions bundling executables, runtime DLLs (`SDL2.dll`, `glew32.dll`, Qt platform runtimes), assets, and zero-dependency `.bat` launchers:
 
-### A. Native C Portable Windows ZIP (`native_c/`)
-- **One-Click Packager:** Run `native_c\package_windows.bat` (or `./native_c/package_windows.sh` in bash/CI).
-- **Output:** `native_c/dist/vue3d_native_c_win64_portable.zip`
-- **Contents:**
-  - `vue_3d_canvas_c.exe` (Stand-alone native C executable)
-  - `SDL2.dll` (Hardware windowing and multi-touch input)
-  - `glew32.dll` (OpenGL 2.0 / DirectX 11 GL driver)
-  - `assets/` (Open-source attribution and brush presets)
-  - `run_vue3d.bat` (Zero-dependency click-to-run launcher)
+### Retired
+`native_c/` and `python_desktop/` are not in this repository and are not build targets. Do not recreate their packagers.
 
-### B. Python Desktop Portable Windows ZIP (`python_desktop/`)
-- **One-Click Packager:** Run `python_desktop\package_windows.bat` or `python python_desktop/package_windows.py`.
-- **Output:** `python_desktop/dist/vue3d_python_win64_portable.zip`
-- **Contents:**
-  - `vue_3d_canvas_py.exe` / standalone Python runtime
-  - Qt / PyQt platform DLLs and libraries
-  - PyOpenGL, NumPy, and Pillow modules
-  - `assets/` and `vue3d/` modules
-  - `VUE_3D_Canvas.bat` (One-click portable launcher)
-
-### C. Web / Rust Core Desktop Portable ZIP (`scripts/`)
-- **One-Click Packager:** Run `scripts\package_windows_portable.bat` (or `./scripts/package_windows_portable.sh`).
-- **Output:** `dist/vue3d_win64_portable.zip`
-- **Contents:**
-  - `vue_3d_canvas.exe` / production web application
-  - `app/` pre-compiled production client workspace
-  - `assets/`
-  - `start_vue3d.bat` (Zero-dependency instant launcher)
+### C. Windows application folder (`scripts/`)
+- **On Windows:** `scripts\build_standalone_desktop.bat`
+- **Output:** `dist\VUE_3D_Canvas_Windows\vue_3d_canvas.exe` with a `ui` folder beside it
+- **GitHub:** Actions → Build Windows Application → Run workflow. Download `VUE_3D_Canvas_Windows.zip`.
 
 ---
 
-## 6. 100% Serverless Standalone Desktop Distribution (No Compilers & No Servers)
+## 6. Windows application folder
 
-For users who want to run the full VUE 3D Canvas graphical workstation immediately without installing Node, Cargo, MSVC, or any compilers, and without needing a localhost web server or `.htaccess`:
+`scripts\build_standalone_desktop.bat` writes `dist\VUE_3D_Canvas_Windows\`. Double-click `vue_3d_canvas.exe` in that folder. The `ui` folder must stay beside the exe. Do not launch `index.html` by itself, and do not use the removed diagnostic batch files. The same package is the artifact from the manual **Build Windows Application** workflow.
 
-### Staged Ready-to-Run Directory: `dist/standalone_desktop/`
-- **Launch Workstation (Clean GUI):** Double-click `dist\standalone_desktop\VUE_3D_Canvas.bat`. Opens the desktop workstation immediately with zero console window.
-- **Hardware Diagnostics & Troubleshooting:** Double-click `dist\standalone_desktop\VUE_3D_Canvas_Diagnostic.bat`. Prints GPU adapter information, DirectX 11 / OpenGL pipeline state, and execution logs.
-- **Single Downloadable ZIP:** `release/VUE_3D_Canvas_Standalone_Desktop_Win64.zip`.
-- **Building from Source:** Run `scripts\build_standalone_desktop.bat` (or `./scripts/build_standalone_desktop.sh`).
-- **GPU Backend Switching:** In the top Menu Bar, click **Help > Graphics Hardware Backend** to switch between DirectX 11 (Priority Mode), OpenGL 2.0+ (Compatibility Mode), and Modern Auto-Detect.
+The Help menu GPU switch writes `gpu-backend.txt` and restarts the window so ANGLE can change between DirectX 11 and OpenGL.
 
 
