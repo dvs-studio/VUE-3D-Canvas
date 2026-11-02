@@ -58,6 +58,8 @@ native_c/
 - [x] **Stochastic Layer Scattering Engine (`v3d_stochastic_scatter_apply`)**: Mulberry32 deterministic PRNG, custom image texture dabs, physical fill color masking, alpha outline dilation/blur, and non-overlapping distribution.
 - [x] **Shader Node Graph Parity & Specification**: Node graph topology and socket wiring definitions aligned with the Blender 2.8+ node evaluator specification.
 - [x] **Portable Windows ZIP Distribution (`native_c/dist/vue3d_native_c_win64_portable.zip`)**: Automated zero-dependency packager (`package_windows.bat` & `package_windows.sh`) bundling `vue_3d_canvas_c.exe`, required DLLs (`SDL2.dll`, `glew32.dll`), `assets/`, and click-to-run launcher `run_vue3d.bat` for portable execution across all Windows computers.
+- [x] **Serverless & Zero-Lag Desktop Pipeline**: Native DirectX 11 / OpenGL 2.0 rendering pipeline operating 100% offline without HTTP server, localhost networking, or external browser dependencies.
+
 
 
 

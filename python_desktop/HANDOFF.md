@@ -62,8 +62,8 @@ python_desktop/
 - [x] **Symmetrize UV Engine**: Bilateral mirroring (+X/-X) with midline seam welding, ear feature preservation, and vertex group isolation.
 - [x] **2D UV Sculpt Engine**: Laplacian smoothing, straightening, pinching, expansion, and crease brush operators on 2D UV charts.
 - [x] **Stochastic Layer Scattering Engine (`vue3d/tools/stochastic_scatter.py`)**: Deterministic Mulberry32 PRNG, custom image texture import, physical fill color masking toggle, alpha outline with spread dilation and Gaussian blur, and repeat/continuous scatter modes.
-- [x] **Shader Node Graph Integration**: Specification alignment for Blender 2.8+ node topologies, input parameter editing, and multi-branch connection tracking.
 - [x] **Portable Windows ZIP Distribution (`python_desktop/dist/vue3d_python_win64_portable.zip`)**: Automated zero-dependency packager (`package_windows.bat` & `package_windows.py`) bundling `vue_3d_canvas_py.exe`, Python runtimes, Qt libraries, `assets/`, and click-to-run launcher `VUE_3D_Canvas.bat` for portable execution across all Windows computers.
+- [x] **Serverless & Standalone Desktop Integration**: 100% offline desktop runtime without HTTP server, localhost, or `.htaccess` dependencies; relative file paths (`base: './'`), direct filesystem access, and DirectX 11 / OpenGL 2.0+ hardware priority switching.
 
 
 

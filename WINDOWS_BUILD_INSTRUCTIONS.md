@@ -154,3 +154,17 @@ For maximum portability across different Windows computers without requiring dev
   - `assets/`
   - `start_vue3d.bat` (Zero-dependency instant launcher)
 
+---
+
+## 6. 100% Serverless Standalone Desktop Distribution (No Compilers & No Servers)
+
+For users who want to run the full VUE 3D Canvas graphical workstation immediately without installing Node, Cargo, MSVC, or any compilers, and without needing a localhost web server or `.htaccess`:
+
+### Staged Ready-to-Run Directory: `dist/standalone_desktop/`
+- **Launch Workstation (Clean GUI):** Double-click `dist\standalone_desktop\VUE_3D_Canvas.bat`. Opens the desktop workstation immediately with zero console window.
+- **Hardware Diagnostics & Troubleshooting:** Double-click `dist\standalone_desktop\VUE_3D_Canvas_Diagnostic.bat`. Prints GPU adapter information, DirectX 11 / OpenGL pipeline state, and execution logs.
+- **Single Downloadable ZIP:** `release/VUE_3D_Canvas_Standalone_Desktop_Win64.zip`.
+- **Building from Source:** Run `scripts\build_standalone_desktop.bat` (or `./scripts/build_standalone_desktop.sh`).
+- **GPU Backend Switching:** In the top Menu Bar, click **Help > Graphics Hardware Backend** to switch between DirectX 11 (Priority Mode), OpenGL 2.0+ (Compatibility Mode), and Modern Auto-Detect.
+
+

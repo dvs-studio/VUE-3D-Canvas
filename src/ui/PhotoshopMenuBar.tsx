@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check, Stamp } from 'lucide-react';
+import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check, Stamp, Cpu } from 'lucide-react';
 import { ThemeMode } from '../core/types';
 
 interface PhotoshopMenuBarProps {
@@ -50,6 +50,9 @@ interface PhotoshopMenuBarProps {
   onOpenPatternStampDialog?: () => void;
   onImportBlenderMaterial?: () => void;
   onExportMultiChannelModel?: () => void;
+  gpuBackend?: 'dx11' | 'opengl' | 'modern';
+  onChangeGpuBackend?: (backend: 'dx11' | 'opengl' | 'modern') => void;
+  onOpenGpuDiagnostics?: () => void;
 }
 
 export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
@@ -93,6 +96,9 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onOpenPatternStampDialog,
   onImportBlenderMaterial,
   onExportMultiChannelModel,
+  gpuBackend = 'dx11',
+  onChangeGpuBackend,
+  onOpenGpuDiagnostics,
 }) => {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
@@ -562,6 +568,45 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                       {currentTheme === th.id && <Check className="w-3 h-3 text-white" />}
                     </button>
                   ))}
+                </>
+              )}
+
+              {/* Graphics Hardware Backend Switcher */}
+              {onChangeGpuBackend && (
+                <>
+                  <div className="my-1 border-t border-[#444]" />
+                  <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider flex items-center gap-1">
+                    <Cpu className="w-3 h-3 text-[#3d7fb8]" />
+                    GRAPHICS HARDWARE BACKEND
+                  </div>
+                  {[
+                    { id: 'dx11', label: 'DirectX 11 (D3D11 - Priority)' },
+                    { id: 'opengl', label: 'OpenGL 2.0+ / Desktop GL' },
+                    { id: 'modern', label: 'Modern Auto-Detect (DX12/VK)' },
+                  ].map((backend) => (
+                    <button
+                      key={backend.id}
+                      onClick={() => { onChangeGpuBackend(backend.id as any); close(); }}
+                      className={`w-full text-left px-3 py-1 flex items-center justify-between text-[11px] ${
+                        gpuBackend === backend.id
+                          ? 'bg-[#3d7fb8] text-white font-medium'
+                          : 'hover:bg-[#444] text-[#eee]'
+                      }`}
+                      title={backend.id === 'dx11' ? 'DirectX 11 Compatibility Priority Mode' : backend.label}
+                    >
+                      <span>{backend.label}</span>
+                      {gpuBackend === backend.id && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                  ))}
+                  {onOpenGpuDiagnostics && (
+                    <button
+                      onClick={() => { onOpenGpuDiagnostics(); close(); }}
+                      className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between text-[#89b4fa] mt-0.5"
+                    >
+                      <span>GPU Hardware Diagnostics...</span>
+                      <span className="text-[9px] font-mono bg-[#3d7fb8]/30 px-1 rounded">INFO</span>
+                    </button>
+                  )}
                 </>
               )}
 

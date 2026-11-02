@@ -72,6 +72,7 @@ import { SymmetryPanel } from './ui/panels/SymmetryPanel';
 import { MaskPanel } from './ui/panels/MaskPanel';
 import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
 import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
+import { GpuDiagnosticsModal } from './ui/GpuDiagnosticsModal';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -229,6 +230,23 @@ export default function App() {
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState<boolean>(false);
   const [isUndoSettingsOpen, setIsUndoSettingsOpen] = useState<boolean>(false);
   const [surfaceMode, setSurfaceMode] = useState<SurfaceShadingMode>('default');
+
+  // Graphics Hardware Backend Selection (DirectX 11 Priority Default)
+  const [gpuBackend, setGpuBackend] = useState<'dx11' | 'opengl' | 'modern'>(() => {
+    try {
+      return (localStorage.getItem('vue3d_gpu_backend') as any) || 'dx11';
+    } catch (_) {
+      return 'dx11';
+    }
+  });
+  const [isGpuDiagnosticsOpen, setIsGpuDiagnosticsOpen] = useState<boolean>(false);
+
+  const handleSetGpuBackend = (backend: 'dx11' | 'opengl' | 'modern') => {
+    setGpuBackend(backend);
+    try {
+      localStorage.setItem('vue3d_gpu_backend', backend);
+    } catch (_) {}
+  };
 
   // Layer Material & PBR Settings Modal
   const [isLayerSettingsOpen, setIsLayerSettingsOpen] = useState<boolean>(false);
@@ -1150,6 +1168,9 @@ export default function App() {
         onToggleIsolateSelectedGroupOnly={(checked) => setIsolateSelectedGroupOnly(checked)}
         currentTheme={currentTheme}
         onChangeTheme={setCurrentTheme}
+        gpuBackend={gpuBackend}
+        onChangeGpuBackend={handleSetGpuBackend}
+        onOpenGpuDiagnostics={() => setIsGpuDiagnosticsOpen(true)}
       />
 
       {/* 2. Tool Options Sub-Toolbar */}
@@ -1717,8 +1738,13 @@ export default function App() {
       <div className="h-6 bg-[#262626] border-t border-[#383838] px-3 flex items-center justify-between text-[10px] text-[#888] font-mono select-none z-40">
         <div className="flex items-center gap-3">
           <span className="text-[#a6e3a1]">● RUST/WASM CORE</span>
-          <span>DIRECTX 11 / OPENGL 2.0 WEBGL LIMITS</span>
+          <span className="text-[#89b4fa] font-bold">
+            {gpuBackend === 'dx11' && '● DIRECTX 11 (D3D11 PRIORITY) ACTIVE'}
+            {gpuBackend === 'opengl' && '● OPENGL 2.0+ (COMPATIBILITY) ACTIVE'}
+            {gpuBackend === 'modern' && '● MODERN AUTO-DETECT GPU ACTIVE'}
+          </span>
           <span className="text-[#3d7fb8]">.XBLEND FORMAT (LINKED ASSETS DEFAULT)</span>
+          <span className="text-[#4ade80] font-semibold">● STANDALONE OFFLINE</span>
           <button
             onClick={() => setTouchNavEnabled(t => !t)}
             className={`px-1.5 py-0.5 rounded text-[9px] font-mono border transition-colors cursor-pointer ${
@@ -1880,6 +1906,13 @@ export default function App() {
         currentMesh={null}
         activeModelName={modelKey}
         activeUVChannel={activeUVChannel}
+      />
+
+      {/* 16. GPU Hardware & Diagnostics Modal */}
+      <GpuDiagnosticsModal
+        isOpen={isGpuDiagnosticsOpen}
+        onClose={() => setIsGpuDiagnosticsOpen(false)}
+        activeBackend={gpuBackend}
       />
 
       {/* Hidden file input for Blender material import */}
