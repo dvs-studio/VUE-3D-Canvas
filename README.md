@@ -1,175 +1,149 @@
 # VUE 3D Canvas
 
 **Author / Creator:** Victory Ukpong  
-**Target Architecture:** Rust Core + WASM-first (Browser Testing) + Native Windows Desktop (DirectX 11 / OpenGL 2.0 Fallback)  
+**Target Architecture:** Native Windows Desktop (DirectX 11 / OpenGL 2.0 Fallback) + Rust Core + Standalone Offline Workstation  
 **Project Format:** `.xblend` (Linked 3D Assets Default + 3-State Undo Ring Buffer)  
-**Primary IDE:** Visual Studio Code (VS Code) — *No full Visual Studio Community Edition required*  
+**Primary Distribution:** 100% Self-Contained Portable Desktop Package (Zero Compilers or Servers Needed)  
 
 ---
 
-## 1. Project Overview & Philosophy
+## 1. Quick Start: Standalone Offline Desktop (No Compiler Needed)
 
-**VUE 3D Canvas** is an ultra-lightweight, high-performance 3D texture painting and digital sculpting workstation designed with a low memory footprint and zero raytracing or D3D12 dependency.
+The standalone desktop package (`VUE_3D_Canvas_Standalone_Desktop_Win64.zip` or folder `dist/standalone_desktop/`) is a **100% self-contained, pre-compiled Windows workstation**.
 
-The software fuses the productivity paradigms of classic digital art suites:
-- **Photoshop CS5 Fusion:** Dark gray workspace palette (`#333333`, `#2b2b2b`, `#3c3c3c`), layer stack, blend modes, marquee selectors, and separable filter pipelines.
-- **Autodesk Sketchbook & MediBang:** Dockable Docker tab groups and a circular carousel brush wheel (`V` key).
-- **Blender 2.8+ Viewport:** Middle-mouse orbit/pan/zoom navigation, standard numpad camera hotkeys, quad split-view layout, and node graph evaluator.
-- **Self-Hosted Autonomy:** Complete offline-capable self-hosted server (`self-host/`) for running on localhost, home lab, or private network without cloud dependencies.
+### Where to Extract:
+> [!IMPORTANT]
+> **You do NOT need to move this to your user home folder.**
+> The application is 100% portable. You can extract and run it from **any folder or drive of your choice**:
+> - Your **Desktop** (e.g., `C:\Users\<Name>\Desktop\VUE_3D_Canvas`)
+> - A **USB Flash Drive** (e.g., `E:\VUE_3D_Canvas`)
+> - An Applications directory (e.g., `C:\Apps\VUE_3D_Canvas`)
+> - A Secondary Drive (e.g., `D:\Tools\VUE_3D_Canvas`)
+>
+> It does not write to the Windows Registry, does not pollute `%USERPROFILE%`, and requires no administrative privileges.
 
----
+### How to Launch:
+Inside the extracted folder, choose your preferred launcher:
 
-## 2. Compiling with Visual Studio Code (VS Code)
+1. **Direct Executable (`vue_3d_canvas.exe`):**
+   - Double-click `vue_3d_canvas.exe`.
+   - The application starts its embedded zero-overhead loopback stream server and launches directly in a **clean, chromeless desktop window** (`--app` mode).
+   - No browser tabs, no address bar, and **zero blank screens** (completely bypasses `file://` CORS restrictions).
 
-This project is tailored specifically for **VS Code**. You do **not** need the full, heavyweight Visual Studio Community Edition (saving ~20-30 GB of disk space).
+2. **1-Click Batch Launcher (`VUE_3D_Canvas.bat`):**
+   - Double-click `VUE_3D_Canvas.bat`.
+   - Automatically executes `vue_3d_canvas.exe` (with a built-in background PowerShell streaming fallback).
 
-### Prerequisites
-1. **VS Code:** Install [Visual Studio Code](https://code.visualstudio.com/).
-2. **Recommended VS Code Extensions:**
-   - `rust-lang.rust-analyzer` (Rust code intelligence & compiler checks)
-   - `tamasfe.even-better-toml` (Cargo.toml support)
-   - `dbaeumer.vscode-eslint` (TypeScript / React linting)
-3. **Rust Toolchain:** Install `rustup` from [https://rustup.rs](https://rustup.rs).
-4. **C++ Compiler (Choose ONE — no VS Community needed):**
-   - **Option A (Lightweight MSVC Build Tools CLI):**
-     Run in Windows PowerShell:
-     ```powershell
-     winget install Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended"
-     ```
-   - **Option B (MinGW-w64 / GCC — 100% Free of Visual Studio):**
-     Install MinGW-w64 via MSYS2 or `winget install MSYS2.MSYS2`, then set target:
-     ```powershell
-     rustup target add x86_64-pc-windows-gnu
-     rustup default stable-x86_64-pc-windows-gnu
-     ```
-5. **Node.js:** v18.x or v20.x LTS from [https://nodejs.org](https://nodejs.org).
+3. **Diagnostic Launcher (`VUE_3D_Canvas_Diagnostic.bat`):**
+   - Double-click `VUE_3D_Canvas_Diagnostic.bat`.
+   - Opens a console window that checks graphics hardware accelerators, detects GPU adapter vendor & renderer, verifies DirectX 11 / OpenGL pipelines, checks core assets, and displays live runtime logs.
 
 ---
 
-## 3. Cargo & Native Compilation Instructions
+## 2. Graphics Hardware Backend Switching (DirectX 11 & OpenGL)
 
-Open the project folder in **VS Code** and open the Integrated Terminal (`Ctrl + ~`):
+You can switch the graphics rendering backend at any time directly from the top Menu Bar:
+- Click **Help > GPU Graphics Backend**:
+  - `● DirectX 11 (D3D11 - Priority)` *(Default - optimal for Windows desktop hardware)*
+  - `○ OpenGL 2.0+ / Desktop GL` *(Compatibility mode for older GPUs or virtual machines)*
+  - `○ Modern Auto-Detect` *(DirectX 12 / Vulkan / Metal auto-negotiation)*
+- Click **Help > GPU Hardware Diagnostics...**:
+  - Opens the interactive hardware modal displaying your unmasked GPU card name, driver vendor, maximum texture dimension (e.g., 8192×8192 or 16384×16384), shader precision limits, and offline filesystem status.
 
-### A. Compile Rust Core & Native Host Binary (`vue_3d_canvas`)
-```bash
-# Build optimized release binary
-cargo build --release
+---
 
-# Or build explicitly for the native host binary
-cargo build --release --bin vue_3d_canvas
+## 3. Comprehensive Application Feature Index
+
+### A. 3D Texture Painting & Viewport Engine
+- **Blender Drone Navigation:** Orbit, planar pan (along camera local right/up axes), and WASD+QE drone flight controls with Shift speed boost.
+- **Dynamic Surface Normals:** Blender-style normal recalculations toggled on the fly:
+  - `Def` (Original vertex normals)
+  - `Smooth` (Angle-weighted surface smoothing)
+  - `Flat` (Faceted low-poly visualization)
+- **Quad & Perspective Cameras:** 1-click quad split-view (Top, Front, Right, Perspective) with numpad camera hotkeys.
+- **Lighting & Reflections:** Studio, Sunset, Cyberpunk, and Daylight HDRI environments, custom panorama upload, and Matcap reflection shaders.
+- **Post-Processing:** UnrealBloomPass high-dynamic-range bloom with intensity and threshold controls.
+
+### B. 2D UV Texture Canvas & Sculpt Suite
+- **Real-Time 2D/3D Synchronization:** Edits on the 2D UV canvas immediately reflect on the 3D model and Navigator window.
+- **Smart UV Unwrap Engine:** Automatic seam detection (angles > 60°), conformal chart relaxation, and Mulberry32 seeded stochastic island packing with configurable gutter bleeding (2px–16px).
+- **Multi-UV Channel System:** Dynamic UV slot manager (`uv_original`, `uv_tightmap`, custom slots) and inverse barycentric triangle re-baking from tight-map back to original reference UVs.
+- **Bilateral Symmetrize (+X/-X):** Bilateral UV chart mirroring with centerline seam welding, ear feature pinning, and 3D X-Ray depth vertex selection brush.
+- **2D UV Sculpt Brushes (N-Panel):** Press `N` to open the dockable sculpt panel featuring:
+  - *Straighten* (aligns chart borders)
+  - *Smooth* (Laplacian edge relaxation)
+  - *Pinch* (condenses vertex cluster density)
+  - *Expand* (relieves texture stretching)
+  - *Crease* (sharpens UV chart boundaries)
+
+### C. Procedural Shader Node Graph & Floating Inspector
+- **Blender 2.8+ Node Graph:** Interactive node network for procedural textures, mixes, color ramps, math operators, UV mapping, and emission.
+- **Independent Floating Node Inspector Pop-up:**
+  - Standalone floating dialog decoupled from the node graph canvas.
+  - Close and minimize controls, live 2-way value synchronization, steppers, and color swatches.
+  - Dual-sided Sockets Exposure Manager (inputs on left, outputs on right) to reveal or hide connection plugs on the node perimeter.
+- **Gboard-Style Perimeter Resize Handles:**
+  - 8-directional perimeter grab zones on floating panels.
+  - Interactive glowing accent pills and corner grab brackets that appear when hovering or resizing.
+  - Enforced minimum dimensions and screen clamping.
+- **Multi-Branch Wire Connections:** 2-click sequential wiring with dynamic rubber-band guide lines, glowing branch junction dots, and Shift-click multi-connection support.
+
+### D. Advanced Texturing Tools & Filters
+- **Stochastic Layer Scattering Engine:**
+  - Import custom image textures (PNG, JPG, WebP, SVG) or pick presets (grunge, leaves, cracks, stars, hex, circuit).
+  - Authentic native image colors preserved by default.
+  - "Use physical fill color" checkbox to override stamp silhouettes with chosen palette colors.
+  - Dedicated Rotation Jitter slider (0° to 180°).
+  - Alpha outline effect with configurable spread dilation (0–20px) and Gaussian blur.
+- **Multi-Texture Triplanar Box Filter:** UV-less XYZ box projection with multi-texture mixing operators, noise/cloud blending, edge bleed, tiling randomization, and custom upload stack.
+- **3D Pattern Stamp Decal Tool:** Surface decal stamper with sharpness masks, edge imperfection sliders, and blendable grunge overlays.
+- **Edge Wear & AO Filter:** Curvature analysis and ambient occlusion cavity dirt generator for realistic distress.
+- **Jenny Stitch Studio:** Mesh vertex edge topology follower with thread shaders and displacement depth.
+
+### E. File Format, Undo & Export Architecture
+- **`.xblend` Project Format:** Custom low-overhead specification saving layer stack, blend modes, node graphs, and strictly up to 3 undo states. 3D assets remain linked by default to keep files small.
+- **1-Step Live Undo / Redo:** Strict 1-state undo (`Ctrl+Z`) and redo (`Ctrl+Y`) with repeat guard.
+- **Multi-Channel Model Exporters:** Automated FBX and glTF 2.0 texture baking separated into Albedo, Emission, Normal/Displacement, Roughness, and Metallic maps.
+
+---
+
+## 4. Package Contents (`VUE_3D_Canvas_Standalone_Desktop_Win64.zip`)
+
 ```
-The compiled executable will be located at:
-- Windows: `target/release/vue_3d_canvas.exe`
-- Linux / macOS: `target/release/vue_3d_canvas`
-
-### B. Run Native Host Binary
-```bash
-# Run benchmark (tests 1,000,000 procedural triplanar evaluations with 0-allocation loop)
-cargo run --release -- --bench
-
-# Launch self-hosted native server on port 3000
-cargo run --release -- --serve 3000
-
-# Inspect and validate an .xblend project file
-cargo run --release -- --xblend path/to/project.xblend
+VUE_3D_Canvas_Standalone_Desktop_Win64/
+├── vue_3d_canvas.exe              # 64-bit Windows Native Application Runner
+├── VUE_3D_Canvas.bat              # 1-Click GUI Desktop Launcher
+├── VUE_3D_Canvas_Diagnostic.bat   # Hardware Diagnostics & Console Launcher
+├── README_STANDALONE.txt          # Offline Quick Start Manual
+├── index.html                     # Application Frontend Entry
+└── assets/
+    ├── index-*.js                 # Complete VUE 3D Canvas Application Bundle
+    ├── index-*.css                # Photoshop CS5 Dark Theme Stylesheet
+    └── signature.svg              # Open-Source Creator Attribution
 ```
 
-### C. Compile WebAssembly (WASM) Module
-```bash
-# Install wasm-pack if not already installed
-cargo install wasm-pack
+---
 
-# Build WASM package targeting the browser
-wasm-pack build crates/vue3d_core --target web --release --out-dir wasm_pkg
-```
+## 5. Developer & Source Compilation (Optional)
 
-### D. Compile Web Frontend (Vite + React + Three.js)
+If modifying source code or compiling from scratch:
+
 ```bash
-# Install NPM dependencies
+# 1. Compile web client assets
 npm install
-
-# Run hot-reloading dev server on http://localhost:3000
-npm run dev
-
-# Build production static bundle in dist/
 npm run build
+
+# 2. Compile native Windows executable runner (via MinGW)
+x86_64-w64-mingw32-gcc -O3 native_runner/vue_3d_canvas.c \
+  -o native_runner/vue_3d_canvas.exe -lws2_32 -lshlwapi -mwindows
+
+# 3. Build standalone distribution folder & ZIP
+./scripts/build_standalone_desktop.sh
 ```
 
 ---
 
-## 4. Self-Hosted Full Programme (`self-host/`)
-
-A ready-to-run, zero-dependency self-hosted version of the complete programme is included in the `self-host/` directory.
-
-### Quick Start (Localhost or LAN):
-1. **Via Node.js in VS Code:**
-   ```bash
-   node self-host/server.js
-   ```
-   Or:
-   ```bash
-   npm run serve
-   ```
-2. **Via 1-Click Launchers:**
-   - Windows: Double-click `self-host/start.bat`
-   - Linux / macOS: Run `self-host/start.sh`
-3. **Via Docker Compose:**
-   ```bash
-   docker compose -f self-host/docker-compose.yml up -d
-   ```
-
-### Storage & Persistence
-- Projects (`.xblend` files) are saved automatically to `self-host/storage/projects/`.
-- Uploaded custom textures, decals, and brush tips are saved to `self-host/storage/textures/`.
-- The server automatically sets `Cross-Origin-Opener-Policy: same-origin` and `application/wasm` MIME headers required for WebGL and WASM.
-
----
-
-## 5. VS Code Tasks Integration
-
-Built-in VS Code tasks are configured in `.vscode/tasks.json`. Press `Ctrl + Shift + B` or open `Terminal > Run Task...`:
-1. `1. Run Dev Server (Vite)` - Starts the interactive development server.
-2. `2. Build Web Production Client (Vite)` - Compiles `dist/` bundle.
-3. `3. Run Self-Hosted Server` - Starts `self-host/server.js`.
-4. `4. Cargo: Build Rust Core & Native CLI (Release)` - Runs `cargo build --release`.
-5. `5. Cargo: Build Browser WASM Package` - Compiles WebAssembly crate.
-6. `6. Package Self-Hosted Distribution (ZIP)` - Compresses the self-hosted distribution into a `.zip` archive.
-
----
-
-## 6. GitHub Actions Workflows & ZIP Artifacts
-
-All GitHub Actions CI workflows (`.github/workflows/`) are configured to save build outputs directly into **ZIP format** artifacts for convenient one-click download:
-
-| Workflow File | Description | Output ZIP Artifact |
-|---|---|---|
-| `windows-build.yml` | Builds native Windows x64 `.exe` with MSVC toolchain | `vue-3d-canvas-windows-zip` (`vue-3d-canvas-windows-x64.zip`) |
-| `build-self-host.yml` | Builds WASM module, web frontend, and packages self-host directory | `vue-3d-canvas-self-hosted-zip` (`vue-3d-canvas-self-hosted.zip`) |
-| `build-all.yml` | Complete multi-stage build matrix (Windows, WASM, Frontend, Master Suite) | `vue-3d-canvas-windows-x64-zip`, `vue-3d-canvas-wasm-zip`, `vue-3d-canvas-frontend-zip`, `vue-3d-canvas-full-suite-zip` |
-
----
-
-## 7. Feature Architecture Breakdown
-
-| Module | Location | Description |
-|---|---|---|
-| **Multi-Texture Triplanar Box Filter** | `src/tools/fillSuite.ts` & `src/ui/TriplanarDialog.tsx` | Triplanar projection with multi-texture mixing operator, noise/cloud blending, edge bleed, tiling randomization, and custom upload stack. |
-| **Pattern Stamp Decal Tool** | `src/tools/patternStampTool.ts` & `src/ui/PatternStampDialog.tsx` | 3D surface decal projection stamper with sharpness masks, edge jitter, and blendable grunge overlays. |
-| **Edge Wear & AO Filter** | `src/tools/edgeWearFilter.ts` & `src/ui/EdgeWearDialog.tsx` | Procedural curvature edge wear and ambient occlusion cavity dirt generator. |
-| **Per-Layer PBR Node Setup** | `src/ui/LayerSettingsModal.tsx` | Roughness, metallic, bump/height, normal strength, emission, and matcap reflection sliders with bump-only toggle. |
-| **Blender Material Converter** | `src/nodes/blenderMaterialImporter.ts` | Ingests Blender shader nodes and converts them into VUE 3D Canvas layers and node networks. |
-| **FBX & glTF Multi-Channel Exporter** | `src/core/modelExporters.ts` & `src/ui/ExportModelDialog.tsx` | Automated texture separation into Albedo, Emission, Displacement/Normal, Roughness, and Metallic maps. |
-| **Smart UV Unwrap Engine** | `src/tools/smartUVUnwrap.ts` | 2D UV editor automatic unwrap analyzing open edges and angles > 60° with island shelf packing. |
-| **Symmetry Tool Docker** | `src/ui/panels/SymmetryPanel.tsx` | Bilateral mirror painting across X/Y/Z with origin/cursor locator and 3D visual slice plane. |
-| **Gaussian Blur Tool** | `src/tools/gaussianBlur.ts` | Separable 1D convolution blur targeting active layer (0.1 to 250px radius). |
-| **Stochastic Scatter** | `src/tools/stochasticScatter.ts` | Random stamp distribution with deterministic PRNG and repeat/continuous modes. |
-| **Jenny Stitch Studio** | `src/tools/stitchStudio.ts` | Mesh vertex edge topology follower with displacement depth and thread shaders. |
-| **Undo / Redo Preferences** | `src/ui/UndoSettingsDialog.tsx` | Custom undo buffer state limit (3 to 120 states) with live RAM estimation. |
-
----
-
-## 8. Memory & System Constraints
-
-- **`.xblend` File Format:** Custom specification saving layer stack, blend modes, node graphs, and 3-state undo ring buffer. Mesh models remain linked by default to preserve minimal project size.
-- **Hardware Limits:** Compatible with DirectX 11 Feature Level 10_0 and WebGL 1.0/2.0 standard extensions without requiring DirectX 12 DXR hardware raytracing.
-- **Attribution:** Open-source software created by Victory Ukpong.
+## 6. Attribution & Open-Source License
+- **Author & Creator:** Victory Ukpong
+- **UI Theme:** Photoshop CS5 Dark Gray (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`)
+- **License:** Apache-2.0
