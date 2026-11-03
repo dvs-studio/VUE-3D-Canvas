@@ -4,8 +4,7 @@
  * 
  * High-performance, zero-dependency self-hosted distribution server for VUE 3D Canvas.
  * Features:
- * - High-speed static file serving for WebGL, WebAssembly, and React SPA
- * - Automatic application/wasm MIME mapping & Cross-Origin-Opener-Policy headers
+ * - High-speed static file serving for the built painter (ES modules, WebGL, wasm MIME)
  * - Local filesystem persistence for .xblend projects and custom textures
  * - Zero external npm dependencies: runs on any standard Node.js runtime (v18+)
  */
@@ -97,6 +96,11 @@ function parseBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function isInside(root, candidate) {
+  const rel = path.relative(root, candidate);
+  return rel === '' || (!rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel));
 }
 
 const server = http.createServer(async (req, res) => {
@@ -239,7 +243,7 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/storage/')) {
     const relPath = pathname.replace('/storage/', '');
     const safePath = path.normalize(path.join(STORAGE_DIR, relPath));
-    if (safePath.startsWith(STORAGE_DIR) && fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+    if (isInside(STORAGE_DIR, safePath) && fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
       const ext = path.extname(safePath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
       res.writeHead(200, { 'Content-Type': contentType, 'Access-Control-Allow-Origin': '*' });
@@ -256,14 +260,21 @@ const server = http.createServer(async (req, res) => {
   let filePath = path.normalize(path.join(PUBLIC_DIR, requestedFile));
 
   // Security: Prevent directory traversal
-  if (!filePath.startsWith(PUBLIC_DIR)) {
+  if (!isInside(PUBLIC_DIR, filePath)) {
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('403 Forbidden');
     return;
   }
 
-  // SPA Fallback: If file doesn't exist, serve index.html
+  // Missing real files must 404. Falling back to index.html for a .js URL
+  // makes the browser execute HTML and the painter stays blank.
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+    const askedExt = path.extname(requestedFile).toLowerCase();
+    if (askedExt && askedExt !== '.html') {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('404 Not Found');
+      return;
+    }
     filePath = path.join(PUBLIC_DIR, 'index.html');
   }
 
@@ -278,8 +289,6 @@ const server = http.createServer(async (req, res) => {
 
   const headers = {
     'Content-Type': contentType,
-    'Cross-Origin-Opener-Policy': 'same-origin',
-    'Cross-Origin-Embedder-Policy': 'require-corp',
     'X-Content-Type-Options': 'nosniff',
   };
 

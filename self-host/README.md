@@ -87,11 +87,11 @@ If you make modifications to the source code in `src/`:
    ```bash
    npm run build
    ```
-2. Copy the fresh build to `self-host/public/`:
+2. Copy the fresh build into this folder (this also deletes stale hashed bundles):
    ```bash
-   # Linux / macOS
-   cp -r dist/* self-host/public/
-
-   # Windows PowerShell
-   Copy-Item -Recurse -Force dist/* self-host/public/
+   npm run host:sync
    ```
+   `host:sync` runs `vite build`, then `scripts/sync_self_host.mjs`.
+
+This folder is the non-exe standalone. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat`. That starts Node and opens the painter in the browser. Keep `server.js` next to `public/`. Do not open `public/index.html` with `file://`; the ES module bundle will be a blank page.
+

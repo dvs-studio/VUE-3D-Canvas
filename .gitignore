@@ -8,4 +8,5 @@ coverage/
 *.log
 .env*
 !.env.example
+self-host/storage/
 

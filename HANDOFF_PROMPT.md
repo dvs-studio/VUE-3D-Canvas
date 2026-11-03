@@ -68,3 +68,7 @@ A Windows application, not a website:
 ## Status after 2026-11-03
 
 The esbuild peer conflict named in the 2026-11-03 pre-execution note is fixed. `package.json` pins `esbuild@^0.28.0`. `npm install` and `npm run build` were verified (`dist/index.html` and a JavaScript bundle). The manual Windows workflow has still not been clicked. Do not rebuild Python, native C, or a server. If Victory asks for the next step, it is Actions → Build Windows Application, then confirm the zip contains `vue_3d_canvas.exe` and `ui/` with `index.html` and the JS bundle.
+
+## Status after the self-hosted standalone
+
+Victory asked for a self-hosted app that is not the exe. That package is `self-host/`. `public/` now matches the painter build (`index-B-mwzPmH.js`). Start it with `node server.js` inside `self-host/`, `start.bat`, or `npm run host`. The Windows exe workflow is still manual and was not run. Do not recreate Python, native C, `native_runner/`, or the deleted GitHub workflows. Do not open the UI with `file://`.

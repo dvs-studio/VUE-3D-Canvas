@@ -126,7 +126,24 @@ cargo build --release --bin vue_3d_canvas
 
 ---
 
-## 6. Attribution & Open-Source License
+## 6. Self-hosted standalone (no exe)
+
+This is the package Victory can run without `vue_3d_canvas.exe`. It is the current painter, already built into `self-host/public/`. Node serves those files. It does not compile Rust and it does not open a WebView2 window.
+
+```bash
+cd self-host
+node server.js
+```
+
+Windows: double-click `self-host/start.bat`. Linux or macOS: `./start.sh`. Then use `http://localhost:3000`. Do not open `public/index.html` as a file.
+
+From the repository root, `npm run host` starts that server. `npm run host:sync` rebuilds `src/` and replaces `self-host/public/` so the folder cannot keep an old bundle.
+
+The Windows exe in section 1 is unchanged. This server is only the non-exe package.
+
+---
+
+## 7. Attribution & Open-Source License
 - **Author & Creator:** Victory Ukpong
 - **UI Theme:** Photoshop CS5 Dark Gray (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`)
 - **License:** Apache-2.0

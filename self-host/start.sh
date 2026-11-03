@@ -23,4 +23,10 @@ echo "Starting VUE 3D Canvas server on http://localhost:${PORT} ..."
 echo "Press Ctrl+C to terminate."
 echo ""
 
+if command -v xdg-open >/dev/null 2>&1; then
+  (sleep 0.6 && xdg-open "http://localhost:${PORT}" >/dev/null 2>&1) &
+elif command -v open >/dev/null 2>&1; then
+  (sleep 0.6 && open "http://localhost:${PORT}" >/dev/null 2>&1) &
+fi
+
 exec node server.js --port "${PORT}" --host "${HOST}"

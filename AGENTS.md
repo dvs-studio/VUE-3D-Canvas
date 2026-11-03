@@ -67,3 +67,10 @@
 - Victory asked for a self-hosted standalone that is not `vue_3d_canvas.exe`. The Windows window path stays. This note is the pre-edit bookend only.
 - `self-host/` already exists: zero-dependency `server.js`, `start.bat`, `start.sh`, Docker. Its `public/` still points at `assets/index-DOfcFx5E.js` and keeps several older bundles. That is not the painter verified today (`index-B-mwzPmH.js`).
 - This execution refreshes `self-host/public` from the current `npm run build`, keeps the server as the way that package opens, and does not add Python, native C, or a new GitHub workflow. The Windows exe workflow is not the target of this run.
+
+### 2026-11-03 — post-execution (self-hosted standalone, not the exe)
+- Pre-edit bookend is `77dec62`. The Windows window path was not changed and no workflow was added.
+- `self-host/public/` no longer keeps the old bundles (`index-DOfcFx5E.js` and the other stale hashes). `scripts/sync_self_host.mjs` copied the current build: `index.html`, `assets/index-B-mwzPmH.js` (1,443,254 bytes), and `assets/index-DxXuOCkG.css`. The bundle parses as JavaScript and contains the painter title.
+- `self-host/server.js` still has no npm dependencies. COOP/COEP `require-corp` was removed so the Google font links in `index.html` are not blocked. A missing `.js` URL now returns 404 instead of `index.html`, which was a blank-page failure. Path checks use `path.relative`.
+- Verified on Linux with `node self-host/server.js --port 4173`: `/` is `text/html`, the JS bundle is `application/javascript`, `/api/health` is online, `/api/projects/save` wrote `probe.xblend`, and the old bundle URL plus a `..` path returned 404 plain text, not the server source.
+- Launch without an exe: `self-host/start.bat` (opens the browser), `self-host/start.sh`, or `npm run host` from the repo root. `npm run host:sync` rebuilds and refreshes `public/`. Do not open `index.html` with `file://`.
