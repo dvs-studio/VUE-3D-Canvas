@@ -74,3 +74,7 @@
 - `self-host/server.js` still has no npm dependencies. COOP/COEP `require-corp` was removed so the Google font links in `index.html` are not blocked. A missing `.js` URL now returns 404 instead of `index.html`, which was a blank-page failure. Path checks use `path.relative`.
 - Verified on Linux with `node self-host/server.js --port 4173`: `/` is `text/html`, the JS bundle is `application/javascript`, `/api/health` is online, `/api/projects/save` wrote `probe.xblend`, and the old bundle URL plus a `..` path returned 404 plain text, not the server source.
 - Launch without an exe: `self-host/start.bat` (opens the browser), `self-host/start.sh`, or `npm run host` from the repo root. `npm run host:sync` rebuilds and refreshes `public/`. Do not open `index.html` with `file://`.
+
+### 2026-11-03 — pre-execution (native DirectX 11 / OpenGL window, other folder)
+- Victory asked for another folder: a Windows app written in Rust with direct DirectX and OpenGL access, not the WebView painter and not the self-host server. `.htaccess` cannot enable either API. This note is the pre-edit bookend only.
+- The WebView exe (`crates/vue3d_core`) and `self-host/` stay. This is not a D3D12 or ray-tracing programme, and it is not Python or C. No code for the new folder has been added yet.
