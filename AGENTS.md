@@ -48,5 +48,10 @@
 - Help → GPU backend writes `gpu-backend.txt` and restarts the exe. `Viewport3D` and `NavigatorPanel` request `powerPreference: 'high-performance'`.
 - Old workflows and `native_runner/` are deleted. The only workflow is `.github/workflows/build-windows-app.yml`, and it runs only when Victory clicks Run workflow.
 - `cargo check --target x86_64-pc-windows-msvc --bin vue_3d_canvas` finished clean on the Linux sandbox. The exe was not run here, so the first real proof is that GitHub artifact.
-- Landed as commit `e6e4169` on `main`.
+- Landed as commit `e6e4169` on `main`. Handover hash commit `9d133eb`.
+
+### 2026-11-03 — pre-execution (make the manual Windows build actually install)
+- No run of `.github/workflows/build-windows-app.yml` exists yet. It is still `workflow_dispatch` only.
+- The last push that still had the old workflows failed **Build Self-Hosted Full Programme** (`41471393718`) at `npm install`: `vite@8.3.5` wants optional peer `esbuild@^0.27 || ^0.28`, and the root `package.json` pins `esbuild@^0.25.0`. The Windows workflow uses the same `npm install`, so it would stop before compiling the window.
+- This execution only fixes that install conflict, confirms `npm run build` emits `dist/index.html` and a JavaScript bundle, then leaves the manual workflow able to package `vue_3d_canvas.exe` plus `ui/`. No Python desktop, no native C, no server.
 
