@@ -62,3 +62,8 @@
 - Verified here: `npm install` resolved `esbuild@0.28.2` and `vite@8.3.5` with no peer conflict. `npm run build` wrote `dist/index.html`, `dist/assets/index-B-mwzPmH.js` (1443 kB), and `dist/assets/index-DxXuOCkG.css`.
 - `package-lock.json` is added so `.github/workflows/build-windows-app.yml` `npm install` uses that tree. `bun.lock` was refreshed to `esbuild@0.28.2` as well. The workflow is still `workflow_dispatch` only. It was not run from this session.
 - `crates/vue3d_core/src/main.rs` still calls `desktop::run()` on Windows. The exe was not compiled here. No Python desktop, no native C, no server.
+
+### 2026-11-03 — pre-execution (self-hosted standalone, not the exe)
+- Victory asked for a self-hosted standalone that is not `vue_3d_canvas.exe`. The Windows window path stays. This note is the pre-edit bookend only.
+- `self-host/` already exists: zero-dependency `server.js`, `start.bat`, `start.sh`, Docker. Its `public/` still points at `assets/index-DOfcFx5E.js` and keeps several older bundles. That is not the painter verified today (`index-B-mwzPmH.js`).
+- This execution refreshes `self-host/public` from the current `npm run build`, keeps the server as the way that package opens, and does not add Python, native C, or a new GitHub workflow. The Windows exe workflow is not the target of this run.
