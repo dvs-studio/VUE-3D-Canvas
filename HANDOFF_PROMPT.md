@@ -64,3 +64,7 @@ A Windows application, not a website:
 | `.github/workflows/build-windows-app.yml` | Manual Windows package |
 | `XBLEND_FORMAT_SPECIFICATION.md` | Project format |
 | `self-host/` | Old Node hosting folder. Not the desktop product. |
+
+## Status after 2026-11-03
+
+The esbuild peer conflict named in the 2026-11-03 pre-execution note is fixed. `package.json` pins `esbuild@^0.28.0`. `npm install` and `npm run build` were verified (`dist/index.html` and a JavaScript bundle). The manual Windows workflow has still not been clicked. Do not rebuild Python, native C, or a server. If Victory asks for the next step, it is Actions → Build Windows Application, then confirm the zip contains `vue_3d_canvas.exe` and `ui/` with `index.html` and the JS bundle.

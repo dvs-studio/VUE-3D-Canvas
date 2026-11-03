@@ -124,3 +124,11 @@ Current Windows product:
 
 
 
+
+## 5. Superseding note — 2026-11-03 install pin
+
+The 2026-11-02 desktop window note still stands. This note only records the install fix that the 2026-11-03 pre-execution entry in `AGENTS.md` named.
+
+- Windows package path is unchanged: manual workflow `.github/workflows/build-windows-app.yml` builds `dist/` then `vue_3d_canvas.exe` and zips `vue_3d_canvas.exe` plus `ui/`.
+- The install blocker from run `41471393718` is fixed in `package.json`: `esbuild` is `^0.28.0`. Verified `npm install` (`esbuild@0.28.2`, `vite@8.3.5`) and `npm run build` (`dist/index.html` plus a JavaScript bundle).
+- Not yet proven: Victory clicking Run workflow, or a double-click of the exe on a Windows machine with WebView2.

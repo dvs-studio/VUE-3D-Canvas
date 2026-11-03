@@ -55,3 +55,10 @@
 - The last push that still had the old workflows failed **Build Self-Hosted Full Programme** (`41471393718`) at `npm install`: `vite@8.3.5` wants optional peer `esbuild@^0.27 || ^0.28`, and the root `package.json` pins `esbuild@^0.25.0`. The Windows workflow uses the same `npm install`, so it would stop before compiling the window.
 - This execution only fixes that install conflict, confirms `npm run build` emits `dist/index.html` and a JavaScript bundle, then leaves the manual workflow able to package `vue_3d_canvas.exe` plus `ui/`. No Python desktop, no native C, no server.
 
+
+### 2026-11-03 — post-execution (npm install conflict fixed)
+- Continued from the pre-execution note already on `main` as `6444fb9`. No painting code changed.
+- `package.json` devDependency `esbuild` is now `^0.28.0` (was `^0.25.0`). That range satisfies Vite 8's optional peer `esbuild@^0.27.0 || ^0.28.0` and `tsx`'s `esbuild@~0.28.0`.
+- Verified here: `npm install` resolved `esbuild@0.28.2` and `vite@8.3.5` with no peer conflict. `npm run build` wrote `dist/index.html`, `dist/assets/index-B-mwzPmH.js` (1443 kB), and `dist/assets/index-DxXuOCkG.css`.
+- `package-lock.json` is added so `.github/workflows/build-windows-app.yml` `npm install` uses that tree. `bun.lock` was refreshed to `esbuild@0.28.2` as well. The workflow is still `workflow_dispatch` only. It was not run from this session.
+- `crates/vue3d_core/src/main.rs` still calls `desktop::run()` on Windows. The exe was not compiled here. No Python desktop, no native C, no server.
