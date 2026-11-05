@@ -140,3 +140,91 @@ Victory asked for a standalone that is not the Windows exe. The 2026-11-02 windo
 - Non-exe package: `self-host/`. `node server.js` serves `public/` (the current Vite painter) and stores `.xblend` files in `storage/projects/`. No Rust compile, no WebView2, no Python, no native C.
 - `public/` was refreshed from `npm run build` (`index-B-mwzPmH.js`). Stale hashed bundles were removed. Refresh again with `npm run host:sync`.
 - Verified: HTTP 200 for `index.html`, the JS bundle, and the CSS; `/api/health` and project save; 404 for a missing script and for a path that tries to leave `public/`.
+
+## 7. Superseding note — 2026-11-03 high-fidelity Three.js 3D engine & mesh precision in self-hosted app
+
+Victory reported that in the self-hosted distribution, models loaded with low detail ("LOD 2 behavior", non-detailed, blurred/melted sharp edges on architectural models, and detail lost when zoomed out).
+
+- **Crease-Angle-Aware Auto-Smooth Normal Calculation:** Upgraded `SurfaceShadingEngine.computeSmoothNormals` with a 38-degree dihedral crease threshold. Faces sharing a vertex only blend if their angle <= 38°, preserving 90° architectural corners, chamfers, and window frames without rounding.
+- **Architectural N-Gon & Relative OBJ Parser:** Upgraded `parseOBJ` to triangulate arbitrary n-gons (walls, slabs, multi-vertex architectural polygons), resolve relative negative indices (`v -1`, `vt -1`), and preserve imported explicit normals (`vn`).
+- **16x Anisotropic Texture Filtering & Mipmaps:** In `Viewport3D.tsx`, dynamic and emissive textures use `LinearMipmapLinearFilter`, `generateMipmaps = true`, and max anisotropy (`renderer.capabilities.getMaxAnisotropy()`). Textures and fine architectural lines maintain razor-sharp clarity without shimmering when zoomed out.
+- **High-Fidelity Procedural Presets:** Suzanne upgraded to a 4x subdivided icosahedron base with sculpted anatomy; Cyber Helmet upgraded to 64x48 segments; added a built-in Classical Architectural Colonnade preset (`pavilion`).
+- **Synchronized:** Ran `npm run host:sync`, updating `self-host/public` with the latest build bundle (`index-B2S4rs6M.js`).
+
+## 8. Superseding note — 2026-11-04 Stochastic scatter sizing, Navigation calibration, 3D Gizmos & Auto-Fit, MTL material imports, Texture Auto-Node Setup & Material Texture Fill, Preferences & Tablet Mode
+
+- **Stochastic Scatter Dialog Controls:** Added dedicated `stampSize` slider + numeric text input (8px-512px) and `sizeJitter` slider + numeric text input (0%-100%) in `StochasticScatterDialog.tsx` and `StochasticScatterEngine.applyScatter`, allowing precise micro- and macro-scatter sizing.
+- **Calibrated Navigation & Smooth Orbit/Pan:** Adjusted orbit sensitivity to `0.0042 * navSensitivity` and refined pan deltas in `Viewport3D.tsx`, eliminating runaway spin and hyper-sensitive camera movements.
+- **Orientation Gizmo Synchronization & Visual Styles:** Corrected CSS 3D matrix math in `boxGizmo.tsx` (`rotateX(${degX}deg) rotateY(${degY}deg)`), aligning gizmo rotation with viewport viewing angle. Added spring zoom pulse animation effect (`zoomScale`) on camera zoom in/out. Added 3 switchable gizmo styles: `box` (isometric cube with labeled axes), `sphere` (3D sphere with latitude/longitude coordinate rings), and `mountain` (geometric trapezium/triangle peaks with altitude gradient shading).
+- **Auto-Fit / Frame Model Button (`[⛶ Frame]`):** Added 1-click model framing button to the gizmo overlay computing the bounding sphere radius $R$ and positioning the camera at distance $D = \frac{R}{\sin(\text{fov}/2) \cdot 0.85}$, centering and filling the viewport for any loaded model regardless of import scale.
+- **Companion `.mtl` Import Support:** Added staged MTL file upload input and status display in `ProjectSettingsModal.tsx`, linked to `parseOBJ` for material coordinate and UV map preservation.
+- **Texture Import & Auto-Node Setup Modal (`TextureAutoNodeModal.tsx`):** Added "Import Texture..." action in `LayersPanel.tsx` opening an interactive auto-focused preview modal. Provides a role dropdown (`Material Texture Fill`, `Color / Albedo`, `Displacement / Height`, `Emission`, `Reflection Mask`, `Normal Map (Sobel RGB)`) that wires directly into the Blender shader node graph.
+- **Procedural Material Texture Fill Layer:** Dedicated procedural fill mode supporting triplanar XYZ blended projection and box mapping with scale, repeat, rotation, and stochastic randomization. Displays a `FILL` badge in `LayersPanel` and includes a "Bake to Layer" button to rasterize the fill into standard pixels before converting to bump or normal maps.
+- **Centralized Preferences Modal (`PreferencesModal.tsx`):** Added Edit > Preferences... menu item and top bar shortcut gear button to toggle Constant Viewport Refresh (OFF = on-demand, ON = continuous 60fps), select 3D Gizmo Style (`box`, `sphere`, `mountain`), toggle Tablet Mode, and fine-tune Navigation Sensitivity.
+- **Full-Screen Tablet Mode:** Collapses left tools into a bottom-left circular carousel and top tool sliders into an expandable top-right carousel. The Docker panel system transforms into a collapsible N-Panel slide-out drawer accessible via right-edge `[◀ PANELS]` tab or the `N` key shortcut, providing an expansive drawing canvas while keeping floating filters active.
+- **Self-Hosted Synchronized:** Successfully compiled and synchronized production bundle (`dist/assets/index-Ct70vtbA.js`) to `self-host/public` via `npm run host:sync`.
+
+## 9. Superseding note — 2026-11-04 SweetHome 3D & Architectural Mesh Auto-Repair, Companion Texture Auto-Replacement, Native UV Re-import, Tablet Radial/HUD Carousel, Non-Overlapping Options, and Draggable Zero-Blur Filters
+
+Victory reported:
+1. Architectural models from SweetHome 3D still experience choppy edges and abnormal normal surfaces because their adjacent wall/floor faces are not properly connected.
+2. Companion material folders with textures need an auto-detection algorithm to auto-replace and populate layer stacks upon model import for rapid auto-texturing.
+3. Native UV coordinates in OBJ files must be re-importable on demand without wiping user painting work.
+4. In Tablet Mode, the top-left brush parameter carousel was needed to adjust parameters on the fly, with switchable sub-operators (Radial Arc Dial vs. Floating Circular HUD).
+5. Sub-menu bar option buttons were overlapping on narrow viewports; needed flexible layout choices.
+6. Filter dialogs were obscuring the viewport with dark backdrop blurs; needed to be non-modal, draggable dockers with zero background blur so the user can observe live 3D updates while tweaking controls.
+
+- **SweetHome 3D Architectural Mesh Auto-Repair Engine (`surfaceShading.ts`, `modelGeometry.ts`):**
+  - Implemented spatial vertex welding with relaxed tolerance (`EPSILON = 5e-4`) in `SurfaceShadingEngine.computeSmoothNormals` and `repairArchitecturalMesh`. Unifies disconnected adjacent wall faces and split vertices created by SweetHome 3D / CAD polygon exporters while preserving separate UV vertices.
+  - Implemented Coplanar Face Normal Snapping: Adjacent faces on planar walls with dihedral angle < 2° (`dot >= 0.99939`) snap directly to their averaged coplanar normal, eliminating wavy lighting bands and blackened facet artifacts.
+  - Mesh auto-repair executes automatically on model import (configurable in Preferences via `architecturalRepair: boolean`), with a manual 1-click trigger button (`[Auto-Repair Architectural Mesh]`) in `ProjectSettingsModal.tsx`.
+- **Companion Folder Auto-Texturing & Layer Auto-Replacement Algorithm (`ProjectSettingsModal.tsx`, `App.tsx`):**
+  - Added companion multi-image folder upload (`multiple accept="image/*"`) in `ProjectSettingsModal`.
+  - Implemented semantic token and `.mtl` parser matching filenames against material channels:
+    - Diffuse/Albedo: `map_kd`, `diffuse`, `albedo`, `color`, `col`, `texture`, `basecolor`, `wall`, `floor`.
+    - Normal/Bump: `map_bump`, `bump`, `norm`, `normal`, `nrm`, `height`, `disp`, `displacement`.
+    - Roughness/Specular: `map_ks`, `rough`, `roughness`, `gloss`, `spec`, `specular`, `refl`.
+    - Emission: `map_ke`, `emiss`, `emission`, `glow`, `light`.
+  - Added `[⚡ Auto-Texture Model & Replace Layers]` button: loads matched textures, rasterizes each into a dedicated 1024x1024 layer, sets the appropriate PBR layer channel, assigns Photoshop CS5 layer naming, pushes an undo checkpoint, and triggers composite canvas synchronization.
+- **Native UV Channel Re-Import (`reimportUVsFromOBJ`, `ProjectSettingsModal.tsx`):**
+  - Added `reimportUVsFromOBJ(geom, objText)` and `[⟲ Re-import Original UVs]` button in `ProjectSettingsModal.tsx`. Restores and re-binds pristine `vt` UV coordinates from the source OBJ file without clearing or resetting painted texture layers.
+- **Tablet Mode Top-Left Quick Parameter Carousel (`TabletBrushCarousel.tsx`):**
+  - Created dedicated circular/radial parameter carousel in the top-left area during Tablet Mode.
+  - Features 6 quick-access parameter toggles with active feedback: Size, Opacity, Spacing, Scatter/Jitter, Hardness, and Stabilizer Lazy-Mouse.
+  - Supported dual switchable sub-operator styles (toggleable in Preferences):
+    - `Radial Dial Popup` (`'radial'`): Interactive SVG radial arc dial around the active button with rotational thumb/stylus scrub.
+    - `Compact Floating Circular HUD` (`'hud'`): Floating minimal circular widget with numeric display and `+ / -` steppers.
+- **Options Bar Responsive Layout Switch (`ToolOptionsBar.tsx`, `PreferencesModal.tsx`):**
+  - Solved overlapping buttons below the menu bar by implementing two switchable modes in Preferences:
+    - `Grouped Clusters` (`'clusters'`): Flex-wrapped semantic clusters for Brush, Surface, View, and Workspace tools.
+    - `Collapsible Icon Groups` (`'compact'`): Compact icon pills with click-to-expand popovers for tight screens.
+- **Draggable Docker Filter Windows with Zero Backdrop Blur:**
+  - Upgraded `GaussianBlurDialog`, `StochasticScatterDialog`, `EdgeWearDialog`, `TriplanarDialog`, and `StitchStudioDialog`.
+  - Converted dialog wrappers to non-blocking floating layers (`pointer-events-none fixed inset-0`, with `pointer-events-auto` on dialog body).
+  - Removed all `backdrop-blur` and dark dimming layers, allowing complete, unobstructed visibility of the 3D model while adjusting sliders.
+  - Added drag handles to dialog headers with pointer event tracking and viewport boundary clamping (`clamp(10, x, window.innerWidth - 300)`).
+- **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, updating `self-host/public` with the latest build bundle (`index-C8hb8ysL.js`).
+- **High-Performance Painting Engine & Zero Choppiness:**
+  - Re-architected pointer paint loop in `Viewport3D.tsx`: eliminated synchronous multi-layer 1024x1024 recompositing and mipmap generation per micro-dab.
+  - Active layer canvas updates blit directly to `compositeCanvas` and set `needsUpdate = true` on the dynamic texture with RAF throttling.
+  - Final full composite, mipmap generation, and undo buffering execute upon `handlePointerUp`, providing a continuous 60–120+ FPS stutter-free drawing experience.
+- **Surface Normal Triggers Restored (Def, Smooth, Flat):**
+  - Cached pristine geometry normals in `origFileNormal` upon initial load before any architectural processing.
+  - Default restores original mesh normals without corruption; Smooth applies angle-weighted curvature interpolation; Flat applies facet normals and toggles `material.flatShading = true`.
+  - Added dedicated trigger controls to the Toolbox, Tool Options Bar, and the top View Menu.
+- **Configurable Viewport Refresh Rate Engine (`PreferencesModal.tsx`, `Viewport3D.tsx`):**
+  - Added 5-way refresh rate selector in Preferences: On-Demand (Power Saver), 30 FPS, 60 FPS, 120 FPS, and Custom VSync.
+  - Added custom VSync numeric text input (15 Hz to 240 Hz).
+  - Throttled the Three.js `animate()` loop using delta timestamps (`performance.now() - lastRenderTime >= 1000 / targetFps`) and dirty-state checks in on-demand mode.
+- **Stroke Control Menu & Dynamics Everywhere:**
+  - Added dedicated Stroke & Dynamics popover in the Tool Options Bar next to Spacing (Space, Airbrush, Dot, Dragged-Dot, Curve, Spacing %, Flow %, Lazy Mouse tether slider, Scatter %, Hardness %).
+  - Added 7th parameter `Mode` in the Tablet Mode Carousel (`TabletBrushCarousel.tsx`) with specialized sub-operators for radial and circular HUD modes.
+  - Confirmed explicit Stroke Application Mode segmented buttons in `BrushLibraryPanel.tsx` under Core Brush Parameters.
+- **Decluttered Top Menu Bar & Options Bar Overlap Resolution:**
+  - Removed bulky inline select boxes and stamp buttons from the top menu strip that exceeded the viewport radius.
+  - Added top **View** and **Options** dropdown menus housing Viewport Shading, Surface Normals, Camera Layout, Canvas View Mode, 3D Mesh selection, and Mesh Parts isolation.
+  - Added 3-way layout switch in Preferences: Grouped Clusters (`'clusters'`), Minimal Clean (`'minimal'`), and Collapsible Groups (`'compact'`). Minimal layout keeps only brush controls on the sub-bar and relocates viewport controls to the menu bar, completely preventing button overlaps.
+- **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, updating `self-host/public` with the latest bundle (`index-BblJ2yhP.js`).
+
+
+

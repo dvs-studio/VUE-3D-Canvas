@@ -27,7 +27,8 @@ import {
   ChevronDown,
   Sliders,
   Contrast,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 
 interface LayersPanelProps {
@@ -55,6 +56,8 @@ interface LayersPanelProps {
   onConvertToEmissive?: (layerId: string) => void;
   onInvertLayerColor?: (layerId: string) => void;
   onOpenLayerSettings?: (layerId: string) => void;
+  onImportTexture?: () => void;
+  onBakeTextureFill?: (layerId: string) => void;
 }
 
 const BLEND_MODES: BlendMode[] = [
@@ -94,6 +97,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onConvertToEmissive,
   onInvertLayerColor,
   onOpenLayerSettings,
+  onImportTexture,
+  onBakeTextureFill,
 }) => {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -249,10 +254,31 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 <div className="truncate font-medium text-[11px] leading-tight">
                   {layer.name}
                 </div>
-                <div className="text-[9px] text-[#888] font-mono">
-                  {layer.channel.toUpperCase()} · {layer.opacity}%
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[9px] text-[#888] font-mono">
+                    {layer.channel.toUpperCase()} · {layer.opacity}%
+                  </span>
+                  {layer.isTextureFill && (
+                    <span className="px-1 py-0.2 bg-amber-500/25 border border-amber-500 text-amber-300 text-[8px] font-bold rounded">
+                      FILL
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* Bake Texture Fill button */}
+              {layer.isTextureFill && onBakeTextureFill && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onBakeTextureFill(layer.id);
+                  }}
+                  className="px-1.5 py-0.5 bg-[#252525] hover:bg-amber-600 hover:text-black text-amber-300 rounded text-[9px] font-bold border border-amber-600/50 transition-colors shadow-xs"
+                  title="Bake procedural texture fill into standard pixel layer"
+                >
+                  Bake
+                </button>
+              )}
 
               {/* Lock toggle */}
               <button
@@ -303,6 +329,15 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          {onImportTexture && (
+            <button
+              onClick={onImportTexture}
+              className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#38bdf8] rounded border border-[#505050] transition-colors"
+              title="Import Texture (Auto-Node Setup / Material Texture Fill)..."
+            >
+              <Upload className="w-3.5 h-3.5" />
+            </button>
+          )}
           {onAddGroup && (
             <button
               onClick={onAddGroup}
@@ -399,7 +434,27 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             LAYER CONVERSIONS
           </div>
 
-          {onConvertToBump && (
+          {/* Bake Texture Fill option if layer is texture fill */}
+          {layers.find(l => l.id === contextMenu.layerId)?.isTextureFill && onBakeTextureFill && (
+            <button
+              onClick={() => {
+                onBakeTextureFill(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8] hover:text-white text-amber-300 font-bold flex items-center justify-between"
+            >
+              <span>Bake Texture Fill to Pixel Layer</span>
+              <span className="text-[9px] font-mono text-amber-400">RASTERIZE</span>
+            </button>
+          )}
+
+          {layers.find(l => l.id === contextMenu.layerId)?.isTextureFill && (
+            <div className="px-3 py-0.5 text-[9px] text-amber-300/80 italic leading-snug">
+              Bake layer first to enable bump/normal map conversions.
+            </div>
+          )}
+
+          {onConvertToBump && !layers.find(l => l.id === contextMenu.layerId)?.isTextureFill && (
             <button
               onClick={() => {
                 onConvertToBump(contextMenu.layerId);

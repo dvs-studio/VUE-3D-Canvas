@@ -25,6 +25,8 @@ export interface StochasticScatterConfig {
   secondaryColor?: string;
   colorJitter?: number; // 0.0 to 1.0
   rotationJitter?: number; // 0 to 180 degrees
+  stampSize?: number; // 8 to 512 px, default 64
+  sizeJitter?: number; // 0 to 100 percent, default 20
   opacity: number; // 1 to 100
   // Custom image texture & physical mask fill
   customImageElement?: HTMLImageElement | HTMLCanvasElement | null;
@@ -337,7 +339,8 @@ export class StochasticScatterEngine {
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    const baseStampSize = 96;
+    const userStampSize = config.stampSize && config.stampSize > 0 ? config.stampSize : 64;
+    const baseStampSize = Math.max(16, Math.min(512, userStampSize));
     const stampCanvas = this.createStampCanvas(
       config,
       baseStampSize,
@@ -385,13 +388,20 @@ export class StochasticScatterEngine {
         py = prng.next() * h;
       }
 
-      // Rotation & Scaling with Rotation Jitter
+      // Rotation & Scaling with Rotation Jitter and Size Jitter
       const rotBase = prng.nextRange(config.rotationMin, config.rotationMax);
       const rotJitter = config.rotationJitter && config.rotationJitter > 0
         ? prng.nextRange(-config.rotationJitter, config.rotationJitter)
         : 0;
       const rotRad = (rotBase + rotJitter) * radToDeg;
-      const scale = prng.nextRange(config.scaleMin, config.scaleMax);
+
+      // Scaling with Size Jitter
+      const baseScale = prng.nextRange(config.scaleMin, config.scaleMax);
+      const sizeJitterAmount = (config.sizeJitter ?? 0) / 100.0;
+      const sizeJitterFactor = sizeJitterAmount > 0
+        ? 1.0 + prng.nextRange(-sizeJitterAmount, sizeJitterAmount)
+        : 1.0;
+      const scale = Math.max(0.05, baseScale * sizeJitterFactor);
 
       const stampW = stampRenderWidth * scale;
       const stampH = stampRenderHeight * scale;

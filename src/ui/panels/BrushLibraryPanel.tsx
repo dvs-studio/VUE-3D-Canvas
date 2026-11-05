@@ -590,6 +590,36 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
               <span className="text-[#3d7fb8]">STANDARD</span>
             </div>
 
+            {/* Stroke Application Mode */}
+            <div className="space-y-1 bg-[#303030] p-2 rounded border border-[#444]">
+              <div className="flex justify-between text-[10px]">
+                <span className="text-[#aaa]">Stroke Application Mode</span>
+                <span className="text-[#fab387] font-mono capitalize">{activeBrush.strokeType || 'space'}</span>
+              </div>
+              <div className="grid grid-cols-5 gap-1 pt-0.5">
+                {[
+                  { id: 'space', label: 'Space' },
+                  { id: 'airbrush', label: 'Airbrush' },
+                  { id: 'dot', label: 'Dot' },
+                  { id: 'dragged-dot', label: 'Drag' },
+                  { id: 'curve', label: 'Curve' },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => onUpdateBrush({ strokeType: st.id as any })}
+                    className={`py-1 px-0.5 rounded text-[9.5px] font-mono font-medium border text-center transition-colors cursor-pointer ${
+                      (activeBrush.strokeType || 'space') === st.id
+                        ? 'bg-[#3d7fb8] text-white border-[#5ca2db] shadow-xs'
+                        : 'bg-[#202020] border-[#383838] text-[#aaa] hover:bg-[#282828] hover:text-white'
+                    }`}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Size */}
             <div className="space-y-1 bg-[#303030] p-2 rounded border border-[#444]">
               <div className="flex justify-between text-[10px]">

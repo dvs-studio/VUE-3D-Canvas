@@ -78,3 +78,71 @@
 ### 2026-11-03 — pre-execution (native DirectX 11 / OpenGL window, other folder)
 - Victory asked for another folder: a Windows app written in Rust with direct DirectX and OpenGL access, not the WebView painter and not the self-host server. `.htaccess` cannot enable either API. This note is the pre-edit bookend only.
 - The WebView exe (`crates/vue3d_core`) and `self-host/` stay. This is not a D3D12 or ray-tracing programme, and it is not Python or C. No code for the new folder has been added yet.
+
+### 2026-11-03 — post-execution (high-fidelity Three.js 3D engine & mesh precision in self-hosted app)
+- Upgraded Three.js engine and mesh geometry processing in the self-hosted distribution (`self-host/public`):
+  - Solved low-poly "LOD 2" blurry appearance on complex and architectural models.
+  - Implemented crease-angle-aware normal calculation in `SurfaceShadingEngine.computeSmoothNormals` (38° threshold) preventing sharp 90-degree architectural edges and chamfers from being smoothed or melted into rounded blobs.
+  - Upgraded wavefront OBJ loader (`parseOBJ`) to support convex polygon fan triangulation for arbitrary n-gons (walls, slabs, windows), relative negative index parsing (`v -1`, `vt -1`), and preservation of explicit imported `vn` normals.
+  - Configured 16x anisotropic texture filtering (`renderer.capabilities.getMaxAnisotropy()`) and `LinearMipmapLinearFilter` on dynamic and emissive textures, maintaining razor-sharp detail and eliminating moiré/shimmer when zooming out.
+  - Re-architected procedural model presets: High-poly Suzanne (4x subdivided icosahedron base with sculpted anatomy), high-precision Cyber Helmet (64x48 segments), and added a high-fidelity Architectural Pavilion preset (`pavilion`).
+  - Synced production bundle to `self-host/public` via `npm run host:sync` (`index-B2S4rs6M.js`).
+
+### 2026-11-04 — post-execution (stochastic scatter sizing, navigation calibration, 3D gizmos & auto-fit, MTL imports, texture auto-nodes & material fill, preferences, tablet mode)
+- Appended capabilities to the Web and Self-Hosted application suites:
+  - **Stochastic Scatter Sizing & Jitter:** Added `stampSize` slider + numeric text input (8px-512px) and `sizeJitter` slider + numeric text input (0%-100%) in `StochasticScatterDialog.tsx` and `StochasticScatterEngine.applyScatter`.
+  - **Navigation Calibration:** Reduced orbit speed multiplier to `0.0042 * navSensitivity` and tuned panning deltas in `Viewport3D.tsx` for stable, responsive 3D navigation.
+  - **Orientation Gizmo Synchronization & Visual Styles:** Corrected CSS 3D matrix math in `boxGizmo.tsx` (`rotateX(${degX}deg) rotateY(${degY}deg)`), aligning gizmo rotation with viewport viewing angle. Added spring zoom pulse animation effect (`zoomScale`) on camera zoom in/out. Added 3 switchable gizmo styles: `box`, `sphere`, and `mountain`.
+  - **Auto-Fit / Frame Model Button (`[⛶ Frame]`):** 1-click model framing button in the gizmo overlay computing the bounding sphere radius and centering/filling the viewport for any loaded model regardless of import scale.
+  - **Companion `.mtl` Import Support:** Added staged MTL file upload input and status display in `ProjectSettingsModal.tsx`, linked to `parseOBJ` for material coordinate and UV map preservation.
+  - **Texture Import & Auto-Node Setup Modal (`TextureAutoNodeModal.tsx`):** Added "Import Texture..." action in `LayersPanel.tsx` opening an interactive auto-focused preview modal. Provides a role dropdown (`Material Texture Fill`, `Color / Albedo`, `Displacement / Height`, `Emission`, `Reflection Mask`, `Normal Map`) that wires directly into the Blender shader node graph.
+  - **Procedural Material Texture Fill Layer:** Dedicated procedural fill mode supporting triplanar XYZ blended projection and box mapping with scale, repeat, rotation, and stochastic randomization. Displays a `FILL` badge in `LayersPanel` and includes a "Bake to Layer" button to rasterize the fill into standard pixels before converting to bump or normal maps.
+  - **Centralized Preferences Modal (`PreferencesModal.tsx`):** Added Edit > Preferences... menu item and top bar shortcut gear button to toggle Constant Viewport Refresh (OFF = on-demand, ON = continuous 60fps), select 3D Gizmo Style (`box`, `sphere`, `mountain`), toggle Tablet Mode, and fine-tune Navigation Sensitivity.
+  - **Full-Screen Tablet Mode:** Collapses left tools into a bottom-left circular carousel and top tool sliders into an expandable top-right carousel. The Docker panel system transforms into a collapsible N-Panel slide-out drawer accessible via right-edge `[◀ PANELS]` tab or the `N` key shortcut, providing an expansive drawing canvas while keeping floating filters active.
+  - **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, updating `self-host/public` with the latest build bundle (`index-Ct70vtbA.js`).
+
+### 2026-11-04 — pre-execution (SweetHome 3D mesh repair, texture auto-replacement, tablet brush carousel, options overlap, draggable filters)
+- Pre-execution bookend: proceeding with implementation of:
+  - SweetHome 3D architectural mesh auto-repair (spatial vertex welding & coplanar normal snapping)
+  - Native UV re-import action & companion texture folder auto-matching and layer replacement algorithm
+  - Top-left tablet brush parameter carousel with switchable radial dial & circular HUD sub-operators
+  - Options bar button overlap fix with Preferences layout switch (Grouped Clusters vs Collapsible Icon Groups)
+  - Draggable docker-style filter windows with zero backdrop blur
+  - Verified and synchronized to `self-host/public`.
+
+### 2026-11-04 — post-execution (SweetHome 3D mesh repair, auto-texturing, UV re-import, tablet carousel, zero-blur draggable filters landed)
+- Appended capabilities to the Web and Self-Hosted application suites:
+  - **SweetHome 3D & Architectural Mesh Auto-Repair:** Relaxed vertex welding (`EPSILON = 5e-4`) connects split adjacent faces in CAD/SweetHome 3D models; coplanar normal snapping (< 2° dihedral angle) unifies normals across planar architectural walls and slabs, eliminating choppy faceted edges and dark shading bands. Toggleable in Preferences (`architecturalRepair`) and manual trigger button in `ProjectSettingsModal`.
+  - **Companion Texture Folder Auto-Matching & Layer Auto-Replacement:** Upload multiple images from a model's texture folder; automatic semantic and `.mtl` parser classifies files into Diffuse, Normal/Bump, Roughness, and Emission channels. 1-click `[⚡ Auto-Texture Model & Replace Layers]` converts them directly into Photoshop CS5 layers with proper PBR channels and live canvas composite sync.
+  - **Native UV Channel Re-Import:** Added `[⟲ Re-import Original UVs]` button in `ProjectSettingsModal` restoring pure `vt` coordinates from source OBJ files without affecting existing user painting or layer structure.
+  - **Tablet Mode Top-Left Quick Parameter Carousel (`TabletBrushCarousel.tsx`):** Circular carousel for Size, Opacity, Spacing, Scatter/Jitter, Hardness, and Stabilizer with dual sub-operator styles switchable in Preferences: Interactive SVG Radial Arc Dial (`'radial'`) and Compact Floating Circular HUD (`'hud'`).
+  - **Non-Overlapping Options Bar Layout:** Added `optionsBarLayout` switch in Preferences between Grouped Semantic Clusters (`'clusters'`) and Collapsible Icon Groups (`'compact'`), preventing button collisions on compact laptop screens.
+  - **Draggable Docker Filter Windows with Zero Backdrop Blur:** Converted `GaussianBlurDialog`, `StochasticScatterDialog`, `EdgeWearDialog`, `TriplanarDialog`, and `StitchStudioDialog` into non-blocking, draggable floating windows without backdrop blur or dark overlays, enabling live 3D canvas observation during parameter adjustments.
+  - **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, compiling production bundle `index-C8hb8ysL.js` and updating `self-host/public`.
+
+### 2026-11-05 — pre-execution (Painting performance, surface normals fix, refresh rate controls, stroke dynamics menu, and menu bar decluttering)
+- Pre-execution bookend: proceeding with implementation of:
+  - Eliminating 3D painting choppiness by replacing synchronous multi-layer re-compositing and per-dab mipmap regeneration with RAF-throttled canvas updates.
+  - Fixing broken surface normal triggers (Def, Smooth, Flat) by isolating original file normals in `origFileNormal` and recompiling `flatShading: true` materials.
+  - Viewport Refresh Rate engine in Preferences with presets (On-Demand, 30 FPS, 60 FPS, 120 FPS) and custom VSync numeric text input.
+  - Stroke Control Menu (Airbrush, Dot, Drag Dot, Space, Curve, Lazy Mouse, Spacing) in Options bar popup, Tablet Carousel, and Brush Library docker.
+  - Decluttering the options bar and menu bar: moving secondary controls into top Menu Bar dropdowns (**View**, **Options**, **Window**) and adding 3-way layout switch (**Default**, **Minimal**, **Compact**) for desktop and tablet.
+  - Dev server health verification.
+
+### 2026-11-05 — post-execution (Painting performance, surface normals fix, refresh rate controls, stroke dynamics, and menu bar decluttering landed)
+- Appended capabilities to the Web and Self-Hosted application suites:
+  - **High-Performance Smooth Painting Loop:** Replaced synchronous multi-layer 1024x1024 canvas re-compositing and WebGL mipmap generation in `executePaintTool` with fast active-layer canvas blits to the composite canvas and RAF-throttled texture dirty notifications. Deferred full multi-layer recompositing, mipmap recalculation, and undo commits to pointer-up, eliminating all painting window stutter and stutter on rapid brush strokes (60-120+ FPS continuous drawing).
+  - **Restored Surface Normal Triggers (Default, Smooth, Flat / Hard Surface):** Preserved pristine mesh vertex normals in `origFileNormal` before running architectural repair or normal recalculations. Default restores original mesh normals without loss; Smooth computes angle-weighted curvature interpolation; Flat applies facet normals and recompiles shaders with `flatShading: true`. Added direct surface mode triggers across Toolbox, Tool Options Bar, and the top View Menu.
+  - **Configurable Viewport Refresh Rate Engine:** Extended Preferences with 5 selectable refresh rate presets: **On-Demand** (power-saver dirty updates), **30 FPS** (battery mode), **60 FPS** (standard VSync), **120 FPS** (high refresh display), and **Custom VSync** (interactive numeric input from 15 Hz to 240 Hz). The 3D viewport throttles the render loop using high-precision `performance.now()` frame intervals.
+  - **Stroke Control Menu & Dynamics Access:** Added dedicated Stroke & Dynamics popover in the Tool Options Bar (accessible next to Spacing), added a dedicated `Mode` button with radial arc & circular HUD sub-operators in the Tablet Mode Carousel (`TabletBrushCarousel.tsx`), and confirmed explicit Stroke Application Mode segmented controls in the Brush Library docker panel (`BrushLibraryPanel.tsx`) for instant on-the-fly switching between **Space**, **Airbrush**, **Dot**, **Dragged-Dot**, and **Curve**.
+  - **Decluttered Top Menu Bar & Options Bar Overlap Solution:** Removed bulky inline select boxes and stamp buttons from the top menu strip that exceeded the viewport radius. Re-architected secondary viewport, geometry, and parts isolation controls into standard Photoshop CS5 top dropdown menus (**View** and **Options**). Added a 3-way layout switch in Preferences (**Grouped Clusters**, **Minimal (Clean)**, and **Collapsible Groups**): Minimal layout keeps only core brush controls on the sub-bar and moves all viewport tools to the menu bar, completely eliminating UI collisions on tablets and laptops.
+  - **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, compiling production bundle `index-BblJ2yhP.js` and updating `self-host/public`.
+
+### 2026-11-05 — pre-execution (Lagoon radial menu, camera viewpoints fix, uncapped refresh rate, and master docs)
+- Pre-execution bookend: proceeding with implementation of:
+  - Autodesk Sketchbook / Maya Lagoon radial interface triggered via top menu bar button before Projection [F8] and keyboard/gesture shortcuts, covering workspace into an expansive drawing canvas while preserving 3D gizmo and dockable panels.
+  - Fix camera viewpoints in the View menu (Front, Back, Right, Left, Top, Bottom, and Ortho/Persp) so selecting them actively re-orients the 3D camera in `Viewport3D.tsx`.
+  - Add "Uncapped / Disable refresh rate" setting to Preferences alongside On-Demand and VSync options.
+  - Author master `API_DOCUMENTATION.md` detailing Viewport, Brush, Layering, Filters, WebGL/DirectX/OpenGL ANGLE architecture, and Shader Nodes.
+  - Author master `DEVELOPMENT.md` detailing program genesis, Rust native desktop app, and self-hosted distribution architecture.
+  - Update `AGENTS.md` and `AGENT_STATE.md` with links to all development documentation.

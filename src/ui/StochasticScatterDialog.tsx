@@ -47,6 +47,8 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
   const [rotationMin, setRotationMin] = useState<number>(-180);
   const [rotationMax, setRotationMax] = useState<number>(180);
   const [rotationJitter, setRotationJitter] = useState<number>(30); // 0° to 180°
+  const [stampSize, setStampSize] = useState<number>(64); // 8 to 512 px
+  const [sizeJitter, setSizeJitter] = useState<number>(20); // 0% to 100%
   const [scaleMin, setScaleMin] = useState<number>(0.4);
   const [scaleMax, setScaleMax] = useState<number>(1.2);
   const [blendMode, setBlendMode] = useState<StochasticScatterConfig['blendMode']>('NORMAL');
@@ -79,6 +81,8 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
     rotationMin,
     rotationMax,
     rotationJitter,
+    stampSize,
+    sizeJitter,
     scaleMin,
     scaleMax,
     blendMode,
@@ -307,12 +311,49 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
     },
   ];
 
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => ({
+    x: Math.max(20, typeof window !== 'undefined' ? window.innerWidth - 590 : 150),
+    y: 60,
+  }));
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const handlePointerDownHeader = (e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    dragOffsetRef.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const newX = Math.max(10, Math.min(window.innerWidth - 300, e.clientX - dragOffsetRef.current.x));
+    const newY = Math.max(40, Math.min(window.innerHeight - 150, e.clientY - dragOffsetRef.current.y));
+    setPosition({ x: newX, y: newY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch {}
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs select-none">
-      <div className="w-[560px] bg-[#333333] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans">
-        {/* Header */}
-        <div className="cs5-panel-header px-3.5 py-2 flex items-center justify-between shrink-0 bg-[#2b2b2b] border-b border-[#444]">
-          <div className="flex items-center gap-2">
+    <div className="fixed inset-0 z-50 pointer-events-none select-none">
+      <div 
+        style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
+        className="w-[560px] pointer-events-auto bg-[#333333] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans absolute top-0 left-0"
+      >
+        {/* Header (Draggable) */}
+        <div 
+          onPointerDown={handlePointerDownHeader}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="cs5-panel-header px-3.5 py-2 flex items-center justify-between shrink-0 bg-[#2b2b2b] border-b border-[#444] cursor-move"
+          title="Drag to reposition dialog"
+        >
+          <div className="flex items-center gap-2 pointer-events-none">
             <Sparkles className="w-4 h-4 text-[#e5a038]" />
             <span className="text-xs font-bold text-[#eee] tracking-wider uppercase font-mono">
               Stochastic Layer Scattering Engine
@@ -809,6 +850,84 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
                   updateConfigAndPreview({ rotationJitter: val });
                 }}
                 className="w-full accent-[#e5a038] cursor-pointer"
+              />
+            </div>
+
+            {/* Stamp Texture Size (Slider + Number Input) */}
+            <div className="col-span-2 space-y-1 pt-2 border-t border-[#3c3c3c]">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#aaa] flex items-center gap-1">
+                  <span>Stamp Texture Size</span>
+                  <span className="text-[10px] text-[#777]">(base resolution px)</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="8"
+                    max="512"
+                    step="4"
+                    value={stampSize}
+                    onChange={(e) => {
+                      const val = Math.max(8, Math.min(512, Number(e.target.value) || 8));
+                      setStampSize(val);
+                      updateConfigAndPreview({ stampSize: val });
+                    }}
+                    className="w-16 bg-[#1e1e1e] border border-[#555] text-white px-1.5 py-0.5 rounded text-center font-mono text-[11px] outline-none"
+                  />
+                  <span className="text-[10px] text-[#888]">px</span>
+                </div>
+              </div>
+              <input
+                type="range"
+                min="8"
+                max="256"
+                step="4"
+                value={stampSize}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setStampSize(val);
+                  updateConfigAndPreview({ stampSize: val });
+                }}
+                className="w-full accent-[#38bdf8] cursor-pointer"
+              />
+            </div>
+
+            {/* Size Jitter (Slider + Number Input) */}
+            <div className="col-span-2 space-y-1 pt-2 border-t border-[#3c3c3c]">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#aaa] flex items-center gap-1">
+                  <span>Size Jitter</span>
+                  <span className="text-[10px] text-[#777]">(randomized scale variation)</span>
+                </span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={sizeJitter}
+                    onChange={(e) => {
+                      const val = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                      setSizeJitter(val);
+                      updateConfigAndPreview({ sizeJitter: val });
+                    }}
+                    className="w-14 bg-[#1e1e1e] border border-[#555] text-white px-1.5 py-0.5 rounded text-center font-mono text-[11px] outline-none"
+                  />
+                  <span className="text-[10px] text-[#888]">%</span>
+                </div>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={sizeJitter}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setSizeJitter(val);
+                  updateConfigAndPreview({ sizeJitter: val });
+                }}
+                className="w-full accent-[#a855f7] cursor-pointer"
               />
             </div>
           </div>

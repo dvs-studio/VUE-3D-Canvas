@@ -1,140 +1,119 @@
-# Complete Standalone Desktop Engine Packaging & Working Application Deployment
+# Implementation Plan: Lagoon Radial Menu, Camera Viewpoints Fix, System API Documentation & Architecture Handover
 
-A comprehensive, zero-guesswork plan to compile, bundle, and package the entire VUE 3D Canvas workstation—including the compiled native executable, every internal runtime component, stylesheet, asset, and feature module—into a single self-contained folder and downloadable ZIP that launches the real visual application immediately without blank screens, terminal stubs, or external server dependencies.
-
----
-
-## User Review & Critical Decisions
-
-> [!NOTE]
-> **Dev Server Status Fixed:**
-> The dev server has been restarted and verified active (`HTTP/1.1 200 OK` on port 3000).
-
-> [!IMPORTANT]
-> **Eliminating "Hello World" Stubs & Blank Screens:**
-> - The previous `vue_3d_canvas.exe` printed an ASCII banner/terminal shell and attempted to open `index.html` via `file:///` without an active file server, which caused modern browsers (Edge/Chrome) to block ES modules with a CORS/null-origin error, leaving a blank screen.
-> - **Working Solution**: `vue_3d_canvas.exe` is compiled as a full-fledged native application runner. When executed, it automatically binds a local ephemeral loopback socket (`127.0.0.1:<port>`), streams the bundled internal assets with exact MIME types (`text/javascript`, `text/html`, `application/wasm`, `text/css`, `image/png`, `image/svg+xml`), and launches a dedicated chromeless application window (`--app=http://127.0.0.1:<port>`). 
-> - This guarantees that **100% of the visual workstation renders instantly** with full WebGL hardware acceleration (DirectX 11 / OpenGL priority) and zero blank screens.
-
-- **Confirmed Decision 1 (All Internal Components in One Folder)**: The standalone folder and ZIP will contain every file required to run the application with zero missing dependencies:
-  1. `vue_3d_canvas.exe` — The native Windows 64-bit desktop application binary.
-  2. `index.html` — The application entry point.
-  3. `assets/index-*.js` — The complete application engine bundle (Three.js viewport, 2D UV canvas, node graph evaluator, brush engine, filters, tools).
-  4. `assets/index-*.css` — The complete Photoshop CS5 dark skin stylesheet and design tokens.
-  5. `assets/signature.svg` & `signature.png` — Open-source branding and creator attribution.
-  6. Built-in texture presets, stencils, and brush masks (`grunge`, `splat`, `scratch`, `dots`, `cracks`).
-  7. `VUE_3D_Canvas.bat` & `VUE_3D_Canvas_Diagnostic.bat` — 1-click launchers.
-  8. `README_STANDALONE.txt` — Full offline user instructions.
-- **Confirmed Decision 2 (Zero Home-Folder Requirement)**: The application is 100% portable. It can be extracted and run from any directory (Desktop, Downloads, `C:\Tools\`, a secondary drive `D:\`, or an external USB flash drive) with zero installation, zero admin rights, and zero registry changes.
-- **Confirmed Decision 3 (Synchronize Self-Hosted Suite)**: Update `self-host/public` with the latest production assets so the self-hosted distribution matches 100% of the new features.
-- **Confirmed Decision 4 (Setup & Feature Manual in README.md)**: Completely revise `README.md` with step-by-step extraction and setup guides, troubleshooting steps, and an exhaustive catalogue of all application features.
-
----
-
-## 1. Overview & Core Concept
-
-- **What This Delivers**:
-  A fully working, packaged Windows desktop distribution (`VUE_3D_Canvas_Standalone_Desktop_Win64.zip` and `dist/standalone_desktop/`) where double-clicking the executable or batch file immediately launches the visual 3D texture painting workstation.
-- **Key Capabilities Preserved**:
-  - Full 3D Viewport with Blender Drone navigation (WASD+QE), unconstrained trackball orbit, and dynamic surface normals (Def, Smooth, Flat).
-  - 2D UV Canvas with synchronized live texture painting, Smart UV unwrap, multi-UV channels, and 2D sculpt brushes.
-  - Blender 2.8+ Shader Node Graph with an independent floating Node Inspector pop-up window and dual-sided socket exposure.
-  - Floating panels with Gboard-style 8-directional perimeter resize handles and corner grab brackets.
-  - Stochastic scattering engine with authentic native picture colors, physical fill color override, and rotation jitter slider (0°–180°).
-  - Multi-texture Triplanar box mapping and Jenny Stitch Studio.
-  - Runtime GPU Hardware Backend switcher in Menu Bar (DirectX 11 priority vs. OpenGL 2.0+ compatibility).
+## 1. Overview of Scope & Objectives
+The user requested:
+1. **Autodesk Sketchbook / Maya Lagoon Radial Interface**:
+   - A dedicated toggle trigger positioned in the top menu bar immediately before the `Projection [F8]` button.
+   - When engaged, the lagoon covers the workspace (collapsing the top options bar and left toolbox into an expansive drawing canvas, while preserving the 3D orientation gizmo and dockable side panel / N-Panel).
+   - Radial wings/petals offering quick-flick access to Tools (Brush, Eraser, Blur, Smudge, Clone, Stamp), Brush Dynamics (Size, Opac, Mode, Space), Layer controls, Color swatch/wheel, Viewpoints, and Project operations.
+   - Dual-mode gesture support: toggleable via the header button, keyboard shortcut (`~` or `Tab`), and right-click canvas gesture.
+2. **Fix Camera Viewpoint Navigation in the View Menu**:
+   - In `PhotoshopMenuBar.tsx`, connect the camera alignment entries:
+     - **Front View** (`Numpad 1`)
+     - **Back View** (`Ctrl + Numpad 1`)
+     - **Right View** (`Numpad 3`)
+     - **Left View** (`Ctrl + Numpad 3`)
+     - **Top View** (`Numpad 7`)
+     - **Bottom View** (`Ctrl + Numpad 7`)
+     - **Toggle Orthographic / Perspective** (`Numpad 5`)
+   - Ensure the numpad event router in `App.tsx` and the View Menu actions properly rotate the Three.js spherical camera angles ($\theta, \phi$) in `Viewport3D.tsx` and re-render the view instantly.
+3. **Preferences: "Disable Refresh Rate / Uncapped" Option**:
+   - Add an explicit **Uncapped / Max FPS (Disable Refresh Rate Cap)** setting in `PreferencesModal.tsx` alongside On-Demand, 30 FPS, 60 FPS, 120 FPS, and Custom VSync.
+4. **Comprehensive `API_DOCUMENTATION.md`**:
+   - A unified reference documenting:
+     - **Viewport Engine**: Three.js WebGL pipeline, camera projections (Perspective, Quad, Ortho), raycasting UV unwrapping, 16x anisotropic filtering, normal generation, and bloom passes.
+     - **Brush Engine**: Stabilizer lazy-mouse, stroke modes (Space, Airbrush, Dot, Dragged-Dot, Curve), stencils, pattern maps, pressure dynamics.
+     - **Layering System**: 1024×1024 PBR channels (Color, Bump/Height, Normal, Emissive, Roughness, Metallic), blend modes, clipping masks, and live composite canvas sync.
+     - **Filters & Procedurals**: Triplanar box-mapping with XYZ projection, Gaussian blur with separable kernel, Stochastic scatter, Edge wear & ambient occlusion, Jenny Stitch studio.
+     - **Shader Node System**: Blender 2.8+ node graph evaluator, shader serialization, and PBR channel bridging.
+     - **Texture System & Hardware Acceleration**: WebGL $\to$ ANGLE $\to$ DirectX 11 (default) and Desktop OpenGL counterpart, GPU flags, and native bridging.
+5. **`DEVELOPMENT.md` Architecture & Genesis Guide**:
+   - Historical lineage: How the Rust desktop application (`crates/vue3d_core`) with WebView2 native windowing and the standalone self-hosted package (`self-host/`) came to be.
+   - Core constraints: Strict 3-state `.xblend` ring buffer, low memory footprint, linked 3D assets, ANGLE GPU arguments, and single Windows executable delivery.
+   - Handover directives for subsequent AI engineering systems.
+6. **`AGENTS.md` and `AGENT_STATE.md` Updates**:
+   - Append newly verified capabilities.
+   - Point to all project markdown documents (`API_DOCUMENTATION.md`, `DEVELOPMENT.md`, `AGENT_STATE.md`, `HANDOFF_PROMPT.md`).
 
 ---
 
-## 2. Complete Inventory of Packaged Components
-
-```
-VUE_3D_Canvas_Standalone_Desktop_Win64/
-│
-├── vue_3d_canvas.exe              # [Native Binary] 64-bit Windows application host & desktop runner
-│                                  # - Embedded zero-overhead loopback stream server
-│                                  # - DirectX 11 / OpenGL hardware priority configuration
-│                                  # - Spawns chromeless desktop app window (--app mode)
-│
-├── VUE_3D_Canvas.bat              # [Launcher] Clean 1-click launch (no console window)
-├── VUE_3D_Canvas_Diagnostic.bat   # [Diagnostic] Console launcher showing GPU adapter info & logs
-├── README_STANDALONE.txt          # [Documentation] Offline setup guide and feature reference
-│
-├── index.html                     # [Core Entry] Application DOM shell & font configurations
-│
-└── assets/                        # [Application Core Bundle]
-    ├── index-*.js                 # Compiled workstation bundle:
-    │                              #   - Three.js WebGL rendering pipeline
-    │                              #   - 3D/2D Viewport synchronization engine
-    │                              #   - Photoshop CS5 Dark skin UI & Dockable Panels
-    │                              #   - Blender 2.8+ Node Graph & Floating Inspector
-    │                              #   - Gboard-style perimeter resizing system
-    │                              #   - Stochastic scatter engine & rotation jitter
-    │                              #   - Triplanar box filter & Jenny Stitch Studio
-    │                              #   - Smart UV unwrap & 2D sculpt tools
-    │                              #   - .xblend 3-state ring buffer serializer
-    │
-    ├── index-*.css                # Compiled CS5 dark theme styles & CSS variables
-    ├── signature.svg              # Creator attribution signature vector
-    └── signature.png              # Creator attribution raster asset
-```
+## 2. User Review & Decision Points
+From clarifying questions:
+- **Lagoon Position & Scope**: Toggle switch is located right before `Projection [F8]` button in the top menu bar. The Lagoon covers the workspace except for the 3D gizmo and the side panel/N-Panel.
+- **Lagoon Interaction**: Combines full canvas mode with radial wings and right-click / shortcut gestures.
+- **Camera Viewpoints**: Fixing the existing View Menu items (Front, Back, Right, Left, Top, Bottom) so they actively orient the 3D camera.
+- **Refresh Rate**: Add a dedicated option in Preferences to disable refresh rate throttling (Uncapped).
 
 ---
 
-## 3. Technical Architecture & Zero-Blank Runtime Flow
+## 3. Step-by-Step Implementation Plan
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│               User double-clicks vue_3d_canvas.exe                     │
-│               (or double-clicks VUE_3D_Canvas.bat)                     │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                  vue_3d_canvas.exe (Native Runner)                     │
-│  1. Scans current folder for index.html and assets/                    │
-│  2. Binds ephemeral loopback socket on 127.0.0.1                       │
-│  3. Multi-threaded HTTP/1.1 stream engine serves internal assets:      │
-│     - .html -> text/html                                               │
-│     - .js   -> application/javascript                                  │
-│     - .css  -> text/css                                                │
-│     - .wasm -> application/wasm                                        │
-│     - Headers: Cross-Origin-Opener-Policy & Access-Control-Allow-Origin │
-│  4. Locates system Edge/Chrome engine or default desktop webview       │
-│  5. Spawns chromeless application window:                              │
-│     msedge.exe --app=http://127.0.0.1:[PORT]                           │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│            Active VUE 3D Canvas Desktop Workstation Window             │
-│  - No address bar, no tabs, no dev banner                              │
-│  - Instant WebGL / Three.js canvas initialization (Zero CORS error)   │
-│  - GPU acceleration active: DirectX 11 / OpenGL                        │
-│  - Complete tool palette, layers panel, floating node inspector        │
-└────────────────────────────────────────────────────────────────────────┘
-```
+### Step 1: Fix Camera Viewpoint Actions in View Menu and Viewport3D
+1. In `src/renderer/Viewport3D.tsx`:
+   - Expose an imperative handler or listener for `onNumpadKey(key, ctrl)`:
+     - `'1'` without Ctrl: Front view ($\phi = \pi / 2, \theta = 0$)
+     - `'1'` with Ctrl: Back view ($\phi = \pi / 2, \theta = \pi$)
+     - `'3'` without Ctrl: Right view ($\phi = \pi / 2, \theta = \pi / 2$)
+     - `'3'` with Ctrl: Left view ($\phi = \pi / 2, \theta = -\pi / 2$)
+     - `'7'` without Ctrl: Top view ($\phi = 0.001, \theta = 0$)
+     - `'7'` with Ctrl: Bottom view ($\phi = \pi - 0.001, \theta = 0$)
+     - `'5'`: Toggle Orthographic / Perspective projection
+   - Set `needsRenderRef.current = true` and update camera orbit angles smoothly.
+2. In `src/ui/PhotoshopMenuBar.tsx`:
+   - Under the **View** menu, add a **Camera Viewpoints (Numpad)** submenu:
+     - Front View (`Num 1`), Back View (`Ctrl+Num 1`)
+     - Right View (`Num 3`), Left View (`Ctrl+Num 3`)
+     - Top View (`Num 7`), Bottom View (`Ctrl+Num 7`)
+     - Perspective / Ortho View (`Num 5`)
+   - Wire each button to call `onNumpadKey(key, ctrl)`.
 
----
+### Step 2: Add "Disable Refresh Rate / Uncapped" to Preferences
+1. In `src/core/types.ts`:
+   - Update `RefreshRateMode = 'on_demand' | '30' | '60' | '120' | 'custom' | 'uncapped'`.
+2. In `src/ui/PreferencesModal.tsx`:
+   - Add a 6th button: **Uncapped / Off** (`'uncapped'` - disables all frame throttling).
+3. In `src/renderer/Viewport3D.tsx`:
+   - When `mode === 'uncapped'`, bypass timestamp delta throttling completely (`requestAnimationFrame` runs at full display rate without cap).
 
-## 4. Planned Execution Steps (Upon Approval)
+### Step 3: Implement the Lagoon Radial Menu Suite
+1. Create `src/ui/LagoonMenu.tsx`:
+   - Designed after the classic Autodesk Sketchbook / Maya Lagoon interface.
+   - Sleek radial puck located at bottom-left (or floating), fanning out 6 radial petals/wings:
+     - **Tools Wing**: Brush, Eraser, Blur, Smudge, Clone, Pen, Bucket
+     - **Brush Wing**: Size, Opacity, Stroke Mode, Spacing, Stabilizer
+     - **Layers Wing**: New Layer, Duplicate, Clear, Blend Mode, Invert, Solo
+     - **Colors Wing**: Primary/Secondary swap, quick palette ring, Eyedropper
+     - **Views Wing**: Front, Back, Right, Left, Top, Bottom, Quad, Perspective/Ortho, Frame Model
+     - **Project Wing**: Save (.xblend), Export OBJ, Export Zip, Undo, Redo, Projection F8
+   - Features radial hover highlighting, gesture trail, and subtle CS5 dark styling (`#222222` to `#333333` with `#3d7fb8` and `#fab387` accents).
+2. In `src/ui/PhotoshopMenuBar.tsx`:
+   - Add the **Lagoon Mode** toggle button immediately before `Projection [F8]` with an iconic curved lagoon icon.
+3. In `src/App.tsx`:
+   - Manage `isLagoonActive` state.
+   - When active, hide the top options bar and left column tool box while keeping the 3D orientation gizmo and right dockers/N-Panel visible, displaying the Lagoon menu hub.
+   - Support `Tab` key and right-click long-press to open/close the Lagoon.
 
-1. **Native Desktop Executable Implementation**:
-   - Compile Windows 64-bit binary `vue_3d_canvas.exe` equipped with the embedded HTTP/1.1 loopback stream server and `--app` chromeless window launcher.
-2. **Full Production Asset Build & Staging**:
-   - Run `npm run build` to compile the complete, updated application bundle into `dist/`.
-   - Stage all assets (`index.html`, `assets/index-*.js`, `assets/index-*.css`, `signature.svg`, `signature.png`) into `dist/standalone_desktop/`.
-   - Synchronize `self-host/public` with the identical compiled bundle so the self-hosted directory is also 100% up to date with all new features.
-3. **Packaging the Standalone Folder & ZIP**:
-   - Copy `vue_3d_canvas.exe` directly into `dist/standalone_desktop/`.
-   - Configure `VUE_3D_Canvas.bat` to execute `vue_3d_canvas.exe` silently.
-   - Configure `VUE_3D_Canvas_Diagnostic.bat` to run `vue_3d_canvas.exe --diagnostic` in console mode.
-   - Package the entire folder into `release/VUE_3D_Canvas_Standalone_Desktop_Win64.zip`.
-4. **Complete Setup & Feature Manual in README.md**:
-   - Revise `README.md` to document the standalone desktop package at the top.
-   - Clarify extraction rules (extract anywhere, no home folder needed).
-   - Document GPU backend switching in Menu Bar (Help > GPU Graphics Backend).
-   - Provide an exhaustive catalogue of all features across the 3D engine, 2D UV suite, node graph, and texturing tools.
-5. **Verification**:
-   - Inspect the compiled `.exe` format and verify all files exist inside `dist/standalone_desktop/` and the ZIP archive.
-   - Run `lint_applet` and `compile_applet` to ensure zero compilation or TypeScript errors.
+### Step 4: Author `API_DOCUMENTATION.md`
+Create a master technical reference at `/API_DOCUMENTATION.md` containing:
+- Architecture Overview & GPU Bridging (WebGL $\leftrightarrow$ ANGLE DirectX 11 / OpenGL)
+- Viewport Engine Architecture (Three.js WebGL setup, camera matrix math, UV coordinates, anisotropic filtering)
+- Brush Engine Architecture (Dab stamping, spacing, stabilizer lazy-mouse, stroke modes, stencils)
+- Layering & PBR Composite Pipeline (1024×1024 canvases, channels, blending equations, live composite canvas sync)
+- Filter Suite Specification (Triplanar XYZ box filter, Gaussian blur separable pass, Stochastic scatter, Edge wear AO)
+- Procedural Node Graph Architecture (Blender 2.8+ node evaluator, socket types, material bridging)
+- Memory Management & Performance Constraints (Buffer re-use, RAF throttling, single Windows executable packaging)
+
+### Step 5: Author `DEVELOPMENT.md`
+Create `/DEVELOPMENT.md` detailing:
+- The dual-target architecture: Native Windows window (`crates/vue3d_core`) and Self-Hosted web distribution (`self-host/`).
+- Evolution timeline and genesis of all modules.
+- ANGLE DirectX 11 vs OpenGL launch switches (`--opengl`, `--modern`).
+- Handover instructions for subsequent AI models.
+
+### Step 6: Update `AGENTS.md` and `AGENT_STATE.md`
+- Append the post-execution ledger entries for this session.
+- Add an index table pointing to all project documentation files (`API_DOCUMENTATION.md`, `DEVELOPMENT.md`, `HANDOFF_PROMPT.md`, `AGENT_STATE.md`).
+
+### Step 7: Build & Host Synchronization Verification
+- Run `compile_applet` and `lint_applet` to guarantee 0 errors.
+- Run `npm run host:sync` to rebuild and synchronize `/self-host/public`.

@@ -13,10 +13,10 @@
  * 6. Protection via active selection and texture mask brush.
  */
 
-import { SelectionMask, TriplanarConfig, TriplanarTextureItem } from '../core/types';
+import { SelectionMask, TriplanarConfig, TriplanarTextureItem, TextureFillConfig } from '../core/types';
 import { SelectionTool } from './selectionTool';
 
-export type { TriplanarConfig, TriplanarTextureItem };
+export type { TriplanarConfig, TriplanarTextureItem, TextureFillConfig };
 
 export class FillSuite {
   // Texture buffer cache for fast sampling
@@ -565,6 +565,144 @@ export class FillSuite {
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     ctx.restore();
+  }
+
+  /**
+   * Applies a dedicated Material Texture Fill using an imported texture
+   * with Triplanar or Box Mapping projection, scale, repeat, rotation, and randomization.
+   */
+  public static applyMaterialTextureFill(
+    ctx: CanvasRenderingContext2D,
+    fillConfig: TextureFillConfig,
+    opacity = 100
+  ): Promise<void> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        const outImgData = ctx.createImageData(w, h);
+        const data = outImgData.data;
+
+        // Sample buffer of the source image
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = img.width;
+        tempCanvas.height = img.height;
+        const tempCtx = tempCanvas.getContext('2d')!;
+        tempCtx.drawImage(img, 0, 0);
+        const srcData = tempCtx.getImageData(0, 0, img.width, img.height).data;
+
+        const scale = Math.max(0.1, fillConfig.scale);
+        const repeat = Math.max(1, fillConfig.repeat);
+        const rotRad = (fillConfig.rotation * Math.PI) / 180;
+        const cosR = Math.cos(rotRad);
+        const sinR = Math.sin(rotRad);
+        const isTriplanar = fillConfig.projection === 'triplanar';
+        const randomize = fillConfig.randomize;
+
+        for (let y = 0; y < h; y++) {
+          const v = y / h;
+          for (let x = 0; x < w; x++) {
+            const u = x / w;
+            const idx = (y * w + x) * 4;
+
+            // 3D coordinates from spherical polar mapping
+            const phi = (u - 0.5) * Math.PI * 2.0;
+            const theta = (v - 0.5) * Math.PI;
+
+            const cosTheta = Math.cos(theta);
+            const sinTheta = Math.sin(theta);
+            const cosPhi = Math.cos(phi);
+            const sinPhi = Math.sin(phi);
+
+            const px = cosTheta * cosPhi;
+            const py = sinTheta;
+            const pz = cosTheta * sinPhi;
+
+            const nx = px;
+            const ny = py;
+            const nz = pz;
+
+            let r = 0, g = 0, b = 0, a = 255;
+
+            if (isTriplanar) {
+              let wx = Math.pow(Math.abs(nx), 3.0);
+              let wy = Math.pow(Math.abs(ny), 3.0);
+              let wz = Math.pow(Math.abs(nz), 3.0);
+              const sumW = (wx + wy + wz) || 1.0;
+              wx /= sumW;
+              wy /= sumW;
+              wz /= sumW;
+
+              // Sample 3 planes: YZ (X plane), XZ (Y plane), XY (Z plane)
+              const samplePlane = (pu: number, pv: number, randSeed: number) => {
+                let su = pu * repeat * scale;
+                let sv = pv * repeat * scale;
+                if (randomize) {
+                  su += Math.sin(randSeed * 7.1) * 0.2;
+                  sv += Math.cos(randSeed * 11.3) * 0.2;
+                }
+                const rU = su * cosR - sv * sinR;
+                const rV = su * sinR + sv * cosR;
+
+                let tx = Math.floor(((rU % 1.0) + 1.0) % 1.0 * img.width);
+                let ty = Math.floor(((rV % 1.0) + 1.0) % 1.0 * img.height);
+                tx = Math.max(0, Math.min(img.width - 1, tx));
+                ty = Math.max(0, Math.min(img.height - 1, ty));
+                const sIdx = (ty * img.width + tx) * 4;
+                return [srcData[sIdx], srcData[sIdx + 1], srcData[sIdx + 2], srcData[sIdx + 3]];
+              };
+
+              const colX = samplePlane(pz, py, 1.0);
+              const colY = samplePlane(px, pz, 2.0);
+              const colZ = samplePlane(px, py, 3.0);
+
+              r = colX[0] * wx + colY[0] * wy + colZ[0] * wz;
+              g = colX[1] * wx + colY[1] * wy + colZ[1] * wz;
+              b = colX[2] * wx + colY[2] * wy + colZ[2] * wz;
+              a = 255;
+            } else {
+              // Box mapping
+              const absX = Math.abs(nx);
+              const absY = Math.abs(ny);
+              const absZ = Math.abs(nz);
+              let su = 0, sv = 0;
+              if (absX >= absY && absX >= absZ) {
+                su = pz; sv = py;
+              } else if (absY >= absX && absY >= absZ) {
+                su = px; sv = pz;
+              } else {
+                su = px; sv = py;
+              }
+              su *= repeat * scale;
+              sv *= repeat * scale;
+              const rU = su * cosR - sv * sinR;
+              const rV = su * sinR + sv * cosR;
+              let tx = Math.floor(((rU % 1.0) + 1.0) % 1.0 * img.width);
+              let ty = Math.floor(((rV % 1.0) + 1.0) % 1.0 * img.height);
+              tx = Math.max(0, Math.min(img.width - 1, tx));
+              ty = Math.max(0, Math.min(img.height - 1, ty));
+              const sIdx = (ty * img.width + tx) * 4;
+              r = srcData[sIdx];
+              g = srcData[sIdx + 1];
+              b = srcData[sIdx + 2];
+              a = srcData[sIdx + 3];
+            }
+
+            data[idx] = Math.min(255, Math.floor(r));
+            data[idx + 1] = Math.min(255, Math.floor(g));
+            data[idx + 2] = Math.min(255, Math.floor(b));
+            data[idx + 3] = Math.min(255, Math.floor(a * (opacity / 100)));
+          }
+        }
+
+        ctx.putImageData(outImgData, 0, 0);
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = fillConfig.dataUrl;
+    });
   }
 }
 

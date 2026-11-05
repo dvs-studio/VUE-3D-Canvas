@@ -5,7 +5,7 @@
  * Created by Victory Ukpong
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Layer, EdgeWearConfig, BlendMode } from '../core/types';
 import { EdgeWearEngine } from '../tools/edgeWearFilter';
 import { Mountain, Sliders, Check, X, Sparkles, Shield, Droplets } from 'lucide-react';
@@ -56,12 +56,49 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
     onClose();
   };
 
+  const [position, setPosition] = useState<{ x: number; y: number }>(() => ({
+    x: Math.max(20, typeof window !== 'undefined' ? window.innerWidth - 530 : 180),
+    y: 70,
+  }));
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  const handlePointerDownHeader = (e: React.PointerEvent) => {
+    isDraggingRef.current = true;
+    dragOffsetRef.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const newX = Math.max(10, Math.min(window.innerWidth - 300, e.clientX - dragOffsetRef.current.x));
+    const newY = Math.max(40, Math.min(window.innerHeight - 150, e.clientY - dragOffsetRef.current.y));
+    setPosition({ x: newX, y: newY });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch {}
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs select-none">
-      <div className="w-[500px] bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[90vh] flex flex-col font-sans">
-        {/* Header */}
-        <div className="cs5-panel-header px-3 py-2 flex items-center justify-between shrink-0 bg-[#252525] border-b border-[#404040]">
-          <div className="flex items-center gap-2">
+    <div className="fixed inset-0 z-50 pointer-events-none select-none">
+      <div 
+        style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
+        className="w-[500px] pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[90vh] flex flex-col font-sans absolute top-0 left-0"
+      >
+        {/* Header (Draggable) */}
+        <div 
+          onPointerDown={handlePointerDownHeader}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className="cs5-panel-header px-3 py-2 flex items-center justify-between shrink-0 bg-[#252525] border-b border-[#404040] cursor-move"
+          title="Drag to reposition dialog"
+        >
+          <div className="flex items-center gap-2 pointer-events-none">
             <Mountain className="w-4 h-4 text-[#a6e3a1]" />
             <span className="text-xs font-bold text-[#eee] tracking-wider uppercase">
               Edge Wear &amp; Cavity Ambient Occlusion Filter

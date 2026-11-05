@@ -25,6 +25,9 @@ import {
   EdgeWearConfig,
   LayerPBRSettings,
   ThemeMode,
+  PreferencesState,
+  TextureFillConfig,
+  GizmoStyle,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
 import { UndoRingBuffer } from './core/history';
@@ -32,12 +35,13 @@ import { WasmMemoryEngine } from './core/wasmMemoryEngine';
 import { XBlendManager } from './core/xblendFormat';
 import { FillSuite, TriplanarConfig } from './tools/fillSuite';
 import * as THREE from 'three';
-import { BUILTIN_MODELS, parseOBJ } from './renderer/modelGeometry';
+import { BUILTIN_MODELS, parseOBJ, repairArchitecturalMesh, reimportUVsFromOBJ } from './renderer/modelGeometry';
 import { UVChannelManager } from './tools/uvChannelManager';
 import { INITIAL_NODES, INITIAL_CONNECTIONS } from './nodes/defaultNodes';
 
 import { PhotoshopMenuBar } from './ui/PhotoshopMenuBar';
 import { ToolOptionsBar } from './ui/ToolOptionsBar';
+import { TabletBrushCarousel } from './ui/TabletBrushCarousel';
 import { ToolBox } from './ui/ToolBox';
 import { DockablePanelFrame } from './ui/DockablePanelFrame';
 import { LayersPanel } from './ui/panels/LayersPanel';
@@ -56,6 +60,8 @@ import { LayerSettingsModal } from './ui/LayerSettingsModal';
 import { PatternStampDialog } from './ui/PatternStampDialog';
 import { EdgeWearDialog } from './ui/EdgeWearDialog';
 import { ExportModelDialog } from './ui/ExportModelDialog';
+import { PreferencesModal } from './ui/PreferencesModal';
+import { TextureAutoNodeModal } from './ui/TextureAutoNodeModal';
 import { PatternStampEngine } from './tools/patternStampTool';
 import { EdgeWearEngine } from './tools/edgeWearFilter';
 import { BlenderMaterialImporter } from './nodes/blenderMaterialImporter';
@@ -65,7 +71,7 @@ import { StochasticScatterConfig } from './tools/stochasticScatter';
 import { StitchConfig } from './tools/stitchStudio';
 import { ProjectionModal } from './ui/ProjectionModal';
 import { AboutModal } from './ui/AboutModal';
-import { ProjectSettingsModal } from './ui/ProjectSettingsModal';
+import { ProjectSettingsModal, MatchedTextureMap } from './ui/ProjectSettingsModal';
 import { ExportTextureDialog } from './ui/ExportTextureDialog';
 import { DockerGroup, DockerTabItem } from './ui/DockerGroup';
 import { SymmetryPanel } from './ui/panels/SymmetryPanel';
@@ -86,7 +92,19 @@ import {
   Hash, 
   HardDrive,
   SplitSquareVertical,
-  Square as SquareIcon
+  Square as SquareIcon,
+  Eraser,
+  Sparkles,
+  Stamp,
+  Fingerprint,
+  PenTool,
+  PaintBucket,
+  Pipette,
+  Hand,
+  ZoomIn,
+  Sliders,
+  Settings,
+  Tablet
 } from 'lucide-react';
 
 export default function App() {
@@ -129,6 +147,33 @@ export default function App() {
   const [primaryColor, setPrimaryColor] = useState<string>('#e6e6e6');
   const [secondaryColor, setSecondaryColor] = useState<string>('#1a1a1a');
 
+  // Application Preferences & Workspace Settings
+  const [preferences, setPreferences] = useState<PreferencesState>(() => {
+    try {
+      const saved = localStorage.getItem('vue3d_preferences');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      constantRefresh: false,
+      gizmoStyle: 'box',
+      tabletMode: false,
+      navSensitivity: 1.0,
+      optionsBarLayout: 'clusters',
+      tabletSubOperator: 'radial',
+      architecturalRepair: true,
+    };
+  });
+
+  const handleUpdatePreferences = useCallback((patch: Partial<PreferencesState>) => {
+    setPreferences(prev => {
+      const next = { ...prev, ...patch };
+      try {
+        localStorage.setItem('vue3d_preferences', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
   // 3D Viewport State
   const [modelKey, setModelKey] = useState<string>('suzanne');
   const [customOBJText, setCustomOBJText] = useState<string | undefined>(undefined);
@@ -151,11 +196,14 @@ export default function App() {
     } else {
       geom = BUILTIN_MODELS.suzanne().geometry;
     }
+    if (preferences.architecturalRepair !== false) {
+      repairArchitecturalMesh(geom);
+    }
     UVChannelManager.ensureBaseChannels(geom);
     setActiveGeometry(geom);
     setActiveUVChannel('uv_original');
     setXrayVertexSelection(new Set());
-  }, [modelKey, customOBJText]);
+  }, [modelKey, customOBJText, preferences.architecturalRepair]);
 
   const [shadingMode, setShadingMode] = useState<ViewportShadingMode>('material');
   const [viewMode, setViewMode] = useState<'3d' | '2d' | 'split'>('3d');
@@ -230,6 +278,19 @@ export default function App() {
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState<boolean>(false);
   const [isUndoSettingsOpen, setIsUndoSettingsOpen] = useState<boolean>(false);
   const [surfaceMode, setSurfaceMode] = useState<SurfaceShadingMode>('default');
+
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState<boolean>(false);
+
+  // Tablet Mode Workspace Drawer & Carousel States
+  const [tabletDrawerOpen, setTabletDrawerOpen] = useState<boolean>(false);
+  const [isTabletToolsOpen, setIsTabletToolsOpen] = useState<boolean>(false);
+  const [isTabletOptionsOpen, setIsTabletOptionsOpen] = useState<boolean>(false);
+
+  // Texture Import & Auto-Node Setup Dialog State
+  const [isTextureAutoNodeOpen, setIsTextureAutoNodeOpen] = useState<boolean>(false);
+  const [stagedTextureUrl, setStagedTextureUrl] = useState<string>('');
+  const [stagedTextureName, setStagedTextureName] = useState<string>('');
+  const textureFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Graphics Hardware Backend Selection (DirectX 11 Priority Default)
   const [gpuBackend, setGpuBackend] = useState<'dx11' | 'opengl' | 'modern'>(() => {
@@ -514,6 +575,7 @@ export default function App() {
         else if (e.key === 'g' || e.key === 'G') setActiveTool('bucket');
         else if (e.key === 'i' || e.key === 'I') setActiveTool('eyedropper');
         else if (e.key === 'h' || e.key === 'H') setActiveTool('hand');
+        else if (e.key === 'n' || e.key === 'N') setTabletDrawerOpen(open => !open);
         else if (e.key === 'x' || e.key === 'X') swapColors();
         else if (e.key === 'd' || e.key === 'D') resetColors();
       }
@@ -650,9 +712,18 @@ export default function App() {
     notifyTextureUpdated();
   };
 
+  // 3D Camera View Snap Trigger
+  const [viewSnapTrigger, setViewSnapTrigger] = useState<{ view: 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom'; timestamp: number } | null>(null);
+
   // Numpad Key Action
   const handleNumpadKey = (key: string, ctrl: boolean) => {
-    if (key === '5') {
+    if (key === '1') {
+      setViewSnapTrigger({ view: ctrl ? 'back' : 'front', timestamp: Date.now() });
+    } else if (key === '3') {
+      setViewSnapTrigger({ view: ctrl ? 'left' : 'right', timestamp: Date.now() });
+    } else if (key === '7') {
+      setViewSnapTrigger({ view: ctrl ? 'bottom' : 'top', timestamp: Date.now() });
+    } else if (key === '5') {
       setIsOrtho(o => !o);
     } else if (key === '0') {
       setZoomFactor(1.0);
@@ -1101,9 +1172,258 @@ export default function App() {
     document.body.removeChild(link);
   };
 
-  const handleImportCustomModel = (fileName: string, content: string) => {
+  const handleImportCustomModel = (fileName: string, content: string, mtlContent?: string) => {
     setCustomOBJText(content);
     setModelKey('custom_obj');
+  };
+
+  const handleAutoTextureModel = async (textureMaps: MatchedTextureMap[]) => {
+    if (!textureMaps || textureMaps.length === 0) return;
+    const memory = WasmMemoryEngine.getInstance();
+
+    const loadedLayers: Layer[] = [];
+    for (let i = 0; i < textureMaps.length; i++) {
+      const map = textureMaps[i];
+      const cvs = document.createElement('canvas');
+      cvs.width = 1024;
+      cvs.height = 1024;
+      const ctx = cvs.getContext('2d')!;
+      memory.registerBuffer(1024 * 1024 * 4);
+
+      await new Promise<void>((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, 1024, 1024);
+          resolve();
+        };
+        img.onerror = () => {
+          resolve();
+        };
+        img.src = map.dataUrl;
+      });
+
+      const newLayer: Layer = {
+        id: `layer_${Date.now()}_${i}`,
+        name: map.layerName,
+        visible: true,
+        opacity: 100,
+        blendMode: 'normal',
+        locked: false,
+        canvas: cvs,
+        ctx,
+        channel: map.role,
+      };
+      loadedLayers.push(newLayer);
+    }
+
+    if (loadedLayers.length > 0) {
+      setLayers(loadedLayers);
+      setActiveLayerId(loadedLayers[0].id);
+      undoBuffer.pushState(`Auto-Texture from Folder (${loadedLayers.length} maps)`, loadedLayers);
+      notifyTextureUpdated();
+    }
+  };
+
+  const handleReimportUVs = useCallback(() => {
+    if (!activeGeometry) return;
+    if (customOBJText) {
+      reimportUVsFromOBJ(activeGeometry, customOBJText);
+    } else {
+      UVChannelManager.ensureBaseChannels(activeGeometry);
+    }
+    setActiveUVChannel('uv_original');
+    notifyTextureUpdated();
+  }, [activeGeometry, customOBJText, notifyTextureUpdated]);
+
+  const handleRepairArchitecturalMesh = useCallback(() => {
+    if (!activeGeometry) return;
+    repairArchitecturalMesh(activeGeometry);
+    notifyTextureUpdated();
+  }, [activeGeometry, notifyTextureUpdated]);
+
+  const handleTextureFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const dataUrl = evt.target?.result as string;
+      if (dataUrl) {
+        setStagedTextureUrl(dataUrl);
+        setStagedTextureName(file.name);
+        setIsTextureAutoNodeOpen(true);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleApplyTextureAutoNode = async (result: {
+    role: string;
+    isTextureFill: boolean;
+    fillConfig?: TextureFillConfig;
+    createNodeSetup: boolean;
+    layerName: string;
+  }) => {
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024;
+    cvs.height = 1024;
+    const ctx = cvs.getContext('2d')!;
+
+    const newLayerId = `layer_${Date.now()}`;
+    const newLayer: Layer = {
+      id: newLayerId,
+      name: result.layerName,
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas: cvs,
+      ctx,
+      channel: (result.role === 'texture_fill' ? 'color' : result.role) as any,
+      isTextureFill: result.isTextureFill,
+      textureFillConfig: result.fillConfig,
+    };
+
+    if (result.isTextureFill && result.fillConfig) {
+      await FillSuite.applyMaterialTextureFill(ctx, result.fillConfig, 100);
+    } else {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, 1024, 1024);
+          resolve();
+        };
+        img.onerror = () => resolve();
+        img.src = stagedTextureUrl;
+      });
+    }
+
+    if (result.createNodeSetup) {
+      const texNodeId = `node_tex_${Date.now()}`;
+      const texNode: GraphNode = {
+        id: texNodeId,
+        type: 'image_texture',
+        title: `${result.layerName} (Texture)`,
+        x: 100,
+        y: result.role === 'color' ? 120 : result.role === 'height' ? 280 : 200,
+        inputs: [],
+        outputs: [
+          { id: 'color', name: 'Color', type: 'color' },
+          { id: 'alpha', name: 'Alpha', type: 'float' },
+        ],
+        properties: {
+          imageName: stagedTextureName,
+          channel: result.role,
+        },
+      };
+
+      const bsdfNode = nodes.find(n => n.type === 'principled_bsdf') || {
+        id: 'node_bsdf',
+        type: 'principled_bsdf' as const,
+        title: 'Principled BSDF',
+        x: 380,
+        y: 150,
+        inputs: [
+          { id: 'base_color', name: 'Base Color', type: 'color', value: '#ffffff' },
+          { id: 'metallic', name: 'Metallic', type: 'float', value: 0.1 },
+          { id: 'roughness', name: 'Roughness', type: 'float', value: 0.4 },
+          { id: 'normal', name: 'Normal', type: 'vector' },
+        ],
+        outputs: [{ id: 'bsdf', name: 'BSDF', type: 'shader' }],
+        properties: {},
+      };
+
+      const newNodes = [...nodes.filter(n => n.id !== bsdfNode.id), texNode, bsdfNode];
+      const newConns = [...connections];
+
+      if (result.role === 'color' || result.role === 'texture_fill') {
+        newConns.push({
+          id: `conn_${Date.now()}_color`,
+          fromNodeId: texNodeId,
+          fromSocketId: 'color',
+          toNodeId: bsdfNode.id,
+          toSocketId: 'base_color',
+        });
+      } else if (result.role === 'height') {
+        const bumpNodeId = `node_bump_${Date.now()}`;
+        const bumpNode: GraphNode = {
+          id: bumpNodeId,
+          type: 'math',
+          title: 'Bump (Height -> Normal)',
+          x: 240,
+          y: 300,
+          inputs: [
+            { id: 'a', name: 'Height', type: 'float' },
+            { id: 'b', name: 'Strength', type: 'float', value: 1.0 },
+          ],
+          outputs: [{ id: 'result', name: 'Normal', type: 'vector' }],
+          properties: { operation: 'bump' },
+        };
+        newNodes.push(bumpNode);
+        newConns.push(
+          {
+            id: `conn_${Date.now()}_h`,
+            fromNodeId: texNodeId,
+            fromSocketId: 'color',
+            toNodeId: bumpNodeId,
+            toSocketId: 'a',
+          },
+          {
+            id: `conn_${Date.now()}_norm`,
+            fromNodeId: bumpNodeId,
+            fromSocketId: 'result',
+            toNodeId: bsdfNode.id,
+            toSocketId: 'normal',
+          }
+        );
+      } else if (result.role === 'emission') {
+        const emNodeId = `node_em_${Date.now()}`;
+        const emNode: GraphNode = {
+          id: emNodeId,
+          type: 'emission',
+          title: 'Emission Shader',
+          x: 280,
+          y: 220,
+          inputs: [
+            { id: 'color', name: 'Color', type: 'color', value: '#ffffff' },
+            { id: 'strength', name: 'Strength', type: 'float', value: 2.5 },
+          ],
+          outputs: [{ id: 'emission', name: 'Emission', type: 'color' }],
+          properties: {},
+        };
+        newNodes.push(emNode);
+        newConns.push({
+          id: `conn_${Date.now()}_em`,
+          fromNodeId: texNodeId,
+          fromSocketId: 'color',
+          toNodeId: emNodeId,
+          toSocketId: 'color',
+        });
+      }
+
+      setNodes(newNodes);
+      setConnections(newConns);
+    }
+
+    const updatedLayers = [...layers, newLayer];
+    setLayers(updatedLayers);
+    setActiveLayerId(newLayer.id);
+    undoBuffer.pushState(`Import Texture (${result.layerName})`, updatedLayers);
+    notifyTextureUpdated();
+  };
+
+  const handleBakeTextureFill = async (layerId: string) => {
+    const layer = layers.find(l => l.id === layerId);
+    if (!layer || !layer.isTextureFill || !layer.textureFillConfig) return;
+
+    await FillSuite.applyMaterialTextureFill(layer.ctx, layer.textureFillConfig, layer.opacity);
+    layer.isTextureFill = false;
+    layer.textureFillConfig = undefined;
+
+    setLayers([...layers]);
+    undoBuffer.pushState(`Bake Texture Fill (${layer.name})`, layers);
+    notifyTextureUpdated();
   };
 
   const togglePanel = (panelName: string) => {
@@ -1177,57 +1497,220 @@ export default function App() {
         gpuBackend={gpuBackend}
         onChangeGpuBackend={handleSetGpuBackend}
         onOpenGpuDiagnostics={() => setIsGpuDiagnosticsOpen(true)}
-      />
-
-      {/* 2. Tool Options Sub-Toolbar */}
-      <ToolOptionsBar
-        activeTool={activeTool}
-        brush={activeBrush}
-        onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
-        selectedModelKey={modelKey}
-        onSelectModelKey={setModelKey}
+        onOpenPreferences={() => setIsPreferencesOpen(true)}
         shadingMode={shadingMode}
         onSelectShadingMode={setShadingMode}
+        surfaceMode={surfaceMode}
+        onSelectSurfaceMode={setSurfaceMode}
         viewMode={viewMode}
         onSelectViewMode={setViewMode}
-        onOpenCarousel={() => setIsCarouselOpen(true)}
-        onTriggerProjection={triggerProjectionScreenshot}
-        isNavLocked={isNavLocked}
-        touchNavEnabled={touchNavEnabled}
-        onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
         viewLayout={viewLayout}
         onSelectViewLayout={setViewLayout}
         isSymmetryX={symmetryConfig.activeRealtimeMirror}
         onToggleSymmetryX={() => setSymmetryConfig(c => ({ ...c, activeRealtimeMirror: !c.activeRealtimeMirror }))}
-        onOpenSymmetryPanel={() => {
-          setDockerGroup2Tab('symmetry');
-          setActivePanels(p => ({ ...p, symmetry: true }));
-        }}
-        onOpenPatternStampDialog={() => {
-          setActiveTool('pattern_stamp');
-          setIsPatternStampDialogOpen(true);
-        }}
       />
 
-      {/* 3. Main Workspace Area: Left ToolBox + Center Viewport(s) + Right Dockable Panels */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Photoshop CS5 Tool Palette */}
-        <ToolBox
+      {/* 2. Tool Options Sub-Toolbar (Standard or Tablet Carousel) */}
+      {!preferences.tabletMode ? (
+        <ToolOptionsBar
           activeTool={activeTool}
-          onSelectTool={setActiveTool}
-          primaryColor={primaryColor}
-          secondaryColor={secondaryColor}
-          onSwapColors={swapColors}
-          onResetColors={resetColors}
-          onChangePrimaryColor={setPrimaryColor}
-          onChangeSecondaryColor={setSecondaryColor}
+          brush={activeBrush}
+          onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
+          optionsBarLayout={preferences.optionsBarLayout}
+          selectedModelKey={modelKey}
+          onSelectModelKey={setModelKey}
+          shadingMode={shadingMode}
+          onSelectShadingMode={setShadingMode}
           surfaceMode={surfaceMode}
           onSelectSurfaceMode={setSurfaceMode}
+          viewMode={viewMode}
+          onSelectViewMode={setViewMode}
+          onOpenCarousel={() => setIsCarouselOpen(true)}
+          onTriggerProjection={triggerProjectionScreenshot}
+          isNavLocked={isNavLocked}
+          touchNavEnabled={touchNavEnabled}
+          onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
+          viewLayout={viewLayout}
+          onSelectViewLayout={setViewLayout}
+          isSymmetryX={symmetryConfig.activeRealtimeMirror}
+          onToggleSymmetryX={() => setSymmetryConfig(c => ({ ...c, activeRealtimeMirror: !c.activeRealtimeMirror }))}
+          onOpenSymmetryPanel={() => {
+            setDockerGroup2Tab('symmetry');
+            setActivePanels(p => ({ ...p, symmetry: true }));
+          }}
           onOpenPatternStampDialog={() => {
             setActiveTool('pattern_stamp');
             setIsPatternStampDialogOpen(true);
           }}
         />
+      ) : (
+        /* Tablet Mode: Top-Left Quick Parameter Radial/HUD Carousel + Top-Right Collapsible Options */
+        <>
+          <div className="absolute top-9 left-4 z-40">
+            <TabletBrushCarousel
+              brush={activeBrush}
+              onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
+              subOperatorStyle={preferences.tabletSubOperator}
+            />
+          </div>
+
+          <div className="absolute top-9 right-4 z-40">
+            <button
+              onClick={() => setIsTabletOptionsOpen(o => !o)}
+              className="px-3 py-1 bg-[#252525]/95 hover:bg-[#333] text-[#eee] rounded-full border border-[#555] shadow-xl backdrop-blur-md text-[11px] font-mono flex items-center gap-2 cursor-pointer cs5-outset"
+              title="Expand Brush Controls Carousel"
+            >
+            <Sliders className="w-3.5 h-3.5 text-[#3d7fb8]" />
+            <span className="text-[#38bdf8] font-bold">{activeBrush.size}px</span>
+            <span className="text-[#666]">·</span>
+            <span className="text-[#a6e3a1]">{activeBrush.opacity}%</span>
+          </button>
+
+          {isTabletOptionsOpen && (
+            <div className="absolute top-10 right-0 w-64 bg-[#2b2b2b]/95 border-2 border-[#555] rounded-xl p-3 shadow-2xl backdrop-blur-md cs5-outset space-y-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-1 border-b border-[#444] font-bold text-[#eee]">
+                <span className="flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-[#3d7fb8]" />
+                  Brush Options
+                </span>
+                <button onClick={() => setIsTabletOptionsOpen(false)} className="text-[#888] hover:text-white">✕</button>
+              </div>
+
+              {/* Size Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-[#aaa]">Size:</span>
+                  <span className="font-mono text-[#38bdf8] font-bold">{activeBrush.size}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="200"
+                  value={activeBrush.size}
+                  onChange={(e) => setActiveBrush(b => ({ ...b, size: Number(e.target.value) }))}
+                  className="w-full accent-[#3d7fb8] h-1.5 cursor-pointer"
+                />
+              </div>
+
+              {/* Opacity Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-[#aaa]">Opacity:</span>
+                  <span className="font-mono text-[#a6e3a1] font-bold">{activeBrush.opacity}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={activeBrush.opacity}
+                  onChange={(e) => setActiveBrush(b => ({ ...b, opacity: Number(e.target.value) }))}
+                  className="w-full accent-[#a6e3a1] h-1.5 cursor-pointer"
+                />
+              </div>
+
+              {/* Hardness Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-[#aaa]">Hardness:</span>
+                  <span className="font-mono text-[#f38ba8] font-bold">{activeBrush.hardness ?? 50}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={activeBrush.hardness ?? 50}
+                  onChange={(e) => setActiveBrush(b => ({ ...b, hardness: Number(e.target.value) }))}
+                  className="w-full accent-[#f38ba8] h-1.5 cursor-pointer"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </>
+    )}
+
+      {/* 3. Main Workspace Area: Left ToolBox + Center Viewport(s) + Right Dockable Panels */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Tool Palette: Desktop Column vs Tablet Bottom-Left Circular Carousel */}
+        {!preferences.tabletMode ? (
+          <ToolBox
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            primaryColor={primaryColor}
+            secondaryColor={secondaryColor}
+            onSwapColors={swapColors}
+            onResetColors={resetColors}
+            onChangePrimaryColor={setPrimaryColor}
+            onChangeSecondaryColor={setSecondaryColor}
+            surfaceMode={surfaceMode}
+            onSelectSurfaceMode={setSurfaceMode}
+            onOpenPatternStampDialog={() => {
+              setActiveTool('pattern_stamp');
+              setIsPatternStampDialogOpen(true);
+            }}
+          />
+        ) : (
+          /* Tablet Mode: Bottom-Left Circular Carousel Hub */
+          <div className="absolute bottom-5 left-5 z-40">
+            {isTabletToolsOpen && (
+              <div className="absolute bottom-16 left-0 bg-[#2b2b2b]/95 border-2 border-[#555] rounded-2xl p-3 shadow-2xl backdrop-blur-md cs5-outset w-72 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between pb-1 border-b border-[#444] text-[11px] font-bold text-[#89b4fa]">
+                  <span className="flex items-center gap-1.5">
+                    <Tablet className="w-3.5 h-3.5" />
+                    Tablet Tool Palette
+                  </span>
+                  <button onClick={() => setIsTabletToolsOpen(false)} className="text-[#888] hover:text-white">✕</button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'brush', label: 'Brush (B)', icon: <Paintbrush className="w-3.5 h-3.5" /> },
+                    { id: 'eraser', label: 'Eraser (E)', icon: <Eraser className="w-3.5 h-3.5" /> },
+                    { id: 'blur', label: 'Blur (R)', icon: <Sparkles className="w-3.5 h-3.5" /> },
+                    { id: 'smudge', label: 'Smudge (U)', icon: <Fingerprint className="w-3.5 h-3.5" /> },
+                    { id: 'clone', label: 'Clone (S)', icon: <Stamp className="w-3.5 h-3.5" /> },
+                    { id: 'pen', label: 'Pen (P)', icon: <PenTool className="w-3.5 h-3.5" /> },
+                    { id: 'bucket', label: 'Bucket (G)', icon: <PaintBucket className="w-3.5 h-3.5" /> },
+                    { id: 'eyedropper', label: 'Eyedropper (I)', icon: <Pipette className="w-3.5 h-3.5" /> },
+                    { id: 'hand', label: 'Hand (H)', icon: <Hand className="w-3.5 h-3.5" /> },
+                    { id: 'zoom', label: 'Zoom (Z)', icon: <ZoomIn className="w-3.5 h-3.5" /> },
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => { setActiveTool(t.id as any); setIsTabletToolsOpen(false); }}
+                      className={`p-2 rounded flex items-center gap-2 text-[10px] font-medium border transition-colors ${
+                        activeTool === t.id
+                          ? 'bg-[#3d7fb8] text-white border-[#5ea1da] shadow-xs'
+                          : 'bg-[#353535] hover:bg-[#454545] text-[#ccc] border-[#4a4a4a]'
+                      }`}
+                    >
+                      {t.icon}
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-[#444] flex items-center justify-between">
+                  <span className="text-[10px] text-[#aaa]">Color:</span>
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="w-8 h-8 rounded border border-[#555] cursor-pointer bg-transparent"
+                  />
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => setIsTabletToolsOpen(o => !o)}
+              className="w-13 h-13 rounded-full bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white border-2 border-white shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+              title="Open Tablet Tools Carousel Palette"
+            >
+              <Paintbrush className="w-6 h-6" />
+            </button>
+          </div>
+        )}
 
         {/* Center Viewport Area (3D, 2D, or Split) */}
         <div className="flex-1 flex overflow-hidden relative bg-[#242424]">
@@ -1271,6 +1754,12 @@ export default function App() {
                 onToggleXRayBrush={() => setIsXRayBrushActive(v => !v)}
                 selectedVertices={xrayVertexSelection}
                 onUpdateSelectedVertices={setXrayVertexSelection}
+                gizmoStyle={preferences.gizmoStyle}
+                constantRefresh={preferences.constantRefresh}
+                refreshRateMode={preferences.refreshRateMode}
+                customRefreshRate={preferences.customRefreshRate}
+                navSensitivity={preferences.navSensitivity}
+                viewSnapTrigger={viewSnapTrigger}
               />
             </div>
           )}
@@ -1306,8 +1795,50 @@ export default function App() {
           )}
         </div>
 
+        {/* Tablet Mode Edge Trigger Button */}
+        {preferences.tabletMode && !tabletDrawerOpen && (
+          <button
+            onClick={() => setTabletDrawerOpen(true)}
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-[#2b2b2b] text-[#e0e0e0] border border-r-0 border-[#555] rounded-l px-1.5 py-4 shadow-xl flex flex-col items-center gap-1 hover:bg-[#383838] cursor-pointer text-[10px] font-mono tracking-widest transition-transform hover:-translate-x-0.5"
+            title="Open N-Panel Dockers (Press N)"
+          >
+            <span className="text-[#3d7fb8] font-bold text-xs">◀</span>
+            <span>P</span>
+            <span>A</span>
+            <span>N</span>
+            <span>E</span>
+            <span>L</span>
+            <span>S</span>
+          </button>
+        )}
+
         {/* Right Dockable Workspace Panels (Autodesk Sketchbook / CS5 Fusion / Docker System) */}
-        <div className="w-72 bg-[#383838] border-l border-[#242424] flex flex-col overflow-y-auto shrink-0 z-30 cs5-outset">
+        <div
+          className={
+            preferences.tabletMode
+              ? `fixed right-0 top-9 bottom-6 w-80 bg-[#383838] border-l border-[#242424] flex flex-col overflow-y-auto z-50 shadow-2xl cs5-outset transition-transform duration-200 ${
+                  tabletDrawerOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
+                }`
+              : 'w-72 bg-[#383838] border-l border-[#242424] flex flex-col overflow-y-auto shrink-0 z-30 cs5-outset'
+          }
+        >
+          {preferences.tabletMode && (
+            <div className="p-1.5 bg-[#252525] border-b border-[#444] flex items-center justify-between text-xs shrink-0">
+              <span className="font-mono text-[#888] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+                <LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />
+                <strong className="text-white">N-Panel Dockers</strong>
+              </span>
+              <button
+                onClick={() => setTabletDrawerOpen(false)}
+                className="px-2 py-0.5 bg-[#444] hover:bg-[#555] text-white rounded text-[10px] font-mono cursor-pointer flex items-center gap-1"
+                title="Close N-Panel (N)"
+              >
+                <span>Close</span>
+                <span className="text-[#aaa]">(N) ▶</span>
+              </button>
+            </div>
+          )}
+
           {/* Docker Header Switcher: Grouped Dockers (Tabs) vs Expanded Panels (Stack) */}
           <div className="p-1.5 bg-[#2c2c2c] border-b border-[#444] flex items-center justify-between text-[10px]">
             <span className="font-mono text-[#888] uppercase tracking-wider flex items-center gap-1">
@@ -1364,6 +1895,8 @@ export default function App() {
                             onConvertToClipMask={handleConvertToClipMask}
                             onConvertToEmissive={handleConvertToEmissive}
                             onInvertLayerColor={handleInvertLayerColor}
+                            onImportTexture={() => textureFileInputRef.current?.click()}
+                            onBakeTextureFill={handleBakeTextureFill}
                             onOpenLayerSettings={(id) => {
                               setLayerSettingsTargetId(id);
                               setIsLayerSettingsOpen(true);
@@ -1526,6 +2059,8 @@ export default function App() {
                       onConvertToNormal={handleConvertToNormal}
                       onConvertToClipMask={handleConvertToClipMask}
                       onConvertToEmissive={handleConvertToEmissive}
+                      onImportTexture={() => textureFileInputRef.current?.click()}
+                      onBakeTextureFill={handleBakeTextureFill}
                     />
                   </DockablePanelFrame>
                 </div>
@@ -1855,6 +2390,9 @@ export default function App() {
         onExportOBJ={handleExportOBJ}
         onImportCustomModel={handleImportCustomModel}
         onExportBundleZip={handleExportBundleZip}
+        onAutoTextureModel={handleAutoTextureModel}
+        onReimportUVs={handleReimportUVs}
+        onRepairMesh={handleRepairArchitecturalMesh}
       />
 
       {/* 10. CorelDraw-Style Texture & Alpha Mask Export Dialog */}
@@ -1919,6 +2457,32 @@ export default function App() {
         isOpen={isGpuDiagnosticsOpen}
         onClose={() => setIsGpuDiagnosticsOpen(false)}
         activeBackend={gpuBackend}
+      />
+
+      {/* 17. Application Preferences & Hardware Diagnostics Modal */}
+      <PreferencesModal
+        isOpen={isPreferencesOpen}
+        onClose={() => setIsPreferencesOpen(false)}
+        preferences={preferences}
+        onUpdatePreferences={handleUpdatePreferences}
+      />
+
+      {/* 18. Texture Import & Auto-Node Setup Modal */}
+      <TextureAutoNodeModal
+        isOpen={isTextureAutoNodeOpen}
+        onClose={() => setIsTextureAutoNodeOpen(false)}
+        imageDataUrl={stagedTextureUrl}
+        imageFileName={stagedTextureName}
+        onApply={handleApplyTextureAutoNode}
+      />
+
+      {/* Hidden file input for texture import */}
+      <input
+        ref={textureFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleTextureFileSelected}
+        className="hidden"
       />
 
       {/* Hidden file input for Blender material import */}

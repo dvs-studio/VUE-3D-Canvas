@@ -17,6 +17,7 @@ import {
   ThemeMode,
   BloomSettings,
   PatternStampConfig,
+  GizmoStyle,
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
 import { PatternStampEngine } from '../tools/patternStampTool';
@@ -78,6 +79,12 @@ interface Viewport3DProps {
   onToggleXRayBrush?: () => void;
   selectedVertices?: Set<number>;
   onUpdateSelectedVertices?: (verts: Set<number>) => void;
+  gizmoStyle?: GizmoStyle;
+  constantRefresh?: boolean;
+  navSensitivity?: number;
+  refreshRateMode?: 'on_demand' | '30' | '60' | '120' | 'custom' | 'uncapped';
+  customRefreshRate?: number;
+  viewSnapTrigger?: { view: 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom'; timestamp: number } | null;
 }
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
@@ -123,6 +130,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   onToggleXRayBrush,
   selectedVertices,
   onUpdateSelectedVertices,
+  gizmoStyle = 'box',
+  constantRefresh = false,
+  navSensitivity = 1.0,
+  refreshRateMode = 'on_demand',
+  customRefreshRate = 60,
+  viewSnapTrigger = null,
 }) => {
   const [internalViewLayout, setInternalViewLayout] = useState<'perspective' | 'quad'>('perspective');
   const viewLayout = controlledViewLayout || internalViewLayout;
@@ -131,6 +144,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   const isOrthoRef = useRef<boolean>(isOrtho);
   isOrthoRef.current = isOrtho;
+
+  const constantRefreshRef = useRef<boolean>(constantRefresh);
+  constantRefreshRef.current = constantRefresh;
+
+  const refreshRateModeRef = useRef<'on_demand' | '30' | '60' | '120' | 'custom' | 'uncapped'>(refreshRateMode);
+  refreshRateModeRef.current = refreshRateMode;
+
+  const customRefreshRateRef = useRef<number>(customRefreshRate || 60);
+  customRefreshRateRef.current = customRefreshRate || 60;
+
+  const needsRenderRef = useRef<boolean>(true);
+
+  const [zoomPulseTrigger, setZoomPulseTrigger] = useState(0);
 
   const mountRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -298,9 +324,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     });
 
     if (dynamicTextureRef.current) {
+      dynamicTextureRef.current.generateMipmaps = true;
+      dynamicTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
       dynamicTextureRef.current.needsUpdate = true;
     }
     if (emissiveTextureRef.current) {
+      emissiveTextureRef.current.generateMipmaps = true;
+      emissiveTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
       emissiveTextureRef.current.needsUpdate = true;
     }
 
@@ -369,10 +399,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       preserveDrawingBuffer: true,
     });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 1.05;
     rendererRef.current = renderer;
+
+    const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
     // 3-Point Studio Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
@@ -400,6 +432,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     compositeCanvasRef.current = targetComp;
     const tex = new THREE.CanvasTexture(targetComp);
     tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = maxAniso;
     dynamicTextureRef.current = tex;
 
     // Emissive Canvas Texture
@@ -409,6 +445,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     emissiveCanvasRef.current = emCanvas;
     const emTex = new THREE.CanvasTexture(emCanvas);
     emTex.colorSpace = THREE.SRGBColorSpace;
+    emTex.generateMipmaps = true;
+    emTex.minFilter = THREE.LinearMipmapLinearFilter;
+    emTex.magFilter = THREE.LinearFilter;
+    emTex.anisotropy = maxAniso;
     emissiveTextureRef.current = emTex;
 
     const modelPreset = BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]() : BUILTIN_MODELS.suzanne();
@@ -461,8 +501,33 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     composer.addPass(outputPass);
 
     let animId: number;
-    const animate = () => {
+    let lastRenderTime = performance.now();
+
+    const animate = (currentTime: number = performance.now()) => {
       animId = requestAnimationFrame(animate);
+
+      const mode = refreshRateModeRef.current || (constantRefreshRef.current ? '60' : 'on_demand');
+      let targetFps = 60;
+      if (mode === '30') targetFps = 30;
+      else if (mode === '60') targetFps = 60;
+      else if (mode === '120') targetFps = 120;
+      else if (mode === 'custom') targetFps = Math.max(15, Math.min(240, customRefreshRateRef.current || 60));
+
+      const isThrottled = mode !== 'on_demand' && mode !== 'uncapped';
+      const frameInterval = isThrottled ? 1000 / targetFps : 0;
+
+      if (isThrottled && currentTime - lastRenderTime < frameInterval - 1.0) {
+        return;
+      }
+
+      const isActivelyInteracting = orbitState.current.isOrbiting || orbitState.current.isPanning || isPaintingRef.current || activePointers.current.size > 0;
+      if (mode === 'on_demand' && !needsRenderRef.current && !isActivelyInteracting) {
+        return;
+      }
+
+      needsRenderRef.current = false;
+      lastRenderTime = currentTime;
+
       updateCameraPosition();
 
       const currentLayout = viewLayoutRef.current;
@@ -940,27 +1005,36 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       orbitState.current.theta = 0;
       orbitState.current.phi = Math.PI - 0.0001;
     }
+    needsRenderRef.current = true;
     updateCameraPosition();
   };
+
+  useEffect(() => {
+    if (viewSnapTrigger) {
+      snapToView(viewSnapTrigger.view);
+    }
+  }, [viewSnapTrigger]);
 
   const handleFlipView = () => {
     orbitState.current.theta = (orbitState.current.theta + Math.PI) % (2 * Math.PI);
     orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, Math.PI - orbitState.current.phi));
+    needsRenderRef.current = true;
     updateCameraPosition();
   };
 
   const handlePanDelta = (dx: number, dy: number) => {
     const camera = cameraPerspRef.current;
+    const sens = navSensitivity !== undefined ? navSensitivity : 1.0;
     if (camera) {
-      const panSpeed = (orbitState.current.radius / zoomFactor) * 0.0016;
+      const panSpeed = (orbitState.current.radius / zoomFactor) * 0.0011 * sens;
       const right = new THREE.Vector3();
       const up = new THREE.Vector3();
       camera.matrixWorld.extractBasis(right, up, new THREE.Vector3());
       orbitState.current.target.addScaledVector(right, -dx * panSpeed);
       orbitState.current.target.addScaledVector(up, dy * panSpeed);
     } else {
-      orbitState.current.target.x -= dx * 0.005;
-      orbitState.current.target.y += dy * 0.005;
+      orbitState.current.target.x -= dx * 0.0035 * sens;
+      orbitState.current.target.y += dy * 0.0035 * sens;
     }
     updateCameraPosition();
   };
@@ -969,6 +1043,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // Nearly infinite zoom in and out
     const factor = Math.exp(-delta * 0.05);
     orbitState.current.radius = Math.max(0.0001, Math.min(100000.0, orbitState.current.radius * factor));
+    setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
 
@@ -978,8 +1053,27 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     orbitState.current.phi = 1.15;
     orbitState.current.target.set(0, 0, 0);
     if (onZoomChange) onZoomChange(1.0);
+    setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
+
+  // Auto-fit / frame model in viewport
+  const handleAutoFitModel = useCallback(() => {
+    if (!meshRef.current) return;
+    meshRef.current.geometry.computeBoundingBox();
+    meshRef.current.geometry.computeBoundingSphere();
+    const sphere = meshRef.current.geometry.boundingSphere;
+    if (!sphere) return;
+
+    orbitState.current.target.copy(sphere.center);
+    const r = Math.max(sphere.radius, 0.25);
+    const fovRad = (45 * Math.PI) / 180;
+    const dist = (r / Math.sin(fovRad / 2)) * 1.15;
+    orbitState.current.radius = dist;
+    if (onZoomChange) onZoomChange(1.0);
+    setZoomPulseTrigger(p => p + 1);
+    updateCameraPosition();
+  }, [onZoomChange]);
 
   // Blender-style Drone Flight Navigator (WASD + QE + Shift boost)
   useEffect(() => {
@@ -1176,6 +1270,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       if (pinchStartDist.current && pinchStartDist.current > 0) {
         const ratio = pinchStartDist.current / currentDist;
         orbitState.current.radius = Math.max(0.0001, Math.min(100000.0, pinchStartRadius.current * ratio));
+        setZoomPulseTrigger(p => p + 1);
       }
 
       const currentMidpoint = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
@@ -1198,9 +1293,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       // Dragging right rotates the model clockwise (camera theta decreases).
       // Inverted flips the axis.
       const dirSign = invertNav ? 1 : -1;
-      orbitState.current.theta += dx * 0.008 * dirSign;
+      const baseSpeed = 0.0042 * (navSensitivity !== undefined ? navSensitivity : 1.0);
+      orbitState.current.theta += dx * baseSpeed * dirSign;
       // Allow unrestricted pitch rotation without gimbal lock at the poles
-      orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, orbitState.current.phi + dy * 0.008 * dirSign));
+      orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, orbitState.current.phi + dy * baseSpeed * dirSign));
       orbitState.current.lastMouseX = e.clientX;
       orbitState.current.lastMouseY = e.clientY;
       updateCameraPosition();
@@ -1273,14 +1369,17 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       isPaintingRef.current = false;
       brushEngine.endStroke();
       clearStabilizerTether();
+      updateCompositeTexture();
+      onTextureUpdated();
       undoBuffer.pushState(`${brush.name} 3D Paint`, layers);
     }
   };
 
   const handleWheel = (e: React.WheelEvent) => {
     // Smooth proportional zoom nearly infinitely in and out
-    const factor = Math.exp(e.deltaY * 0.0015);
+    const factor = Math.exp(e.deltaY * 0.0012);
     orbitState.current.radius = Math.max(0.0001, Math.min(100000.0, orbitState.current.radius * factor));
+    setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
 
@@ -1418,8 +1517,31 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       });
     }
 
-    updateCompositeTexture();
-    onTextureUpdated();
+    // High-performance direct texture update during active stroke:
+    // Fast copy active layer dab to compositeCanvas and flag WebGL texture update
+    if (compositeCanvas) {
+      const cctx = compositeCanvas.getContext('2d');
+      if (cctx) {
+        cctx.save();
+        cctx.globalAlpha = layer.opacity / 100;
+        let gco: GlobalCompositeOperation = 'source-over';
+        switch (layer.blendMode) {
+          case 'multiply': gco = 'multiply'; break;
+          case 'screen': gco = 'screen'; break;
+          case 'overlay': gco = 'overlay'; break;
+          case 'darken': gco = 'darken'; break;
+          case 'lighten': gco = 'lighten'; break;
+          default: gco = 'source-over'; break;
+        }
+        cctx.globalCompositeOperation = gco;
+        cctx.drawImage(layer.canvas, 0, 0);
+        cctx.restore();
+      }
+    }
+    if (dynamicTextureRef.current) {
+      dynamicTextureRef.current.needsUpdate = true;
+    }
+    needsRenderRef.current = true;
   };
 
   const drawStabilizerTether = (
@@ -1494,11 +1616,14 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           onZoomDelta={handleZoomDelta}
           onToggleOrtho={onToggleOrtho}
           onResetCamera={handleResetCamera}
+          onAutoFit={handleAutoFitModel}
           isOrtho={isOrtho}
           touchNavEnabled={touchNavEnabled}
           onToggleTouchNav={onToggleTouchNav}
           invertNav={invertNav}
           onToggleInvertNav={handleToggleInvertNav}
+          gizmoStyle={gizmoStyle}
+          zoomPulseTrigger={zoomPulseTrigger}
         />
       )}
 

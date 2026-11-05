@@ -19,14 +19,16 @@ export class SurfaceShadingEngine {
    * Caches original mesh normals into a 'defaultNormal' attribute if not already present.
    */
   public static ensureDefaultNormalsCached(geom: THREE.BufferGeometry): void {
-    if (!geom.getAttribute('defaultNormal')) {
+    if (!geom.getAttribute('origFileNormal')) {
       const normalAttr = geom.getAttribute('normal');
       if (normalAttr) {
+        geom.setAttribute('origFileNormal', normalAttr.clone());
         geom.setAttribute('defaultNormal', normalAttr.clone());
       } else {
         geom.computeVertexNormals();
         const computed = geom.getAttribute('normal');
         if (computed) {
+          geom.setAttribute('origFileNormal', computed.clone());
           geom.setAttribute('defaultNormal', computed.clone());
         }
       }
@@ -64,7 +66,7 @@ export class SurfaceShadingEngine {
     geom: THREE.BufferGeometry,
     material: THREE.Material | THREE.Material[] | null
   ): void {
-    const defaultNorm = geom.getAttribute('defaultNormal');
+    const defaultNorm = geom.getAttribute('origFileNormal') || geom.getAttribute('defaultNormal');
     if (defaultNorm) {
       geom.setAttribute('normal', defaultNorm.clone());
       geom.attributes.normal.needsUpdate = true;
@@ -78,9 +80,16 @@ export class SurfaceShadingEngine {
    * Dynamically recalculates and averages vertex normals across shared vertices using
    * angle-weighted face normal averaging for a continuous organic appearance.
    */
+  /**
+   * Mode: "Smooth"
+   * Dynamically calculates angle-weighted face normal averages with a crease-angle threshold (default 38°).
+   * Faces sharing a vertex are only averaged if their dihedral angle is within the threshold.
+   * This preserves razor-sharp architectural edges, chamfers, and window frames while keeping organic curves smooth.
+   */
   public static computeSmoothNormals(
     geom: THREE.BufferGeometry,
-    material: THREE.Material | THREE.Material[] | null
+    material: THREE.Material | THREE.Material[] | null,
+    creaseAngleThreshold: number = THREE.MathUtils.degToRad(38)
   ): void {
     const posAttr = geom.getAttribute('position');
     if (!posAttr) return;
@@ -89,7 +98,8 @@ export class SurfaceShadingEngine {
     const normals = new Float32Array(vertexCount * 3);
 
     // Spatial hash lookup: key = quantized position -> array of vertex indices sharing that position
-    const EPSILON = 1e-4;
+    // EPSILON 5e-4 accommodates CAD / SweetHome 3D coordinate floating point variances
+    const EPSILON = 5e-4;
     const posKey = (x: number, y: number, z: number): string => {
       const qx = Math.round(x / EPSILON);
       const qy = Math.round(y / EPSILON);
@@ -97,18 +107,14 @@ export class SurfaceShadingEngine {
       return `${qx}_${qy}_${qz}`;
     };
 
-    const sharedVertexMap = new Map<string, number[]>();
-    for (let i = 0; i < vertexCount; i++) {
-      const key = posKey(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-      let list = sharedVertexMap.get(key);
-      if (!list) {
-        list = [];
-        sharedVertexMap.set(key, list);
-      }
-      list.push(i);
-    }
+    const indexAttr = geom.getIndex();
+    const triangleCount = indexAttr ? indexAttr.count / 3 : Math.floor(vertexCount / 3);
 
-    // Temporary vectors for face normal and angle calculation
+    // 1. Compute and store face normal and angle weights for every triangle
+    const faceNormals: THREE.Vector3[] = new Array(triangleCount);
+    const faceVertexAngles: [number, number, number][] = new Array(triangleCount);
+    const triangleIndices: [number, number, number][] = new Array(triangleCount);
+
     const vA = new THREE.Vector3();
     const vB = new THREE.Vector3();
     const vC = new THREE.Vector3();
@@ -118,16 +124,9 @@ export class SurfaceShadingEngine {
     const edgeBA = new THREE.Vector3();
     const edgeCA = new THREE.Vector3();
     const edgeCB = new THREE.Vector3();
-    const faceNormal = new THREE.Vector3();
 
-    // Accumulation map: key -> Vector3 sum of weighted normals
-    const accumMap = new Map<string, THREE.Vector3>();
-    sharedVertexMap.forEach((_, key) => {
-      accumMap.set(key, new THREE.Vector3(0, 0, 0));
-    });
-
-    const indexAttr = geom.getIndex();
-    const triangleCount = indexAttr ? indexAttr.count / 3 : vertexCount / 3;
+    // Map each spatial vertex position to list of triangles sharing that position and vertex slot (0, 1, or 2)
+    const posToFaces = new Map<string, { triIndex: number; corner: number; vertIndex: number }[]>();
 
     for (let t = 0; t < triangleCount; t++) {
       let iA: number, iB: number, iC: number;
@@ -140,6 +139,7 @@ export class SurfaceShadingEngine {
         iB = t * 3 + 1;
         iC = t * 3 + 2;
       }
+      triangleIndices[t] = [iA, iB, iC];
 
       vA.set(posAttr.getX(iA), posAttr.getY(iA), posAttr.getZ(iA));
       vB.set(posAttr.getX(iB), posAttr.getY(iB), posAttr.getZ(iB));
@@ -147,56 +147,102 @@ export class SurfaceShadingEngine {
 
       edgeAB.subVectors(vB, vA);
       edgeAC.subVectors(vC, vA);
-      faceNormal.crossVectors(edgeAB, edgeAC);
-
-      const area2 = faceNormal.length();
-      if (area2 <= 1e-8) continue; // Degenerate face
-      faceNormal.divideScalar(area2); // Normalized face normal
+      const fn = new THREE.Vector3().crossVectors(edgeAB, edgeAC);
+      const area = fn.length();
+      if (area > 1e-8) {
+        fn.divideScalar(area);
+      } else {
+        fn.set(0, 1, 0);
+      }
+      faceNormals[t] = fn;
 
       edgeBC.subVectors(vC, vB);
       edgeBA.copy(edgeAB).negate();
       edgeCA.copy(edgeAC).negate();
       edgeCB.copy(edgeBC).negate();
 
-      // Angle weights at vertices A, B, C
       const angleA = Math.max(0, Math.min(Math.PI, edgeAB.angleTo(edgeAC)));
       const angleB = Math.max(0, Math.min(Math.PI, edgeBA.angleTo(edgeBC)));
       const angleC = Math.max(0, Math.min(Math.PI, edgeCA.angleTo(edgeCB)));
+      faceVertexAngles[t] = [angleA, angleB, angleC];
 
-      // Accumulate to spatial keys
       const keyA = posKey(vA.x, vA.y, vA.z);
       const keyB = posKey(vB.x, vB.y, vB.z);
       const keyC = posKey(vC.x, vC.y, vC.z);
 
-      const accA = accumMap.get(keyA);
-      if (accA) accA.addScaledVector(faceNormal, angleA);
+      if (!posToFaces.has(keyA)) posToFaces.set(keyA, []);
+      if (!posToFaces.has(keyB)) posToFaces.set(keyB, []);
+      if (!posToFaces.has(keyC)) posToFaces.set(keyC, []);
 
-      const accB = accumMap.get(keyB);
-      if (accB) accB.addScaledVector(faceNormal, angleB);
-
-      const accC = accumMap.get(keyC);
-      if (accC) accC.addScaledVector(faceNormal, angleC);
+      posToFaces.get(keyA)!.push({ triIndex: t, corner: 0, vertIndex: iA });
+      posToFaces.get(keyB)!.push({ triIndex: t, corner: 1, vertIndex: iB });
+      posToFaces.get(keyC)!.push({ triIndex: t, corner: 2, vertIndex: iC });
     }
 
-    // Normalize accumulated normals and assign back to all shared vertices
-    sharedVertexMap.forEach((indices, key) => {
-      const acc = accumMap.get(key);
-      if (!acc || acc.lengthSq() < 1e-8) {
-        acc?.set(0, 1, 0);
-      } else {
-        acc.normalize();
-      }
+    const cosThreshold = Math.cos(creaseAngleThreshold);
+    // Strict coplanar angle threshold: 2 degrees (cos ~ 0.99939) for dead-flat architectural planar walls
+    const cosCoplanar = Math.cos(THREE.MathUtils.degToRad(2.0));
 
-      const nx = acc!.x;
-      const ny = acc!.y;
-      const nz = acc!.z;
+    // 2. For each triangle corner, accumulate face normals with coplanar alignment and crease angle protection
+    const accumVec = new THREE.Vector3();
+    const coplanarVec = new THREE.Vector3();
 
-      for (const idx of indices) {
-        normals[idx * 3] = nx;
-        normals[idx * 3 + 1] = ny;
-        normals[idx * 3 + 2] = nz;
+    for (let t = 0; t < triangleCount; t++) {
+      const baseFn = faceNormals[t];
+      const [iA, iB, iC] = triangleIndices[t];
+      const vertIndices = [iA, iB, iC];
+
+      for (let corner = 0; corner < 3; corner++) {
+        const vIdx = vertIndices[corner];
+        const px = posAttr.getX(vIdx);
+        const py = posAttr.getY(vIdx);
+        const pz = posAttr.getZ(vIdx);
+        const key = posKey(px, py, pz);
+
+        const neighbors = posToFaces.get(key);
+        accumVec.set(0, 0, 0);
+
+        if (neighbors && neighbors.length > 0) {
+          // Pass A: Check for coplanar adjacent faces (< 2 deg)
+          coplanarVec.set(0, 0, 0);
+          let coplanarCount = 0;
+
+          for (const n of neighbors) {
+            const neighborFn = faceNormals[n.triIndex];
+            const dot = baseFn.dot(neighborFn);
+            if (dot >= cosCoplanar) {
+              coplanarVec.add(neighborFn);
+              coplanarCount++;
+            }
+          }
+
+          if (coplanarCount > 1) {
+            // Directly snap to unified coplanar normal to eliminate wavy/choppy shading on planar walls & floors
+            accumVec.copy(coplanarVec).normalize();
+          } else {
+            // Pass B: Standard angle-weighted blending within crease threshold
+            for (const n of neighbors) {
+              const neighborFn = faceNormals[n.triIndex];
+              const dot = baseFn.dot(neighborFn);
+              if (dot >= cosThreshold) {
+                const weight = faceVertexAngles[n.triIndex][n.corner];
+                accumVec.addScaledVector(neighborFn, Math.max(weight, 1e-4));
+              }
+            }
+          }
+        }
+
+        if (accumVec.lengthSq() < 1e-8) {
+          accumVec.copy(baseFn);
+        } else {
+          accumVec.normalize();
+        }
+
+        normals[vIdx * 3] = accumVec.x;
+        normals[vIdx * 3 + 1] = accumVec.y;
+        normals[vIdx * 3 + 2] = accumVec.z;
       }
-    });
+    }
 
     geom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
     geom.attributes.normal.needsUpdate = true;

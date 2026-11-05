@@ -82,6 +82,35 @@ export interface Layer {
   isGroup?: boolean;
   collapsed?: boolean;
   pbrSettings?: LayerPBRSettings;
+  isTextureFill?: boolean;
+  textureFillConfig?: TextureFillConfig;
+}
+
+export interface TextureFillConfig {
+  dataUrl: string;
+  name?: string;
+  scale: number;
+  repeat: number;
+  rotation: number;
+  randomize: boolean;
+  projection: 'triplanar' | 'box';
+}
+
+export type GizmoStyle = 'box' | 'sphere' | 'mountain';
+export type OptionsBarLayout = 'clusters' | 'compact' | 'minimal';
+export type TabletSubOperator = 'radial' | 'hud';
+export type RefreshRateMode = 'on_demand' | '30' | '60' | '120' | 'custom' | 'uncapped';
+
+export interface PreferencesState {
+  constantRefresh: boolean;
+  refreshRateMode: RefreshRateMode;
+  customRefreshRate: number;
+  gizmoStyle: GizmoStyle;
+  tabletMode: boolean;
+  navSensitivity: number;
+  optionsBarLayout: OptionsBarLayout;
+  tabletSubOperator: TabletSubOperator;
+  architecturalRepair: boolean;
 }
 
 export interface BloomSettings {

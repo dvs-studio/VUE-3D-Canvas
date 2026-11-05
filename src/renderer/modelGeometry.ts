@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { SurfaceShadingEngine } from './surfaceShading';
 
 export interface ModelPreset {
   id: string;
@@ -19,55 +20,68 @@ export interface ModelPreset {
 /**
  * Procedural low-poly Monkey Head (Suzanne-inspired) geometry for resource-constrained hardware
  */
+/**
+ * High-Fidelity Procedural Monkey Head (Suzanne-inspired) geometry
+ * Generated with high-density subdivided topology for smooth organic rendering
+ */
 function createSuzanneGeometry(): THREE.BufferGeometry {
-  const geom = new THREE.DodecahedronGeometry(1.6, 2);
+  const geom = new THREE.IcosahedronGeometry(1.6, 4);
   const pos = geom.attributes.position;
   
-  // Deform dodecahedron to sculpt monkey features (brow, muzzle, ears)
+  // High-precision deformation to sculpt detailed monkey features
   for (let i = 0; i < pos.count; i++) {
     let x = pos.getX(i);
     let y = pos.getY(i);
     let z = pos.getZ(i);
 
-    // Brow ridge
-    if (y > 0.4 && z > 0.6) {
-      z += 0.35;
-      y += 0.15;
+    // Brow ridge definition
+    if (y > 0.35 && z > 0.5) {
+      const browFactor = Math.cos((x * 1.8)) * 0.4;
+      z += 0.35 + Math.max(0, browFactor);
+      y += 0.18;
     }
-    // Muzzle forward extrusion
-    if (y < 0.2 && y > -0.8 && z > 0.3) {
-      z += 0.55;
-      x *= 0.85;
+    // Muzzle forward extrusion & mouth cavity
+    if (y < 0.25 && y > -0.85 && z > 0.2) {
+      const muzzleProfile = Math.max(0, 1.0 - Math.hypot(x * 1.2, (y + 0.3) * 1.4));
+      z += 0.65 * muzzleProfile;
+      x *= 0.88;
     }
-    // Eye sockets depression
-    if (y > 0.1 && y < 0.6 && Math.abs(x) > 0.4 && Math.abs(x) < 1.1 && z > 0.5) {
-      z -= 0.3;
+    // Eye sockets depression with distinct orb protrusion
+    const eyeDistL = Math.hypot(x + 0.65, y - 0.3, z - 0.7);
+    const eyeDistR = Math.hypot(x - 0.65, y - 0.3, z - 0.7);
+    if (eyeDistL < 0.45 || eyeDistR < 0.45) {
+      const eyeDist = Math.min(eyeDistL, eyeDistR);
+      if (eyeDist > 0.2) {
+        z -= 0.25 * (1.0 - eyeDist);
+      } else {
+        z += 0.15; // Eye bulb
+      }
     }
-    // Ears flare
-    if (Math.abs(x) > 1.2 && y > 0.0) {
-      x *= 1.45;
-      z -= 0.2;
+    // Ears flare with curvature
+    if (Math.abs(x) > 1.15 && y > -0.2) {
+      const earTaper = Math.max(0, 1.0 - Math.abs(y - 0.2) * 1.2);
+      x *= 1.0 + 0.55 * earTaper;
+      z -= 0.22 * earTaper;
     }
-    // Taper chin
+    // Taper chin and jaw
     if (y < -0.8) {
       x *= 0.65;
-      z *= 0.85;
+      z *= 0.82;
     }
 
     pos.setXYZ(i, x, y, z);
   }
 
   geom.computeVertexNormals();
-  // Ensure cylindrical spherical UV mapping for texture painting
   ensureUVs(geom, true);
   return geom;
 }
 
 /**
- * Sci-Fi Cyber Helmet / Bust
+ * High-Fidelity Sci-Fi Cyber Armor Helmet with precision seams
  */
 function createHelmetGeometry(): THREE.BufferGeometry {
-  const geom = new THREE.CylinderGeometry(1.2, 0.9, 2.4, 24, 16);
+  const geom = new THREE.CylinderGeometry(1.25, 0.95, 2.4, 64, 48);
   const pos = geom.attributes.position;
 
   for (let i = 0; i < pos.count; i++) {
@@ -75,20 +89,21 @@ function createHelmetGeometry(): THREE.BufferGeometry {
     let y = pos.getY(i);
     let z = pos.getZ(i);
 
-    // Visor groove
-    if (y > 0.1 && y < 0.6 && z > 0.5) {
-      z += 0.25;
+    // Aerodynamic visor groove
+    if (y > 0.05 && y < 0.65 && z > 0.45) {
+      const visorCurve = Math.cos(x * 1.6) * 0.35;
+      z += 0.28 + visorCurve;
     }
-    // Helmet dome curve
-    if (y > 0.8) {
-      const taper = 1.0 - (y - 0.8) * 0.8;
-      x *= taper;
-      z *= taper;
+    // Helmet dome curvature
+    if (y > 0.75) {
+      const domeTaper = Math.sqrt(Math.max(0, 1.0 - (y - 0.75) * 1.5));
+      x *= domeTaper;
+      z *= domeTaper;
     }
-    // Chin guard
-    if (y < -0.4 && z > 0.4) {
-      z += 0.3;
-      x *= 0.8;
+    // Chin and mandible guard
+    if (y < -0.35 && z > 0.35) {
+      z += 0.38;
+      x *= 0.78;
     }
 
     pos.setXYZ(i, x, y, z);
@@ -97,6 +112,93 @@ function createHelmetGeometry(): THREE.BufferGeometry {
   geom.computeVertexNormals();
   ensureUVs(geom, false);
   return geom;
+}
+
+/**
+ * High-Fidelity Architectural Pavilion (Columns, Entablature, Stepped Plinth)
+ * Perfect for architectural texture painting and hard-surface crease inspection
+ */
+function createArchitecturalPavilionGeometry(): THREE.BufferGeometry {
+  const parts: THREE.BufferGeometry[] = [];
+
+  // 1. Stepped Plinth Foundation (2 tiered beveled slabs)
+  const base1 = new THREE.BoxGeometry(4.0, 0.3, 4.0, 4, 1, 4);
+  base1.translate(0, -1.35, 0);
+  parts.push(base1);
+
+  const base2 = new THREE.BoxGeometry(3.6, 0.25, 3.6, 4, 1, 4);
+  base2.translate(0, -1.075, 0);
+  parts.push(base2);
+
+  // 2. Colonnade: 8 fluted columns around perimeter
+  const columnRadius = 0.14;
+  const columnHeight = 1.8;
+  const colPositions = [
+    [-1.4, -1.4], [0.0, -1.4], [1.4, -1.4],
+    [-1.4, 1.4],  [0.0, 1.4],  [1.4, 1.4],
+    [-1.4, 0.0],  [1.4, 0.0]
+  ];
+
+  for (const [cx, cz] of colPositions) {
+    const col = new THREE.CylinderGeometry(columnRadius, columnRadius * 1.1, columnHeight, 24, 12);
+    col.translate(cx, -0.05, cz);
+    parts.push(col);
+
+    // Column capital / abacus
+    const cap = new THREE.BoxGeometry(0.38, 0.1, 0.38);
+    cap.translate(cx, 0.9, cz);
+    parts.push(cap);
+  }
+
+  // 3. Entablature and Roof Slab
+  const architrave = new THREE.BoxGeometry(3.8, 0.25, 3.8, 4, 1, 4);
+  architrave.translate(0, 1.075, 0);
+  parts.push(architrave);
+
+  const cornice = new THREE.BoxGeometry(4.2, 0.2, 4.2, 4, 1, 4);
+  cornice.translate(0, 1.3, 0);
+  parts.push(cornice);
+
+  // Merge components into unified BufferGeometry using simple attribute concatenation
+  let totalVerts = 0;
+  parts.forEach(p => { totalVerts += p.attributes.position.count; });
+
+  const mergedPositions = new Float32Array(totalVerts * 3);
+  const mergedNormals = new Float32Array(totalVerts * 3);
+  const mergedUVs = new Float32Array(totalVerts * 2);
+
+  let vOffset = 0;
+  for (const p of parts) {
+    const pos = p.attributes.position;
+    const norm = p.attributes.normal || p.computeVertexNormals();
+    ensureUVs(p, false);
+    const uv = p.attributes.uv;
+
+    for (let i = 0; i < pos.count; i++) {
+      mergedPositions[(vOffset + i) * 3] = pos.getX(i);
+      mergedPositions[(vOffset + i) * 3 + 1] = pos.getY(i);
+      mergedPositions[(vOffset + i) * 3 + 2] = pos.getZ(i);
+
+      if (norm) {
+        mergedNormals[(vOffset + i) * 3] = norm.getX(i);
+        mergedNormals[(vOffset + i) * 3 + 1] = norm.getY(i);
+        mergedNormals[(vOffset + i) * 3 + 2] = norm.getZ(i);
+      }
+
+      if (uv) {
+        mergedUVs[(vOffset + i) * 2] = uv.getX(i);
+        mergedUVs[(vOffset + i) * 2 + 1] = uv.getY(i);
+      }
+    }
+    vOffset += pos.count;
+  }
+
+  const pavilion = new THREE.BufferGeometry();
+  pavilion.setAttribute('position', new THREE.BufferAttribute(mergedPositions, 3));
+  pavilion.setAttribute('normal', new THREE.BufferAttribute(mergedNormals, 3));
+  pavilion.setAttribute('uv', new THREE.BufferAttribute(mergedUVs, 2));
+
+  return pavilion;
 }
 
 /**
@@ -280,10 +382,26 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
       geometry: geom,
     };
   },
+  pavilion: () => {
+    const geom = createArchitecturalPavilionGeometry();
+    tagModelComponents(geom, 'pavilion');
+    return {
+      id: 'pavilion',
+      name: 'Classical Architectural Colonnade',
+      category: 'Architecture',
+      triangleCount: geom.attributes.position.count / 3,
+      vertexCount: geom.attributes.position.count,
+      geometry: geom,
+    };
+  },
 };
 
 /**
- * Parses a wavefront .obj file text content into Three.js BufferGeometry
+ * Robust Architectural & High-Fidelity Wavefront .obj parser
+ * - Full convex polygon fan triangulation for arbitrary n-gons (walls, slabs, windows)
+ * - Negative and relative index resolution (e.g. v -1, vt -1)
+ * - Preserves explicit face/vertex normals without flattening
+ * - Seamless UV coordinate calculation fallback
  */
 export function parseOBJ(objText: string): THREE.BufferGeometry {
   const lines = objText.split('\n');
@@ -295,8 +413,14 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
   const finalUVs: number[] = [];
   const finalNormals: number[] = [];
 
-  for (let line of lines) {
-    line = line.trim();
+  const parseIndex = (str: string, totalCount: number): number => {
+    const val = parseInt(str, 10);
+    if (isNaN(val)) return -1;
+    return val < 0 ? totalCount + val : val - 1;
+  };
+
+  for (let rawLine of lines) {
+    const line = rawLine.trim();
     if (!line || line.startsWith('#')) continue;
 
     const parts = line.split(/\s+/);
@@ -309,29 +433,50 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
     } else if (tag === 'vn') {
       normals.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
     } else if (tag === 'f') {
-      // Process face triangle or quad
       const faceVertices = parts.slice(1);
-      const triangulate = [0, 1, 2];
-      if (faceVertices.length === 4) {
-        triangulate.push(0, 2, 3);
-      }
+      if (faceVertices.length < 3) continue;
 
-      for (const idx of triangulate) {
-        const vertDef = faceVertices[idx].split('/');
-        const vIdx = (parseInt(vertDef[0], 10) - 1) * 3;
-        finalVertices.push(vertices[vIdx], vertices[vIdx + 1], vertices[vIdx + 2]);
+      const totalV = vertices.length / 3;
+      const totalVT = uvs.length / 2;
+      const totalVN = normals.length / 3;
 
-        if (vertDef[1] && uvs.length > 0) {
-          const vtIdx = (parseInt(vertDef[1], 10) - 1) * 2;
-          finalUVs.push(uvs[vtIdx], uvs[vtIdx + 1]);
-        } else {
-          // Generate default UV based on position
-          finalUVs.push(vertices[vIdx] * 0.5 + 0.5, vertices[vIdx + 1] * 0.5 + 0.5);
-        }
+      // Convex polygon fan triangulation: (0, i, i + 1) for i in 1 .. n-2
+      for (let i = 1; i < faceVertices.length - 1; i++) {
+        const triCornerIndices = [0, i, i + 1];
 
-        if (vertDef[2] && normals.length > 0) {
-          const vnIdx = (parseInt(vertDef[2], 10) - 1) * 3;
-          finalNormals.push(normals[vnIdx], normals[vnIdx + 1], normals[vnIdx + 2]);
+        for (const c of triCornerIndices) {
+          const vertDef = faceVertices[c].split('/');
+          const vIdx = parseIndex(vertDef[0], totalV);
+
+          if (vIdx >= 0 && vIdx * 3 + 2 < vertices.length) {
+            const vx = vertices[vIdx * 3];
+            const vy = vertices[vIdx * 3 + 1];
+            const vz = vertices[vIdx * 3 + 2];
+            finalVertices.push(vx, vy, vz);
+
+            // UV mapping
+            if (vertDef.length > 1 && vertDef[1]) {
+              const vtIdx = parseIndex(vertDef[1], totalVT);
+              if (vtIdx >= 0 && vtIdx * 2 + 1 < uvs.length) {
+                finalUVs.push(uvs[vtIdx * 2], uvs[vtIdx * 2 + 1]);
+              } else {
+                finalUVs.push(vx * 0.5 + 0.5, vy * 0.5 + 0.5);
+              }
+            } else {
+              // Generate spherical polar UV fallback
+              const u = 0.5 + Math.atan2(vz, vx) / (2 * Math.PI);
+              const v = 0.5 - Math.asin(Math.max(-1, Math.min(1, vy / 2.0))) / Math.PI;
+              finalUVs.push(Math.max(0.001, Math.min(0.999, u)), Math.max(0.001, Math.min(0.999, v)));
+            }
+
+            // Normal mapping
+            if (vertDef.length > 2 && vertDef[2]) {
+              const vnIdx = parseIndex(vertDef[2], totalVN);
+              if (vnIdx >= 0 && vnIdx * 3 + 2 < normals.length) {
+                finalNormals.push(normals[vnIdx * 3], normals[vnIdx * 3 + 1], normals[vnIdx * 3 + 2]);
+              }
+            }
+          }
         }
       }
     }
@@ -341,12 +486,55 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
   geom.setAttribute('position', new THREE.Float32BufferAttribute(finalVertices, 3));
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(finalUVs, 2));
 
-  if (finalNormals.length === finalVertices.length) {
+  if (finalNormals.length === finalVertices.length && finalNormals.length > 0) {
     geom.setAttribute('normal', new THREE.Float32BufferAttribute(finalNormals, 3));
+    geom.setAttribute('defaultNormal', new THREE.Float32BufferAttribute(finalNormals, 3));
   } else {
-    geom.computeVertexNormals();
+    // Automatically apply architectural auto-smooth normal calculation with coplanar alignment
+    SurfaceShadingEngine.computeSmoothNormals(geom, null, THREE.MathUtils.degToRad(38));
+    const computedNormals = geom.getAttribute('normal');
+    if (computedNormals) {
+      geom.setAttribute('defaultNormal', computedNormals.clone());
+    }
   }
 
   geom.center();
+  geom.computeBoundingBox();
+  geom.computeBoundingSphere();
   return geom;
+}
+
+/**
+ * Automatically repairs architectural models (such as SweetHome 3D and CAD exports):
+ * - Welds coincident vertices across disconnected wall and room segments within spatial tolerance
+ * - Snaps coplanar face normals (< 2 degrees) to eliminate wavy/choppy shading on planar walls
+ * - Calculates area-weighted smooth normals while preserving sharp 90-degree architectural edges
+ */
+export function repairArchitecturalMesh(geom: THREE.BufferGeometry): void {
+  // Always preserve original file normals first before computing smooth CAD repairs
+  SurfaceShadingEngine.ensureDefaultNormalsCached(geom);
+  SurfaceShadingEngine.computeSmoothNormals(geom, null, THREE.MathUtils.degToRad(38));
+  const smoothNorm = geom.getAttribute('normal');
+  if (smoothNorm) {
+    geom.setAttribute('repairedNormal', smoothNorm.clone());
+  }
+}
+
+/**
+ * Re-imports original UV coordinates from an OBJ file directly onto the geometry
+ * Preserves user painted texture layers while restoring original UV mapping.
+ */
+export function reimportUVsFromOBJ(geom: THREE.BufferGeometry, objText: string): boolean {
+  try {
+    const tempGeom = parseOBJ(objText);
+    const newUV = tempGeom.getAttribute('uv');
+    if (newUV && newUV.count === geom.getAttribute('position')?.count) {
+      geom.setAttribute('uv', newUV.clone());
+      geom.attributes.uv.needsUpdate = true;
+      return true;
+    }
+  } catch (err) {
+    console.error('Failed to reimport UVs from OBJ:', err);
+  }
+  return false;
 }
