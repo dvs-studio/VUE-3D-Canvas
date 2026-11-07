@@ -225,6 +225,24 @@ Victory reported:
   - Added top **View** and **Options** dropdown menus housing Viewport Shading, Surface Normals, Camera Layout, Canvas View Mode, 3D Mesh selection, and Mesh Parts isolation.
   - Added 3-way layout switch in Preferences: Grouped Clusters (`'clusters'`), Minimal Clean (`'minimal'`), and Collapsible Groups (`'compact'`). Minimal layout keeps only brush controls on the sub-bar and relocates viewport controls to the menu bar, completely preventing button overlaps.
 - **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, updating `self-host/public` with the latest bundle (`index-BblJ2yhP.js`).
+- **Autodesk Sketchbook Pro & Maya Lagoon Radial Interface (`LagoonMenu.tsx`):**
+  - Integrated full-featured Lagoon radial puck into the top header (toggle button before `Projection [F8]`) and via `Tab` key shortcut.
+  - When active, collapses top options bar and left tool palette into an expansive full-screen drawing canvas, while preserving the 3D Orientation Gizmo and right dockers / N-Panel.
+  - Features 6 interactive wings: Tools, Brush Dynamics (Size, Opacity, Hardness, Stroke Modes), Colors & Quick Swatches, Layers, Views (Camera snap & Ortho/Persp), and Project Actions (.xblend, OBJ export, Projection snapshot).
+  - Floating puck is draggable with boundary clamping and non-blocking background pointer pass-through.
+- **Camera Viewpoints Snapping in View Menu & Lagoon:**
+  - Connected Front (`Num 1`), Back (`Ctrl+Num 1`), Right (`Num 3`), Left (`Ctrl+Num 3`), Top (`Num 7`), Bottom (`Ctrl+Num 7`), Ortho/Persp (`Num 5`), Reset (`Num 0`), and Auto-Fit Frame (`Num .`) in `PhotoshopMenuBar.tsx`.
+  - Dispatches `viewSnapTrigger` to `Viewport3D.tsx`, snapping camera theta and phi spherical coordinates and forcing immediate `needsRenderRef.current = true`.
+- **Uncapped Refresh Rate in Preferences:**
+  - Added 6th refresh rate mode `Uncapped (Disable Cap / Max FPS)` in `PreferencesModal.tsx` and `types.ts`.
+  - Disables frame delta throttling in `Viewport3D.tsx`, unlocking maximum framerates on high-refresh monitors and benchmark runs.
+- **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, updating `self-host/public` with the latest bundle (`index-DskiiCkq.js`).
+- **Master Technical Documentation (`API_DOCUMENTATION.md`):**
+  - Comprehensive unified technical specification covering Viewport Architecture, Brush Engine & Stabilizer, Layering System & Compositing, Filter Suite, Blender 2.8+ Node Graph Evaluator, Multi-UV Channel Manager, and Hardware Acceleration (ANGLE DirectX 11 / Desktop OpenGL bridge).
+- **Master Development Architecture Guide (`DEVELOPMENT.md`):**
+  - Detailed guide covering program genesis by Victory Ukpong, Rust native Windows WebView2 desktop app (`crates/vue3d_core`), self-hosted web distribution (`self-host/`), immutable constraints (3-state undo, linked assets, no ray-tracing/D3D12), and AI model transfer recommendations.
+- **Complete Documentation Cross-Reference Index:**
+  - Added centralized documentation directory in `AGENTS.md` and `DEVELOPMENT.md` connecting all operational markdown files.
 
 
 

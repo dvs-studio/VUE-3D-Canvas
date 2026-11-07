@@ -79,6 +79,7 @@ import { MaskPanel } from './ui/panels/MaskPanel';
 import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
 import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
 import { GpuDiagnosticsModal } from './ui/GpuDiagnosticsModal';
+import { LagoonMenu } from './ui/LagoonMenu';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -280,6 +281,7 @@ export default function App() {
   const [surfaceMode, setSurfaceMode] = useState<SurfaceShadingMode>('default');
 
   const [isPreferencesOpen, setIsPreferencesOpen] = useState<boolean>(false);
+  const [isLagoonActive, setIsLagoonActive] = useState<boolean>(false);
 
   // Tablet Mode Workspace Drawer & Carousel States
   const [tabletDrawerOpen, setTabletDrawerOpen] = useState<boolean>(false);
@@ -544,6 +546,13 @@ export default function App() {
       if (e.key === 'F8') {
         e.preventDefault();
         triggerProjectionScreenshot();
+        return;
+      }
+
+      // Tab: Toggle Autodesk Sketchbook / Maya Lagoon Mode
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        setIsLagoonActive(lagoon => !lagoon);
         return;
       }
 
@@ -1508,10 +1517,12 @@ export default function App() {
         onSelectViewLayout={setViewLayout}
         isSymmetryX={symmetryConfig.activeRealtimeMirror}
         onToggleSymmetryX={() => setSymmetryConfig(c => ({ ...c, activeRealtimeMirror: !c.activeRealtimeMirror }))}
+        isLagoonActive={isLagoonActive}
+        onToggleLagoon={() => setIsLagoonActive(v => !v)}
       />
 
-      {/* 2. Tool Options Sub-Toolbar (Standard or Tablet Carousel) */}
-      {!preferences.tabletMode ? (
+      {/* 2. Tool Options Sub-Toolbar (Standard or Tablet Carousel) - Collapsed in Lagoon Mode */}
+      {!isLagoonActive && (!preferences.tabletMode ? (
         <ToolOptionsBar
           activeTool={activeTool}
           brush={activeBrush}
@@ -1627,12 +1638,12 @@ export default function App() {
           )}
         </div>
       </>
-    )}
+    ))}
 
       {/* 3. Main Workspace Area: Left ToolBox + Center Viewport(s) + Right Dockable Panels */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Tool Palette: Desktop Column vs Tablet Bottom-Left Circular Carousel */}
-        {!preferences.tabletMode ? (
+        {/* Left Tool Palette: Desktop Column vs Tablet Bottom-Left Circular Carousel (Hidden in Lagoon Mode) */}
+        {!isLagoonActive && (!preferences.tabletMode ? (
           <ToolBox
             activeTool={activeTool}
             onSelectTool={setActiveTool}
@@ -1710,7 +1721,7 @@ export default function App() {
               <Paintbrush className="w-6 h-6" />
             </button>
           </div>
-        )}
+        ))}
 
         {/* Center Viewport Area (3D, 2D, or Split) */}
         <div className="flex-1 flex overflow-hidden relative bg-[#242424]">
@@ -1792,6 +1803,34 @@ export default function App() {
                 onRebakeTexture={handleRebakeTexture}
               />
             </div>
+          )}
+
+          {/* Autodesk Sketchbook Pro & Maya Lagoon Radial Interface */}
+          {isLagoonActive && (
+            <LagoonMenu
+              activeTool={activeTool}
+              onSelectTool={setActiveTool}
+              brush={activeBrush}
+              onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
+              onSelectPrimaryColor={setPrimaryColor}
+              onSwapColors={swapColors}
+              layers={layers}
+              activeLayerId={activeLayerId}
+              onSelectLayer={setActiveLayerId}
+              onAddLayer={handleAddLayer}
+              onToggleLayerVisibility={handleToggleVisibility}
+              onNumpadKey={handleNumpadKey}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={undoBuffer.canUndo()}
+              canRedo={undoBuffer.canRedo()}
+              onSaveProject={handleSaveXBlend}
+              onExportOBJ={handleExportOBJ}
+              onTriggerProjection={triggerProjectionScreenshot}
+              onCloseLagoon={() => setIsLagoonActive(false)}
+            />
           )}
         </div>
 

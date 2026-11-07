@@ -146,3 +146,34 @@
   - Author master `API_DOCUMENTATION.md` detailing Viewport, Brush, Layering, Filters, WebGL/DirectX/OpenGL ANGLE architecture, and Shader Nodes.
   - Author master `DEVELOPMENT.md` detailing program genesis, Rust native desktop app, and self-hosted distribution architecture.
   - Update `AGENTS.md` and `AGENT_STATE.md` with links to all development documentation.
+
+### 2026-11-05 — post-execution (Lagoon radial menu, camera viewpoints fix, uncapped refresh rate, and master docs landed)
+- Appended capabilities to the Web and Self-Hosted application suites:
+  - **Autodesk Sketchbook / Maya Lagoon Radial Interface (`LagoonMenu.tsx`):**
+    - Toggle button placed directly before `Projection [F8]` in the top menu bar (`PhotoshopMenuBar.tsx`), with `Tab` keyboard shortcut.
+    - When active, collapses the top options sub-toolbar and left tool column into an expansive full-screen drawing canvas, while preserving the 3D Orientation Gizmo and right dockable panels / N-Panel.
+    - Draggable floating puck with 6 radial wings: Tools, Brush Dynamics (Size, Opacity, Hardness, Stroke Modes), Colors & Swatches, Layers, Views, and Project (.xblend, OBJ export, Projection snapshot).
+  - **Camera Viewpoints Snapping in View Menu:**
+    - Fixed Front (`Num 1`), Back (`Ctrl+Num 1`), Right (`Num 3`), Left (`Ctrl+Num 3`), Top (`Num 7`), Bottom (`Ctrl+Num 7`), Ortho/Persp (`Num 5`), Reset (`Num 0`), and Auto-Fit Frame (`Num .`) in `PhotoshopMenuBar.tsx`.
+    - Wired `onNumpadKey` through `viewSnapTrigger` state in `App.tsx` directly to `Viewport3D.tsx`, recalculating spherical angles ($\theta, \phi$) and triggering immediate dirty-frame rendering.
+  - **Uncapped Refresh Rate in Preferences (`PreferencesModal.tsx`):**
+    - Added 6th refresh rate mode `Uncapped (Disable Cap / Max FPS)` in Preferences alongside On-Demand, 30 FPS, 60 FPS, 120 FPS, and Custom VSync.
+    - Bypasses all `frameInterval` throttling in `Viewport3D.tsx`, unlocking maximum allowable GPU throughput.
+  - **Self-Hosted Distribution Rebuilt & Synced:** Ran `npm run host:sync`, updating `self-host/public` with the latest bundle (`index-DskiiCkq.js`).
+  - **Master Technical Documentation (`API_DOCUMENTATION.md`):**
+    - Authoritative unified API specification detailing Viewport Architecture, Brush Engine & Stabilizer, Layering System & Canvas Compositing, Filter Suite, Blender 2.8+ Node Graph Evaluator, Multi-UV Channel Manager, and Hardware Acceleration (ANGLE DirectX 11 / Desktop OpenGL bridge).
+  - **Master Development Architecture Guide (`DEVELOPMENT.md`):**
+    - Comprehensive guide detailing program genesis by Victory Ukpong, Rust native Windows WebView2 desktop app (`crates/vue3d_core`), self-hosted web distribution (`self-host/`), immutable constraints (3-state undo, linked assets, no ray-tracing/D3D12), and AI model transfer recommendations.
+
+## Complete Development Documentation Index
+| Document | Purpose & Key Topics |
+| :--- | :--- |
+| [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md) | Technical reference for Viewport, Brush Engine, Layering, Filters, WebGL, Node Graph, Textures, and ANGLE DirectX 11/OpenGL bridge. |
+| [`DEVELOPMENT.md`](./DEVELOPMENT.md) | Architectural genesis, Rust desktop app, Self-hosted distribution, constraints, and AI model handover recommendations. |
+| [`AGENTS.md`](./AGENTS.md) | Architectural decisions ledger, immutable governing rules, and historical execution log. |
+| [`AGENT_STATE.md`](./AGENT_STATE.md) | Detailed ledger of all live tools, panels, shaders, dialogs, and UI features. |
+| [`HANDOFF_PROMPT.md`](./HANDOFF_PROMPT.md) | Context priming prompt for conversational transfer between AI coding engines. |
+| [`XBLEND_FORMAT_SPECIFICATION.md`](./XBLEND_FORMAT_SPECIFICATION.md) | Binary and JSON layout of `.xblend` project files and 3-state ring buffer history. |
+| [`WINDOWS_BUILD_INSTRUCTIONS.md`](./WINDOWS_BUILD_INSTRUCTIONS.md) | Step-by-step instructions for building the native Windows desktop package. |
+| [`BLENDER_ADDON_PROMPT.md`](./BLENDER_ADDON_PROMPT.md) | Instructions for the companion Blender 2.8+ node graph importer script. |
+
