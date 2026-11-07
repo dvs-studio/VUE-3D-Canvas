@@ -177,3 +177,15 @@
 | [`WINDOWS_BUILD_INSTRUCTIONS.md`](./WINDOWS_BUILD_INSTRUCTIONS.md) | Step-by-step instructions for building the native Windows desktop package. |
 | [`BLENDER_ADDON_PROMPT.md`](./BLENDER_ADDON_PROMPT.md) | Instructions for the companion Blender 2.8+ node graph importer script. |
 
+### 2026-11-07 — pre-execution (self-host navigation, mesh normals, file://)
+- Victory will test GitHub Actions artifacts and give feedback before any Windows exe rewrite. This execution does not edit `crates/vue3d_core`.
+- Answer recorded here: the Windows build can be rewritten from the programme that already exists. Read `src/renderer/Viewport3D.tsx`, `modelGeometry.ts`, and `surfaceShading.ts`, then replace the WebView2 window with a Win32 process that creates a real DirectX 11 device and swapchain, and a real OpenGL context when `--opengl` is passed. Do not compile the React UI as if it were HLSL. Do not ship another console that only prints "DirectX initialized". The next agent does that rewrite only after Victory says the self-host test passed.
+- Suggestions kept with the self-host, not deferred:
+  - Free tumble. The current orbit clamps `phi` to `(0.0001, π-0.0001)` in `Viewport3D.tsx` and `NavigatorPanel.tsx`. That is the lock. Replace it with a quaternion camera and do not clamp pitch, yaw, or roll.
+  - Imported OBJ keeps the file normals. If a face has no `vn`, fill only that face with its own flat normal. Do not run the 38° smooth on load. Smooth and Flat stay as buttons. Architectural auto-repair stays a button, not the default on import.
+  - Scale an imported OBJ to a unit bounding sphere so a building and a character both land in view. Do not scale the built-in presets.
+  - Session undo stays a normal stack (default 30). `.xblend` still stores only the last 3. Do not cap the live session at 3.
+  - `self-host/public/index.html` must run from `file://` and from `http://`. Inline the script and CSS. Keep `server.js` for HTTP.
+- Workflow first: add `.github/workflows/build-self-host.yml` (`workflow_dispatch` only) before the painter edits. It runs `npm run host:sync` and uploads a zip of `self-host/` (no `storage/`).
+- Next task after Victory's test, and not before: rewrite the Windows exe onto DirectX 11 and OpenGL using the behaviour this self-host pass locks in.
+
