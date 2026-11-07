@@ -1,0 +1,52 @@
+name: Build Self-Hosted Programme
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-self-host:
+    name: Pack the painter for file and http
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build and sync self-host
+        run: npm run host:sync
+
+      - name: Refuse a package that is not the painter
+        run: |
+          set -euo pipefail
+          test -f self-host/public/index.html
+          test -f self-host/server.js
+          grep -q "VUE 3D Canvas" self-host/public/index.html
+          grep -q 'type="module"' self-host/public/index.html
+          if grep -q 'src="[^"]*\.js"' self-host/public/index.html; then
+            echo "index.html still loads an external script, so file:// will be blank."
+            exit 1
+          fi
+
+      - name: Zip the self-host folder
+        run: |
+          set -euo pipefail
+          mkdir -p packaging
+          tar -C self-host --exclude storage -czf packaging/VUE_3D_Canvas_SelfHost.tar.gz .
+          tar -tzf packaging/VUE_3D_Canvas_SelfHost.tar.gz | head
+
+      - name: Upload the self-host package
+        uses: actions/upload-artifact@v4
+        with:
+          name: VUE_3D_Canvas_SelfHost
+          path: packaging/VUE_3D_Canvas_SelfHost.tar.gz
+          if-no-files-found: error
