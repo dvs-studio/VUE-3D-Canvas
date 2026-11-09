@@ -23,4 +23,27 @@ if (bundles.length === 0) {
 
 fs.rmSync(pub, { recursive: true, force: true });
 fs.cpSync(dist, pub, { recursive: true });
-console.log(`self-host/public now serves ${bundles.join(', ')}`);
+
+const publicIndex = path.join(pub, 'index.html');
+let html = fs.readFileSync(publicIndex, 'utf8');
+html = html.replace(/<link rel="modulepreload"[^>]*>/g, '');
+html = html.replace(/<link rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g, (tag, href) => {
+  if (/^https?:/i.test(href)) return tag;
+  const file = path.join(pub, href.replace(/^\.\//, ''));
+  if (!fs.existsSync(file)) return tag;
+  const css = fs.readFileSync(file, 'utf8');
+  return `<style>\n${css}\n</style>`;
+});
+html = html.replace(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g, (tag, src) => {
+  if (/^https?:/i.test(src)) return tag;
+  const file = path.join(pub, src.replace(/^\.\//, ''));
+  if (!fs.existsSync(file)) return tag;
+  const js = fs.readFileSync(file, 'utf8').replace(/<\/script/gi, '<\\/script');
+  return `<script type="module">\n${js}\n</script>`;
+});
+fs.writeFileSync(publicIndex, html);
+if (/src="[^"]+\.js"/.test(html)) {
+  console.error('self-host/public/index.html still points at an external script.');
+  process.exit(1);
+}
+console.log(`self-host/public now serves ${bundles.join(', ')} inlined into index.html for file:// and http://`);

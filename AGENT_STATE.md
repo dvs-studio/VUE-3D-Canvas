@@ -244,5 +244,15 @@ Victory reported:
 - **Complete Documentation Cross-Reference Index:**
   - Added centralized documentation directory in `AGENTS.md` and `DEVELOPMENT.md` connecting all operational markdown files.
 
+## 10. Superseding note — 2026-11-09 self-host tumble and file normals
+
+The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snaps still exist. The orbit no longer clamps.
+
+- Free tumble: `src/renderer/freeCamera.ts`, used by `Viewport3D.tsx` and `NavigatorPanel.tsx`.
+- OBJ import: file normals stay. Missing `vn` is a flat face normal. No automatic 38° smooth. Unit-sphere scale on imported OBJ only. Weld preference defaults off.
+- Session undo remains 30. The file still saves 3.
+- Self-host page is inlined (`index-BahJ6256.js` inside `self-host/public/index.html`) for `file://` and `http://`.
+- Windows exe was not changed. Next step waits for Victory's test of this self-host build.
+
 
 

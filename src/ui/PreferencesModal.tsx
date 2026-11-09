@@ -303,14 +303,14 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
             <label className="flex items-start gap-2.5 cursor-pointer bg-[#323232] p-2.5 rounded border border-[#404040]">
               <input
                 type="checkbox"
-                checked={preferences.architecturalRepair ?? true}
+                checked={preferences.architecturalRepair === true}
                 onChange={(e) => onUpdatePreferences({ architecturalRepair: e.target.checked })}
                 className="mt-0.5 accent-[#3d7fb8]"
               />
               <div className="text-[11px]">
-                <strong className="text-white block">Auto-Weld Split Vertices &amp; Snap Coplanar Normals</strong>
+                <strong className="text-white block">Weld split vertices on import</strong>
                 <span className="text-[#999] text-[10px] leading-snug block mt-0.5">
-                  Automatically welds coincident vertices at disconnected wall joints and snaps coplanar face normals (&lt; 2° dihedral angle) to eliminate wavy, choppy, or blackened shading on walls and floor slabs.
+                  Off by default. Import shows the file normals. Smooth and Flat are the overwrite buttons. Turn this on only when a CAD wall needs the weld, then re-import. Def restores the cached file normals.
                 </span>
               </div>
             </label>

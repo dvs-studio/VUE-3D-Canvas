@@ -150,19 +150,30 @@ export default function App() {
 
   // Application Preferences & Workspace Settings
   const [preferences, setPreferences] = useState<PreferencesState>(() => {
-    try {
-      const saved = localStorage.getItem('vue3d_preferences');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return {
+    const defaults: PreferencesState = {
       constantRefresh: false,
+      refreshRateMode: 'on_demand',
+      customRefreshRate: 60,
       gizmoStyle: 'box',
       tabletMode: false,
       navSensitivity: 1.0,
       optionsBarLayout: 'clusters',
       tabletSubOperator: 'radial',
-      architecturalRepair: true,
+      architecturalRepair: false,
     };
+    try {
+      const saved = localStorage.getItem('vue3d_preferences');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.fileNormalsOnImport !== true) {
+          parsed.architecturalRepair = false;
+          parsed.fileNormalsOnImport = true;
+          localStorage.setItem('vue3d_preferences', JSON.stringify({ ...defaults, ...parsed }));
+        }
+        return { ...defaults, ...parsed };
+      }
+    } catch {}
+    return defaults;
   });
 
   const handleUpdatePreferences = useCallback((patch: Partial<PreferencesState>) => {
@@ -197,7 +208,7 @@ export default function App() {
     } else {
       geom = BUILTIN_MODELS.suzanne().geometry;
     }
-    if (preferences.architecturalRepair !== false) {
+    if (customOBJText && preferences.architecturalRepair === true) {
       repairArchitecturalMesh(geom);
     }
     UVChannelManager.ensureBaseChannels(geom);
@@ -212,7 +223,7 @@ export default function App() {
   const [zoomFactor, setZoomFactor] = useState<number>(1.0);
   const [selectionMask, setSelectionMask] = useState<SelectionMask | null>(null);
 
-  // Undo Ring Buffer (Strict 3 max states)
+  // Live undo is a normal stack (default 30). Only the .xblend file stores 3 states.
   const [undoBuffer] = useState<UndoRingBuffer>(() => new UndoRingBuffer());
 
   // Procedural Node Graph

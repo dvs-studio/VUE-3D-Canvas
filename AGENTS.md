@@ -189,3 +189,11 @@
 - Workflow first: add `.github/workflows/build-self-host.yml` (`workflow_dispatch` only) before the painter edits. It runs `npm run host:sync` and uploads a zip of `self-host/` (no `storage/`).
 - Next task after Victory's test, and not before: rewrite the Windows exe onto DirectX 11 and OpenGL using the behaviour this self-host pass locks in.
 
+### 2026-11-09 — post-execution (self-host tumble, file normals, file://)
+- Pre-edit bookend is `fcf1ad8`. The workflow file landed first as `86528df` (`.github/workflows/build-self-host.yml`, `workflow_dispatch` only). `crates/vue3d_core` was not edited.
+- `src/renderer/freeCamera.ts` replaces the clamped theta/phi orbit in `Viewport3D.tsx` and `NavigatorPanel.tsx`. Dragging tumbles on the camera's own up and right. There is no pitch stop. Zoom is not capped at 100000. Numpad snaps still set front, back, left, right, top, and bottom, then tumble continues from there.
+- `parseOBJ` keeps file `vn` normals in `origFileNormal`. A face with no `vn` gets that face's flat normal only. It does not call the 38° smooth on load. Imported OBJ is scaled to a unit bounding sphere. Built-in presets are not scaled. Architectural weld runs only when the preference is on and an OBJ is imported. The first load of this build turns that preference off (`fileNormalsOnImport`).
+- Live undo is still the 30-state stack in `UndoRingBuffer`. `.xblend` still stores 3. That split was already in `src/core/history.ts`. It was not capped down.
+- `scripts/sync_self_host.mjs` inlines the JS and CSS into `self-host/public/index.html`, so the same page opens on `file://` and through `node server.js`. Verified: `npm run host:sync` wrote `index-BahJ6256.js` (1,544,928 bytes) inlined into the HTML, and `http://127.0.0.1:4173/` returned `text/html` 200. The HTML has no `<script src="*.js">`.
+- Victory tests this from Actions → Build Self-Hosted Programme, or by opening `self-host/public/index.html`. Do not start the DirectX exe until that test is accepted.
+

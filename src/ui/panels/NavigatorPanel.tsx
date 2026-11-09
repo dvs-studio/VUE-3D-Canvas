@@ -11,6 +11,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { BUILTIN_MODELS, parseOBJ } from '../../renderer/modelGeometry';
+import { applyFreeCamera, quatFromSpherical, tumbleFreeCamera, yawAroundWorldUp } from '../../renderer/freeCamera';
 import { SurfaceShadingEngine, SurfaceShadingType } from '../../renderer/surfaceShading';
 import { RotateCw, RefreshCw, ZoomIn, ZoomOut, Compass, Smartphone, Box } from 'lucide-react';
 
@@ -54,9 +55,8 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
 
   const orbitState = useRef({
     radius: 4.8,
-    theta: 0.8,
-    phi: 1.2,
     target: new THREE.Vector3(0, 0, 0),
+    quat: quatFromSpherical(0.8, 1.2),
     isOrbiting: false,
     isPanning: false,
     lastX: 0,
@@ -79,7 +79,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     scene.background = new THREE.Color('#1c1c1c');
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.001, 1000);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.0001, 1e7);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
@@ -132,7 +132,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     const animate = () => {
       animId = requestAnimationFrame(animate);
       if (autoRotateRef.current) {
-        orbitState.current.theta += 0.015;
+        yawAroundWorldUp(orbitState.current, 0.015);
       }
       updateCamera();
       renderer.render(scene, camera);
@@ -218,19 +218,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
   }, [materialProps]);
 
   const updateCamera = () => {
-    const { radius, theta, phi, target } = orbitState.current;
-    const sinPhi = Math.sin(phi);
-    const cosPhi = Math.cos(phi);
-    const x = radius * sinPhi * Math.sin(theta);
-    const y = radius * cosPhi;
-    const z = radius * sinPhi * Math.cos(theta);
-
-    if (cameraRef.current) {
-      // Dynamic non-singular up-vector so looking at top or bottom in supervisor never locks
-      cameraRef.current.up.set(-cosPhi * Math.sin(theta), sinPhi, -cosPhi * Math.cos(theta));
-      cameraRef.current.position.set(x + target.x, y + target.y, z + target.z);
-      cameraRef.current.lookAt(target);
-    }
+    if (cameraRef.current) applyFreeCamera(cameraRef.current, orbitState.current, 1);
   };
 
   // Supervisor Touch & Mouse Input Handlers (NEVER paints on model)
@@ -262,7 +250,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
       const pts = Array.from(activePointers.current.values());
       const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       if (pinchStartDist.current && pinchStartDist.current > 0) {
-        orbitState.current.radius = Math.max(0.001, Math.min(1000.0, pinchStartRadius.current * (pinchStartDist.current / dist)));
+        orbitState.current.radius = Math.max(1e-6, pinchStartRadius.current * (pinchStartDist.current / dist));
       }
       return;
     }
@@ -270,9 +258,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     if (orbitState.current.isOrbiting) {
       const dx = e.clientX - orbitState.current.lastX;
       const dy = e.clientY - orbitState.current.lastY;
-      orbitState.current.theta += dx * 0.015;
-      // Allow unrestricted pitch orbit without locking at top or bottom
-      orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, orbitState.current.phi - dy * 0.015));
+      tumbleFreeCamera(orbitState.current, dx, -dy, 0.008);
       orbitState.current.lastX = e.clientX;
       orbitState.current.lastY = e.clientY;
     } else if (orbitState.current.isPanning) {
@@ -298,13 +284,12 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
 
   const handleWheel = (e: React.WheelEvent) => {
     const factor = Math.exp(e.deltaY * 0.002);
-    orbitState.current.radius = Math.max(0.001, Math.min(1000.0, orbitState.current.radius * factor));
+    orbitState.current.radius = Math.max(1e-6, orbitState.current.radius * factor);
   };
 
   const handleReset = () => {
     orbitState.current.radius = 4.8;
-    orbitState.current.theta = 0.8;
-    orbitState.current.phi = 1.2;
+    orbitState.current.quat.copy(quatFromSpherical(0.8, 1.2));
     orbitState.current.target.set(0, 0, 0);
   };
 

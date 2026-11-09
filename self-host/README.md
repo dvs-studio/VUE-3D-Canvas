@@ -37,6 +37,7 @@ This directory contains the **Self-Hosted Standalone Distribution** of **VUE 3D 
    ```
    http://localhost:3000
    ```
+   Or open `public/index.html` directly (`file://`). The page inlines the painter, so both addresses use the same JavaScript. Do not use an older copy that still has `<script src="./assets/...">`.
 
 ### Method B: 1-Click Launch Scripts
 - **Windows:** Double-click `start.bat`.

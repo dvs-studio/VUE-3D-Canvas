@@ -29,6 +29,7 @@ import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
+import { applyFreeCamera, gizmoAngles, quatFromSpherical, tumbleFreeCamera } from './freeCamera';
 import { SurfaceShadingEngine, SurfaceShadingType } from './surfaceShading';
 import { LayoutGrid, Sun, Sparkles, Sliders, Image, Check, Zap, Compass } from 'lucide-react';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -185,12 +186,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const pinchStartRadius = useRef<number>(4.8);
   const twoFingerStartMidpoint = useRef<{ x: number; y: number } | null>(null);
 
-  // Camera Orbit State (Zero rotation lock - smooth intuitive navigation always!)
+  // Quaternion tumble. No theta/phi clamp, so the view does not lock at the poles.
   const orbitState = useRef({
     radius: 4.8,
-    theta: 0.78, // Y-axis angle
-    phi: 1.15,   // X-axis angle
     target: new THREE.Vector3(0, 0, 0),
+    quat: quatFromSpherical(0.78, 1.15),
     isOrbiting: false,
     isPanning: false,
     lastMouseX: 0,
@@ -369,23 +369,23 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     const aspect = width / height;
     // Unlimited near/far clipping planes for infinite zoom
-    const perspCam = new THREE.PerspectiveCamera(45, aspect, 0.001, 100000);
-    const orthoCam = new THREE.OrthographicCamera(-3 * aspect, 3 * aspect, 3, -3, 0.001, 100000);
+    const perspCam = new THREE.PerspectiveCamera(45, aspect, 0.0001, 1e7);
+    const orthoCam = new THREE.OrthographicCamera(-3 * aspect, 3 * aspect, 3, -3, 0.0001, 1e7);
     cameraPerspRef.current = perspCam;
     cameraOrthoRef.current = orthoCam;
 
     // Quad View Orthographic Cameras (Top, Front, Right)
-    const topCam = new THREE.OrthographicCamera(-2.5 * aspect, 2.5 * aspect, 2.5, -2.5, 0.001, 100000);
+    const topCam = new THREE.OrthographicCamera(-2.5 * aspect, 2.5 * aspect, 2.5, -2.5, 0.0001, 1e7);
     topCam.position.set(0, 30, 0);
     topCam.up.set(0, 0, -1);
     topCam.lookAt(0, 0, 0);
 
-    const frontCam = new THREE.OrthographicCamera(-2.5 * aspect, 2.5 * aspect, 2.5, -2.5, 0.001, 100000);
+    const frontCam = new THREE.OrthographicCamera(-2.5 * aspect, 2.5 * aspect, 2.5, -2.5, 0.0001, 1e7);
     frontCam.position.set(0, 0, 30);
     frontCam.up.set(0, 1, 0);
     frontCam.lookAt(0, 0, 0);
 
-    const rightCam = new THREE.OrthographicCamera(-2.5 * aspect, 2.5 * aspect, 2.5, -2.5, 0.001, 100000);
+    const rightCam = new THREE.OrthographicCamera(-2.5 * aspect, 2.5 * aspect, 2.5, -2.5, 0.0001, 1e7);
     rightCam.position.set(30, 0, 0);
     rightCam.up.set(0, 1, 0);
     rightCam.lookAt(0, 0, 0);
@@ -956,55 +956,23 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   }, [symmetryConfig?.showVirtualCursorPlane, symmetryConfig?.axis, symmetryConfig?.locatorValue]);
 
   const updateCameraPosition = () => {
-    const { radius, theta, phi, target } = orbitState.current;
-    const r = radius / zoomFactor;
-
-    const sinPhi = Math.sin(phi);
-    const cosPhi = Math.cos(phi);
-
-    const x = r * sinPhi * Math.sin(theta);
-    const y = r * cosPhi;
-    const z = r * sinPhi * Math.cos(theta);
-
-    // Continuous, non-singular up-vector ensuring looking straight at top or bottom NEVER locks
-    const upX = -cosPhi * Math.sin(theta);
-    const upY = sinPhi;
-    const upZ = -cosPhi * Math.cos(theta);
-
-    if (cameraPerspRef.current) {
-      cameraPerspRef.current.up.set(upX, upY, upZ);
-      cameraPerspRef.current.position.set(x + target.x, y + target.y, z + target.z);
-      cameraPerspRef.current.lookAt(target);
-    }
-    if (cameraOrthoRef.current) {
-      cameraOrthoRef.current.up.set(upX, upY, upZ);
-      cameraOrthoRef.current.position.set(x + target.x, y + target.y, z + target.z);
-      cameraOrthoRef.current.lookAt(target);
-    }
-
-    setBoxRotation({ x: phi - Math.PI / 2, y: -theta });
+    const zoom = zoomFactor || 1;
+    if (cameraPerspRef.current) applyFreeCamera(cameraPerspRef.current, orbitState.current, zoom);
+    if (cameraOrthoRef.current) applyFreeCamera(cameraOrthoRef.current, orbitState.current, zoom);
+    setBoxRotation(gizmoAngles(orbitState.current.quat));
   };
 
   const snapToView = (view: 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom') => {
-    if (view === 'front') {
-      orbitState.current.theta = 0;
-      orbitState.current.phi = Math.PI / 2;
-    } else if (view === 'back') {
-      orbitState.current.theta = Math.PI;
-      orbitState.current.phi = Math.PI / 2;
-    } else if (view === 'right') {
-      orbitState.current.theta = Math.PI / 2;
-      orbitState.current.phi = Math.PI / 2;
-    } else if (view === 'left') {
-      orbitState.current.theta = -Math.PI / 2;
-      orbitState.current.phi = Math.PI / 2;
-    } else if (view === 'top') {
-      orbitState.current.theta = 0;
-      orbitState.current.phi = 0.0001;
-    } else if (view === 'bottom') {
-      orbitState.current.theta = 0;
-      orbitState.current.phi = Math.PI - 0.0001;
-    }
+    const snaps = {
+      front: [0, Math.PI / 2],
+      back: [Math.PI, Math.PI / 2],
+      right: [Math.PI / 2, Math.PI / 2],
+      left: [-Math.PI / 2, Math.PI / 2],
+      top: [0, 0],
+      bottom: [0, Math.PI],
+    } as const;
+    const [theta, phi] = snaps[view];
+    orbitState.current.quat.copy(quatFromSpherical(theta, phi));
     needsRenderRef.current = true;
     updateCameraPosition();
   };
@@ -1016,8 +984,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   }, [viewSnapTrigger]);
 
   const handleFlipView = () => {
-    orbitState.current.theta = (orbitState.current.theta + Math.PI) % (2 * Math.PI);
-    orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, Math.PI - orbitState.current.phi));
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(orbitState.current.quat);
+    orbitState.current.quat.premultiply(new THREE.Quaternion().setFromAxisAngle(up, Math.PI));
+    orbitState.current.quat.normalize();
     needsRenderRef.current = true;
     updateCameraPosition();
   };
@@ -1042,15 +1011,14 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const handleZoomDelta = (delta: number) => {
     // Nearly infinite zoom in and out
     const factor = Math.exp(-delta * 0.05);
-    orbitState.current.radius = Math.max(0.0001, Math.min(100000.0, orbitState.current.radius * factor));
+    orbitState.current.radius = Math.max(1e-6, orbitState.current.radius * factor);
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
 
   const handleResetCamera = () => {
     orbitState.current.radius = 4.8;
-    orbitState.current.theta = 0.78;
-    orbitState.current.phi = 1.15;
+    orbitState.current.quat.copy(quatFromSpherical(0.78, 1.15));
     orbitState.current.target.set(0, 0, 0);
     if (onZoomChange) onZoomChange(1.0);
     setZoomPulseTrigger(p => p + 1);
@@ -1269,7 +1237,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
       if (pinchStartDist.current && pinchStartDist.current > 0) {
         const ratio = pinchStartDist.current / currentDist;
-        orbitState.current.radius = Math.max(0.0001, Math.min(100000.0, pinchStartRadius.current * ratio));
+        orbitState.current.radius = Math.max(1e-6, pinchStartRadius.current * ratio);
         setZoomPulseTrigger(p => p + 1);
       }
 
@@ -1293,10 +1261,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       // Dragging right rotates the model clockwise (camera theta decreases).
       // Inverted flips the axis.
       const dirSign = invertNav ? 1 : -1;
-      const baseSpeed = 0.0042 * (navSensitivity !== undefined ? navSensitivity : 1.0);
-      orbitState.current.theta += dx * baseSpeed * dirSign;
-      // Allow unrestricted pitch rotation without gimbal lock at the poles
-      orbitState.current.phi = Math.max(0.0001, Math.min(Math.PI - 0.0001, orbitState.current.phi + dy * baseSpeed * dirSign));
+      const baseSpeed = 0.005 * (navSensitivity !== undefined ? navSensitivity : 1.0);
+      tumbleFreeCamera(orbitState.current, dx * dirSign, dy * dirSign, baseSpeed);
       orbitState.current.lastMouseX = e.clientX;
       orbitState.current.lastMouseY = e.clientY;
       updateCameraPosition();
@@ -1378,7 +1344,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const handleWheel = (e: React.WheelEvent) => {
     // Smooth proportional zoom nearly infinitely in and out
     const factor = Math.exp(e.deltaY * 0.0012);
-    orbitState.current.radius = Math.max(0.0001, Math.min(100000.0, orbitState.current.radius * factor));
+    orbitState.current.radius = Math.max(1e-6, orbitState.current.radius * factor);
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };

@@ -412,6 +412,7 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
   const finalVertices: number[] = [];
   const finalUVs: number[] = [];
   const finalNormals: number[] = [];
+  const uvFromFile: boolean[] = [];
 
   const parseIndex = (str: string, totalCount: number): number => {
     const val = parseInt(str, 10);
@@ -454,28 +455,32 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
             const vz = vertices[vIdx * 3 + 2];
             finalVertices.push(vx, vy, vz);
 
-            // UV mapping
             if (vertDef.length > 1 && vertDef[1]) {
               const vtIdx = parseIndex(vertDef[1], totalVT);
               if (vtIdx >= 0 && vtIdx * 2 + 1 < uvs.length) {
                 finalUVs.push(uvs[vtIdx * 2], uvs[vtIdx * 2 + 1]);
+                uvFromFile.push(true);
               } else {
-                finalUVs.push(vx * 0.5 + 0.5, vy * 0.5 + 0.5);
+                finalUVs.push(0, 0);
+                uvFromFile.push(false);
               }
             } else {
-              // Generate spherical polar UV fallback
-              const u = 0.5 + Math.atan2(vz, vx) / (2 * Math.PI);
-              const v = 0.5 - Math.asin(Math.max(-1, Math.min(1, vy / 2.0))) / Math.PI;
-              finalUVs.push(Math.max(0.001, Math.min(0.999, u)), Math.max(0.001, Math.min(0.999, v)));
+              finalUVs.push(0, 0);
+              uvFromFile.push(false);
             }
 
-            // Normal mapping
+            let nx = Number.NaN;
+            let ny = Number.NaN;
+            let nz = Number.NaN;
             if (vertDef.length > 2 && vertDef[2]) {
               const vnIdx = parseIndex(vertDef[2], totalVN);
               if (vnIdx >= 0 && vnIdx * 3 + 2 < normals.length) {
-                finalNormals.push(normals[vnIdx * 3], normals[vnIdx * 3 + 1], normals[vnIdx * 3 + 2]);
+                nx = normals[vnIdx * 3];
+                ny = normals[vnIdx * 3 + 1];
+                nz = normals[vnIdx * 3 + 2];
               }
             }
+            finalNormals.push(nx, ny, nz);
           }
         }
       }
@@ -484,21 +489,92 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
 
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.Float32BufferAttribute(finalVertices, 3));
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let minZ = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let maxZ = -Infinity;
+  for (let i = 0; i < finalVertices.length; i += 3) {
+    const x = finalVertices[i];
+    const y = finalVertices[i + 1];
+    const z = finalVertices[i + 2];
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (z < minZ) minZ = z;
+    if (x > maxX) maxX = x;
+    if (y > maxY) maxY = y;
+    if (z > maxZ) maxZ = z;
+  }
+  const cx = Number.isFinite(minX) ? (minX + maxX) / 2 : 0;
+  const cy = Number.isFinite(minY) ? (minY + maxY) / 2 : 0;
+  const cz = Number.isFinite(minZ) ? (minZ + maxZ) / 2 : 0;
+  let maxR = 1e-8;
+  for (let i = 0; i < finalVertices.length; i += 3) {
+    const r = Math.hypot(finalVertices[i] - cx, finalVertices[i + 1] - cy, finalVertices[i + 2] - cz);
+    if (r > maxR) maxR = r;
+  }
+  for (let i = 0; i < uvFromFile.length; i++) {
+    if (uvFromFile[i]) continue;
+    const x = finalVertices[i * 3] - cx;
+    const y = finalVertices[i * 3 + 1] - cy;
+    const z = finalVertices[i * 3 + 2] - cz;
+    finalUVs[i * 2] = 0.5 + Math.atan2(z, x) / (2 * Math.PI);
+    finalUVs[i * 2 + 1] = 0.5 - Math.asin(Math.max(-1, Math.min(1, y / maxR))) / Math.PI;
+  }
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(finalUVs, 2));
 
-  if (finalNormals.length === finalVertices.length && finalNormals.length > 0) {
-    geom.setAttribute('normal', new THREE.Float32BufferAttribute(finalNormals, 3));
-    geom.setAttribute('defaultNormal', new THREE.Float32BufferAttribute(finalNormals, 3));
-  } else {
-    // Automatically apply architectural auto-smooth normal calculation with coplanar alignment
-    SurfaceShadingEngine.computeSmoothNormals(geom, null, THREE.MathUtils.degToRad(38));
-    const computedNormals = geom.getAttribute('normal');
-    if (computedNormals) {
-      geom.setAttribute('defaultNormal', computedNormals.clone());
+  const vertCount = finalVertices.length / 3;
+  for (let t = 0; t + 2 < vertCount; t += 3) {
+    let missing = false;
+    for (let k = 0; k < 3; k++) {
+      if (Number.isNaN(finalNormals[(t + k) * 3])) missing = true;
+    }
+    if (!missing) continue;
+    const ax = finalVertices[t * 3];
+    const ay = finalVertices[t * 3 + 1];
+    const az = finalVertices[t * 3 + 2];
+    const bx = finalVertices[(t + 1) * 3];
+    const by = finalVertices[(t + 1) * 3 + 1];
+    const bz = finalVertices[(t + 1) * 3 + 2];
+    const cxv = finalVertices[(t + 2) * 3];
+    const cyv = finalVertices[(t + 2) * 3 + 1];
+    const czv = finalVertices[(t + 2) * 3 + 2];
+    const e1x = bx - ax;
+    const e1y = by - ay;
+    const e1z = bz - az;
+    const e2x = cxv - ax;
+    const e2y = cyv - ay;
+    const e2z = czv - az;
+    let nx = e1y * e2z - e1z * e2y;
+    let ny = e1z * e2x - e1x * e2z;
+    let nz = e1x * e2y - e1y * e2x;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    nx /= len;
+    ny /= len;
+    nz /= len;
+    for (let k = 0; k < 3; k++) {
+      const o = (t + k) * 3;
+      if (Number.isNaN(finalNormals[o])) {
+        finalNormals[o] = nx;
+        finalNormals[o + 1] = ny;
+        finalNormals[o + 2] = nz;
+      }
     }
   }
 
+  const fileNormals = new THREE.Float32BufferAttribute(finalNormals, 3);
+  geom.setAttribute('normal', fileNormals);
+  geom.setAttribute('origFileNormal', fileNormals.clone());
+  geom.setAttribute('defaultNormal', fileNormals.clone());
+
   geom.center();
+  geom.computeBoundingSphere();
+  const fitted = geom.boundingSphere?.radius || 1;
+  if (fitted > 1e-8 && Number.isFinite(fitted)) {
+    geom.scale(1 / fitted, 1 / fitted, 1 / fitted);
+  }
   geom.computeBoundingBox();
   geom.computeBoundingSphere();
   return geom;
