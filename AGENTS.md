@@ -197,3 +197,13 @@
 - `scripts/sync_self_host.mjs` inlines the JS and CSS into `self-host/public/index.html`, so the same page opens on `file://` and through `node server.js`. Verified: `npm run host:sync` wrote `index-BahJ6256.js` (1,544,928 bytes) inlined into the HTML, and `http://127.0.0.1:4173/` returned `text/html` 200. The HTML has no `<script src="*.js">`.
 - Victory tests this from Actions → Build Self-Hosted Programme, or by opening `self-host/public/index.html`. Do not start the DirectX exe until that test is accepted.
 
+### 2026-11-09 — pre-execution (filters, full smooth, live draw, UV islands, simpler nodes)
+- Victory tested `63ad9b2`. Tumble no longer locks. `file://` launches. This pass is still self-host only. Do not edit `crates/vue3d_core`.
+- Filters: he says every filter dialog fails. Gaussian, Scatter, and Stitch already paint inside the dialog, then `App.tsx` only stores an undo. The web view also skips frames unless Refresh is changed, so a finished filter can sit on the canvas and never show. Fix the apply path so the composite and the 3D view update, and so closing a dialog does not wipe the result.
+- Surface: Smooth must be fully smooth. Blend every shared edge, including 90° corners. Do not keep the 38° crease cut or the coplanar snap inside Smooth. Flat stays faceted. Def stays the file normals.
+- Refresh: remove the web refresh-rate control and always draw. Do not leave on-demand as the default. A frame cap can return later on the Windows exe only.
+- UV: `SmartUVUnwrapEngine` must cut a watertight mesh into islands. The angle limit is how wide a patch may be before it splits. Pack those islands so they do not overlap. Mirror copies one side onto the other and overlaps it. It must not weld both sides into one skewed chart.
+- UV editing: double-click selects the whole island under the cursor, even if another island occupies the same pixels. Right-click separates the left half of a mirrored selection from the right half so one side can be moved. A drag tool moves that selection. Layer properties get a UV-channel choice per layer, for placing a tattoo on one side.
+- Nodes: simplify the graph so a layer and its node agree. Changing the layer image or baking the node must show on that layer. Do not add a second node product.
+- After the code works, append `API_DOCUMENTATION.md`, `DEVELOPMENT.md`, `AGENT_STATE.md`, and this file. Then `npm run host:sync`.
+
