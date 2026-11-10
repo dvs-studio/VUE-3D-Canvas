@@ -217,4 +217,10 @@
 - Bake to Layer clears the layer first, then draws the graph. `npm run host:sync` inlined `index-D4_J0RPb.js`.
 - `API_DOCUMENTATION.md` section 11 and `DEVELOPMENT.md` 2026-11-10 note match this. The Windows DirectX rewrite still waits for Victory's test.
 
+### 2026-11-10 — pre-execution (triplanar, scatter, edge wear crash, and lag)
+- Victory says unwrap and Smooth are good. Gaussian and Stitch open. Triplanar, Scatter, and Edge Wear break the app. The view is also laggy.
+- Cause to fix: those three dialogs call `useState` after `if (!isOpen) return null`. Gaussian and Stitch do not. Move the early return to after every hook.
+- The web view currently draws the bloom pass on every animation frame, even when idle. Draw only while the user is orbiting, painting, or a texture just changed, and cap that at 60. Do not put the refresh buttons back. Do not edit `crates/vue3d_core`.
+
+
 
