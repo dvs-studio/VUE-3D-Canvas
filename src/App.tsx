@@ -945,11 +945,29 @@ export default function App() {
     }
   };
 
+  const handleSelectLayer = (id: string) => {
+    setActiveLayerId(id);
+    const layer = layers.find(l => l.id === id);
+    if (layer?.uvChannel && activeGeometry) {
+      if (UVChannelManager.setActiveChannel(activeGeometry, layer.uvChannel)) {
+        setActiveUVChannel(layer.uvChannel);
+      }
+    }
+  };
+
+  const handleSetLayerUV = (layerId: string, channelId: string) => {
+    setLayers(prev => prev.map(l => (l.id === layerId ? { ...l, uvChannel: channelId } : l)));
+    if (activeGeometry && UVChannelManager.setActiveChannel(activeGeometry, channelId)) {
+      setActiveUVChannel(channelId);
+    }
+  };
+
   // Bake procedural node tree to active layer
   const handleBakeNodeTree = (bakeCanvas: HTMLCanvasElement) => {
     const targetLayer = layers.find(l => l.id === activeLayerId);
     if (targetLayer) {
-      targetLayer.ctx.drawImage(bakeCanvas, 0, 0);
+      targetLayer.ctx.clearRect(0, 0, targetLayer.canvas.width, targetLayer.canvas.height);
+      targetLayer.ctx.drawImage(bakeCanvas, 0, 0, targetLayer.canvas.width, targetLayer.canvas.height);
       undoBuffer.pushState('Bake Node Tree to Layer', layers);
       notifyTextureUpdated();
     }
@@ -1829,7 +1847,7 @@ export default function App() {
               onSwapColors={swapColors}
               layers={layers}
               activeLayerId={activeLayerId}
-              onSelectLayer={setActiveLayerId}
+              onSelectLayer={handleSelectLayer}
               onAddLayer={handleAddLayer}
               onToggleLayerVisibility={handleToggleVisibility}
               onNumpadKey={handleNumpadKey}
@@ -1924,7 +1942,7 @@ export default function App() {
                           <LayersPanel
                             layers={layers}
                             activeLayerId={activeLayerId}
-                            onSelectLayer={setActiveLayerId}
+                            onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
                             onAddGroup={handleAddGroup}
                             onToggleGroupCollapse={handleToggleGroupCollapse}
@@ -2089,7 +2107,7 @@ export default function App() {
                     <LayersPanel
                       layers={layers}
                       activeLayerId={activeLayerId}
-                      onSelectLayer={setActiveLayerId}
+                      onSelectLayer={handleSelectLayer}
                       onAddLayer={handleAddLayer}
                       onAddGroup={handleAddGroup}
                       onToggleGroupCollapse={handleToggleGroupCollapse}
@@ -2469,6 +2487,8 @@ export default function App() {
         onClose={() => setIsLayerSettingsOpen(false)}
         layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
         onSavePBR={handleSaveLayerPBR}
+        uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
+        onSetUVChannel={handleSetLayerUV}
         onOpenNodeEditor={() => {
           setActivePanels(p => ({ ...p, nodeGraph: true }));
         }}

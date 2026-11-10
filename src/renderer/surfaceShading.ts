@@ -89,7 +89,7 @@ export class SurfaceShadingEngine {
   public static computeSmoothNormals(
     geom: THREE.BufferGeometry,
     material: THREE.Material | THREE.Material[] | null,
-    creaseAngleThreshold: number = THREE.MathUtils.degToRad(38)
+    creaseAngleThreshold: number = Math.PI
   ): void {
     const posAttr = geom.getAttribute('position');
     if (!posAttr) return;
@@ -216,7 +216,7 @@ export class SurfaceShadingEngine {
             }
           }
 
-          if (coplanarCount > 1) {
+          if (false && coplanarCount > 1) {
             // Directly snap to unified coplanar normal to eliminate wavy/choppy shading on planar walls & floors
             accumVec.copy(coplanarVec).normalize();
           } else {

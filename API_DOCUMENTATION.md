@@ -309,3 +309,14 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 - **Specification:** Fully documented in `XBLEND_FORMAT_SPECIFICATION.md`.
 - **Ring Buffer Undo:** Bounded at 3 states. When state 4 is added, state 1 is recycled.
 - **WASM Memory Engine:** `src/core/wasmMemoryEngine.ts` monitors active canvas pixel buffers and explicitly terminates dead context allocations, guaranteeing zero memory creep over long painting sessions.
+
+## 11. 2026-11-10 — Smooth, live draw, UV islands, filters, nodes
+
+- **Smooth** (`SurfaceShadingEngine.computeSmoothNormals`) blends every shared edge. The 38° crease cut and the coplanar snap are not used for the Smooth button. Flat stays faceted. Def stays the file normals.
+- **Web viewport** draws every frame. Preferences no longer offers a refresh cap. That cap froze the view, so filter and paint updates did not appear.
+- **Filters** still run inside their dialogs (Gaussian, Scatter, Stitch, Triplanar, Edge Wear). Closing after Apply must keep the pixels. The 3D view updates because it no longer skips frames.
+- **Smart unwrap** (`SmartUVUnwrapEngine.unwrapGeometry`) cuts a chart when the surface turns past the angle limit, measured from the island's first face. Islands are shelf-packed into 0..1. A vertex shared by two charts is cloned so one chart cannot pull the other.
+- **UV edit:** double-click selects the island under the cursor (`pickIsland`). Right-click keeps only the side of U = 0.5 under the cursor (`keepSide`). Sculpt mode **Drag Island** moves that selection (`moveUVs`).
+- **Mirror** copies the opposite side onto the same UV and overlaps it. It no longer refuses vertices outside |axis| > 1.25.
+- **Layer Settings** stores `layer.uvChannel` and switches the mesh to that channel. **Bake to Layer** clears the active layer, then draws the node graph into it.
+

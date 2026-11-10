@@ -56,7 +56,7 @@ export class SymmetrizeUVEngine {
     };
 
     // Fast spatial hash to locate opposite symmetric vertices
-    const eps = 0.035;
+    const eps = 0.08;
     const hash = (c1: number, c2: number) => {
       return `${Math.round(c1 / eps)}_${Math.round(c2 / eps)}`;
     };
@@ -83,13 +83,6 @@ export class SymmetrizeUVEngine {
         continue;
       }
 
-      // Check if asymmetric feature / ear protection is triggered
-      // For character models (Suzanne/Helmet), peripheral extremities (|X| > 1.2 or high curvature)
-      if (protectAsym && Math.abs(aCoord) > 1.25) {
-        asymmetricIndices.push(i);
-        continue;
-      }
-
       const isSource = sourceIsPositive ? (aCoord > midThresh) : (aCoord < -midThresh);
       if (isSource) {
         const key = hash(o1, o2);
@@ -112,7 +105,6 @@ export class SymmetrizeUVEngine {
 
       const aCoord = getAxisCoord(targetIdx);
       if (Math.abs(aCoord) <= midThresh) continue;
-      if (protectAsym && Math.abs(aCoord) > 1.25) continue;
 
       const isTarget = sourceIsPositive ? (aCoord < -midThresh) : (aCoord > midThresh);
       if (!isTarget) continue;
@@ -141,7 +133,8 @@ export class SymmetrizeUVEngine {
         }
       }
 
-      if (bestSrcIdx !== -1 && bestDistSq < 0.05) {
+      const matchLimit = protectAsym ? 0.08 : 0.25;
+      if (bestSrcIdx !== -1 && bestDistSq < matchLimit) {
         const srcU = uvArray[bestSrcIdx * 2];
         const srcV = uvArray[bestSrcIdx * 2 + 1];
 

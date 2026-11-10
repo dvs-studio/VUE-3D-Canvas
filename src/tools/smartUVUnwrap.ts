@@ -235,8 +235,7 @@ export class SmartUVUnwrapEngine {
       const islandId = currentIsland++;
       const queue: number[] = [faces[i].index];
       faces[i].islandId = islandId;
-
-      const islandNormal = faces[i].normal.clone();
+      const seedNormal = faces[i].normal.clone();
 
       while (queue.length > 0) {
         const currIdx = queue.shift()!;
@@ -274,15 +273,12 @@ export class SmartUVUnwrapEngine {
           const neighborFace = faceIndexToData.get(nIdx);
           if (!neighborFace || neighborFace.islandId !== -1) continue;
 
-          // Check dihedral angle between adjacent faces
           const angle = currFace.normal.angleTo(neighborFace.normal);
-          // Also check angle against average island normal
-          const angleToIsland = islandNormal.angleTo(neighborFace.normal);
+          const angleToSeed = seedNormal.angleTo(neighborFace.normal);
 
-          if (angle <= angleLimitRad && angleToIsland <= angleLimitRad * 1.35) {
+          if (angle <= angleLimitRad && angleToSeed <= angleLimitRad) {
             neighborFace.islandId = islandId;
             queue.push(nIdx);
-            islandNormal.addScaledVector(neighborFace.normal, neighborFace.area).normalize();
           }
         }
       }
@@ -320,11 +316,7 @@ export class SmartUVUnwrapEngine {
       }
       const vAxis = new THREE.Vector3().crossVectors(avgNormal, uAxis).normalize();
 
-      // Seeded rotational jitter: choose from candidate angles [0, 45, 90, 180, 270] + small jitter
-      const rotationCandidates = [0, Math.PI * 0.25, Math.PI * 0.5, Math.PI, Math.PI * 1.5];
-      const selectedBaseRot = rotationCandidates[Math.floor(prng.next() * rotationCandidates.length)];
-      const jitterRot = prng.range(-0.15, 0.15);
-      const islandRotation = selectedBaseRot + jitterRot;
+      const islandRotation = 0;
 
       const cosR = Math.cos(islandRotation);
       const sinR = Math.sin(islandRotation);
@@ -411,100 +403,149 @@ export class SmartUVUnwrapEngine {
       });
     });
 
-    // 4. Seeded Variational Sorting and Non-Overlapping Shelf Packing
-    // Sort primarily by max dimension, with seeded secondary ranking to break repetitive grids
-    islands.sort((a, b) => {
-      const dimA = Math.max(a.width, a.height);
-      const dimB = Math.max(b.width, b.height);
-      const delta = dimB - dimA;
-      if (Math.abs(delta) > 0.05) return delta;
-      // Secondary seeded tie-breaker gives varied island sequences
-      return (prng.next() - 0.5);
-    });
+    // Shelf-pack islands into 0..1. The scale is the largest one that still fits, so charts do not pile up.
+    islands.sort((a, b) => b.height - a.height || b.width - a.width);
 
-    // Calculate total island area including effective margin & gutter bleed
-    let totalIslandArea = 0;
-    islands.forEach((isl) => {
-      totalIslandArea += (isl.width + effectiveMargin) * (isl.height + effectiveMargin);
-    });
+    const pad = effectiveMargin;
+    const fits = (scale: number) => {
+      let x = pad;
+      let y = pad;
+      let rowH = 0;
+      for (const isl of islands) {
+        const w = isl.width * scale;
+        const h = isl.height * scale;
+        if (x + w > 1 - pad && x > pad + 1e-6) {
+          x = pad;
+          y += rowH + pad;
+          rowH = 0;
+        }
+        if (x + w > 1 - pad + 1e-4 || y + h > 1 - pad + 1e-4) return false;
+        x += w + pad;
+        if (h > rowH) rowH = h;
+      }
+      return true;
+    };
 
-    // Scale islands dynamically to tightly fill [0..1] square
-    const packingDimension = Math.sqrt(totalIslandArea) * 1.18 || 1.0;
-    const globalScale = (1.0 - effectiveMargin * 2) / packingDimension;
+    let lo = 0;
+    let hi = 1;
+    let maxDim = 1e-4;
+    for (const isl of islands) maxDim = Math.max(maxDim, isl.width, isl.height);
+    hi = (1 - pad * 2) / maxDim;
+    for (let step = 0; step < 18; step++) {
+      const mid = (lo + hi) * 0.5;
+      if (fits(mid)) lo = mid;
+      else hi = mid;
+    }
+    const globalScale = lo > 1e-8 ? lo : hi;
 
-    // Shelf bin packing
-    let currentX = effectiveMargin;
-    let currentY = effectiveMargin;
+    let currentX = pad;
+    let currentY = pad;
     let rowMaxHeight = 0;
-
     const packedOffsets = new Map<number, { x: number; y: number; scale: number }>();
-
     for (const isl of islands) {
       const scaledW = isl.width * globalScale;
       const scaledH = isl.height * globalScale;
-
-      if (currentX + scaledW > 1.0 - effectiveMargin) {
-        // Move to next shelf row
-        currentX = effectiveMargin;
-        currentY += rowMaxHeight + effectiveMargin;
+      if (currentX + scaledW > 1 - pad && currentX > pad + 1e-6) {
+        currentX = pad;
+        currentY += rowMaxHeight + pad;
         rowMaxHeight = 0;
       }
-
-      // If vertical space exceeds 1.0, shrink slightly to avoid clamping
-      if (currentY + scaledH > 1.0 - effectiveMargin) {
-        // Re-scale slightly downwards
-        currentY = Math.min(currentY, 1.0 - scaledH - effectiveMargin);
-      }
-
-      packedOffsets.set(isl.id, {
-        x: currentX,
-        y: currentY,
-        scale: globalScale,
-      });
-
-      currentX += scaledW + effectiveMargin;
-      if (scaledH > rowMaxHeight) {
-        rowMaxHeight = scaledH;
-      }
+      packedOffsets.set(isl.id, { x: currentX, y: currentY, scale: globalScale });
+      currentX += scaledW + pad;
+      if (scaledH > rowMaxHeight) rowMaxHeight = scaledH;
     }
 
-    // 5. Write packed UV coordinates back to geometry BufferAttribute
-    const uvArray = new Float32Array(posAttr.count * 2);
-
-    // If preserveOthers is enabled and existing UV attribute exists, copy existing values first
-    if (preserveOthers && existingUvAttr && targetSubmesh !== 'all') {
-      const existingArray = existingUvAttr.array;
-      for (let i = 0; i < uvArray.length; i++) {
-        uvArray[i] = existingArray[i];
-      }
-    }
-
-    // Write newly unwrapped islands
+    // Desired UV per face corner. A shared vertex that lands on two charts is cloned so the charts do not pull each other.
+    type CornerUV = { face: number; local: number; vIdx: number; u: number; v: number };
+    const corners: CornerUV[] = [];
     for (const isl of islands) {
       const pack = packedOffsets.get(isl.id)!;
       for (const face of isl.faces) {
         const indices = [face.iA, face.iB, face.iC];
         indices.forEach((vIdx, localIdx) => {
           const c = isl.coords.get(`${face.index}_${localIdx}`)!;
-          // Map to local normalized UV within island bounding box
-          const normU = (c.u - isl.minU) * pack.scale;
-          const normV = (c.v - isl.minV) * pack.scale;
-
-          const finalU = THREE.MathUtils.clamp(pack.x + normU, 0.001, 0.999);
-          const finalV = THREE.MathUtils.clamp(pack.y + normV, 0.001, 0.999);
-
-          uvArray[vIdx * 2] = finalU;
-          uvArray[vIdx * 2 + 1] = finalV;
+          const finalU = pack.x + (c.u - isl.minU) * pack.scale;
+          const finalV = pack.y + (c.v - isl.minV) * pack.scale;
+          corners.push({
+            face: face.index,
+            local: localIdx,
+            vIdx,
+            u: Math.min(0.999, Math.max(0.001, finalU)),
+            v: Math.min(0.999, Math.max(0.001, finalV)),
+          });
         });
       }
     }
 
-    geom.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
-    geom.attributes.uv.needsUpdate = true;
+    const indexAttrNow = geom.getIndex();
+    const indexArray = indexAttrNow
+      ? Array.from({ length: indexAttrNow.count }, (_, i) => indexAttrNow.getX(i))
+      : null;
 
-    // Cache this unwrap result in userData for the UV Channel Manager
+    const baseAttrs: Record<string, { array: Float32Array; itemSize: number }> = {};
+    for (const name of Object.keys(geom.attributes)) {
+      const attr = geom.getAttribute(name);
+      baseAttrs[name] = { array: new Float32Array(attr.array as ArrayLike<number>), itemSize: attr.itemSize };
+    }
+    const baseChannels: Record<string, Float32Array> = {};
+    const channelBag = (geom.userData?.uvChannels || {}) as Record<string, Float32Array>;
+    for (const key of Object.keys(channelBag)) {
+      baseChannels[key] = new Float32Array(channelBag[key]);
+    }
+
+    const sourceOf: number[] = [];
+    for (let i = 0; i < posAttr.count; i++) sourceOf.push(i);
+    const claimed = new Map<number, string>();
+    const sig = (u: number, v: number) => `${u.toFixed(4)}_${v.toFixed(4)}`;
+
+    for (const corner of corners) {
+      let vIdx = indexArray ? indexArray[corner.face * 3 + corner.local] : corner.vIdx;
+      const mark = sig(corner.u, corner.v);
+      const prev = claimed.get(vIdx);
+      if (prev && prev !== mark && indexArray) {
+        const src = sourceOf[vIdx];
+        sourceOf.push(src);
+        vIdx = sourceOf.length - 1;
+        indexArray[corner.face * 3 + corner.local] = vIdx;
+      }
+      claimed.set(vIdx, mark);
+      corner.vIdx = vIdx;
+    }
+
+    const vertCount = sourceOf.length;
+    for (const name of Object.keys(baseAttrs)) {
+      const { array, itemSize } = baseAttrs[name];
+      const next = new Float32Array(vertCount * itemSize);
+      for (let i = 0; i < vertCount; i++) {
+        const s = sourceOf[i];
+        for (let k = 0; k < itemSize; k++) next[i * itemSize + k] = array[s * itemSize + k] || 0;
+      }
+      geom.setAttribute(name, new THREE.BufferAttribute(next, itemSize));
+    }
     if (!geom.userData) geom.userData = {};
     if (!geom.userData.uvChannels) geom.userData.uvChannels = {};
+    for (const key of Object.keys(baseChannels)) {
+      const array = baseChannels[key];
+      const next = new Float32Array(vertCount * 2);
+      for (let i = 0; i < vertCount; i++) {
+        const s = sourceOf[i];
+        next[i * 2] = array[s * 2] || 0;
+        next[i * 2 + 1] = array[s * 2 + 1] || 0;
+      }
+      geom.userData.uvChannels[key] = next;
+    }
+    if (indexArray) geom.setIndex(indexArray);
+
+    const uvArray = new Float32Array((geom.getAttribute('uv') as THREE.BufferAttribute).array as ArrayLike<number>);
+    if (!(preserveOthers && existingUvAttr && targetSubmesh !== 'all')) {
+      uvArray.fill(0);
+    }
+    for (const corner of corners) {
+      uvArray[corner.vIdx * 2] = corner.u;
+      uvArray[corner.vIdx * 2 + 1] = corner.v;
+    }
+    geom.setAttribute('uv', new THREE.BufferAttribute(uvArray, 2));
+    geom.attributes.uv.needsUpdate = true;
     geom.userData.uvChannels['uv_tightmap'] = new Float32Array(uvArray);
 
     return {
@@ -513,6 +554,113 @@ export class SmartUVUnwrapEngine {
       seedUsed: seed,
       submeshIsolated: targetSubmesh,
     };
+  }
+
+  /** Vertex indices of the UV island under a point. Seams are edges whose two sides do not share UVs. */
+  public static pickIsland(geom: THREE.BufferGeometry, u: number, v: number): Set<number> {
+    const picked = new Set<number>();
+    const uv = geom.getAttribute('uv') as THREE.BufferAttribute | undefined;
+    const pos = geom.getAttribute('position');
+    if (!uv || !pos) return picked;
+    const index = geom.getIndex();
+    const triCount = index ? index.count / 3 : pos.count / 3;
+    const vert = (f: number, k: number) => (index ? index.getX(f * 3 + k) : f * 3 + k);
+    const q = (i: number) => {
+      const e = 1e-4;
+      return `${Math.round(pos.getX(i) / e)}_${Math.round(pos.getY(i) / e)}_${Math.round(pos.getZ(i) / e)}`;
+    };
+
+    let bestF = -1;
+    let bestD = 0.03 * 0.03;
+    for (let f = 0; f < triCount; f++) {
+      for (let k = 0; k < 3; k++) {
+        const i = vert(f, k);
+        const du = uv.getX(i) - u;
+        const dv = uv.getY(i) - v;
+        const d = du * du + dv * dv;
+        if (d < bestD) {
+          bestD = d;
+          bestF = f;
+        }
+      }
+    }
+    if (bestF < 0) return picked;
+
+    const edgeFaces = new Map<string, number[]>();
+    const edgeKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+    for (let f = 0; f < triCount; f++) {
+      const keys = [0, 1, 2].map((k) => q(vert(f, k)));
+      for (let k = 0; k < 3; k++) {
+        const ek = edgeKey(keys[k], keys[(k + 1) % 3]);
+        let list = edgeFaces.get(ek);
+        if (!list) {
+          list = [];
+          edgeFaces.set(ek, list);
+        }
+        list.push(f);
+      }
+    }
+
+    const uvOf = (i: number) => ({ u: uv.getX(i), v: uv.getY(i) });
+    const sameUV = (a: number, b: number) => {
+      const pa = uvOf(a);
+      const pb = uvOf(b);
+      return Math.abs(pa.u - pb.u) < 0.004 && Math.abs(pa.v - pb.v) < 0.004;
+    };
+
+    const seen = new Set<number>([bestF]);
+    const queue = [bestF];
+    while (queue.length > 0) {
+      const f = queue.shift()!;
+      for (let k = 0; k < 3; k++) picked.add(vert(f, k));
+      const keys = [0, 1, 2].map((k) => q(vert(f, k)));
+      for (let k = 0; k < 3; k++) {
+        const ek = edgeKey(keys[k], keys[(k + 1) % 3]);
+        const a = vert(f, k);
+        const b = vert(f, (k + 1) % 3);
+        for (const other of edgeFaces.get(ek) || []) {
+          if (seen.has(other)) continue;
+          let matchA = -1;
+          let matchB = -1;
+          for (let t = 0; t < 3; t++) {
+            const ov = vert(other, t);
+            if (q(ov) === q(a)) matchA = ov;
+            if (q(ov) === q(b)) matchB = ov;
+          }
+          if (matchA < 0 || matchB < 0) continue;
+          if (!sameUV(a, matchA) || !sameUV(b, matchB)) continue;
+          seen.add(other);
+          queue.push(other);
+        }
+      }
+    }
+    return picked;
+  }
+
+  /** Drop the half of a selection that is not on the requested side of U = 0.5. */
+  public static keepSide(
+    geom: THREE.BufferGeometry,
+    selected: Set<number>,
+    side: 'left' | 'right'
+  ): Set<number> {
+    const uv = geom.getAttribute('uv') as THREE.BufferAttribute | undefined;
+    const next = new Set<number>();
+    if (!uv) return next;
+    for (const i of selected) {
+      const u = uv.getX(i);
+      if (side === 'left' ? u < 0.5 : u >= 0.5) next.add(i);
+    }
+    return next;
+  }
+
+  public static moveUVs(geom: THREE.BufferGeometry, selected: Set<number>, du: number, dv: number): number {
+    const uv = geom.getAttribute('uv') as THREE.BufferAttribute | undefined;
+    if (!uv || selected.size === 0) return 0;
+    for (const i of selected) {
+      uv.setXY(i, uv.getX(i) + du, uv.getY(i) + dv);
+    }
+    uv.needsUpdate = true;
+    return selected.size;
   }
 
   /**

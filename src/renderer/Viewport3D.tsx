@@ -505,26 +505,6 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     const animate = (currentTime: number = performance.now()) => {
       animId = requestAnimationFrame(animate);
-
-      const mode = refreshRateModeRef.current || (constantRefreshRef.current ? '60' : 'on_demand');
-      let targetFps = 60;
-      if (mode === '30') targetFps = 30;
-      else if (mode === '60') targetFps = 60;
-      else if (mode === '120') targetFps = 120;
-      else if (mode === 'custom') targetFps = Math.max(15, Math.min(240, customRefreshRateRef.current || 60));
-
-      const isThrottled = mode !== 'on_demand' && mode !== 'uncapped';
-      const frameInterval = isThrottled ? 1000 / targetFps : 0;
-
-      if (isThrottled && currentTime - lastRenderTime < frameInterval - 1.0) {
-        return;
-      }
-
-      const isActivelyInteracting = orbitState.current.isOrbiting || orbitState.current.isPanning || isPaintingRef.current || activePointers.current.size > 0;
-      if (mode === 'on_demand' && !needsRenderRef.current && !isActivelyInteracting) {
-        return;
-      }
-
       needsRenderRef.current = false;
       lastRenderTime = currentTime;
 

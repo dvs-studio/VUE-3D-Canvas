@@ -119,6 +119,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const [sculptBrushMode, setSculptBrushMode] = useState<UVSculptMode>('smooth');
   const [sculptRadius, setSculptRadius] = useState<number>(0.08); // normalized [0..1]
   const [sculptStrength, setSculptStrength] = useState<number>(0.35);
+  const uvSelectionRef = useRef<Set<number>>(new Set());
+  const uvDragLast = useRef<{ u: number; v: number } | null>(null);
 
   const effectiveGeom = React.useMemo(() => {
     if (geometry) return geometry;
@@ -255,6 +257,17 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           }
 
           ctx.stroke();
+
+          const selected = uvSelectionRef.current;
+          if (selected.size > 0) {
+            ctx.fillStyle = '#f472b6';
+            ctx.globalAlpha = 0.95;
+            for (const i of selected) {
+              const sx = uvAttr.getX(i) * 1024;
+              const sy = (1 - uvAttr.getY(i)) * 1024;
+              ctx.fillRect(sx - 2, sy - 2, 4, 4);
+            }
+          }
 
           // Outer UV Tile 0..1 Boundary Box
           ctx.strokeStyle = '#ffffff';
@@ -443,6 +456,17 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         setPenMenu({ x: e.clientX, y: e.clientY });
         return;
       }
+      e.preventDefault();
+      const hit = getCanvasCoords(e.clientX, e.clientY);
+      const u = hit.x / 1024;
+      const v = 1 - hit.y / 1024;
+      if (uvSelectionRef.current.size === 0) {
+        uvSelectionRef.current = SmartUVUnwrapEngine.pickIsland(effectiveGeom, u, v);
+      }
+      const side = u < 0.5 ? 'left' : 'right';
+      uvSelectionRef.current = SmartUVUnwrapEngine.keepSide(effectiveGeom, uvSelectionRef.current, side);
+      drawOverlay();
+      return;
     }
 
     // Two-finger multi-touch gesture start
@@ -478,8 +502,26 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     // DIRECT 2D PAINTING / TOOL EXECUTION
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
+    const u = x / 1024.0;
+    const v = 1.0 - (y / 1024.0);
+
+    if (e.detail === 2 && e.button === 0) {
+      uvSelectionRef.current = SmartUVUnwrapEngine.pickIsland(effectiveGeom, u, v);
+      drawOverlay();
+      return;
+    }
 
     // 2D UV Sculpt Brush Stroke Execution
+    if (isSculptModeActive && sculptBrushMode === 'drag') {
+      if (uvSelectionRef.current.size === 0) {
+        uvSelectionRef.current = SmartUVUnwrapEngine.pickIsland(effectiveGeom, u, v);
+        drawOverlay();
+      }
+      uvDragLast.current = { u, v };
+      isPaintingRef.current = true;
+      return;
+    }
+
     if (isSculptModeActive) {
       isPaintingRef.current = true;
       const u = x / 1024.0;
@@ -649,6 +691,21 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
 
     // 2D UV Sculpt Brush Dragging
+    if (isSculptModeActive && sculptBrushMode === 'drag') {
+      const u = x / 1024.0;
+      const v = 1.0 - (y / 1024.0);
+      const last = uvDragLast.current;
+      if (last && uvSelectionRef.current.size > 0) {
+        const moved = SmartUVUnwrapEngine.moveUVs(effectiveGeom, uvSelectionRef.current, u - last.u, v - last.v);
+        if (moved > 0) {
+          drawOverlay();
+          if (onGeometryUpdated) onGeometryUpdated();
+        }
+      }
+      uvDragLast.current = { u, v };
+      return;
+    }
+
     if (isSculptModeActive) {
       const u = x / 1024.0;
       const v = 1.0 - (y / 1024.0);

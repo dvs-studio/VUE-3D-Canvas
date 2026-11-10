@@ -82,7 +82,7 @@ export interface Layer {
   isGroup?: boolean;
   collapsed?: boolean;
   pbrSettings?: LayerPBRSettings;
-  isTextureFill?: boolean;
+  uvChannel?: string;
   textureFillConfig?: TextureFillConfig;
 }
 
@@ -449,7 +449,7 @@ export interface EdgeWearConfig {
   applyToRidges: boolean;
 }
 
-export type UVSculptMode = 'straighten' | 'smooth' | 'pinch' | 'expand' | 'crease';
+export type UVSculptMode = 'straighten' | 'smooth' | 'pinch' | 'expand' | 'crease' | 'drag';
 
 export interface UVChannelInfo {
   id: string;

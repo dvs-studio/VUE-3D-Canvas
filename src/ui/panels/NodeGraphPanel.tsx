@@ -727,7 +727,7 @@ export const NodeGraphPanel: React.FC<NodeGraphPanelProps> = ({
         <button
           onClick={handleBake}
           className="px-2.5 py-0.5 bg-[#2ea043] hover:bg-[#3fb950] text-white rounded text-[11px] font-medium flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
-          title="Bake procedural texture tree into active texture layer"
+          title="Bake this graph onto the active layer. It replaces that layer's pixels. The layer's UV channel is chosen in Layer Settings."
         >
           <Sparkles className="w-3 h-3" />
           Bake to Layer

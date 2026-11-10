@@ -207,3 +207,14 @@
 - Nodes: simplify the graph so a layer and its node agree. Changing the layer image or baking the node must show on that layer. Do not add a second node product.
 - After the code works, append `API_DOCUMENTATION.md`, `DEVELOPMENT.md`, `AGENT_STATE.md`, and this file. Then `npm run host:sync`.
 
+### 2026-11-10 — post-execution (filters visible, full smooth, UV islands)
+- Pre-edit bookend is `c5310e2`. `crates/vue3d_core` was not edited.
+- The web viewport no longer skips frames. The refresh-rate buttons are gone from Preferences. A cap is still allowed later on the Windows exe only.
+- Smooth blends every shared edge (`creaseAngleThreshold` defaults to 180°). The coplanar snap inside Smooth is off. Flat and Def are unchanged.
+- Unwrap uses the angle as the patch limit against the island's first face, shelf-packs so charts fit in 0..1, and clones a vertex that would be pulled into two charts. Random island rotation is gone.
+- Double-click selects the UV island. Right-click keeps the side of U = 0.5 under the cursor. Sculpt → Drag Island moves it. Layer Settings has a UV channel menu (`layer.uvChannel`).
+- Mirror no longer drops vertices with |axis| > 1.25. Overlap still copies the source UV onto the other side.
+- Bake to Layer clears the layer first, then draws the graph. `npm run host:sync` inlined `index-D4_J0RPb.js`.
+- `API_DOCUMENTATION.md` section 11 and `DEVELOPMENT.md` 2026-11-10 note match this. The Windows DirectX rewrite still waits for Victory's test.
+
+

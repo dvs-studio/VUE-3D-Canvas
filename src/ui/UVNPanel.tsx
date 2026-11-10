@@ -634,6 +634,7 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
                     { id: 'pinch', label: 'Pinch', desc: 'Pulls toward cursor' },
                     { id: 'expand', label: 'Expand', desc: 'Pushes outward' },
                     { id: 'crease', label: 'Crease', desc: 'Sharpens UV seam' },
+                    { id: 'drag', label: 'Drag Island', desc: 'Moves the selected island' },
                   ] as const
                 ).map((b) => (
                   <button

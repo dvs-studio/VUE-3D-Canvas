@@ -54,75 +54,11 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
 
         {/* Preferences Sections */}
         <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
-          {/* Section 1: 3D Viewport Performance */}
-          <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-[#eee] text-xs flex items-center gap-1.5">
-                <Gauge className="w-4 h-4 text-[#38bdf8]" />
-                Viewport Refresh Rate &amp; VSync
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border bg-[#262626] border-[#555] text-[#89b4fa]">
-                {preferences.refreshRateMode === 'on_demand'
-                  ? 'On-Demand Dirty Updates'
-                  : preferences.refreshRateMode === 'uncapped'
-                  ? 'Uncapped (No FPS Limit)'
-                  : preferences.refreshRateMode === 'custom'
-                  ? `Custom ${preferences.customRefreshRate || 60} Hz VSync`
-                  : `${preferences.refreshRateMode || '60'} FPS`}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-6 gap-1.5">
-              {[
-                { id: 'on_demand', label: 'On-Demand', sub: 'Power Saver' },
-                { id: '30', label: '30 FPS', sub: 'Battery 30Hz' },
-                { id: '60', label: '60 FPS', sub: 'Standard 60Hz' },
-                { id: '120', label: '120 FPS', sub: 'ProMotion' },
-                { id: 'custom', label: 'Custom', sub: 'VSync / Mon' },
-                { id: 'uncapped', label: 'Uncapped', sub: 'Disable Cap' },
-              ].map((item) => {
-                const isActive = (preferences.refreshRateMode || (preferences.constantRefresh ? '60' : 'on_demand')) === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onUpdatePreferences({
-                      refreshRateMode: item.id as any,
-                      constantRefresh: item.id !== 'on_demand',
-                    })}
-                    className={`p-2 rounded border text-center transition-all ${
-                      isActive
-                        ? 'bg-[#38bdf8]/25 border-[#38bdf8] text-white shadow-xs'
-                        : 'bg-[#262626] border-[#444] text-[#aaa] hover:bg-[#333]'
-                    }`}
-                  >
-                    <strong className="block text-[11px] leading-tight">{item.label}</strong>
-                    <span className="text-[8px] text-[#888] block mt-0.5">{item.sub}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Custom VSync numeric text input */}
-            {(preferences.refreshRateMode === 'custom') && (
-              <div className="flex items-center justify-between bg-[#303030] p-2 rounded border border-[#555] mt-1 text-[11px]">
-                <span className="text-[#ccc]">Type Custom VSync Monitor Refresh Rate:</span>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="number"
-                    min="15"
-                    max="240"
-                    step="1"
-                    value={preferences.customRefreshRate || 60}
-                    onChange={(e) => onUpdatePreferences({
-                      customRefreshRate: Math.max(15, Math.min(240, Number(e.target.value) || 60)),
-                    })}
-                    className="w-16 bg-[#202020] border border-[#555] text-white rounded px-2 py-0.5 font-mono text-center text-xs outline-none"
-                  />
-                  <span className="text-[#89b4fa] font-mono font-bold">Hz</span>
-                </div>
-              </div>
-            )}
+          <div className="bg-[#2a2a2a] p-3 rounded border border-[#444]">
+            <span className="font-bold text-[#eee] text-xs">Viewport</span>
+            <p className="text-[10px] text-[#999] mt-1 leading-snug">
+              This web build always draws. The refresh-rate cap is not used here, because it was freezing the view. A frame cap can come back on the Windows programme later.
+            </p>
           </div>
 
           {/* Section 2: 3D Orientation Gizmo Style */}

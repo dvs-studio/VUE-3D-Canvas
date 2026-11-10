@@ -121,3 +121,16 @@ When transferring ownership of this codebase to another AI model or engineering 
    - View menu camera viewpoints (Front, Back, Right, Left, Top, Bottom) snap camera angles instantly.
    - Lagoon mode toggle (`Tab` or menu bar button) expands viewport while keeping 3D gizmo and right dockers accessible.
    - Refresh rate settings in Preferences (`on-demand`, `30fps`, `60fps`, `120fps`, `custom`, `uncapped`) function as expected.
+
+## 2026-11-10 — Web build changes
+
+The refresh checklist line above is retired for the web / self-host build. Preferences no longer has a refresh cap, and the viewport draws every frame. A cap may return on the Windows exe only.
+
+Verify on `self-host/public/index.html` (`file://` or `node server.js`):
+
+- Smooth has no leftover hard crease from the 38° cut. Flat is still faceted. Def is the file shading.
+- A filter Apply stays on the layer and shows on the model without changing a refresh setting.
+- Smart Unwrap splits a closed mesh into separate islands. The angle is how wide one patch may turn. Islands do not sit on top of each other.
+- Double-click an island to select it. Right-click keeps the left or the right of U = 0.5. Drag Island moves that piece.
+- Layer Settings → UV for this layer switches the channel. Node panel → Bake to Layer replaces that layer.
+

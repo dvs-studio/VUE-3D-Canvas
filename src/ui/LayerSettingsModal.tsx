@@ -18,6 +18,8 @@ interface LayerSettingsModalProps {
   layer: Layer | null;
   onSavePBR: (layerId: string, pbrSettings: LayerPBRSettings) => void;
   onOpenNodeEditor?: () => void;
+  uvChannels?: { id: string; name: string }[];
+  onSetUVChannel?: (layerId: string, channelId: string) => void;
 }
 
 export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
@@ -26,6 +28,8 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
   layer,
   onSavePBR,
   onOpenNodeEditor,
+  uvChannels = [],
+  onSetUVChannel,
 }) => {
   if (!isOpen || !layer) return null;
 
@@ -82,6 +86,22 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+
+        <div className="px-3 py-2 bg-[#262626] border-b border-[#3e3e3e] flex items-center gap-2 text-[11px]">
+          <span className="text-[#aaa] shrink-0">UV for this layer</span>
+          <select
+            value={layer.uvChannel || 'uv_original'}
+            onChange={(e) => onSetUVChannel?.(layer.id, e.target.value)}
+            className="flex-1 bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1"
+          >
+            {(uvChannels.length > 0 ? uvChannels : [{ id: 'uv_original', name: 'Original Mesh UVs' }]).map((ch) => (
+              <option key={ch.id} value={ch.id}>{ch.name}</option>
+            ))}
+          </select>
+          <span className="text-[10px] text-[#888] max-w-[180px] leading-tight">
+            Bake in the node panel writes onto this layer. Double-click a UV island to select it.
+          </span>
         </div>
 
         {/* Navigation Tabs */}

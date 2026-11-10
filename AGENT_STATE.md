@@ -254,5 +254,16 @@ The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snap
 - Self-host page is inlined (`index-BahJ6256.js` inside `self-host/public/index.html`) for `file://` and `http://`.
 - Windows exe was not changed. Next step waits for Victory's test of this self-host build.
 
+## 11. Superseding note — 2026-11-10 filters, smooth, UV islands
+
+- Web view always draws. Refresh-rate control removed from Preferences. Do not bring on-demand back on the web build.
+- Smooth is a full average. No 38° crease. No coplanar snap on that path.
+- `SmartUVUnwrapEngine` splits by angle from the seed face, packs without stacking, and clones seam vertices.
+- UV: double-click island, right-click keeps left or right of U = 0.5, Drag Island moves the selection.
+- `layer.uvChannel` is chosen in Layer Settings and becomes the active mesh channel.
+- Node bake replaces the active layer pixels instead of painting over them.
+- Self-host bundle: `index-D4_J0RPb.js`, inlined for `file://` and `http://`.
+
+
 
 
