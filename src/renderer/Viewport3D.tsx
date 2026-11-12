@@ -505,6 +505,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     const animate = (currentTime: number = performance.now()) => {
       animId = requestAnimationFrame(animate);
+      const interacting = orbitState.current.isOrbiting || orbitState.current.isPanning || isPaintingRef.current || activePointers.current.size > 0;
+      if (!interacting && !needsRenderRef.current) return;
+      if (currentTime - lastRenderTime < 16) return;
       needsRenderRef.current = false;
       lastRenderTime = currentTime;
 
@@ -816,6 +819,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (dynamicTextureRef.current) {
       dynamicTextureRef.current.needsUpdate = true;
     }
+    needsRenderRef.current = true;
   }, [layers, textureVersion, updateCompositeTexture]);
 
   // Virtual 3D Origin Cursor / Plane Helper for Symmetry with X-Ray Overlay and Axis Label

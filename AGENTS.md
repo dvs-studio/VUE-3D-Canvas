@@ -228,6 +228,13 @@
 - Still broken: Triplanar crashes on open because `useState` sits after `if (!isOpen) return null`. Edge Wear's return was moved locally and is not pushed. Scatter's return was removed, so the dialog would stay on screen. The view redraws every frame and feels slow.
 - This session finishes those three dialogs and the idle redraw. It does not touch `crates/vue3d_core`.
 
+### 2026-11-12 — post-execution (filter dialogs open, idle redraw stopped)
+- Pre-edit bookend is `ab1a766`. `crates/vue3d_core` was not edited.
+- `TriplanarDialog`, `StochasticScatterDialog`, and `EdgeWearDialog` now call every hook before `if (!isOpen) return null`. Opening them no longer throws. Scatter is hidden when closed. Repeats are capped at 300.
+- `Viewport3D` draws only while orbiting, painting, or when `textureVersion` marks the frame dirty, and not faster than 60. Idle no longer runs the bloom pass. Refresh buttons stay gone.
+- `npm run host:sync` inlined `index-DwCqaqSC.js`. Next agent starts at `SELF_HOST_HANDOFF.md`. Self-host remains the folder to finish.
+
+
 
 
 

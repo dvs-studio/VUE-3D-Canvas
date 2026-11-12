@@ -320,3 +320,10 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 - **Mirror** copies the opposite side onto the same UV and overlaps it. It no longer refuses vertices outside |axis| > 1.25.
 - **Layer Settings** stores `layer.uvChannel` and switches the mesh to that channel. **Bake to Layer** clears the active layer, then draws the node graph into it.
 
+## 12. 2026-11-12 — Filter dialogs and the redraw
+
+- Triplanar, Stochastic Scatter, and Edge Wear must not call `useState` or `useRef` after `if (!isOpen) return null`. That throw unmounted the painter. Gaussian and Stitch already followed this order.
+- Scatter `numberOfRepeats` is clamped to 0..300.
+- The web viewport redraws when the camera is moving, a stroke is down, or `textureVersion` changes. It does not redraw faster than 60, and it does not redraw while idle. There is still no refresh-rate control in Preferences.
+
+

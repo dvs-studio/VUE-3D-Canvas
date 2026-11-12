@@ -204,8 +204,6 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
     onClose();
   };
 
-  if (!isOpen) return null;
-
   // Preset thumbnails picture definitions
   const stampPresets: { id: StochasticScatterConfig['stampType']; label: string; icon: React.ReactNode }[] = [
     {
@@ -338,6 +336,8 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
     isDraggingRef.current = false;
     try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch {}
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none select-none">
@@ -702,7 +702,7 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
                 max="300"
                 value={numberOfRepeats}
                 onChange={(e) => {
-                  const val = Math.max(0, Number(e.target.value));
+                  const val = Math.max(0, Math.min(300, Number(e.target.value) || 0));
                   setNumberOfRepeats(val);
                   updateConfigAndPreview({ numberOfRepeats: val });
                 }}

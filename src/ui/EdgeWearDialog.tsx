@@ -35,8 +35,6 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
   const [applyToRidges, setApplyToRidges] = useState<boolean>(true);
   const [applyToCavity, setApplyToCavity] = useState<boolean>(true);
 
-  if (!isOpen || !activeLayer) return null;
-
   const handleConfirm = () => {
     const config: EdgeWearConfig = {
       wearAmount,
@@ -83,6 +81,8 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
     isDraggingRef.current = false;
     try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch {}
   };
+
+  if (!isOpen || !activeLayer) return null;
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none select-none">

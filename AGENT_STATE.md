@@ -264,6 +264,15 @@ The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snap
 - Node bake replaces the active layer pixels instead of painting over them.
 - Self-host bundle: `index-D4_J0RPb.js`, inlined for `file://` and `http://`.
 
+## 12. Superseding note — 2026-11-12 filter dialogs
+
+- The bundle to test is `index-DwCqaqSC.js` inside `self-host/public/index.html`.
+- Triplanar, Scatter, and Edge Wear open. Their position hooks are above the closed-dialog return.
+- Scatter repeats cannot exceed 300.
+- The 3D view sleeps while idle and caps at 60 while drawing. A texture change still marks a frame.
+- Next agent reads `SELF_HOST_HANDOFF.md` first. Self-host is the folder to finish. Do not start the Windows rewrite.
+
+
 
 
 

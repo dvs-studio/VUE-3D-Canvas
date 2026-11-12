@@ -355,7 +355,7 @@ export class StochasticScatterEngine {
     // If numberOfRepeats = 0: stochastic non-repeating mode based on stamp density
     let totalStamps = 0;
     if (config.numberOfRepeats > 0) {
-      totalStamps = config.numberOfRepeats;
+      totalStamps = Math.min(300, Math.round(config.numberOfRepeats));
     } else {
       // Stochastic continuous density (15 to 300 stamps)
       totalStamps = Math.round(15 + (config.stampDensity / 100) * 280);

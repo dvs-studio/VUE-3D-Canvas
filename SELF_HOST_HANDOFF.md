@@ -22,22 +22,18 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## What is broken right now
 
-Victory, 2026-11-10: unwrap and Smooth are good. Gaussian and Stitch are good. Triplanar, Scatter, and Edge Wear break the app. The view is also a bit laggy.
+Nothing from the 2026-11-10 report is still open in code. Confirm it on the new bundle before starting new work.
 
-Cause of the crash: `TriplanarDialog.tsx` still does `if (!isOpen) return null` and then calls `useState` for the window position. React throws as soon as the dialog opens, which takes the whole painter down. Gaussian and Stitch do not do this.
+## Landed 2026-11-12 (`index-DwCqaqSC.js`)
 
-`EdgeWearDialog.tsx` was moved in the working tree so the early return is after the hooks. That edit is not on `main` yet.
-
-`StochasticScatterDialog.tsx` had the same bug. The early return was deleted so the hooks always run, but the dialog is then drawn even when it is closed. Put `if (!isOpen) return null` back, after the last hook and before the JSX.
-
-The lag is from `Viewport3D.tsx`. The loop draws the bloom pass on every animation frame, including when nothing changed. That was done so filters would show. It should draw when the user is orbiting, painting, or a texture just changed, and not faster than 60. Do not put the refresh-rate buttons back.
+- Triplanar, Scatter, and Edge Wear declare every hook before `if (!isOpen) return null`. Opening them no longer throws the React hook error that took the painter down.
+- Scatter still hides when closed. Repeats are capped at 300 so a typed value cannot lock the tab.
+- The 3D view draws while orbiting, painting, or after a texture change, and not faster than 60. It does not draw the bloom pass while idle. The refresh buttons stay removed.
+- Pre-edit bookend is `ab1a766`. `crates/vue3d_core` was not edited.
 
 ## This session does
 
-1. Move Triplanar's early return to after every hook.
-2. Put Scatter's early return back after every hook.
-3. Keep Edge Wear's early return after every hook.
-4. Stop idle redraws. Cap active redraws at 60. Set `needsRenderRef` when `textureVersion` changes so a filter still appears.
+Done. See the landed list above.
 
 ## Later, do not do these until Victory asks
 

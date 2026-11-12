@@ -134,3 +134,8 @@ Verify on `self-host/public/index.html` (`file://` or `node server.js`):
 - Double-click an island to select it. Right-click keeps the left or the right of U = 0.5. Drag Island moves that piece.
 - Layer Settings → UV for this layer switches the channel. Node panel → Bake to Layer replaces that layer.
 
+## 2026-11-12 — filter dialogs
+
+Open Triplanar, Scatter, and Edge Wear. They must appear and Apply without taking the painter down. The 3D view should stay still when you are not painting or orbiting, and a finished filter should still show up. Bundle: `index-DwCqaqSC.js`. The handover for the next agent is `SELF_HOST_HANDOFF.md`.
+
+

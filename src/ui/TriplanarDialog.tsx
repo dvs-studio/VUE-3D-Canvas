@@ -99,8 +99,6 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTargetIdx, setUploadTargetIdx] = useState<number | null>(null);
 
-  if (!isOpen) return null;
-
   const handleAddTexture = () => {
     const newIdx = textures.length;
     const preset = BUILTIN_PRESETS[newIdx % BUILTIN_PRESETS.length];
@@ -216,6 +214,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
     isDraggingRef.current = false;
     try { (e.target as HTMLElement).releasePointerCapture?.(e.pointerId); } catch {}
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none select-none">
