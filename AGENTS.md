@@ -234,6 +234,12 @@
 - `Viewport3D` draws only while orbiting, painting, or when `textureVersion` marks the frame dirty, and not faster than 60. Idle no longer runs the bloom pass. Refresh buttons stay gone.
 - `npm run host:sync` inlined `index-DwCqaqSC.js`. Next agent starts at `SELF_HOST_HANDOFF.md`. Self-host remains the folder to finish.
 
+### 2026-11-12 — pre-execution (filters paint the whole screen black)
+- Victory tested `f2c9496`. The idle redraw fix made painting smoother. Triplanar, Scatter, and Edge Wear still break the programme: the whole screen becomes a blank black background. Gaussian and Stitch do not. He thinks removing the backdrop blur is involved.
+- This pass clones the self-host painter into the preview workspace, opens those three dialogs, and reads the console. The fix has to keep the painter on screen and show a real result. Do not put a full-screen black veil back. Do not edit `crates/vue3d_core` unless the web dialogs cannot explain the black screen.
+- After the fix, append how the web filters relate to the Windows window: they stay in the painter page. The Rust exe only hosts that page. It does not reimplement the filters.
+
+
 
 
 
