@@ -222,5 +222,12 @@
 - Cause to fix: those three dialogs call `useState` after `if (!isOpen) return null`. Gaussian and Stitch do not. Move the early return to after every hook.
 - The web view currently draws the bloom pass on every animation frame, even when idle. Draw only while the user is orbiting, painting, or a texture just changed, and cap that at 60. Do not put the refresh buttons back. Do not edit `crates/vue3d_core`.
 
+### 2026-11-12 — self-host is the folder to finish
+- Another agent must start at `SELF_HOST_HANDOFF.md`. The current product is `self-host/`. Do not open the Windows rewrite until Victory accepts that folder.
+- Already good on `3b5ff79`: tumble, file normals, full Smooth, unwrap islands, UV select / right-click split / drag, layer UV channel, Gaussian, Stitch, `file://`.
+- Still broken: Triplanar crashes on open because `useState` sits after `if (!isOpen) return null`. Edge Wear's return was moved locally and is not pushed. Scatter's return was removed, so the dialog would stay on screen. The view redraws every frame and feels slow.
+- This session finishes those three dialogs and the idle redraw. It does not touch `crates/vue3d_core`.
+
+
 
 
