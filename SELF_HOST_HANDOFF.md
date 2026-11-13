@@ -22,7 +22,18 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## What is broken right now
 
-Nothing from the 2026-11-10 report is still open in code. Confirm it on the new bundle before starting new work.
+Victory, after `f2c9496`: painting is smoother, and unwrap and Smooth stay good. Triplanar, Scatter, and Edge Wear still turn the **self-host** screen black (`file://` and `node server.js`). Gaussian and Stitch do not.
+
+The same three dialogs do open when the source is served by `vite` (the Grok preview on 2026-11-12). That is not the package he ships. Test `self-host/public/index.html` after `npm run host:sync`, not the dev server.
+
+The Rust exe does not contain these filters. It only shows this page. Fix them here.
+
+## This session does
+
+1. This note goes to `main` before any further code change.
+2. Then open the inlined production page and capture the error that the dev server hides.
+3. Fix that error so the three dialogs stay on screen and Apply changes the layer. Do not add a full-screen black veil. Do not edit `crates/vue3d_core`.
+
 
 ## Landed 2026-11-12 (`index-DwCqaqSC.js`)
 

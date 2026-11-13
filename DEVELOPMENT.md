@@ -138,4 +138,9 @@ Verify on `self-host/public/index.html` (`file://` or `node server.js`):
 
 Open Triplanar, Scatter, and Edge Wear. They must appear and Apply without taking the painter down. The 3D view should stay still when you are not painting or orbiting, and a finished filter should still show up. Bundle: `index-DwCqaqSC.js`. The handover for the next agent is `SELF_HOST_HANDOFF.md`.
 
+## 2026-11-13 — do not trust the dev server for filters
+
+`vite` can show Edge Wear, Triplanar, and Scatter while `self-host/public/index.html` still goes black. Check the inlined page. The Windows exe loads that page and does not implement the filters itself.
+
+
 

@@ -239,6 +239,13 @@
 - This pass clones the self-host painter into the preview workspace, opens those three dialogs, and reads the console. The fix has to keep the painter on screen and show a real result. Do not put a full-screen black veil back. Do not edit `crates/vue3d_core` unless the web dialogs cannot explain the black screen.
 - After the fix, append how the web filters relate to the Windows window: they stay in the painter page. The Rust exe only hosts that page. It does not reimplement the filters.
 
+### 2026-11-13 — observation before the next edit (dev shows the filter, self-host does not)
+- Bookend `efd4454` is already on `main`. No painter code has been changed since that note.
+- Opened the painter with the Vite dev server and chose Filter → Edge Wear. The dialog appeared and the rest of the programme stayed on screen. Triplanar and Scatter are the same component shape in that dev server.
+- Victory's report still stands for the copies he actually runs: `self-host/public/index.html` on `file://`, and `node self-host/server.js`. Those turn the screen black for Triplanar, Scatter, and Edge Wear. Gaussian and Stitch do not. Do not treat the Vite dev server as proof that the self-host package is fixed.
+- Next edit, after this note is on `main`: open the inlined production page, not the dev server, and read the console when those three dialogs open. The Rust window only loads that same page, so a fix in the painter page is the fix for the exe. Do not reimplement the filters in Rust.
+
+
 
 
 

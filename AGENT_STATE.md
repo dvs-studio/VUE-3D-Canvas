@@ -272,6 +272,13 @@ The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snap
 - The 3D view sleeps while idle and caps at 60 while drawing. A texture change still marks a frame.
 - Next agent reads `SELF_HOST_HANDOFF.md` first. Self-host is the folder to finish. Do not start the Windows rewrite.
 
+## 13. 2026-11-13 — dev versus self-host
+
+- Vite shows Edge Wear. That does not clear the bug.
+- `file://` and `self-host/server.js` still blank the screen for Triplanar, Scatter, and Edge Wear. Gaussian and Stitch stay up.
+- No code change in this note. The next edit has to be proven on the inlined `self-host/public/index.html`.
+
+
 
 
 

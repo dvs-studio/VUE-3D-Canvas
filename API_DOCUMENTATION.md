@@ -326,4 +326,10 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 - Scatter `numberOfRepeats` is clamped to 0..300.
 - The web viewport redraws when the camera is moving, a stroke is down, or `textureVersion` changes. It does not redraw faster than 60, and it does not redraw while idle. There is still no refresh-rate control in Preferences.
 
+## 13. 2026-11-13 — Where a filter is allowed to fail
+
+- A filter dialog that opens under `vite` can still blank `self-host/public/index.html`. Judge Triplanar, Scatter, and Edge Wear on that file, opened with `file://` or `self-host/server.js`.
+- Those three filters are JavaScript in the painter page (`src/ui/*Dialog.tsx` and `src/tools/`). `crates/vue3d_core` only hosts the page. It does not run the filter.
+
+
 
