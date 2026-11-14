@@ -80,3 +80,8 @@ Append a short note to `AGENTS.md` before the first code edit, and again after `
 ## Correction — 2026-11-14 evening
 
 `LAYER_PBR_PLAN.md` now says: Edit shows Undo, then Redo, then Undo & Redo Settings. The node dock is removed and a UV dock says Coming soon. Import Texture stays and feeds the switches. Do not build the full-screen UV desk yet. Windows compile waits until Victory accepts this self-host page.
+
+
+## Subdivision preview
+
+`LAYER_PBR_PLAN.md` adds a Subdivision dock. Preview only. It follows sharp edges by angle and the combined bump. It never replaces the cage.

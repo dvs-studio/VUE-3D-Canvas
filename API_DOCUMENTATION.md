@@ -373,3 +373,6 @@ The live bundle is still the node-editor build. The next change is specified in 
 
 
 The node panel is removed. A UV dock in that slot says Coming soon. Import Texture remains and sets the switches from the chosen role. Edit menu undo labels are Undo, Redo, and Undo & Redo Settings.
+
+
+A Subdivision dock is specified and not built. It previews Catmull-Clark or Simple subdivision in the 3D view, keeps edges sharper than an angle, and offsets the preview by the combined height. The stored mesh is unchanged.

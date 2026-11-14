@@ -13,8 +13,9 @@ A safety copy of the self-host folder as it is before this task is `release/vue3
 3. Layer right-click export, then the conversion commands.
 4. Triplanar previews and colour mixes.
 5. Themes on the whole interface. Gizmo redraw. Labels.
-6. Remove the node editor. Put a UV dock in its place that only says Coming soon. Keep Import Texture and point it at the switches.
-7. `npm run host:sync`. Append the post-note to `AGENTS.md`, `AGENT_STATE.md`, and `SELF_HOST_HANDOFF.md`.
+6. Subdivision preview dock. It never writes the mesh.
+7. Remove the node editor. Put a UV dock in its place that only says Coming soon. Keep Import Texture and point it at the switches.
+8. `npm run host:sync`. Append the post-note to `AGENTS.md`, `AGENT_STATE.md`, and `SELF_HOST_HANDOFF.md`.
 
 Do not start a native DirectX or OpenGL window in this task. When Victory says the self-host page is perfected, put this same page into the Windows package and compile `vue_3d_canvas.exe`. That package hosts the page. It does not grow a second painter. A real DirectX 11 or OpenGL device is a later project, after that package is the finished page.
 
@@ -196,6 +197,47 @@ The lagoon Undo item stays the word Undo. The settings dialog title is `Undo & R
 - Companion-folder auto-texture still makes one layer per matched file. It does not collapse them into one node.
 - The Coming soon UV dock must not capture the pointer over the 3D view. It is a dock panel, same as Layers.
 
+## Subdivision preview
+
+Add a dock named **Subdivision**. Window menu label: `Subdivision Preview`. It behaves like Blender's Subdivision Surface modifier, and it is only a preview. It must never write the cage.
+
+The cage is the mesh already in the session: the OBJ, the preset, the positions, the UVs, and `origFileNormal`. Paint, Smooth, Flat, Def, unwrap, UV drag, and OBJ export all keep using that cage. Turning the preview on, moving its sliders, or closing the file must not replace those positions. Do not store subdivided vertices in the `.xblend`. The six slider values may be saved with the project. The mesh block stays the cage.
+
+Blender's modifier has two level counts, viewport and render. This dock has one, because nothing is applied at export. Blender's types are Catmull-Clark and Simple. Use those two and no others. Blender keeps an edge sharp with a crease weight from 0 to 1: 0 lets the surface pull the edge, 1 leaves the edge on the cage. This model has no per-edge crease painting, so the dock decides which cage edges are creased from the angle between the two faces.
+
+The dock controls, top to bottom:
+
+| Control | Range | Default | What it does |
+|---|---|---|---|
+| On | checkbox | off | Off shows the cage. On shows the preview in the 3D view only. |
+| Type | Catmull-Clark or Simple | Catmull-Clark | Catmull-Clark rounds the cage. Simple only cuts each face into smaller faces and leaves the cage vertices where they are. |
+| Levels | integer 0–2 | 1 | How many times to subdivide the preview. 0 is the same as Off. Two is the maximum. A cage over 40,000 faces is forced to level 1 and the dock says so. |
+| Sharp above | 0–180 degrees | 60 | A cage edge whose faces meet at this angle or steeper is a sharp edge. Flatter edges are smooth. |
+| Crease | 0–1 | 1 | How hard those sharp edges resist rounding. 0 ignores the angle. 1 keeps a sharp edge on the original cage edge, which is Blender's crease of 1. |
+| Keep boundary | checkbox | on | An open edge, and a corner where two open edges meet, stays on the cage. This is Blender's boundary smooth set to keep corners. |
+| Displacement | 0–1 | 1 | How much of the combined bump image moves the preview. 0 subdivides the shape and ignores height. |
+
+A line at the bottom of the dock reads: `Preview only. The saved mesh is not changed.`
+
+Catmull-Clark, one level, on the cage:
+
+1. Face point: average of that face's vertices.
+2. Edge point: average of the two edge vertices and the face points of the faces that share the edge. If the edge is sharp, blend from that smooth point toward the edge midpoint by the crease weight. Crease 1 means the edge point is the midpoint.
+3. A smooth interior vertex moves to `(F + 2R + (n - 3)P) / n`. `F` is the average of the neighbouring face points, `R` the average of the neighbouring edge midpoints, `P` the old vertex, `n` how many edges meet there. A vertex with two sharp edges moves to the average of itself and those two edge midpoints. A vertex with more than two sharp edges stays put. A boundary vertex stays put when Keep boundary is on.
+4. Each old face becomes one quad per corner: vertex point, the two edge points, the face point.
+5. UVs use the same weights as positions. Do not average UVs across a seam. If the two sides of an edge disagree in UV, the edge point is split, one UV for each side.
+6. Repeat until Levels is reached.
+
+Simple does not run steps 1–3. It only inserts midpoints and builds the quads, then the same UV seam rule.
+
+Displacement runs after the last level, and only if the slider is above 0. Sample the combined height image at the preview vertex's UV. Move the vertex along its preview normal by `height * displacement * 0.05`. Height 1 and displacement 1 move the surface 0.05 in cage units, not farther. The normal used for that move is split across a sharp edge, so the two faces do not share a vertex normal and the corner stays crisp. The height image is the one the bump switches already combine. This dock does not build a second height. While the pen is down, do not rebuild the preview. Resample height on pointer-up, and when a bump slider or the ramp changes.
+
+Shading of the preview follows the same sharp edges. Smooth on the cage does not round a preview edge that the angle marked sharp.
+
+Put the builder in `src/renderer/subdivisionPreview.ts`. It takes the cage `BufferGeometry` and the seven controls and returns a new `BufferGeometry`. `src/renderer/Viewport3D.tsx` keeps the cage in a ref. When the preview is on, the mesh draws the preview geometry. When it is off, the mesh draws the cage again. Dispose the old preview when a new one is built. Do not call the builder from the animation loop. Do not assign the preview back into the React geometry or into the OBJ text.
+
+The panel is `src/ui/panels/SubdivisionPanel.tsx`, listed in the Window menu beside Viewport Navigator. It uses the same dock colours as Layers. It must not sit on top of the WebGL view as a full-screen layer.
+
 ## Do not
 
 - Do not edit `crates/vue3d_core`.
@@ -206,7 +248,8 @@ The lagoon Undo item stays the word Undo. The settings dialog title is `Undo & R
 - Do not delete `release/vue3d-self-host-safety-2026-11-14.zip`.
 - Do not remove Import Texture or Auto-Texture from Folder.
 - Do not build the full-screen UV desk. The dock says Coming soon.
+- Do not write subdivided vertices into the mesh, the OBJ export, or the `.xblend`.
 
 ## Done when
 
-`npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. Edit says Undo, then Redo, then Undo & Redo Settings, and the footer no longer mentions a ring. Import Texture still opens, with no node checkbox, and a fill image still makes a material-fill layer. The node panel is gone. The dock that replaced it says Coming soon. `public/background.jpg` is beside the self-host `index.html` after sync.
+`npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. Edit says Undo, then Redo, then Undo & Redo Settings, and the footer no longer mentions a ring. Import Texture still opens, with no node checkbox, and a fill image still makes a material-fill layer. The node panel is gone. The dock that replaced it says Coming soon. Subdivision Preview can be turned on without changing the exported mesh: a sharp edge above the angle stays sharp, and the displacement slider follows the combined bump. `public/background.jpg` is beside the self-host `index.html` after sync.

@@ -302,3 +302,7 @@
 - The node editor is removed. Its dock becomes a UV Editor that says Coming soon. Do not build the full-screen UV desk in this task. `Viewport2D` stays.
 - Import Texture and Auto-Texture from Folder stay. They set the new layer switches. They do not create nodes.
 - Self-host first. When Victory says that page is perfected, compile the Windows package around that same page.
+
+### 2026-11-14 — subdivision preview added to the task
+- Still no painter code. `LAYER_PBR_PLAN.md` now includes a Subdivision dock.
+- It is a viewport preview in the style of Blender's Subdivision Surface modifier: Catmull-Clark or Simple, levels 0–2, an angle for sharp edges, a crease weight, keep-boundary, and a displacement amount that reads the combined bump. It must not change the saved mesh, the OBJ, or the file's vertex list.
