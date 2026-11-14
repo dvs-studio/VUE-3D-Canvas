@@ -370,3 +370,6 @@ The live bundle is still the node-editor build. The next change is specified in 
 - Triplanar rows preview the picked image. With no image, the row is `rgba`, `hsla`, or `#hex`, and the alpha is separate from the colour.
 - Themes recolour the whole window. The node panel is not part of the interface.
 
+
+
+The node panel is removed. A UV dock in that slot says Coming soon. Import Texture remains and sets the switches from the chosen role. Edit menu undo labels are Undo, Redo, and Undo & Redo Settings.

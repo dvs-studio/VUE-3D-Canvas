@@ -13,10 +13,10 @@ A safety copy of the self-host folder as it is before this task is `release/vue3
 3. Layer right-click export, then the conversion commands.
 4. Triplanar previews and colour mixes.
 5. Themes on the whole interface. Gizmo redraw. Labels.
-6. Remove the node editor from the interface.
+6. Remove the node editor. Put a UV dock in its place that only says Coming soon. Keep Import Texture and point it at the switches.
 7. `npm run host:sync`. Append the post-note to `AGENTS.md`, `AGENT_STATE.md`, and `SELF_HOST_HANDOFF.md`.
 
-Do not start a native DirectX or OpenGL window. When that window is built later, it hosts this same page. It does not reimplement filters or layers.
+Do not start a native DirectX or OpenGL window in this task. When Victory says the self-host page is perfected, put this same page into the Windows package and compile `vue_3d_canvas.exe`. That package hosts the page. It does not grow a second painter. A real DirectX 11 or OpenGL device is a later project, after that package is the finished page.
 
 ## What a layer is
 
@@ -127,21 +127,57 @@ File: `src/renderer/boxGizmo.tsx`. The box stays. The sphere and the mountain do
 
 Hit targets stay: front, back, left, right, top, bottom.
 
+## Edit menu
+
+In `src/ui/PhotoshopMenuBar.tsx` the Edit menu undo block is three items, in this order, and nothing else about history:
+
+1. `Undo` with `Ctrl+Z`. The label is the word Undo. Delete the suffix `(3-State Ring)`.
+2. `Redo` with `Ctrl+Y`.
+3. `Undo & Redo Settings...`
+
+Preferences may stay under those three. It is not an undo command.
+
+Delete the footer line in `src/App.tsx` that reads `UNDO: NORMALIZED (3 STATES SAVED TO .XBLEND)`. Do not replace it with another history sentence. Delete the Window menu entry `Undo History Ring Buffer`. Undo, Redo, and the settings dialog are the only undo controls. Session undo stays 30. The file still stores 3. That fact lives in the settings dialog, not on the menu label.
+
 ## Labels
 
-- Footer in `src/App.tsx` currently says `UNDO: NORMALIZED (3 STATES SAVED TO .XBLEND)`. Change it to `History · 30 live steps · 3 stored in the file`.
-- Edit menu and the lagoon item stay as Undo. Do not invent a second name for Ctrl+Z. The footer was the misleading control.
 - Gizmo badge says `DX11/WASM`. On this self-host page change it to `WebGL`. Do not print DirectX until a later build actually creates that device.
 - `LayerSettingsModal` title becomes `Layer Properties`.
-- Remove the Window menu entry `Node Editor (Blender 2.8+)` in `src/ui/PhotoshopMenuBar.tsx`.
+- Menu names, so the long ones read as tools: `Stochastic Layer Scattering...` becomes `Scatter...`, `Jenny Stitch Studio (Path Stitches)...` becomes `Stitch...`, `Triplanar Box Filter & Masking...` becomes `Triplanar Mix...`. Leave the engine file names alone.
+- Import Texture strings are in the next section. Do not call it an auto-node in the interface.
 
-## Node editor
+## Import Texture
 
-Stop showing `src/ui/panels/NodeGraphPanel.tsx`. Remove it from the panel list and from `App.tsx` layout. Remove “wire into the node graph” from `src/ui/TextureAutoNodeModal.tsx`. Importing a texture still creates a layer and sets the three switches from the role the user picked (colour, height, emission, normal).
+Keep this. It is not the node editor. The menu action is **Import Texture...** in the layers panel. The modal file may stay `src/ui/TextureAutoNodeModal.tsx`. The title the user sees is `Import Texture`. Delete the checkbox `createNodeSetup` and every sentence that says the image will be wired into a node graph.
 
-Do not delete `src/nodes/blender_28_importer.py`. It runs inside Blender, not in this page. `BLENDER_ADDON_PROMPT.md` is the later add-on. The add-on, when it is next written, loads the per-layer images saved in the `.xblend` (colour, height, emission, reflection). It does not rebuild the web node graph. Do not write that add-on in this task.
+The preview, zoom, and pan already in that modal stay. The role list stays, and each role only sets the new switches on the new layer:
 
-Leave `project.nodeGraph` in the file if old files contain it. Loading an old file must not crash. Ignore the graph.
+| Role in the modal | Layer | Switches |
+|---|---|---|
+| Material Texture Fill | `isTextureFill` true, `textureFillConfig` kept (triplanar or box, scale, repeat, rotation, randomise) | Colour on at 1. Bump, emission, reflection off. |
+| Colour / Albedo | Painted layer, image copied into `layer.canvas` | Colour on at 1. Others off. |
+| Displacement / Height | Painted layer | Bump on at 1, ramp black-to-white. Colour, emission, reflection off. |
+| Emission | Painted layer | Emission on at 1. Others off. |
+| Reflection | Painted layer. The old Roughness role is this same choice. | Reflection on at 1. Others off. |
+| Normal Map | Painted layer | `normalLock` true. Colour, bump, emission, reflection off. |
+
+After import, Layer Properties can turn the other switches on. A photo may be colour and bump together. Do not ask the user to import it twice.
+
+The companion-folder button in `src/ui/ProjectSettingsModal.tsx` (`Auto-Texture Model & Replace Layers`) also stays. Point its existing filename tokens at the same switches: diffuse words → colour, bump and height words → bump, emission words → emission, roughness and specular words → reflection, normal words → `normalLock`. It must not create nodes.
+
+Rename the visible button to `Auto-Texture from Folder`. The behaviour above is the behaviour. Do not drop the feature.
+
+## Node editor and the UV dock
+
+Remove the node editor from the page. Take `Node Graph` out of the panel list in `src/ui/PhotoshopMenuBar.tsx` and stop mounting `src/ui/panels/NodeGraphPanel.tsx` in `src/App.tsx`. Do not keep a hidden panel that still builds a graph.
+
+Put a dock in that same slot. Title: `UV Editor`. The body is one line: `Coming soon.` Under it, one sentence: `A full-screen UV desk for this mesh. Not in this build.` No fake tools, no disabled buttons that look broken.
+
+`src/renderer/Viewport2D.tsx` stays. It is the UV view that exists today (double-click island, right-click split, drag). Do not remove it while the dock says Coming soon.
+
+Later, and not in this task: that dock becomes a floating UV application. It can fill the screen. It still reads and writes the open mesh (positions and UVs), and it uses the same undo stack. Tools for that later build are island select, split a mirrored pair, move, pack, unwrap with the angle limit, pin, and sew. Write nothing for those tools now except the Coming soon line.
+
+Do not delete `src/nodes/blender_28_importer.py`. It runs inside Blender, not in this page. Do not write the Blender add-on in this task. Old `.xblend` files may still contain `nodeGraph`. Loading one must not crash. Ignore the graph.
 
 ## Painting feel
 
@@ -149,7 +185,16 @@ Do not undo the fast dab path. A stroke writes the active layer and blits the co
 
 The opening stall is the bloom pass and the texture upload on the first frames. Draw the lit mesh once before creating `UnrealBloomPass`. Create the bloom pass on the following frame. Same rule for the environment image.
 
-Session undo stays 30 (`src/core/history.ts`). The `.xblend` file still stores 3. New switch fields must round-trip in that file (`XBLEND_FORMAT_SPECIFICATION.md`).
+Session undo stays 30 (`src/core/history.ts`). The `.xblend` file still stores 3. New switch fields must round-trip in that file (`XBLEND_FORMAT_SPECIFICATION.md`). The settings dialog may say that. The menu must not.
+
+The lagoon Undo item stays the word Undo. The settings dialog title is `Undo & Redo`. Delete the words "ring buffer" from anything the user can see.
+
+## Also while those files are open
+
+- A layer created by Import Texture is selected and visible, so the user sees it on the model without hunting the stack.
+- A huge image is drawn into the 1024 canvas after the modal closes, not before the modal has painted its preview.
+- Companion-folder auto-texture still makes one layer per matched file. It does not collapse them into one node.
+- The Coming soon UV dock must not capture the pointer over the 3D view. It is a dock panel, same as Layers.
 
 ## Do not
 
@@ -159,7 +204,9 @@ Session undo stays 30 (`src/core/history.ts`). The `.xblend` file still stores 3
 - Do not depend on D3D12 or ray tracing.
 - Do not put a full-screen black layer behind a dialog.
 - Do not delete `release/vue3d-self-host-safety-2026-11-14.zip`.
+- Do not remove Import Texture or Auto-Texture from Folder.
+- Do not build the full-screen UV desk. The dock says Coming soon.
 
 ## Done when
 
-`npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. The node panel is gone. `public/background.jpg` is beside the self-host `index.html` after sync. The footer no longer says “NORMALIZED”.
+`npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. Edit says Undo, then Redo, then Undo & Redo Settings, and the footer no longer mentions a ring. Import Texture still opens, with no node checkbox, and a fill image still makes a material-fill layer. The node panel is gone. The dock that replaced it says Coming soon. `public/background.jpg` is beside the self-host `index.html` after sync.

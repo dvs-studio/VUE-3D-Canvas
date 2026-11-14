@@ -295,3 +295,10 @@
 - Safety copy of the current self-host folder: `release/vue3d-self-host-safety-2026-11-14.zip`. Do not delete it.
 - Victory's test of `a1dd03d`: slightly satisfied. The view lags at the first moment, then settles. The plan tells the next agent to draw one cheap frame before bloom and the studio image.
 
+
+### 2026-11-14 — correction (undo labels, UV dock, keep Import Texture)
+- `LAYER_PBR_PLAN.md` is the task. This note corrects the earlier wording. No painter code yet.
+- Edit menu undo is three items only: Undo, Redo, Undo & Redo Settings. The label is Undo, not "3-State Ring". Delete the footer line about a normalized ring. Do not invent a new name.
+- The node editor is removed. Its dock becomes a UV Editor that says Coming soon. Do not build the full-screen UV desk in this task. `Viewport2D` stays.
+- Import Texture and Auto-Texture from Folder stay. They set the new layer switches. They do not create nodes.
+- Self-host first. When Victory says that page is perfected, compile the Windows package around that same page.
