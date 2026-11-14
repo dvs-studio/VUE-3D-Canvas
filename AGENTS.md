@@ -168,6 +168,7 @@
 ## Complete Development Documentation Index
 | Document | Purpose & Key Topics |
 | :--- | :--- |
+| [`LAYER_PBR_PLAN.md`](./LAYER_PBR_PLAN.md) | Next self-host task: toggle layers, no node editor, before any Windows device work. |
 | [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md) | Technical reference for Viewport, Brush Engine, Layering, Filters, WebGL, Node Graph, Textures, and ANGLE DirectX 11/OpenGL bridge. |
 | [`DEVELOPMENT.md`](./DEVELOPMENT.md) | Architectural genesis, Rust desktop app, Self-hosted distribution, constraints, and AI model handover recommendations. |
 | [`AGENTS.md`](./AGENTS.md) | Architectural decisions ledger, immutable governing rules, and historical execution log. |

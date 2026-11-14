@@ -1,3 +1,5 @@
+> Do not start this until Victory accepts the self-host work in `LAYER_PBR_PLAN.md`. The Windows window hosts that page. It does not reimplement the layers.
+
 # VUE 3D Canvas - Windows Compilation Guide (VS Code Edition)
 
 **The build that produces the application is the manual GitHub Action `Build Windows Application` (`.github/workflows/build-windows-app.yml`), or `scripts\build_standalone_desktop.bat` on Windows.** It compiles the painting UI and a native window. It does not zip a console demo. Sections below that mention `python_desktop/`, `native_c/`, or older Actions are retired and must not be followed.

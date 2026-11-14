@@ -1,3 +1,5 @@
+> Do not start this until Victory accepts the self-host work in `LAYER_PBR_PLAN.md`. The Windows window hosts that page. It does not reimplement the layers.
+
 # VUE 3D Canvas - Windows Build Diagnostics & Native Execution Breakdown
 
 **Superseded for launching the app:** the exe no longer opens a console shell and no longer has a `--serve` command. Use `.github/workflows/build-windows-app.yml`. The notes below explain the old console failure and stay as history.
