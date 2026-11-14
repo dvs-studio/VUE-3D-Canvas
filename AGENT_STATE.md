@@ -303,3 +303,12 @@ The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snap
 
 
 
+
+## 17. 2026-11-14 — toggle layers are the next task
+
+The node editor does not drive materials. Nothing in this section is built yet. The instructions are [`LAYER_PBR_PLAN.md`](./LAYER_PBR_PLAN.md).
+
+- Keep material fill layers. Other layers become toggle layers: colour and reflection, bloom and emission, bump and displacement. Each has a check and an influence. Bump has a ramp. Normals come from the combined height, except a layer converted to Normal.
+- Do this in the self-host painter. Do not edit `crates/vue3d_core` until Victory accepts that build.
+- Safety zip: `release/vue3d-self-host-safety-2026-11-14.zip`.
+

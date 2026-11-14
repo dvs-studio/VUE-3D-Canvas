@@ -356,3 +356,17 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 
 
 
+
+## 13. Planned — toggle layers (not in the bundle yet)
+
+The live bundle is still the node-editor build. The next change is specified in `LAYER_PBR_PLAN.md` and is not implemented. When it lands, the public behaviour is:
+
+- A painted layer has three switches and an influence each: colour and reflection, bloom and emission, bump and displacement.
+- Bump maps luminance through a ramp, then all bump layers add into one height image.
+- Emission layers add into one glow image. Bloom reads that image once.
+- Colour layers stack as they do now. Reflection becomes roughness (`1 - strength`) on the existing standard material.
+- A Normal conversion is the only tangent-space normal. Other normals are built from the combined height.
+- Right-click on a layer exports that layer's displacement, emission, or colour plus reflection.
+- Triplanar rows preview the picked image. With no image, the row is `rgba`, `hsla`, or `#hex`, and the alpha is separate from the colour.
+- Themes recolour the whole window. The node panel is not part of the interface.
+

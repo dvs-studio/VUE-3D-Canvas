@@ -147,3 +147,7 @@ The Windows exe in section 1 is unchanged. This server is only the non-exe packa
 - **Author & Creator:** Victory Ukpong
 - **UI Theme:** Photoshop CS5 Dark Gray (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`)
 - **License:** Apache-2.0
+
+## 8. Next self-host change
+
+The node editor is not the material system. The next change is specified in `LAYER_PBR_PLAN.md` and is not built yet. A copy of the current `self-host/` folder is `release/vue3d-self-host-safety-2026-11-14.zip`.

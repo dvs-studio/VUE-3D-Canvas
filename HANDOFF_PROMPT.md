@@ -72,3 +72,8 @@ The esbuild peer conflict named in the 2026-11-03 pre-execution note is fixed. `
 ## Status after the self-hosted standalone
 
 Victory asked for a self-hosted app that is not the exe. That package is `self-host/`. `public/` now matches the painter build (`index-B-mwzPmH.js`). Start it with `node server.js` inside `self-host/`, `start.bat`, or `npm run host`. The Windows exe workflow is still manual and was not run. Do not recreate Python, native C, `native_runner/`, or the deleted GitHub workflows. Do not open the UI with `file://`.
+
+## Status after 2026-11-14
+
+Victory accepted the filter fix and the zoom and resize fix (`a1dd03d`, bundle `index-DXhSIj8p.js`) with one complaint: the node editor is a dud, and the view lags only at the start. The next task is `LAYER_PBR_PLAN.md`. Do that on the self-host painter. Do not edit `crates/vue3d_core` until he accepts the result. `file://` on `self-host/public/index.html` is valid because the script is inlined. The older "do not open file://" line above is retired. `release/vue3d-self-host-safety-2026-11-14.zip` is the safety copy of `self-host/` before the toggle-layer work. Do not delete it.
+

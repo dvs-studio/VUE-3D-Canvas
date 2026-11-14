@@ -96,3 +96,7 @@ If you make modifications to the source code in `src/`:
 
 This folder is the non-exe standalone. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat`. That starts Node and opens the painter in the browser. Keep `server.js` next to `public/`. Do not open `public/index.html` with `file://`; the ES module bundle will be a blank page.
 
+
+## 6. Safety copy and the next change
+
+`release/vue3d-self-host-safety-2026-11-14.zip` at the repository root is a copy of this folder before the toggle-layer work. The work itself is `LAYER_PBR_PLAN.md`. Do not treat this folder as the Windows exe.

@@ -1,3 +1,5 @@
+> Retired as the live task. The Lagoon work below already landed. The next task is [`LAYER_PBR_PLAN.md`](../../../../LAYER_PBR_PLAN.md) at the repository root.
+
 # Implementation Plan: Lagoon Radial Menu, Camera Viewpoints Fix, System API Documentation & Architecture Handover
 
 ## 1. Overview of Scope & Objectives

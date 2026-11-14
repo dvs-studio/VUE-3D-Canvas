@@ -287,3 +287,10 @@
 ### 2026-11-14 — pre-execution (replace the node editor with toggle PBR layers)
 - Victory tested the self-host build through `a1dd03d` and is slightly satisfied. The viewport lags on the first moments, then settles, like a page that warms up. That behaviour stays. This note is the bookend only.
 - The node editor is rejected. The next documents describe a toggle layer, theme, gizmo, and triplanar change for the self-host painter. No code for that change is in this commit. `crates/vue3d_core` stays untouched until the self-host pass is accepted.
+
+### 2026-11-14 — post-execution (toggle-layer plan written, not built)
+- Pre-edit bookend is `d2d9020`. No painter code changed. `crates/vue3d_core` was not edited.
+- The task for the next agent is [`LAYER_PBR_PLAN.md`](./LAYER_PBR_PLAN.md). The node editor is rejected. Painted layers become three switches (colour and reflection, bloom and emission, bump and displacement) with influence sliders. The bump switch has a colour ramp. Material fill layers stay. Self-host is finished before any Windows device work.
+- Safety copy of the current self-host folder: `release/vue3d-self-host-safety-2026-11-14.zip`. Do not delete it.
+- Victory's test of `a1dd03d`: slightly satisfied. The view lags at the first moment, then settles. The plan tells the next agent to draw one cheap frame before bloom and the studio image.
+

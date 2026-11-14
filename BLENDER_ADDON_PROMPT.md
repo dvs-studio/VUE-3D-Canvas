@@ -1,3 +1,5 @@
+> The web node editor is rejected. Do not extend this add-on until `LAYER_PBR_PLAN.md` has saved per-layer colour, height, emission, and reflection images. The add-on will load those images. It will not rebuild the web node graph. Do not write the add-on in the toggle-layer task.
+
 # Blender 2.8+ Add-on Generation Prompt
 
 Copy and paste the prompt below into an AI model (Claude, ChatGPT, Grok, or Gemini) to generate the complete Blender Python add-on:

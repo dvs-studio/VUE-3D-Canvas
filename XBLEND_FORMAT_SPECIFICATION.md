@@ -246,3 +246,8 @@ This file instructs the Blender add-on on how to build Image Texture and Alpha M
 3. **Color Space Rule:**
    - Texture maps (`textures/`): `sRGB`
    - Alpha masks (`alpha_masks/`): `Non-Color`
+
+## 6. Planned layer switches (not written yet)
+
+`LAYER_PBR_PLAN.md` adds, on each painted layer, checks and influences for colour, reflection, emission, and bump, plus a bump ramp and a normal-lock flag. The file still stores only the last 3 undo states. Old files that still contain `nodeGraph` must load. The graph is ignored. Do not require it.
+

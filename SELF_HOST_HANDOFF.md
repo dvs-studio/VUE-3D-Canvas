@@ -2,6 +2,10 @@
 
 Read this file first. The product to finish is the self-hosted painter. Do not start the Windows DirectX rewrite until Victory says this folder is accepted.
 
+## Next task
+
+Do [`LAYER_PBR_PLAN.md`](../LAYER_PBR_PLAN.md). The node editor is rejected. Painted layers become three switches with influence sliders. Material fill stays. Victory is slightly satisfied with the current page: it lags at the first moment, then settles. The safety copy of this folder before that work is `release/vue3d-self-host-safety-2026-11-14.zip`. Do not delete it.
+
 ## What to run
 
 - Folder: `self-host/`

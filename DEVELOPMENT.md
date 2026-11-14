@@ -159,3 +159,10 @@ The main 3D view must redraw on zoom without a pan. The navigator already does. 
 
 
 
+
+## 2026-11-14 — node editor rejected
+
+Victory tested the self-host page and is slightly satisfied. The first moment of the view is slow; after that it is not. He does not want the node editor.
+
+The next build is self-host only. Follow `LAYER_PBR_PLAN.md`. Keep the material fill layer. Replace the main layer with the three switches described there. The Windows crate is not part of that build. A later Windows window hosts the finished page; it does not grow its own filter code. The safety copy taken before this change is `release/vue3d-self-host-safety-2026-11-14.zip`.
+
