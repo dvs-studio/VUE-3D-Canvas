@@ -150,6 +150,11 @@ Open Triplanar, Scatter, and Edge Wear. They must appear and Apply without takin
 
 The main 3D view must redraw on zoom without a pan. The navigator already does. A tablet rotation must resize the drawing buffer to the new window. Push uncommitted work about every 4 minutes. No empty commits.
 
+## 2026-11-14 — zoom and resize landed
+
+`index-DXhSIj8p.js`. Scroll the 3D view and it should update without a pan. Rotate the tablet and the dead strip should be gone without a reload. Painting should feel lighter on a GTX 1650 because mipmaps wait until the stroke ends.
+
+
 
 
 

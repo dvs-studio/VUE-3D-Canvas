@@ -28,6 +28,13 @@ import { HDRIManager, HDRIPreset } from './hdriManager';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
+
+function drawingRatio(w: number, h: number): number {
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const budget = 1920 * 1080 * 1.25;
+  if (w * h * dpr * dpr <= budget) return dpr;
+  return Math.max(1, Math.sqrt(budget / Math.max(1, w * h)));
+}
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
 import { applyFreeCamera, gizmoAngles, quatFromSpherical, tumbleFreeCamera } from './freeCamera';
 import { SurfaceShadingEngine, SurfaceShadingType } from './surfaceShading';
@@ -398,8 +405,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       powerPreference: 'high-performance',
       preserveDrawingBuffer: true,
     });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.0));
+    renderer.setPixelRatio(drawingRatio(width, height));
+    renderer.setSize(width, height, false);
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     rendererRef.current = renderer;
@@ -511,15 +520,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     composer.addPass(outputPass);
 
     let animId: number;
-    let lastRenderTime = performance.now();
 
-    const animate = (currentTime: number = performance.now()) => {
+    const animate = () => {
       animId = requestAnimationFrame(animate);
       const interacting = orbitState.current.isOrbiting || orbitState.current.isPanning || isPaintingRef.current || activePointers.current.size > 0;
       if (!interacting && !needsRenderRef.current) return;
-      if (currentTime - lastRenderTime < 16) return;
       needsRenderRef.current = false;
-      lastRenderTime = currentTime;
 
       updateCameraPosition();
 
@@ -572,10 +578,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     };
     animate();
 
-    const handleResize = () => {
-      if (!container) return;
+    const fitViewport = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
+      if (w < 2 || h < 2) return;
+      const pr = drawingRatio(w, h);
+      renderer.setPixelRatio(pr);
       const asp = w / h;
       perspCam.aspect = asp;
       perspCam.updateProjectionMatrix();
@@ -600,20 +608,37 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         });
       }
 
-      renderer.setSize(w, h);
+      renderer.setSize(w, h, false);
+      renderer.domElement.style.width = '100%';
+      renderer.domElement.style.height = '100%';
       if (composerRef.current) {
         composerRef.current.setSize(w, h);
       }
       if (bloomPassRef.current) {
-        bloomPassRef.current.resolution.set(w, h);
+        bloomPassRef.current.resolution.set(Math.floor(w * pr), Math.floor(h * pr));
       }
+      const tether = tetherCanvasRef.current;
+      if (tether && (tether.width !== w || tether.height !== h)) {
+        tether.width = w;
+        tether.height = h;
+      }
+      needsRenderRef.current = true;
     };
 
-    window.addEventListener('resize', handleResize);
+    const onOrient = () => requestAnimationFrame(fitViewport);
+    const ro = new ResizeObserver(() => fitViewport());
+    ro.observe(container);
+    window.addEventListener('resize', fitViewport);
+    window.addEventListener('orientationchange', onOrient);
+    window.visualViewport?.addEventListener('resize', fitViewport);
+    requestAnimationFrame(fitViewport);
 
     return () => {
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', fitViewport);
+      window.removeEventListener('orientationchange', onOrient);
+      window.visualViewport?.removeEventListener('resize', fitViewport);
+      ro.disconnect();
       glCanvas.removeEventListener('webglcontextlost', onContextLost);
       glCanvas.removeEventListener('webglcontextrestored', onContextRestored);
       if (composerRef.current) {
@@ -1001,6 +1026,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       orbitState.current.target.x -= dx * 0.0035 * sens;
       orbitState.current.target.y += dy * 0.0035 * sens;
     }
+    needsRenderRef.current = true;
     updateCameraPosition();
   };
 
@@ -1008,6 +1034,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // Nearly infinite zoom in and out
     const factor = Math.exp(-delta * 0.05);
     orbitState.current.radius = Math.max(1e-6, orbitState.current.radius * factor);
+    needsRenderRef.current = true;
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
@@ -1017,6 +1044,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     orbitState.current.quat.copy(quatFromSpherical(0.78, 1.15));
     orbitState.current.target.set(0, 0, 0);
     if (onZoomChange) onZoomChange(1.0);
+    needsRenderRef.current = true;
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
@@ -1035,6 +1063,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const dist = (r / Math.sin(fovRad / 2)) * 1.15;
     orbitState.current.radius = dist;
     if (onZoomChange) onZoomChange(1.0);
+    needsRenderRef.current = true;
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   }, [onZoomChange]);
@@ -1246,6 +1275,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         twoFingerStartMidpoint.current = currentMidpoint;
       }
 
+      needsRenderRef.current = true;
       updateCameraPosition();
       return;
     }
@@ -1332,6 +1362,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       brushEngine.endStroke();
       clearStabilizerTether();
       updateCompositeTexture();
+      if (dynamicTextureRef.current) {
+        dynamicTextureRef.current.generateMipmaps = true;
+        dynamicTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
+        dynamicTextureRef.current.needsUpdate = true;
+      }
+      needsRenderRef.current = true;
       onTextureUpdated();
       undoBuffer.pushState(`${brush.name} 3D Paint`, layers);
     }
@@ -1341,6 +1377,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // Smooth proportional zoom nearly infinitely in and out
     const factor = Math.exp(e.deltaY * 0.0012);
     orbitState.current.radius = Math.max(1e-6, orbitState.current.radius * factor);
+    needsRenderRef.current = true;
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   };
@@ -1501,6 +1538,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
     }
     if (dynamicTextureRef.current) {
+      dynamicTextureRef.current.generateMipmaps = false;
+      dynamicTextureRef.current.minFilter = THREE.LinearFilter;
       dynamicTextureRef.current.needsUpdate = true;
     }
     needsRenderRef.current = true;

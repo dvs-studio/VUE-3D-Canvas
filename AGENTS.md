@@ -266,6 +266,14 @@
 - While orbiting, painting, or zooming, draw every frame. Keep the idle skip. During a stroke, do not rebuild mipmaps on every dab. A GTX 1650 should feel immediate at 1080p. Cap the drawing buffer so a high-DPI tablet does not render a 4K image.
 - Push rule, from Victory: while this work has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. The scheduled check is already set. This note is the bookend before the code edit.
 
+### 2026-11-14 — post-execution (zoom redraws, canvas follows the window)
+- Pre-edit bookend is `11405da`. `crates/vue3d_core` was not edited.
+- Wheel, pinch, gizmo zoom, gizmo pan, reset, and frame now set `needsRenderRef`. The main view draws on the next frame. It no longer waits for a pan. The idle skip remains when nothing changed. The 16ms hold during a zoom was removed.
+- `ResizeObserver`, `resize`, `orientationchange`, and `visualViewport` measure the container. `setSize` no longer writes a fixed pixel style. The canvas CSS stays `100%` by `100%`, so a portrait-to-landscape change fills the new window instead of leaving a dead strip.
+- A stroke uploads the texture without rebuilding mipmaps. Mipmaps are rebuilt once when the pen lifts. The drawing buffer is capped near 1080p times 1.25 so a high-DPI tablet does not render a 4K image. `powerPreference` stays `high-performance`.
+- `npm run host:sync` inlined `index-DXhSIj8p.js`. Push rule stays: about every 4 minutes while the tree is dirty, never an empty commit.
+
+
 
 
 

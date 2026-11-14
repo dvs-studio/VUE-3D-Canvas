@@ -344,6 +344,14 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 - Idle frames stay skipped. Navigation and painting draw every frame. Mipmaps are rebuilt when the stroke ends, not on each dab.
 - While a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit.
 
+## 16. 2026-11-14 — View redraw and resize
+
+- `handleWheel`, pinch, `handleZoomDelta`, `handlePanDelta`, reset, and frame set `needsRenderRef`. The main view draws on the next animation frame. Idle frames are still skipped.
+- `drawingRatio` caps the buffer near 1920×1080×1.25 and never above device pixel ratio 1.5. `setSize(w, h, false)` leaves the canvas CSS at 100% of the container. `ResizeObserver` plus orientation and `visualViewport` call that fit.
+- During a stroke `generateMipmaps` is false and `minFilter` is `LinearFilter`. Pointer-up restores `LinearMipmapLinearFilter` and rebuilds the chain once.
+- Bundle: `index-DXhSIj8p.js`.
+
+
 
 
 

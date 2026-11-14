@@ -22,15 +22,19 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## What is broken right now
 
-Filters are accepted. The main 3D view does not redraw on zoom until a pan or a stroke. The navigator does. A portrait-to-landscape change leaves a dead strip until reload.
+Nothing from the zoom and resize report is still open in `index-DXhSIj8p.js`. Confirm on the tablet: zoom without panning, then rotate from portrait to landscape without reloading.
+
+## Landed 2026-11-14 (`index-DXhSIj8p.js`)
+
+- The main view redraws on wheel, pinch, and gizmo zoom. It still sleeps when idle.
+- The canvas follows the container. A rotation should not leave a dead strip.
+- Strokes skip mipmaps until the pen lifts. The buffer is capped so a GTX 1650 is not asked to draw a 4K view.
+- Push about every 4 minutes while there are uncommitted changes. No empty commits.
 
 ## This session does
 
-1. This note is pushed before the code.
-2. Mark the view dirty on wheel, pinch, and the gizmo zoom.
-3. Resize from the container, not only the window, and redraw.
-4. Draw every frame while navigating or painting. Skip mipmaps until the stroke ends. Stay idle when nothing changed.
-5. Push about every 4 minutes while the tree is dirty. No empty commits. Do not edit `crates/vue3d_core`.
+Done. See the landed list above.
+
 
 
 ## Landed 2026-11-14 (`index-D2VONoEr.js`)

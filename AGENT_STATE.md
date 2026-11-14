@@ -290,6 +290,12 @@ The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snap
 - Next code change: dirty the main view on zoom, resize the canvas with the container, and stop rebuilding mipmaps on every dab.
 - Push about every 4 minutes while the working tree is dirty. No empty commits.
 
+## 16. 2026-11-14 — zoom and resize landed
+
+- Bundle `index-DXhSIj8p.js`.
+- Zoom redraws the main view without a pan. The canvas resizes with the window, including a tablet rotation. Strokes do not rebuild mipmaps until the pen lifts.
+
+
 
 
 
