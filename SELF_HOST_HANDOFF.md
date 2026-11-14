@@ -22,7 +22,16 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## What is broken right now
 
-Nothing from the black-screen report is still open in the self-host bundle `index-D2VONoEr.js`. Victory should confirm on his own `file://` and `server.js` copy, because this browser could not make the old bundle go black.
+Filters are accepted. The main 3D view does not redraw on zoom until a pan or a stroke. The navigator does. A portrait-to-landscape change leaves a dead strip until reload.
+
+## This session does
+
+1. This note is pushed before the code.
+2. Mark the view dirty on wheel, pinch, and the gizmo zoom.
+3. Resize from the container, not only the window, and redraw.
+4. Draw every frame while navigating or painting. Skip mipmaps until the stroke ends. Stay idle when nothing changed.
+5. Push about every 4 minutes while the tree is dirty. No empty commits. Do not edit `crates/vue3d_core`.
+
 
 ## Landed 2026-11-14 (`index-D2VONoEr.js`)
 

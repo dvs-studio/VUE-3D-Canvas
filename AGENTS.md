@@ -259,6 +259,14 @@
 - Gaussian and Stitch were already fine and still use the old full-screen wrapper. Leave them unless Victory says they go black too.
 - The Rust exe still only hosts this page. It does not implement the filters. `crates/vue3d_core` was not edited.
 
+### 2026-11-14 — pre-execution (zoom does not redraw, resize leaves a dead strip)
+- Victory says the filters are fixed. Two view bugs remain, self-host only. Do not edit `crates/vue3d_core`.
+- Zoom in or out does not redraw the main 3D view until he paints or pans. The small navigator stays live because its loop draws every frame. `handleWheel`, pinch, and `handleZoomDelta` change the camera and do not set `needsRenderRef`.
+- Turning a tablet from portrait to landscape leaves a dead strip until reload. `WebGLRenderer.setSize` locks the canvas to the launch pixel size, and only `window.resize` measures again. Measure the container with `ResizeObserver`, keep the canvas CSS at 100% of that box, and redraw.
+- While orbiting, painting, or zooming, draw every frame. Keep the idle skip. During a stroke, do not rebuild mipmaps on every dab. A GTX 1650 should feel immediate at 1080p. Cap the drawing buffer so a high-DPI tablet does not render a 4K image.
+- Push rule, from Victory: while this work has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. The scheduled check is already set. This note is the bookend before the code edit.
+
+
 
 
 

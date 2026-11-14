@@ -146,6 +146,11 @@ Open Triplanar, Scatter, and Edge Wear. They must appear and Apply without takin
 
 `index-D2VONoEr.js` puts Triplanar, Scatter, and Edge Wear on a fixed panel instead of a full-screen layer. Open `self-host/public/index.html` with `file://` or `server.js` and confirm the menus and the model stay visible. Gaussian and Stitch were left as they were.
 
+## 2026-11-14 — zoom and resize, not started
+
+The main 3D view must redraw on zoom without a pan. The navigator already does. A tablet rotation must resize the drawing buffer to the new window. Push uncommitted work about every 4 minutes. No empty commits.
+
+
 
 
 

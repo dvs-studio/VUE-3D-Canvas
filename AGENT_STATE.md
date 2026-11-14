@@ -284,6 +284,13 @@ The 2026-11-05 camera note that stored theta/phi is retired for navigation. Snap
 - Triplanar, Scatter, and Edge Wear open on that page without a full-screen layer. Apply Triplanar leaves the painter up. Scatter preview leaves the model on screen.
 - Gaussian and Stitch were not changed.
 
+## 15. 2026-11-14 — before the zoom and resize fix
+
+- Filters on `index-D2VONoEr.js` are the accepted build.
+- Next code change: dirty the main view on zoom, resize the canvas with the container, and stop rebuilding mipmaps on every dab.
+- Push about every 4 minutes while the working tree is dirty. No empty commits.
+
+
 
 
 

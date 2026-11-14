@@ -337,6 +337,14 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 - Edge Wear is applied only from `handleApplyEdgeWear`. The dialog does not call `EdgeWearEngine` itself.
 - Bundle to test: `index-D2VONoEr.js` inside `self-host/public/index.html`.
 
+## 15. 2026-11-14 — View redraw and resize (planned)
+
+- Wheel, pinch, and gizmo zoom must set the viewport dirty flag. The navigator already draws every frame, which is why only the main view waits for a pan.
+- The canvas buffer follows the container size (`ResizeObserver` plus orientation change). CSS size stays 100% of the container. A tablet rotation must not leave a dead strip.
+- Idle frames stay skipped. Navigation and painting draw every frame. Mipmaps are rebuilt when the stroke ends, not on each dab.
+- While a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit.
+
+
 
 
 
