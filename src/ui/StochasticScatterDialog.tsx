@@ -109,7 +109,17 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
     backupCanvasRef.current = b;
 
     if (preview) {
-      applyPreview(getConfig());
+      const cfg = getConfig();
+      const timer = window.setTimeout(() => applyPreview(cfg), 50);
+      return () => {
+        window.clearTimeout(timer);
+        if (backupCanvasRef.current && activeLayer) {
+          activeLayer.ctx.clearRect(0, 0, activeLayer.canvas.width, activeLayer.canvas.height);
+          activeLayer.ctx.drawImage(backupCanvasRef.current, 0, 0);
+          onPreviewUpdate();
+        }
+        backupCanvasRef.current = null;
+      };
     }
 
     return () => {
@@ -340,11 +350,10 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none select-none">
-      <div 
-        style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
-        className="w-[560px] pointer-events-auto bg-[#333333] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans absolute top-0 left-0"
-      >
+    <div
+      style={{ position: 'fixed', left: position.x, top: position.y, zIndex: 60 }}
+      className="w-[560px] pointer-events-auto bg-[#333333] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans"
+    >
         {/* Header (Draggable) */}
         <div 
           onPointerDown={handlePointerDownHeader}
@@ -984,7 +993,6 @@ export const StochasticScatterDialog: React.FC<StochasticScatterDialogProps> = (
             <span>Apply Scattering</span>
           </button>
         </div>
-      </div>
     </div>
   );
 };

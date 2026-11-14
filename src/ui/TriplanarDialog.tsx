@@ -218,7 +218,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none select-none">
+    <>
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -228,8 +228,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
       />
 
       <div 
-        style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
-        className="w-[620px] pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans absolute top-0 left-0"
+        style={{ position: 'fixed', left: position.x, top: position.y, zIndex: 60 }}
+        className="w-[620px] pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans"
       >
         {/* Header (Draggable) */}
         <div 
@@ -832,6 +832,6 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

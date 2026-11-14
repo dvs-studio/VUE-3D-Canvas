@@ -245,6 +245,13 @@
 - Victory's report still stands for the copies he actually runs: `self-host/public/index.html` on `file://`, and `node self-host/server.js`. Those turn the screen black for Triplanar, Scatter, and Edge Wear. Gaussian and Stitch do not. Do not treat the Vite dev server as proof that the self-host package is fixed.
 - Next edit, after this note is on `main`: open the inlined production page, not the dev server, and read the console when those three dialogs open. The Rust window only loads that same page, so a fix in the painter page is the fix for the exe. Do not reimplement the filters in Rust.
 
+### 2026-11-14 — checkpoint (full-screen filter veil removed, not yet re-tested on self-host)
+- Pushed because Victory asked for the stopped work to be on `main` before more edits, and for a push about every 4 minutes while this work continues.
+- `EdgeWearDialog`, `StochasticScatterDialog`, and `TriplanarDialog` no longer mount a `fixed inset-0` layer over the WebGL view, and they no longer move with `translate3d`. The panel itself is `position: fixed` at the drag point. That full-screen layer is what stayed after the backdrop blur was removed, and it is the likely reason a Windows `file://` or `server.js` view goes black while the Vite preview does not.
+- Scatter waits 50ms before the first preview so the panel can paint first. `Viewport3D` calls `preventDefault` on `webglcontextlost` and marks a frame on restore, so a lost GPU context is not left black.
+- `npm run host:sync` has not been run for this edit yet. Gaussian and Stitch still use the old full-screen wrapper. `crates/vue3d_core` was not edited.
+
+
 
 
 

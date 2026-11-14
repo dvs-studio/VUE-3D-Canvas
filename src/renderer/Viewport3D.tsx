@@ -403,6 +403,16 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     rendererRef.current = renderer;
+    const glCanvas = renderer.domElement;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      needsRenderRef.current = true;
+    };
+    const onContextRestored = () => {
+      needsRenderRef.current = true;
+    };
+    glCanvas.addEventListener('webglcontextlost', onContextLost);
+    glCanvas.addEventListener('webglcontextrestored', onContextRestored);
 
     const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
@@ -604,6 +614,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
+      glCanvas.removeEventListener('webglcontextlost', onContextLost);
+      glCanvas.removeEventListener('webglcontextrestored', onContextRestored);
       if (composerRef.current) {
         composerRef.current.dispose();
       }

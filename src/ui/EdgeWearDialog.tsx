@@ -85,11 +85,10 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
   if (!isOpen || !activeLayer) return null;
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none select-none">
-      <div 
-        style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
-        className="w-[500px] pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[90vh] flex flex-col font-sans absolute top-0 left-0"
-      >
+    <div
+      style={{ position: 'fixed', left: position.x, top: position.y, zIndex: 60 }}
+      className="w-[500px] pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[90vh] flex flex-col font-sans"
+    >
         {/* Header (Draggable) */}
         <div 
           onPointerDown={handlePointerDownHeader}
@@ -270,7 +269,6 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 };
