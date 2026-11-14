@@ -7,7 +7,6 @@
 
 import React, { useState, useRef } from 'react';
 import { Layer, EdgeWearConfig, BlendMode } from '../core/types';
-import { EdgeWearEngine } from '../tools/edgeWearFilter';
 import { Mountain, Sliders, Check, X, Sparkles, Shield, Droplets } from 'lucide-react';
 
 interface EdgeWearDialogProps {
@@ -48,7 +47,6 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
       applyToCavity,
     };
 
-    EdgeWearEngine.applyEdgeWear(activeLayer, config);
     onApply(config);
     if (onPreviewUpdate) onPreviewUpdate();
     onClose();

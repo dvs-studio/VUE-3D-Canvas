@@ -142,5 +142,10 @@ Open Triplanar, Scatter, and Edge Wear. They must appear and Apply without takin
 
 `vite` can show Edge Wear, Triplanar, and Scatter while `self-host/public/index.html` still goes black. Check the inlined page. The Windows exe loads that page and does not implement the filters itself.
 
+## 2026-11-14 — self-host filter panels
+
+`index-D2VONoEr.js` puts Triplanar, Scatter, and Edge Wear on a fixed panel instead of a full-screen layer. Open `self-host/public/index.html` with `file://` or `server.js` and confirm the menus and the model stay visible. Gaussian and Stitch were left as they were.
+
+
 
 

@@ -22,17 +22,19 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## What is broken right now
 
-Victory, after `f2c9496`: painting is smoother, and unwrap and Smooth stay good. Triplanar, Scatter, and Edge Wear still turn the **self-host** screen black (`file://` and `node server.js`). Gaussian and Stitch do not.
+Nothing from the black-screen report is still open in the self-host bundle `index-D2VONoEr.js`. Victory should confirm on his own `file://` and `server.js` copy, because this browser could not make the old bundle go black.
 
-The same three dialogs do open when the source is served by `vite` (the Grok preview on 2026-11-12). That is not the package he ships. Test `self-host/public/index.html` after `npm run host:sync`, not the dev server.
+## Landed 2026-11-14 (`index-D2VONoEr.js`)
 
-The Rust exe does not contain these filters. It only shows this page. Fix them here.
+- Triplanar, Scatter, and Edge Wear are a single fixed panel. They do not cover the 3D view with a full-screen layer, and they do not use `translate3d`.
+- Edge Wear applies once. Scatter waits 50ms before the first preview. A lost WebGL context is asked to restore instead of staying black.
+- Gaussian and Stitch are unchanged.
+- The Windows exe only shows this page. Do not reimplement these filters in Rust.
 
 ## This session does
 
-1. This note goes to `main` before any further code change.
-2. Then open the inlined production page and capture the error that the dev server hides.
-3. Fix that error so the three dialogs stay on screen and Apply changes the layer. Do not add a full-screen black veil. Do not edit `crates/vue3d_core`.
+Done. See the landed list above. Push cadence while this work was open: about every 4 minutes, only when the tree has changes.
+
 
 
 ## Landed 2026-11-12 (`index-DwCqaqSC.js`)

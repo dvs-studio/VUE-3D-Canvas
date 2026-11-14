@@ -331,5 +331,12 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 - A filter dialog that opens under `vite` can still blank `self-host/public/index.html`. Judge Triplanar, Scatter, and Edge Wear on that file, opened with `file://` or `self-host/server.js`.
 - Those three filters are JavaScript in the painter page (`src/ui/*Dialog.tsx` and `src/tools/`). `crates/vue3d_core` only hosts the page. It does not run the filter.
 
+## 14. 2026-11-14 — Filter panels must not cover the view
+
+- Triplanar, Scatter, and Edge Wear are `position: fixed` panels. They must not use a `fixed inset-0` parent or `translate3d`. That parent was the leftover of removing the backdrop blur, and it covered the WebGL canvas.
+- Edge Wear is applied only from `handleApplyEdgeWear`. The dialog does not call `EdgeWearEngine` itself.
+- Bundle to test: `index-D2VONoEr.js` inside `self-host/public/index.html`.
+
+
 
 

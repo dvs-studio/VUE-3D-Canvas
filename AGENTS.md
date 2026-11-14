@@ -251,6 +251,15 @@
 - Scatter waits 50ms before the first preview so the panel can paint first. `Viewport3D` calls `preventDefault` on `webglcontextlost` and marks a frame on restore, so a lost GPU context is not left black.
 - `npm run host:sync` has not been run for this edit yet. Gaussian and Stitch still use the old full-screen wrapper. `crates/vue3d_core` was not edited.
 
+### 2026-11-14 — post-execution (self-host filters stay on screen)
+- Checkpoint `bd16e50` is the pre-test code. This note follows the self-host rebuild.
+- Edge Wear no longer runs the filter twice. The dialog only reports the settings. `App.tsx` applies them once and stores the undo.
+- `npm run host:sync` inlined `index-D2VONoEr.js`.
+- Opened that page through `self-host/server.js`. Edge Wear, Triplanar (including Apply), and Scatter open with the model and the menus still visible. None of the three mounts a full-screen layer. The console stayed empty. Scatter's preview stamps the layer without blanking the view.
+- Gaussian and Stitch were already fine and still use the old full-screen wrapper. Leave them unless Victory says they go black too.
+- The Rust exe still only hosts this page. It does not implement the filters. `crates/vue3d_core` was not edited.
+
+
 
 
 
