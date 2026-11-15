@@ -29,6 +29,21 @@ VUE 3D Canvas is a non-raytraced, low-latency 3D texture painting and digital sc
 - **Hardware Agility via ANGLE:** WebGL reaches the GPU through Google ANGLE (Almost Native Graphics Engine), routing to **DirectX 11 (D3D11)** by default or **Desktop OpenGL** when invoked with `--opengl`.
 - **Linked Assets by Default:** Imported 3D models (`.obj`, `.mtl`) are referenced as lightweight external paths, preventing file bloat while supporting embedded model pack serialization when requested.
 
+### Current self-host corrections (2026-11-15)
+
+These override older sentences in this file:
+
+- The build to test is `self-host/public/index.html` (`index-DXhSIj8p.js`). `file://` works because the script is inlined. Judge filters on that page, not on the Vite dev server.
+- Live undo is 30. Only the `.xblend` file stores 3. The "3-state in-memory history" line below is retired.
+- Smooth blends every shared edge. The 38° crease and the coplanar snap are not the Smooth button. Flat stays faceted. Def restores file normals.
+- Preferences has no refresh-rate control. The main view draws on the next frame when the camera, the brush, or the texture changes, and it sleeps when idle. Wheel, pinch, and gizmo zoom set that dirty flag.
+- The canvas CSS stays 100% of its container. `ResizeObserver` updates the drawing buffer. `drawingRatio` caps that buffer near 1920×1080×1.25 and never above device pixel ratio 1.5.
+- Triplanar, Scatter, and Edge Wear are `position: fixed` panels. They must not use a full-screen parent. Edge Wear is applied once, from `handleApplyEdgeWear`.
+- During a stroke, mipmaps are off. They rebuild when the pen lifts.
+- The Rust window only shows this page. It does not implement these APIs.
+
+---
+
 ---
 
 ## 2. Viewport Architecture & 3D Render Pipeline

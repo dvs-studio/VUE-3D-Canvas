@@ -34,6 +34,8 @@
 5. **Strict Memory & State Limits**: Maintain low memory footprint, max 3 undo states in `.xblend` project files (normal 1-step undo in live session), linked 3D assets by default, no ray-tracing or D3D12 dependency.
 6. **Photoshop CS5 Dark Skin**: Adhere strictly to the CS5 palette (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`).
 7. **One Windows application**: Ship the painter inside a native window. Do not maintain parallel Python Desktop or Native C applications. Do not add a server just to open the UI. `src/nodes/blender_28_importer.py` stays; it runs inside Blender.
+8. **Self-host is the current product** (2026-11-15). Read `SELF_HOST_HANDOFF.md` before the log below. The page is `self-host/public/index.html` with `index-DXhSIj8p.js` inlined. `file://` and `node self-host/server.js` are both valid. Rule 5's "1-step live undo" is retired: the session stack is 30 and the `.xblend` file stores 3. Rule 7 forbids a server for the Windows exe only. `self-host/server.js` stays.
+9. **Push cadence:** while a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. Do not force-push.
 
 ## Retired (do not rebuild)
 - `python_desktop/` and `native_c/` were documentation-only. They are not a build target.
@@ -169,7 +171,8 @@
 | Document | Purpose & Key Topics |
 | :--- | :--- |
 | [`LAYER_PBR_PLAN.md`](./LAYER_PBR_PLAN.md) | Next self-host task: toggle layers, no node editor, before any Windows device work. |
-| [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md) | Technical reference for Viewport, Brush Engine, Layering, Filters, WebGL, Node Graph, Textures, and ANGLE DirectX 11/OpenGL bridge. |
+| [`SELF_HOST_HANDOFF.md`](./SELF_HOST_HANDOFF.md) | Current product. Read this before the log. |
+| [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md) | Technical reference. Start at "Current self-host corrections". |
 | [`DEVELOPMENT.md`](./DEVELOPMENT.md) | Architectural genesis, Rust desktop app, Self-hosted distribution, constraints, and AI model handover recommendations. |
 | [`AGENTS.md`](./AGENTS.md) | Architectural decisions ledger, immutable governing rules, and historical execution log. |
 | [`AGENT_STATE.md`](./AGENT_STATE.md) | Detailed ledger of all live tools, panels, shaders, dialogs, and UI features. |
@@ -273,6 +276,12 @@
 - `ResizeObserver`, `resize`, `orientationchange`, and `visualViewport` measure the container. `setSize` no longer writes a fixed pixel style. The canvas CSS stays `100%` by `100%`, so a portrait-to-landscape change fills the new window instead of leaving a dead strip.
 - A stroke uploads the texture without rebuilding mipmaps. Mipmaps are rebuilt once when the pen lifts. The drawing buffer is capped near 1080p times 1.25 so a high-DPI tablet does not render a 4K image. `powerPreference` stays `high-performance`.
 - `npm run host:sync` inlined `index-DXhSIj8p.js`. Push rule stays: about every 4 minutes while the tree is dirty, never an empty commit.
+
+### 2026-11-15 — docs aligned to the self-host page
+- No painter code changed. The page is still `index-DXhSIj8p.js`.
+- Current instructions that forbade `file://`, called `self-host/` an old folder, restored a refresh-rate control, described a 1-step live undo, or told the next session to build the exe were corrected in `HANDOFF_PROMPT.md`, `README.md`, `self-host/README.md`, `API_DOCUMENTATION.md`, `DEVELOPMENT.md`, `AGENT_STATE.md`, `XBLEND_FORMAT_SPECIFICATION.md`, `BLENDER_ADDON_PROMPT.md`, `WINDOWS_BUILD_INSTRUCTIONS.md`, `export/README.md`, `import/README.md`, and the two Windows release notes.
+- The old log entries were left in place. Rules 8 and 9 above are the ones to follow. `SELF_HOST_HANDOFF.md` stays the first file.
+
 
 
 

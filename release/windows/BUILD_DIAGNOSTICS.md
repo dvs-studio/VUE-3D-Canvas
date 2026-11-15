@@ -2,7 +2,7 @@
 
 # VUE 3D Canvas - Windows Build Diagnostics & Native Execution Breakdown
 
-**Superseded for launching the app:** the exe no longer opens a console shell and no longer has a `--serve` command. Use `.github/workflows/build-windows-app.yml`. The notes below explain the old console failure and stay as history.
+**Superseded for launching the app:** the exe no longer opens a console shell and no longer has a `--serve` command. Use `.github/workflows/build-windows-app.yml` only when Victory asks for the Windows package. The programme to finish now is `self-host/` (`index-DXhSIj8p.js`). The notes below explain the old console failure and stay as history.
 
 **Author & Creator:** Victory Ukpong  
 **Project:** VUE 3D Canvas  

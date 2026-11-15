@@ -2,6 +2,8 @@
 
 # VUE 3D Canvas - Native Windows Release Guide (DirectX 11 / OpenGL)
 
+**Superseded for the current job.** The programme Victory is testing is `self-host/` (`index-DXhSIj8p.js`). The exe does not bind a raw Direct3D 11 device or HLSL shaders. When it is built, WebView2 shows the self-host page and ANGLE talks to DirectX 11. Do not follow the "direct hardware context" steps below until Victory asks for that rewrite.
+
 **Author / Creator:** Victory Ukpong  
 **Architecture:** Rust Native Desktop Binary (`vue_3d_canvas.exe`)  
 **Graphics APIs:** Direct Direct3D 11 (HLSL 5.0) & OpenGL 2.0+ Core Fallback  

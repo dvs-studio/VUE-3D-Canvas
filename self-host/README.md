@@ -11,7 +11,7 @@
 This directory contains the **Self-Hosted Standalone Distribution** of **VUE 3D Canvas**. It allows you to run the complete 3D texture painting suite on your own machine, local network (LAN), or private VPS without any third-party cloud service, telemetry, or external dependencies.
 
 ### Features
-- **Zero-Dependency Node Server:** Pure Node.js HTTP implementation (`server.js`) with WebAssembly MIME support and COOP/COEP isolation headers.
+- **Zero-Dependency Node Server:** Pure Node.js HTTP implementation (`server.js`). It serves the inlined painter and saves `.xblend` files. It does not send COOP/COEP headers, because those headers blocked the page fonts.
 - **Local Persistent Storage:** Automatically stores `.xblend` project files in `./storage/projects/` and uploaded custom decals/textures in `./storage/textures/`.
 - **VS Code First:** Designed to launch with a single click or command inside Visual Studio Code.
 - **Docker & Docker Compose:** Ready for 1-command containerized deployment.
@@ -94,7 +94,11 @@ If you make modifications to the source code in `src/`:
    ```
    `host:sync` runs `vite build`, then `scripts/sync_self_host.mjs`.
 
-This folder is the non-exe standalone. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat`. That starts Node and opens the painter in the browser. Keep `server.js` next to `public/`. Do not open `public/index.html` with `file://`; the ES module bundle will be a blank page.
+This folder is the programme to finish. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat` for `http://localhost:3000`, or open `public/index.html` with `file://`. Both use the same inlined page. The current bundle is `index-DXhSIj8p.js`. Do not open an older `index.html` that still points at `<script src="./assets/...">`.
+
+`npm run host:sync` from the repository root is the only rebuild. It runs the Vite build and then inlines the script and CSS. Copying `dist/` by hand leaves a page that needs a server.
+
+Zoom updates the main 3D view without a pan. Turning a tablet from portrait to landscape resizes the canvas. Triplanar, Scatter, and Edge Wear are panels, not a full-screen black layer. A stroke rebuilds mipmaps when the pen lifts, not on every dab.
 
 
 ## 6. Safety copy and the next change

@@ -2,6 +2,8 @@
 
 # Blender 2.8+ Add-on Generation Prompt
 
+This prompt is only for the Blender importer. It is not the painter. The painter to finish is `self-host/` (`index-DXhSIj8p.js`). `src/nodes/blender_28_importer.py` stays a Blender script.
+
 Copy and paste the prompt below into an AI model (Claude, ChatGPT, Grok, or Gemini) to generate the complete Blender Python add-on:
 
 ---

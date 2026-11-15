@@ -2,6 +2,8 @@
 
 # VUE 3D Canvas - Windows Compilation Guide (VS Code Edition)
 
+**Current product, 2026-11-15:** finish `self-host/` first. The page to test is `self-host/public/index.html` (`index-DXhSIj8p.js`). This Windows guide is not the active job. When the exe is built, it only shows that page. It is not a DirectX rewrite of the painter.
+
 **The build that produces the application is the manual GitHub Action `Build Windows Application` (`.github/workflows/build-windows-app.yml`), or `scripts\build_standalone_desktop.bat` on Windows.** It compiles the painting UI and a native window. It does not zip a console demo. Sections below that mention `python_desktop/`, `native_c/`, or older Actions are retired and must not be followed.
 
 **Author / Creator:** Victory Ukpong  

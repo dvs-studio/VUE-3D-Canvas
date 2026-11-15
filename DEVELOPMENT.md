@@ -103,24 +103,25 @@ Every engineer and AI assistant working on VUE 3D Canvas must adhere to these go
 When transferring ownership of this codebase to another AI model or engineering team:
 
 1. **Mandatory Pre-Flight Reading Order:**
-   - Step 1: Read `AGENTS.md` to review the chronological feature log and strict rules.
-   - Step 2: Read `AGENT_STATE.md` to see the exact state of all UI panels, viewports, and tools.
-   - Step 3: Read `API_DOCUMENTATION.md` for technical API specifications across all engines.
-   - Step 4: Read `DEVELOPMENT.md` (this file) for structural understanding.
-   - Step 5: Read `HANDOFF_PROMPT.md` for conversational prompting patterns.
+   - Step 1: Read `SELF_HOST_HANDOFF.md`. That is the current product.
+   - Step 2: Read `AGENTS.md` for the rules and the chronological log.
+   - Step 3: Read `AGENT_STATE.md`, starting at "Current self-host".
+   - Step 4: Read `API_DOCUMENTATION.md`, starting at "Current self-host corrections".
+   - Step 5: Read this file, then `HANDOFF_PROMPT.md`.
 2. **Rebuilding & Synchronizing:**
-   - Always run `npm run host:sync` after frontend edits. This compiles Vite to `/dist` and updates `self-host/public` in one atomic step.
-   - Verify compilation with `npm run build` and check for TypeScript errors.
+   - Always run `npm run host:sync` after frontend edits. This compiles Vite to `/dist` and inlines the result into `self-host/public`.
+   - Verify compilation with `npm run build`.
 3. **Avoid Deprecated Paths:**
-   - Do not resurrect `python_desktop/`, `native_c/`, or `native_runner/`. These were early experimental prototypes and are retired.
-   - The official Windows application is `crates/vue3d_core`.
-   - The official browser distribution is `self-host/`.
-4. **Testing Checklist for Verification:**
-   - 3D Viewport renders without WebGL context loss.
-   - Direct-on-mesh 3D painting reflects immediately on the 2D UV canvas and 3D preview.
-   - View menu camera viewpoints (Front, Back, Right, Left, Top, Bottom) snap camera angles instantly.
-   - Lagoon mode toggle (`Tab` or menu bar button) expands viewport while keeping 3D gizmo and right dockers accessible.
-   - Refresh rate settings in Preferences (`on-demand`, `30fps`, `60fps`, `120fps`, `custom`, `uncapped`) function as expected.
+   - Do not resurrect `python_desktop/`, `native_c/`, or `native_runner/`.
+   - The product to finish is `self-host/`. `crates/vue3d_core` is the window that will show that page later. Do not rewrite it until Victory asks.
+4. **Testing Checklist for the current self-host page:**
+   - Open `self-host/public/index.html` with `file://` or `node self-host/server.js`. Do not treat the Vite dev server as the test.
+   - Zoom the main view without panning. It should update. The navigator already did.
+   - Rotate the window or the tablet. There should be no dead strip, and no reload.
+   - Paint a stroke. It should stay smooth. Mipmaps wait until the pen lifts.
+   - Open Triplanar, Scatter, and Edge Wear. The model and the menus stay. Apply changes the layer.
+   - Smooth has no leftover 38° crease. Flat is faceted. Def is the file shading.
+   - The refresh-rate checklist below is retired. Preferences has no frame-rate control on this build.
 
 ## 2026-11-10 — Web build changes
 

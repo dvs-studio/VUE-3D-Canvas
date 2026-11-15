@@ -3,6 +3,16 @@
 > **Autonomous Agent Reference File**  
 > Maintained to track codebase state, active features, memory constraints, and module indices so subsequent operations never need to run costly project rescans.
 
+## Current self-host (2026-11-15)
+
+The folder to finish is `self-host/`. The page is `index-DXhSIj8p.js` inlined into `self-host/public/index.html`. `file://` and `node server.js` both run it. `npm run host:sync` rebuilds it.
+
+Accepted there: tumble without a pitch lock, file normals, full Smooth, UV islands, Gaussian, Stitch, Triplanar, Scatter, Edge Wear, zoom that redraws without a pan, and a canvas that follows a tablet rotation. Strokes skip mipmaps until pointer-up. Live undo is 30. The file stores 3.
+
+`native_runner/` is retired. Any older checkbox that calls it the Windows product is historical. Do not rebuild it. Do not edit `crates/vue3d_core` until Victory asks. Push uncommitted work about every 4 minutes. No empty commits.
+
+---
+
 ---
 
 ## 1. Project Specifications

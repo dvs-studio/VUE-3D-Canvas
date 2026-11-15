@@ -4,7 +4,9 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## Next task
 
-Do [`LAYER_PBR_PLAN.md`](../LAYER_PBR_PLAN.md). The node editor is rejected. Painted layers become three switches with influence sliders. Material fill stays. Victory is slightly satisfied with the current page: it lags at the first moment, then settles. The safety copy of this folder before that work is `release/vue3d-self-host-safety-2026-11-14.zip`. Do not delete it.
+Do [`LAYER_PBR_PLAN.md`](LAYER_PBR_PLAN.md). The node editor is rejected. Painted layers become three switches with influence sliders. Material fill stays. Victory is slightly satisfied with the current page: it lags at the first moment, then settles. The safety copy of this folder before that work is `release/vue3d-self-host-safety-2026-11-14.zip`. Do not delete it.
+
+On 2026-11-15 the other guides were aligned with this file. `file://` is allowed. Older sentences that forbid it, restore a refresh-rate control, or call for a 1-step undo are retired. The task above is the one to build.
 
 ## What to run
 

@@ -6,6 +6,7 @@
 * **Created by:** Victory Ukpong (VUE 3D Canvas)
 * **Target Integration:** Blender 2.80+ LTS
 * **Design Philosophy:** Low memory footprint, linked asset priority, deterministic serialization, and non-destructive shader node mapping.
+* **Undo split:** this file stores 3 states. The live painter session keeps 30. Do not shrink the session to match the file.
 
 ---
 

@@ -57,7 +57,7 @@ You can switch the graphics rendering backend at any time directly from the top 
 
 ### B. 2D UV Texture Canvas & Sculpt Suite
 - **Real-Time 2D/3D Synchronization:** Edits on the 2D UV canvas immediately reflect on the 3D model and Navigator window.
-- **Smart UV Unwrap Engine:** Automatic seam detection (angles > 60°), conformal chart relaxation, and Mulberry32 seeded stochastic island packing with configurable gutter bleeding (2px–16px).
+- **Smart UV Unwrap Engine:** The angle limit is how wide one island may turn before it splits. Islands are packed into 0..1 without overlap. A vertex that would sit in two charts is cloned. Island rotation is not random.
 - **Multi-UV Channel System:** Dynamic UV slot manager (`uv_original`, `uv_tightmap`, custom slots) and inverse barycentric triangle re-baking from tight-map back to original reference UVs.
 - **Bilateral Symmetrize (+X/-X):** Bilateral UV chart mirroring with centerline seam welding, ear feature pinning, and 3D X-Ray depth vertex selection brush.
 - **2D UV Sculpt Brushes (N-Panel):** Press `N` to open the dockable sculpt panel featuring:
@@ -93,7 +93,7 @@ You can switch the graphics rendering backend at any time directly from the top 
 
 ### E. File Format, Undo & Export Architecture
 - **`.xblend` Project Format:** Custom low-overhead specification saving layer stack, blend modes, node graphs, and strictly up to 3 undo states. 3D assets remain linked by default to keep files small.
-- **1-Step Live Undo / Redo:** Strict 1-state undo (`Ctrl+Z`) and redo (`Ctrl+Y`) with repeat guard.
+- **Live Undo / Redo:** 30-step session stack (`Ctrl+Z` / `Ctrl+Y`). The `.xblend` file stores only the last 3.
 - **Multi-Channel Model Exporters:** Automated FBX and glTF 2.0 texture baking separated into Albedo, Emission, Normal/Displacement, Roughness, and Metallic maps.
 
 ---
@@ -135,11 +135,13 @@ cd self-host
 node server.js
 ```
 
-Windows: double-click `self-host/start.bat`. Linux or macOS: `./start.sh`. Then use `http://localhost:3000`. Do not open `public/index.html` as a file.
+Windows: double-click `self-host/start.bat`. Linux or macOS: `./start.sh`. Then use `http://localhost:3000`. You can also open `self-host/public/index.html` with `file://`. The script and CSS are inlined. An older file that still has `<script src="./assets/...">` stays blank.
+
+The page on `main` is `index-DXhSIj8p.js`. Zoom redraws the main view without a pan. A window or tablet rotation resizes the canvas instead of leaving a dead strip. Triplanar, Scatter, and Edge Wear open as panels. Live undo is 30 steps. The file still stores 3.
+
+The Windows exe in section 1 is not the current job. This folder is the painter Victory is testing. The exe, when it is built, only shows this same page.
 
 From the repository root, `npm run host` starts that server. `npm run host:sync` rebuilds `src/` and replaces `self-host/public/` so the folder cannot keep an old bundle.
-
-The Windows exe in section 1 is unchanged. This server is only the non-exe package.
 
 ---
 

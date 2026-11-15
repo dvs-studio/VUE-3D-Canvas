@@ -1,6 +1,17 @@
 # Continuation prompt — paste this into the next AI account
 
-Status: the desktop-window change is on `main` as commit `e6e4169`. The pre-execution note was commit `5c5d9f6`. Read `AGENTS.md` before editing.
+Status: the product to finish is the self-hosted painter. Read `SELF_HOST_HANDOFF.md` first, then `AGENTS.md`. The Windows exe is not this session's job.
+
+## Current job (2026-11-15) — self-host
+
+- Folder: `self-host/`. Bundle on `main`: `index-DXhSIj8p.js`, inlined into `self-host/public/index.html`.
+- Open that page with `file://`, or with `node server.js` inside `self-host/` (`npm run host` from the repo root). Rebuild with `npm run host:sync`. An older `index.html` that still has `<script src="./assets/...">` is a blank page. Do not use that copy.
+- Already accepted on this page: free tumble, file normals, full Smooth, UV islands (angle is the patch limit, no overlap), layer UV channel, Gaussian, Stitch, Triplanar, Scatter, and Edge Wear. Those three panels are fixed dialogs. They do not cover the 3D view.
+- Zoom (wheel, pinch, gizmo) redraws the main view without a pan. The canvas follows the container, including a tablet rotation. A stroke does not rebuild mipmaps until the pen lifts. The drawing buffer stays near 1080p.
+- Live undo is 30 steps. A `.xblend` file still stores 3.
+- `crates/vue3d_core` only hosts this page in a window. Do not reimplement the filters or the viewport in Rust, and do not start a DirectX rewrite, until Victory asks.
+- While a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. Do not force-push.
+- Lines below that say `file://` is forbidden, that `self-host/` is not the product, or that this session is building the exe, are retired. The retired-path warnings (no Python desktop, no native C, no `native_runner/`, no hello-world console) still stand.
 
 You are continuing work on the private product repository https://github.com/dvs-studio/VUE-3D-Canvas (owner `dvs-studio`, default branch `main`). The author is Victory Ukpong. Read `AGENTS.md` and `AGENT_STATE.md` before you edit anything. When you finish a task, append the result to both files. Do not wipe the painting-feature ledger. Do not recreate the things this prompt retires.
 
@@ -8,7 +19,7 @@ You are continuing work on the private product repository https://github.com/dvs
 
 VUE 3D Canvas is a 3D texture-painting workstation. The application that already works inside Google AI Studio is the Vite + React + Three.js programme under `src/` (`src/App.tsx`, `src/renderer/Viewport3D.tsx`, `src/renderer/Viewport2D.tsx`, the `src/tools/` and `src/ui/` panels). It paints with WebGL. On Windows, WebView2 runs that WebGL through ANGLE, which talks to DirectX 11 (or OpenGL if launched with `--opengl`). That is the fast path. It is not a from-scratch D3D11 rewrite of the panels, and it must not become one unless Victory explicitly asks.
 
-The project file is `.xblend` (max 3 undo states stored in the file, 1-step undo in the live session). Linked 3D assets by default. No ray tracing. No D3D12 requirement. UI skin is Photoshop CS5 dark (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`).
+The project file is `.xblend` (3 undo states stored in the file, 30-step undo in the live session). Linked 3D assets by default. No ray tracing. No D3D12 requirement. UI skin is Photoshop CS5 dark (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`).
 
 ## What was going wrong
 
@@ -36,8 +47,7 @@ A Windows application, not a website:
 
 - Do not bring back `.github/workflows/build-all.yml`, `windows-build.yml`, `build-windows-rust.yml`, `build-self-host.yml`, `export-rust.yml`, `import-extract.yml`, `backup-codebases.yml`, or `restore-backup.yml`.
 - Do not make `cargo build` the product. The product is the window showing the React painting UI.
-- Do not open `index.html` with `file://` or `cmd /c start`. ES modules will be a blank page.
-- Do not add a Node, Python, or Winsock server as the way the desktop app launches.
+- Do not serve the Windows exe through a Node, Python, or Winsock server. The self-host page may be opened with `file://` because its script and CSS are inlined.
 - Do not recreate `python_desktop/`, `native_c/`, or `native_runner/`.
 - Do not claim DirectX is active unless ANGLE or a real device is actually created.
 - Do not depend on D3D12 or ray tracing.
@@ -63,7 +73,7 @@ A Windows application, not a website:
 | `crates/vue3d_core/Cargo.toml` | `vue_3d_canvas` bin; wry/tao only on Windows |
 | `.github/workflows/build-windows-app.yml` | Manual Windows package |
 | `XBLEND_FORMAT_SPECIFICATION.md` | Project format |
-| `self-host/` | Old Node hosting folder. Not the desktop product. |
+| `self-host/` | Current product. Inlined painter page, plus `server.js` for `http://`. |
 
 ## Status after 2026-11-03
 
@@ -71,9 +81,10 @@ The esbuild peer conflict named in the 2026-11-03 pre-execution note is fixed. `
 
 ## Status after the self-hosted standalone
 
-Victory asked for a self-hosted app that is not the exe. That package is `self-host/`. `public/` now matches the painter build (`index-B-mwzPmH.js`). Start it with `node server.js` inside `self-host/`, `start.bat`, or `npm run host`. The Windows exe workflow is still manual and was not run. Do not recreate Python, native C, `native_runner/`, or the deleted GitHub workflows. Do not open the UI with `file://`.
+## Status after the self-hosted standalone
+
+Victory asked for a self-hosted app that is not the exe. That package is `self-host/`. Start it with `node server.js` inside `self-host/`, `start.bat`, or `npm run host`. `file://` on the inlined `self-host/public/index.html` is valid. Do not recreate Python, native C, `native_runner/`, or the deleted GitHub workflows.
 
 ## Status after 2026-11-14
 
-Victory accepted the filter fix and the zoom and resize fix (`a1dd03d`, bundle `index-DXhSIj8p.js`) with one complaint: the node editor is a dud, and the view lags only at the start. The next task is `LAYER_PBR_PLAN.md`. Do that on the self-host painter. Do not edit `crates/vue3d_core` until he accepts the result. `file://` on `self-host/public/index.html` is valid because the script is inlined. The older "do not open file://" line above is retired. `release/vue3d-self-host-safety-2026-11-14.zip` is the safety copy of `self-host/` before the toggle-layer work. Do not delete it.
-
+Victory accepted the filter fix and the zoom and resize fix (`a1dd03d`, bundle `index-DXhSIj8p.js`) with one complaint: the node editor is a dud, and the view lags only at the start. The next task is `LAYER_PBR_PLAN.md`. Do that on the self-host painter. Do not edit `crates/vue3d_core` until he accepts the result. `release/vue3d-self-host-safety-2026-11-14.zip` is the safety copy of `self-host/` before the toggle-layer work. Do not delete it.
