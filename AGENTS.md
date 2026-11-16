@@ -2,29 +2,42 @@
 
 ## PIN — read only this far
 
-Stop at the line that says `STOP`. Do not read past it unless a bug names an older entry.
+A numbered line is one item inside a set. A history task is a whole set that has been concluded. Checking one line does not make a history task. The `STOP` line comes after History.
 
-### To do
+### To do — this set, not started
 
-Build [`LAYER_PBR_PLAN.md`](./LAYER_PBR_PLAN.md) in the self-host painter. Not started. Page is still `index-DXhSIj8p.js`. Includes toggle layers, Undo / Redo / settings, node panel removed, UV dock says Coming soon, Import Texture kept, themes, gizmos, triplanar colour mix, subdivision preview, cheap first frame, `background.jpg`, `.xblend` zip, Blender mix chain per channel. Do not edit `crates/vue3d_core`. Windows waits for Victory's go-ahead.
+The page is still `index-DXhSIj8p.js`. This set mixes the work that was already assigned with the export work added after it. `f3b43f6` edited guides and did not start this set. Do not continue that edit. Build these, in `LAYER_PBR_PLAN.md`:
+
+1. Toggle layers: colour and reflection, emission, bump with a ramp. One combined map each. A normal-locked layer is the only normal.
+2. Edit menu is Undo, then Redo, then Undo & Redo Settings. Remove the ring label and the footer line.
+3. Remove the node panel. The dock says UV Editor, Coming soon. Keep `Viewport2D`.
+4. Keep Import Texture and Auto-Texture from Folder. They set the switches. They do not make nodes.
+5. Triplanar preview, and a colour mix (rgba, hsla, hex, separate alpha) when no image is chosen.
+6. Themes on the whole window. Sphere and mountain are each one shape. The badge says WebGL.
+7. Subdivision preview only. It never writes the mesh.
+8. Cheap first frame. `background.jpg` beside the self-host `index.html`.
+9. Export a zip. Bake each layer. Old files still open. Blender builds one mix chain per channel into one Principled shader. See `XBLEND_FORMAT_SPECIFICATION.md` section 7 and the first lines of `BLENDER_ADDON_PROMPT.md`.
+10. `npm run host:sync`. Do not edit `crates/vue3d_core`. Windows waits until Victory accepts this page and says to compile.
 
 ### Current implementation
 
-None. `f3b43f6` only rewrote guides. That is not progress. Do not repeat it.
+Not started. The last session rewrote guides (`f3b43f6`) and stopped. Leave those guides. Start at item 1.
 
-### Done — three slots
+### Current history — concluded set
 
-1. 2026-11-14 — zoom redraws, canvas follows the window — `a1dd03d` — `index-DXhSIj8p.js` — done.
-2. 2026-11-14 — filter panels stay on screen — `e124087` — `index-D2VONoEr.js` — done.
-3. 2026-11-12 — Triplanar, Scatter, and Edge Wear open; idle redraw stopped — `f2c9496` — `index-DwCqaqSC.js` — done.
+2026-11-14 view set. Done. Zoom redraws without a pan. The canvas follows a tablet rotation. Strokes skip mipmaps until the pen lifts. Bundle `index-DXhSIj8p.js`, commit `a1dd03d`. Victory was slightly satisfied. The first moment still lags, then it settles.
 
-When a task is marked done, put it in slot 1. The old slot 1 moves to slot 2. The old slot 2 moves to slot 3. The old slot 3 is moved to the first paragraph under `STOP`. It is not deleted. Never keep a fourth done item above the line.
+### History — concluded set
+
+2026-11-12 filter set. Done. Triplanar, Scatter, and Edge Wear open, no longer cover the view, and the view sleeps while idle. Bundles `index-DwCqaqSC.js` and `index-D2VONoEr.js`.
+
+When this to-do set is concluded, it becomes Current history. The view set becomes History. The filter set moves to the first lines under `STOP`. It is not deleted. A checked line stays inside its set.
 
 ## STOP
 
 Read past this line only if absolutely necessary. The log below grows and is not deleted.
 
-2026-11-16 — the pin above this line is the only status. Nothing has been moved under this line yet. The next finished task will push the oldest of the three done slots to here.
+2026-11-09 navigation set, concluded, moved here so the pin stays short. Free tumble, file normals, full Smooth, UV islands, and `file://` on the inlined page. Do not rebuild it.
 
 ## Project Metadata
 - **Project Name:** VUE 3D Canvas
@@ -64,8 +77,8 @@ Read past this line only if absolutely necessary. The log below grows and is not
 9. **Push cadence:** while a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. Do not force-push. Retired by rule 10: the interval is 3.5 minutes.
 10. **Push every 3.5 minutes** (2026-11-16). While the tree is dirty, push to `main` about every 3.5 minutes. No empty commit. No force-push. A painter commit and a note commit stay separate. Do not mix a guide rewrite into a code commit.
 11. **Notes while building.** Until the feature is verified, edit only `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, `LAYER_PBR_PLAN.md` if the task itself is wrong, and your own `agents/<name>.md`. Do not edit `README.md`, `DEVELOPMENT.md`, `API_DOCUMENTATION.md`, `HANDOFF_PROMPT.md`, or the Windows guides mid-task. Align those once, after Victory can run the page.
-12. **This file grows.** Do not delete log entries. The PIN at the top is the only part you rewrite. Three done slots stay above `STOP`. The oldest done slot, when a fourth would appear, moves to the first lines under `STOP`.
-13. **What to read.** Read the PIN and stop. Cross `STOP` only if a bug names an older entry. The same pin is at the top of `AGENT_STATE.md` and `SELF_HOST_HANDOFF.md`.
+12. **This file grows.** Do not delete log entries. Rewrite only the PIN. Above `STOP` keep the open numbered set, the set being built, Current history, and History. When a set is concluded, the oldest history set moves to the first lines under `STOP`.
+13. **What to read.** Read the PIN and stop. Cross `STOP` only if a bug names an older set. The same pin is at the top of `AGENT_STATE.md` and `SELF_HOST_HANDOFF.md`. The numbered how-to is `LAYER_PBR_PLAN.md`.
 14. **One file per worker.** Keep `agents/<your-name>.md`. Last two sessions in full. Older sessions as one line each: date, what landed, commit. Do not copy this file into it. Shared decisions stay here. Create the file on the first push. Do not commit under another worker's name.
 
 ## Now (2026-11-16)

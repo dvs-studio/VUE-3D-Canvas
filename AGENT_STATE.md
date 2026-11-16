@@ -2,27 +2,31 @@
 
 ## PIN — read only this far
 
-Stop at `STOP`. The same rule as `AGENTS.md`.
+Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
 
-### To do
+### To do — this set, not started
 
-`LAYER_PBR_PLAN.md`. Not built.
+The ten items in the `AGENTS.md` pin. Detail is `LAYER_PBR_PLAN.md`. Not built.
 
 ### Current implementation
 
-None. Page `index-DXhSIj8p.js`.
+Not started. `f3b43f6` only rewrote guides. Do not continue that. Page `index-DXhSIj8p.js`.
 
-### Done — three slots
+### Current history — concluded set
 
-1. Zoom and resize — `a1dd03d` — done.
-2. Filter panels stay on screen — `e124087` — done.
-3. Filter dialogs open, idle redraw stopped — `f2c9496` — done.
+2026-11-14 view set. Zoom, resize, mipmaps on pen-up. `index-DXhSIj8p.js`.
 
-A newly finished task takes slot 1. The old slot 3 moves under `STOP` and is not deleted.
+### History — concluded set
+
+2026-11-12 filter set. Dialogs open, they do not cover the view, the view sleeps while idle.
+
+When the to-do set is concluded, it becomes Current history, the view set becomes History, and the filter set moves under `STOP`.
 
 ## STOP
 
 Read past this line only if absolutely necessary.
+
+2026-11-09 navigation set, concluded. Free tumble, file normals, full Smooth, UV islands, `file://`.
 
 > **Autonomous Agent Reference File**  
 > Maintained to track codebase state, active features, memory constraints, and module indices so subsequent operations never need to run costly project rescans.

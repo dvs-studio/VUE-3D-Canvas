@@ -16,7 +16,7 @@ A safety copy of the self-host folder as it is before this task is `release/vue3
 6. Subdivision preview dock. It never writes the mesh.
 7. Remove the node editor. Put a UV dock in its place that only says Coming soon. Keep Import Texture and point it at the switches.
 8. On export, bake each layer and write the `.xblend` zip. Extend `src/nodes/blender_28_importer.py` so Blender rebuilds one mix chain per channel.
-9. `npm run host:sync`. Update the PIN at the top of `AGENTS.md`, `AGENT_STATE.md`, and `SELF_HOST_HANDOFF.md`. Move the oldest of the three done slots under `STOP`. Do not delete it. Append a short note under `STOP` only. Also append `agents/<your-name>.md`.
+9. `npm run host:sync`. When this whole set is concluded, update the PIN: this set becomes Current history, the view set becomes History, and the filter set moves under `STOP`. Do not delete it. Checking one item does not move the pin. Also append `agents/<your-name>.md`.
 
 Do not start a native DirectX or OpenGL window in this task. Do not edit `crates/vue3d_core`. When Victory has accepted this self-host page and gives the go-ahead, the Windows package is compiled around this same page. That compile is not this task. A real DirectX 11 or OpenGL device is later still.
 

@@ -10,6 +10,6 @@ In your file:
 - The last two sessions in full, short.
 - Older sessions as one line: date, what landed, commit.
 
-Read `AGENTS.md` only down to the line `STOP`. The pin above it holds the to-do, the current implementation, and three finished tasks. When a fourth finish would sit there, the oldest of the three moves to the first lines under `STOP`. It is not deleted. Do the same in your own file.
+Read `AGENTS.md` only down to the line `STOP`. Above it: the open numbered set, the set being built, Current history, then History. `STOP` is after History. When a set is concluded, the oldest history set moves under `STOP` and is not deleted. One checked line does not become a history task.
 
 While the feature is unfinished, do not edit the guides outside `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, `LAYER_PBR_PLAN.md`, and your own file. Push code about every 3.5 minutes, in its own commit, separate from note commits.

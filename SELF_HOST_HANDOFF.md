@@ -2,27 +2,31 @@
 
 ## PIN — read only this far
 
-Stop at `STOP`.
+Same sets as `AGENTS.md`. `STOP` comes after History.
 
-### To do
+### To do — this set, not started
 
-Build [`LAYER_PBR_PLAN.md`](LAYER_PBR_PLAN.md). Not started. Keep `release/vue3d-self-host-safety-2026-11-14.zip`.
+The ten numbered items in the `AGENTS.md` pin. How: [`LAYER_PBR_PLAN.md`](LAYER_PBR_PLAN.md). Keep `release/vue3d-self-host-safety-2026-11-14.zip`.
 
 ### Current implementation
 
-None. `index-DXhSIj8p.js`. `f3b43f6` did not change the painter.
+Not started. `f3b43f6` rewrote guides and did not change the painter. Do not continue that. Page `index-DXhSIj8p.js`.
 
-### Done — three slots
+### Current history — concluded set
 
-1. Zoom redraws and the canvas follows the window — done.
-2. Triplanar, Scatter, and Edge Wear no longer cover the view — done.
-3. Those three dialogs open, and the view sleeps while idle — done.
+2026-11-14 view set. Zoom redraws. The canvas follows the window. `index-DXhSIj8p.js`.
 
-When you finish a slice, mark it done in slot 1 here and in `AGENTS.md`. Move the old third slot under `STOP`.
+### History — concluded set
+
+2026-11-12 filter set. Triplanar, Scatter, and Edge Wear open and stay off the view. The view sleeps while idle.
+
+When the to-do set is concluded, move the filter set under `STOP`. Do not delete it.
 
 ## STOP
 
 Read past this line only if absolutely necessary.
+
+2026-11-09 navigation set, concluded. Free tumble, file normals, full Smooth, UV islands, `file://`.
 
 Read this file first. The product to finish is the self-hosted painter. Do not start the Windows DirectX rewrite until Victory says this folder is accepted.
 
