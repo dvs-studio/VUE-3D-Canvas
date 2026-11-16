@@ -322,3 +322,11 @@ The node editor does not drive materials. Nothing in this section is built yet. 
 - Do this in the self-host painter. Do not edit `crates/vue3d_core` until Victory accepts that build.
 - Safety zip: `release/vue3d-self-host-safety-2026-11-14.zip`.
 
+
+## 18. 2026-11-16 — still not built
+
+`f3b43f6` aligned guides only. The page is still `index-DXhSIj8p.js`.
+
+The self-host worker builds `LAYER_PBR_PLAN.md`, including the export zip and the Blender per-channel chains. Import Texture stays. The node panel goes. The UV dock says Coming soon. Subdivision is preview only.
+
+Do not edit `crates/vue3d_core`. Do not rewrite the other guides until this page is verified. Push every 3.5 minutes. Notes and code are separate commits. Each worker writes `agents/<name>.md`.

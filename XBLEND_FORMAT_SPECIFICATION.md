@@ -252,3 +252,16 @@ This file instructs the Blender add-on on how to build Image Texture and Alpha M
 
 `LAYER_PBR_PLAN.md` adds, on each painted layer, checks and influences for colour, reflection, emission, and bump, plus a bump ramp and a normal-lock flag. The file still stores only the last 3 undo states. Old files that still contain `nodeGraph` must load. The graph is ignored. Do not require it.
 
+## 7. To implement — baked layer maps (not in the file yet)
+
+Export writes a zip. The JSON keeps the 3 stored undo states and linked meshes. Each layer that contributes a map also gets:
+
+- `colorOn`, `colorInfluence`, `reflectionOn`, `reflectionInfluence`
+- `emissionOn`, `emissionInfluence`
+- `bumpOn`, `bumpInfluence`, `bumpRamp` as a list of `{ "position", "height" }`
+- `normalLock` (boolean)
+- `maps.color`, `maps.emission`, `maps.height`, `maps.reflection`, `maps.normal` — omit a key the layer does not bake
+
+Image names: `<project>__<layerId>__color.png` and the same pattern for `emission`, `height`, `reflection`, `normal`. Colour and emission are sRGB. Height, reflection, and normal are Non-Color. Reflection is strength, not roughness. A missing field on an old file uses the default in `LAYER_PBR_PLAN.md`. The Blender side builds one Mix chain per channel. It does not store a web node graph.
+
+

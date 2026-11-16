@@ -35,7 +35,20 @@
 6. **Photoshop CS5 Dark Skin**: Adhere strictly to the CS5 palette (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`).
 7. **One Windows application**: Ship the painter inside a native window. Do not maintain parallel Python Desktop or Native C applications. Do not add a server just to open the UI. `src/nodes/blender_28_importer.py` stays; it runs inside Blender.
 8. **Self-host is the current product** (2026-11-15). Read `SELF_HOST_HANDOFF.md` before the log below. The page is `self-host/public/index.html` with `index-DXhSIj8p.js` inlined. `file://` and `node self-host/server.js` are both valid. Rule 5's "1-step live undo" is retired: the session stack is 30 and the `.xblend` file stores 3. Rule 7 forbids a server for the Windows exe only. `self-host/server.js` stays.
-9. **Push cadence:** while a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. Do not force-push.
+9. **Push cadence:** while a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. Do not force-push. Retired by rule 10: the interval is 3.5 minutes.
+10. **Push every 3.5 minutes** (2026-11-16). While the tree is dirty, push to `main` about every 3.5 minutes. No empty commit. No force-push. A painter commit and a note commit stay separate. Do not mix a guide rewrite into a code commit.
+11. **Notes while building.** Until the feature is verified, edit only `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, `LAYER_PBR_PLAN.md` if the task itself is wrong, and your own `agents/<name>.md`. Do not edit `README.md`, `DEVELOPMENT.md`, `API_DOCUMENTATION.md`, `HANDOFF_PROMPT.md`, or the Windows guides mid-task. Align those once, after Victory can run the page.
+12. **This file grows.** Do not delete log entries. The Now block may be replaced when the status changes. The log may not.
+13. **What to read.** On a normal start read the Now block, the Next task in `SELF_HOST_HANDOFF.md`, and the last two log entries. Open an older entry only when the bug names it.
+14. **One file per worker.** Keep `agents/<your-name>.md`. Last two sessions in full. Older sessions as one line each: date, what landed, commit. Do not copy this file into it. Shared decisions stay here. Create the file on the first push. Do not commit under another worker's name.
+
+## Now (2026-11-16)
+
+Not built. The page is still `index-DXhSIj8p.js`.
+
+Build `LAYER_PBR_PLAN.md` in the self-host painter. That file now includes the `.xblend` bake and the Blender per-channel chains. Do not edit `crates/vue3d_core`. Windows waits until Victory accepts this page and says to compile.
+
+Commit `f3b43f6` rewrote many guides and built nothing. Those guide edits are not the task. Do not repeat that. The task is the painter, the export, and the Blender script.
 
 ## Retired (do not rebuild)
 - `python_desktop/` and `native_c/` were documentation-only. They are not a build target.
@@ -315,3 +328,9 @@
 ### 2026-11-14 — subdivision preview added to the task
 - Still no painter code. `LAYER_PBR_PLAN.md` now includes a Subdivision dock.
 - It is a viewport preview in the style of Blender's Subdivision Surface modifier: Catmull-Clark or Simple, levels 0–2, an angle for sharp edges, a crease weight, keep-boundary, and a displacement amount that reads the combined bump. It must not change the saved mesh, the OBJ, or the file's vertex list.
+
+### 2026-11-16 — the build task, which f3b43f6 did not do
+- `f3b43f6` edited fifteen guides and changed no painter file. That was not the task. Do not repeat it.
+- Not built, and still the work: toggle layers, Undo / Redo / settings labels, node panel removed, UV dock says Coming soon, Import Texture kept and mapped to the switches, themes on the whole window, sphere and mountain redrawn, triplanar preview and colour mix, subdivision preview that does not write the mesh, cheap first frame, `background.jpg`, `.xblend` zip with baked maps, Blender mix chain per channel.
+- Instructions: `LAYER_PBR_PLAN.md`. Schema: `XBLEND_FORMAT_SPECIFICATION.md` section 7. Importer: the 2026-11-16 line at the top of `BLENDER_ADDON_PROMPT.md`.
+- While building, notes go only in this file, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, and `agents/<name>.md`. Push code every 3.5 minutes, separate from note commits. Do not edit `crates/vue3d_core`. Windows waits for Victory's go-ahead.

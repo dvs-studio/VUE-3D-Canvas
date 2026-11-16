@@ -87,3 +87,12 @@ Append a short note to `AGENTS.md` before the first code edit, and again after `
 ## Subdivision preview
 
 `LAYER_PBR_PLAN.md` adds a Subdivision dock. Preview only. It follows sharp edges by angle and the combined bump. It never replaces the cage.
+
+
+## Next task — 2026-11-16
+
+`f3b43f6` rewrote guides and did not build `LAYER_PBR_PLAN.md`. Ignore that commit as a product change. The page is still `index-DXhSIj8p.js`.
+
+Build the plan, including the `.xblend` zip and the Blender mix chains. The line below that says to make the node graph evaluate live is retired. The node panel is removed. Import Texture stays.
+
+Until that page is verified, append notes only here, in `AGENTS.md`, in `AGENT_STATE.md`, and in `agents/<your-name>.md`. Push code every 3.5 minutes, not in the same commit as a guide rewrite. Do not edit `crates/vue3d_core`. Windows waits until Victory accepts this page and says to compile.

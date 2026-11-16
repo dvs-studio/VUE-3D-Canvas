@@ -15,9 +15,12 @@ A safety copy of the self-host folder as it is before this task is `release/vue3
 5. Themes on the whole interface. Gizmo redraw. Labels.
 6. Subdivision preview dock. It never writes the mesh.
 7. Remove the node editor. Put a UV dock in its place that only says Coming soon. Keep Import Texture and point it at the switches.
-8. `npm run host:sync`. Append the post-note to `AGENTS.md`, `AGENT_STATE.md`, and `SELF_HOST_HANDOFF.md`.
+8. On export, bake each layer and write the `.xblend` zip. Extend `src/nodes/blender_28_importer.py` so Blender rebuilds one mix chain per channel.
+9. `npm run host:sync`. Append a short note only to `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, and `agents/<your-name>.md`.
 
-Do not start a native DirectX or OpenGL window in this task. When Victory says the self-host page is perfected, put this same page into the Windows package and compile `vue_3d_canvas.exe`. That package hosts the page. It does not grow a second painter. A real DirectX 11 or OpenGL device is a later project, after that package is the finished page.
+Do not start a native DirectX or OpenGL window in this task. Do not edit `crates/vue3d_core`. When Victory has accepted this self-host page and gives the go-ahead, the Windows package is compiled around this same page. That compile is not this task. A real DirectX 11 or OpenGL device is later still.
+
+While you build, push the painter about every 3.5 minutes. Do not push an empty commit. Do not put a guide rewrite in the same commit as code. Do not edit `README.md`, `DEVELOPMENT.md`, `API_DOCUMENTATION.md`, `HANDOFF_PROMPT.md`, or the Windows guides until this page is verified. Commit `f3b43f6` did that and skipped the build. Do not repeat it.
 
 ## What a layer is
 
@@ -178,7 +181,49 @@ Put a dock in that same slot. Title: `UV Editor`. The body is one line: `Coming 
 
 Later, and not in this task: that dock becomes a floating UV application. It can fill the screen. It still reads and writes the open mesh (positions and UVs), and it uses the same undo stack. Tools for that later build are island select, split a mirrored pair, move, pack, unwrap with the angle limit, pin, and sew. Write nothing for those tools now except the Coming soon line.
 
-Do not delete `src/nodes/blender_28_importer.py`. It runs inside Blender, not in this page. Do not write the Blender add-on in this task. Old `.xblend` files may still contain `nodeGraph`. Loading one must not crash. Ignore the graph.
+Do not delete `src/nodes/blender_28_importer.py`. Extend it in this task. The export section says how. Do not put the node editor back on the page.
+
+Old `.xblend` files may still contain `nodeGraph`. Loading one must not crash. Ignore the graph. Missing switch fields mean the defaults in "What a layer is".
+
+## Export and Blender
+
+This is part of the same task, not a later one. The painter's node panel stays gone. The Blender file is the only node tree.
+
+When the user exports a project, write a zip. Prefer the existing bundle action if one exists. Inside it:
+
+- The `.xblend` JSON, still with only the last 3 undo states, still linking the mesh by default.
+- One baked image per layer per job that layer actually does. A fill layer is rasterized on its UV channel before the bake. The user does not export maps one by one.
+- A manifest, next to the JSON, listing for every layer: id, name, order, visible, opacity, blend mode, UV channel, the three switches, both influences, the bump ramp, `normalLock`, and the file names of the baked images.
+
+File names are `<project>__<layerId>__color.png`, `__emission.png`, `__height.png`, `__reflection.png`, `__normal.png`. Skip a file the layer does not contribute. Colour and emission are sRGB. Height, reflection, and normal are non-colour. Reflection is stored as the strength grayscale, not as roughness. The importer turns it into roughness with `1 - strength`.
+
+The manifest fields to add, if the current schema has no place for them, sit on each layer object:
+
+- `colorOn`, `colorInfluence`, `reflectionOn`, `reflectionInfluence`
+- `emissionOn`, `emissionInfluence`
+- `bumpOn`, `bumpInfluence`, `bumpRamp` as `{ position, height }[]`
+- `normalLock`
+- `maps`: `{ color?, emission?, height?, reflection?, normal? }` paths inside the zip
+
+An old file without these fields still opens. Do not require `nodeGraph`.
+
+`src/nodes/blender_28_importer.py` loads that zip and builds one material. It does not make one Principled shader per layer, and it does not mix whole shaders. Mix Shader is the wrong node for this.
+
+For each channel, a chain of Mix nodes in layer order, bottom to top:
+
+| Channel | Inputs | How a layer joins | Into Principled |
+|---|---|---|---|
+| Base Color | the layer colour image | The layer's blend mode. Normal means Mix. Multiply, Screen, Overlay, and the other modes already in the app map to the matching Mix blend. Factor is opacity times colour influence, and 0 if the switch is off or the layer is hidden. | Base Color |
+| Roughness | the reflection image, as `1 - strength` | Not a colour blend. Multiply the strength by reflection influence, then invert. Hidden or off contributes nothing (roughness stays 1 under that layer). | Roughness |
+| Emission | the emission image | Add, multiplied by emission influence. Colour and strength stay the image and the factor. Do not run this through the albedo mix. | Emission |
+| Height | the height image after that layer's ramp | Add, multiplied by bump influence. | Used to build the normal. Also into Displacement if that output exists. |
+| Normal | one image | If any visible layer has `normalLock`, that image is the normal and the height chain is not converted. Otherwise one Normal Map node reads a normal baked from the combined height. Do not mix several tangent-space colours together as if they were paint. | Normal |
+
+Document a blend mode you cannot match in a comment at the top of the generated node group. Do not silently treat it as Mix. Alpha is the Mix factor, not a discarded channel.
+
+If Blender is not installed where you build, do not claim the material was opened. Check that the zip contains the images and the manifest, and that the script's node names match the table. Say that limit in the note.
+
+The web node panel is still removed. `Viewport2D` stays. The UV dock still says Coming soon.
 
 ## Painting feel
 
@@ -249,7 +294,8 @@ The panel is `src/ui/panels/SubdivisionPanel.tsx`, listed in the Window menu bes
 - Do not remove Import Texture or Auto-Texture from Folder.
 - Do not build the full-screen UV desk. The dock says Coming soon.
 - Do not write subdivided vertices into the mesh, the OBJ export, or the `.xblend`.
+- Do not edit the guides outside `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, this file, and `agents/<your-name>.md` until the page is verified.
 
 ## Done when
 
-`npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. Edit says Undo, then Redo, then Undo & Redo Settings, and the footer no longer mentions a ring. Import Texture still opens, with no node checkbox, and a fill image still makes a material-fill layer. The node panel is gone. The dock that replaced it says Coming soon. Subdivision Preview can be turned on without changing the exported mesh: a sharp edge above the angle stays sharp, and the displacement slider follows the combined bump. `public/background.jpg` is beside the self-host `index.html` after sync.
+`npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. Edit says Undo, then Redo, then Undo & Redo Settings, and the footer no longer mentions a ring. Import Texture still opens, with no node checkbox, and a fill image still makes a material-fill layer. The node panel is gone. The dock that replaced it says Coming soon. Subdivision Preview can be turned on without changing the exported mesh. A project zip contains the baked images and the manifest, and an old `.xblend` without the new fields still opens. The Blender script builds one mix chain per channel into one Principled shader. If Blender was not run, the note says so. `public/background.jpg` is beside the self-host `index.html` after sync.

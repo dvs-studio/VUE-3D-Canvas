@@ -1,3 +1,5 @@
+> 2026-11-16: the sentence below that says "do not write the add-on in the toggle-layer task" is retired. This task does extend `src/nodes/blender_28_importer.py`. Follow the Export and Blender section of `LAYER_PBR_PLAN.md`: one mix chain per channel, one Principled shader, no Mix Shader substitute, no web node panel. The older prompt under the line is the old auto-node importer. Where it disagrees with the plan, the plan wins.
+
 > The web node editor is rejected. Do not extend this add-on until `LAYER_PBR_PLAN.md` has saved per-layer colour, height, emission, and reflection images. The add-on will load those images. It will not rebuild the web node graph. Do not write the add-on in the toggle-layer task.
 
 # Blender 2.8+ Add-on Generation Prompt
