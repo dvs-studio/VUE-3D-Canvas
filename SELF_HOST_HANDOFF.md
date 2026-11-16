@@ -1,5 +1,29 @@
 # Self-host handover
 
+## PIN — read only this far
+
+Stop at `STOP`.
+
+### To do
+
+Build [`LAYER_PBR_PLAN.md`](LAYER_PBR_PLAN.md). Not started. Keep `release/vue3d-self-host-safety-2026-11-14.zip`.
+
+### Current implementation
+
+None. `index-DXhSIj8p.js`. `f3b43f6` did not change the painter.
+
+### Done — three slots
+
+1. Zoom redraws and the canvas follows the window — done.
+2. Triplanar, Scatter, and Edge Wear no longer cover the view — done.
+3. Those three dialogs open, and the view sleeps while idle — done.
+
+When you finish a slice, mark it done in slot 1 here and in `AGENTS.md`. Move the old third slot under `STOP`.
+
+## STOP
+
+Read past this line only if absolutely necessary.
+
 Read this file first. The product to finish is the self-hosted painter. Do not start the Windows DirectX rewrite until Victory says this folder is accepted.
 
 ## Next task

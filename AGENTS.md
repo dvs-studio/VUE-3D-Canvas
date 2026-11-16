@@ -1,5 +1,31 @@
 # AGENTS.md - VUE 3D Canvas Developer Handover
 
+## PIN — read only this far
+
+Stop at the line that says `STOP`. Do not read past it unless a bug names an older entry.
+
+### To do
+
+Build [`LAYER_PBR_PLAN.md`](./LAYER_PBR_PLAN.md) in the self-host painter. Not started. Page is still `index-DXhSIj8p.js`. Includes toggle layers, Undo / Redo / settings, node panel removed, UV dock says Coming soon, Import Texture kept, themes, gizmos, triplanar colour mix, subdivision preview, cheap first frame, `background.jpg`, `.xblend` zip, Blender mix chain per channel. Do not edit `crates/vue3d_core`. Windows waits for Victory's go-ahead.
+
+### Current implementation
+
+None. `f3b43f6` only rewrote guides. That is not progress. Do not repeat it.
+
+### Done — three slots
+
+1. 2026-11-14 — zoom redraws, canvas follows the window — `a1dd03d` — `index-DXhSIj8p.js` — done.
+2. 2026-11-14 — filter panels stay on screen — `e124087` — `index-D2VONoEr.js` — done.
+3. 2026-11-12 — Triplanar, Scatter, and Edge Wear open; idle redraw stopped — `f2c9496` — `index-DwCqaqSC.js` — done.
+
+When a task is marked done, put it in slot 1. The old slot 1 moves to slot 2. The old slot 2 moves to slot 3. The old slot 3 is moved to the first paragraph under `STOP`. It is not deleted. Never keep a fourth done item above the line.
+
+## STOP
+
+Read past this line only if absolutely necessary. The log below grows and is not deleted.
+
+2026-11-16 — the pin above this line is the only status. Nothing has been moved under this line yet. The next finished task will push the oldest of the three done slots to here.
+
 ## Project Metadata
 - **Project Name:** VUE 3D Canvas
 - **Author/Creator:** Victory Ukpong
@@ -38,17 +64,13 @@
 9. **Push cadence:** while a task has uncommitted changes, push to `main` about every 4 minutes. Do not push an empty commit. Do not force-push. Retired by rule 10: the interval is 3.5 minutes.
 10. **Push every 3.5 minutes** (2026-11-16). While the tree is dirty, push to `main` about every 3.5 minutes. No empty commit. No force-push. A painter commit and a note commit stay separate. Do not mix a guide rewrite into a code commit.
 11. **Notes while building.** Until the feature is verified, edit only `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, `LAYER_PBR_PLAN.md` if the task itself is wrong, and your own `agents/<name>.md`. Do not edit `README.md`, `DEVELOPMENT.md`, `API_DOCUMENTATION.md`, `HANDOFF_PROMPT.md`, or the Windows guides mid-task. Align those once, after Victory can run the page.
-12. **This file grows.** Do not delete log entries. The Now block may be replaced when the status changes. The log may not.
-13. **What to read.** On a normal start read the Now block, the Next task in `SELF_HOST_HANDOFF.md`, and the last two log entries. Open an older entry only when the bug names it.
+12. **This file grows.** Do not delete log entries. The PIN at the top is the only part you rewrite. Three done slots stay above `STOP`. The oldest done slot, when a fourth would appear, moves to the first lines under `STOP`.
+13. **What to read.** Read the PIN and stop. Cross `STOP` only if a bug names an older entry. The same pin is at the top of `AGENT_STATE.md` and `SELF_HOST_HANDOFF.md`.
 14. **One file per worker.** Keep `agents/<your-name>.md`. Last two sessions in full. Older sessions as one line each: date, what landed, commit. Do not copy this file into it. Shared decisions stay here. Create the file on the first push. Do not commit under another worker's name.
 
 ## Now (2026-11-16)
 
-Not built. The page is still `index-DXhSIj8p.js`.
-
-Build `LAYER_PBR_PLAN.md` in the self-host painter. That file now includes the `.xblend` bake and the Blender per-channel chains. Do not edit `crates/vue3d_core`. Windows waits until Victory accepts this page and says to compile.
-
-Commit `f3b43f6` rewrote many guides and built nothing. Those guide edits are not the task. Do not repeat that. The task is the painter, the export, and the Blender script.
+Superseded by the PIN at the top of this file. Do not add a second status here.
 
 ## Retired (do not rebuild)
 - `python_desktop/` and `native_c/` were documentation-only. They are not a build target.
