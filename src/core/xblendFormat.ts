@@ -6,7 +6,7 @@
  */
 
 import JSZip from 'jszip';
-import { Layer, MeshModelAsset, XBlendProject, GraphNode, NodeConnection, LayerPBRSettings } from './types';
+import { Layer, MeshModelAsset, XBlendProject, LayerPBRSettings } from './types';
 import { UndoRingBuffer } from './history';
 
 type LayerMapKind = 'color' | 'emission' | 'height' | 'reflection' | 'normal';
@@ -130,7 +130,6 @@ export class XBlendManager {
     embed3DAssets: boolean,
     model: MeshModelAsset,
     layers: Layer[],
-    nodeGraph: { nodes: GraphNode[]; connections: NodeConnection[] },
     undoBuffer: UndoRingBuffer,
     materialProps: { metallic: number; roughness: number; normalStrength: number; clearcoat: number; ior: number }
   ): Promise<string> {
@@ -226,7 +225,6 @@ export class XBlendManager {
       embed3DAssets,
       model,
       layers,
-      nodeGraph,
       undoBuffer,
       materialProps
     );
