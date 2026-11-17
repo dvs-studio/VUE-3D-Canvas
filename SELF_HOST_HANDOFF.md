@@ -139,3 +139,12 @@ Victory authorised autonomous work on the self-host painter. Read the new 2026-1
 - Eraser/brush input latency is the top performance issue. Coalesce texture notifications, avoid full composites and GPU resource rebuilds per dab, and measure before/after where possible.
 - UV project remains documentation-only until Victory explicitly authorises its implementation.
 - Build success and browser/device interaction verification must be reported separately.
+
+
+## 2026-11-17 implementation checkpoint
+
+- Paint notifications are coalesced per animation frame. Common 3D brush/eraser/pen/blur/clone/smudge strokes update only clipped dirty rectangles in the canonical colour composite; large-area tools use a full-composite fallback.
+- Temporary CSS gizmos now use X red, Y green, Z blue and corrected front/back/top/bottom labels. Wait for Victory's future low-poly GLB assets before replacing the placeholders. Mountain faded/acoustic paint treatment is deferred.
+- Subdivision panel is visible by default and supports docked/floating mode. Preview geometry exists; destructive Apply/undo-safe replacement is not yet claimed.
+- Latest CI run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44196595476 (success). Bundle `index-DwkyI3V_.js`. Artifact `VUE_3D_Canvas_SelfHost`, ID `14378169255`.
+- Browser/device latency testing remains outstanding; no measured before/after numbers are available yet. Continue with the remaining checklist in `LAYER_PBR_PLAN.md`.
