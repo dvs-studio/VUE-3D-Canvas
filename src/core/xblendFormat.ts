@@ -19,7 +19,7 @@ function getLayerPbr(layer: Layer): LayerPBRSettings {
     metallic: saved.metallic ?? 0,
     bumpHeight: saved.bumpHeight ?? 1,
     normalStrength: saved.normalStrength ?? 1,
-    emissionStrength: saved.emissionStrength ?? 0,
+    emissionStrength: saved.emissionStrength ?? 1,
     emissionColor: saved.emissionColor ?? '#ffffff',
     opacity: saved.opacity ?? (layer.opacity ?? 100) / 100,
     enableColor: saved.enableColor ?? true,
