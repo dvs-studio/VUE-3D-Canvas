@@ -52,7 +52,7 @@ jobs:
           set -euo pipefail
           mkdir -p packaging
           tar -C self-host --exclude storage -czf packaging/VUE_3D_Canvas_SelfHost.tar.gz .
-          tar -tzf packaging/VUE_3D_Canvas_SelfHost.tar.gz | head
+          tar -tzf packaging/VUE_3D_Canvas_SelfHost.tar.gz | sed -n '1,10p'
 
       - name: Upload the self-host package
         uses: actions/upload-artifact@v4
