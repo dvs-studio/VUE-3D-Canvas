@@ -402,7 +402,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                             name: p.name, 
                             isTransparentBlank: false,
                             dataUrl: undefined,
-                            tintColor: p.color
+                            tintColor: p.color,
+                            colorAlpha: 1
                           })}
                           className={`px-2 py-0.5 rounded text-[10px] border flex items-center gap-1 transition-colors ${
                             !tex.isTransparentBlank && tex.id.startsWith(p.id)
@@ -477,7 +478,6 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                         </div>
                         <p className="text-[9px] text-[#777]">{tex.dataUrl ? 'Image selected: colour fields are ignored.' : 'No image selected: this row contributes the entered solid colour.'}</p>
                       </div>
-</div>
                     </div>
                   </div>
                 ))}
