@@ -19,7 +19,7 @@ export const GpuDiagnosticsModal: React.FC<GpuDiagnosticsModalProps> = ({ isOpen
     try {
       const canvas = document.createElement('canvas');
       const gl2 = canvas.getContext('webgl2');
-      const gl = gl2 || canvas.getContext('webgl') || canvas.getContext('experimental-webgl') as WebGLRenderingContext | null;
+      const gl = (gl2 || canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | WebGL2RenderingContext | null;
       if (!gl) return { version: 'Unavailable', vendor: 'Unavailable', renderer: 'WebGL context unavailable', maxTextureSize: 0, maxRenderbufferSize: 0, viewport: 'Unavailable' };
       const debugInfo = gl.getExtension('WEBGL_debug_renderer_info') as any;
       const viewport = gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array;
