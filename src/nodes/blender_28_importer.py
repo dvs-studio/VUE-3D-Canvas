@@ -357,6 +357,9 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
         height_normal = _new_node(nodes, "ShaderNodeNormalMap", "Normal from combined height", (850, -900))
         links.new(height_chain, height_normal.inputs["Color"])
         links.new(_output(height_normal, ["Normal"]), _socket(principled, ["Normal"]))
+
+    # A locked normal source overrides only the normal input; height displacement remains independent.
+    if height_chain:
         displacement = _new_node(nodes, "ShaderNodeDisplacement", "Height displacement", (1200, -650))
         displacement.inputs["Scale"].default_value = displacement_strength * 0.05
         links.new(height_chain, _socket(displacement, ["Height"]))
