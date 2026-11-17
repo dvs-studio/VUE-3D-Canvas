@@ -829,6 +829,11 @@ export default function App() {
     const target = layers.find(l => l.id === layerId);
     if (target) {
       LayerConversions.convertToNormalMap(target);
+      setLayers(previous => previous.map(layer => {
+        if (layer.id === target.id) return target;
+        if (!layer.pbrSettings?.normalLock) return layer;
+        return { ...layer, pbrSettings: { ...layer.pbrSettings, normalLock: false } };
+      }));
       undoBuffer.pushState('Convert Layer to Normal Map', layers);
       notifyTextureUpdated();
     }
