@@ -149,6 +149,8 @@ export class XBlendManager {
         dataUrl: layer.canvas.toDataURL('image/png'),
         pbrSettings: _pbr,
         ...manifest,
+        // Preserve the layer's own visibility in .xblend; effective group visibility belongs to the ZIP manifest.
+        visible: layer.visible,
       };
     });
 
