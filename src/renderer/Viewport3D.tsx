@@ -1657,6 +1657,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     // Primary stroke dab
     applyDabAt(x, y);
+    const changedPoints: { x: number; y: number }[] = [{ x, y }];
 
     // 2. Real-time Multi-Axis Symmetry Mirror Stroke Dab
     const axes = symmetryConfig?.axes || (isSymmetryX ? { X: true, Y: false, Z: false } : { X: false, Y: false, Z: false });
@@ -1697,31 +1698,101 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       mirroredCoords.forEach(m => {
         if (!selectionMask || !selectionMask.active || SelectionTool.isPointInSelection(m.x, m.y, selectionMask)) {
           applyDabAt(m.x, m.y);
+          changedPoints.push(m);
         }
       });
     }
 
-    // High-performance direct texture update during active stroke:
-    // Fast copy active layer dab to compositeCanvas and flag WebGL texture update
-    const activePbr = layer.pbrSettings || ({} as any);
-    const activeColorOn = activePbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(layer.channel);
-    const activeColorInfluence = Math.max(0, Math.min(1, activePbr.colorInfluence ?? 1));
-    if (compositeCanvas && activeColorOn && activeColorInfluence > 0) {
+    // Update only the painted area in the canonical colour composite. The old
+    // path copied the complete active 1K texture on every dab; destination-out
+    // erasing also needs the region recomposited from every visible layer so
+    // lower layers show through correctly.
+    const regionTools = ['brush', 'eraser', 'pen', 'blur', 'clone', 'smudge'];
+    if (compositeCanvas && regionTools.includes(activeTool)) {
+      const cctx = compositeCanvas.getContext('2d');
+      if (cctx) {
+        const radius = Math.max(4, brush.size * 1.25 + 2);
+        const width = compositeCanvas.width;
+        const height = compositeCanvas.height;
+        for (const point of changedPoints) {
+          const left = Math.max(0, Math.floor(point.x - radius));
+          const top = Math.max(0, Math.floor(point.y - radius));
+          const right = Math.min(width, Math.ceil(point.x + radius));
+          const bottom = Math.min(height, Math.ceil(point.y + radius));
+          const dirtyWidth = right - left;
+          const dirtyHeight = bottom - top;
+          if (dirtyWidth <= 0 || dirtyHeight <= 0) continue;
+
+          cctx.save();
+          cctx.beginPath();
+          cctx.rect(left, top, dirtyWidth, dirtyHeight);
+          cctx.clip();
+          cctx.clearRect(left, top, dirtyWidth, dirtyHeight);
+          cctx.fillStyle = '#2b2b2b';
+          cctx.fillRect(left, top, dirtyWidth, dirtyHeight);
+
+          for (const candidate of layers) {
+            if (!candidate.visible || candidate.isGroup) continue;
+            if (candidate.groupId) {
+              const parent = layers.find(item => item.id === candidate.groupId);
+              if (parent && !parent.visible) continue;
+            }
+            const pbr = candidate.pbrSettings || ({} as any);
+            const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(candidate.channel);
+            const influence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
+            if (!colorOn || influence <= 0) continue;
+
+            cctx.save();
+            cctx.globalAlpha = (candidate.opacity / 100) * influence;
+            switch (candidate.blendMode) {
+              case 'multiply': cctx.globalCompositeOperation = 'multiply'; break;
+              case 'screen': cctx.globalCompositeOperation = 'screen'; break;
+              case 'overlay': cctx.globalCompositeOperation = 'overlay'; break;
+              case 'darken': cctx.globalCompositeOperation = 'darken'; break;
+              case 'lighten': cctx.globalCompositeOperation = 'lighten'; break;
+              case 'hard_light': cctx.globalCompositeOperation = 'hard-light'; break;
+              case 'soft_light': cctx.globalCompositeOperation = 'soft-light'; break;
+              case 'difference': cctx.globalCompositeOperation = 'difference'; break;
+              default: cctx.globalCompositeOperation = 'source-over'; break;
+            }
+            cctx.drawImage(candidate.canvas, left, top, dirtyWidth, dirtyHeight, left, top, dirtyWidth, dirtyHeight);
+            cctx.restore();
+          }
+          cctx.restore();
+        }
+      }
+    } else if (compositeCanvas) {
+      // Large-area tools keep the full-composite path; they are infrequent and
+      // may change pixels outside a brush-sized region.
       const cctx = compositeCanvas.getContext('2d');
       if (cctx) {
         cctx.save();
-        cctx.globalAlpha = (layer.opacity / 100) * activeColorInfluence;
-        let gco: GlobalCompositeOperation = 'source-over';
-        switch (layer.blendMode) {
-          case 'multiply': gco = 'multiply'; break;
-          case 'screen': gco = 'screen'; break;
-          case 'overlay': gco = 'overlay'; break;
-          case 'darken': gco = 'darken'; break;
-          case 'lighten': gco = 'lighten'; break;
-          default: gco = 'source-over'; break;
+        cctx.fillStyle = '#2b2b2b';
+        cctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+        for (const candidate of layers) {
+          if (!candidate.visible || candidate.isGroup) continue;
+          if (candidate.groupId) {
+            const parent = layers.find(item => item.id === candidate.groupId);
+            if (parent && !parent.visible) continue;
+          }
+          const pbr = candidate.pbrSettings || ({} as any);
+          const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(candidate.channel);
+          const influence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
+          if (!colorOn || influence <= 0) continue;
+          cctx.save();
+          cctx.globalAlpha = (candidate.opacity / 100) * influence;
+          cctx.globalCompositeOperation = candidate.blendMode === 'multiply' ? 'multiply'
+            : candidate.blendMode === 'screen' ? 'screen'
+            : candidate.blendMode === 'overlay' ? 'overlay'
+            : candidate.blendMode === 'darken' ? 'darken'
+            : candidate.blendMode === 'lighten' ? 'lighten'
+            : candidate.blendMode === 'hard_light' ? 'hard-light'
+            : candidate.blendMode === 'soft_light' ? 'soft-light'
+            : candidate.blendMode === 'difference' ? 'difference'
+            : 'source-over';
+          cctx.drawImage(candidate.canvas, 0, 0);
+          cctx.restore();
         }
-        cctx.globalCompositeOperation = gco;
-        cctx.drawImage(layer.canvas, 0, 0);
         cctx.restore();
       }
     }
