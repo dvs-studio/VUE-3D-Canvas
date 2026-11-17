@@ -205,6 +205,7 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
     height_chain = None
     normal_texture = None
     normal_strength = 1.0
+    displacement_strength = 1.0
     x_color = -700
     y_color = 700
 
@@ -309,6 +310,7 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
                                  "Layer %s Height" % layer.get("name", index),
                                  (x_color, order_y - 900), "Non-Color")
         if height_tex:
+            displacement_strength = max(0.0, min(2.0, float(layer.get('bumpHeight', 1.0))))
             ramp_output = _ramp_node(nodes, links, height_tex, layer.get("bumpRamp", []),
                                      (x_color + 220, order_y - 900), "Layer %s" % index)
             influence = opacity * max(0.0, min(1.0, float(layer.get("bumpInfluence", 0.0))))
@@ -356,7 +358,7 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
         links.new(height_chain, height_normal.inputs["Color"])
         links.new(_output(height_normal, ["Normal"]), _socket(principled, ["Normal"]))
         displacement = _new_node(nodes, "ShaderNodeDisplacement", "Height displacement", (1200, -650))
-        displacement.inputs["Scale"].default_value = max(0.0, min(2.0, float(layers[-1].get("bumpHeight", 1.0)))) * 0.05
+        displacement.inputs["Scale"].default_value = displacement_strength * 0.05
         links.new(height_chain, _socket(displacement, ["Height"]))
         displacement_output = _output(displacement, ["Displacement"])
         displacement_input = _socket(output, ["Displacement"])
