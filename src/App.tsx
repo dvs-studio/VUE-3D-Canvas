@@ -2270,12 +2270,8 @@ export default function App() {
       {/* 4. Bottom Hardware & Deterministic Memory Status Bar */}
       <div className="h-6 bg-[#262626] border-t border-[#383838] px-3 flex items-center justify-between text-[10px] text-[#888] font-mono select-none z-40">
         <div className="flex items-center gap-3">
-          <span className="text-[#a6e3a1]">● RUST/WASM CORE</span>
-          <span className="text-[#89b4fa] font-bold">
-            {gpuBackend === 'dx11' && '● DIRECTX 11 (D3D11 PRIORITY) ACTIVE'}
-            {gpuBackend === 'opengl' && '● OPENGL 2.0+ (COMPATIBILITY) ACTIVE'}
-            {gpuBackend === 'modern' && '● MODERN AUTO-DETECT GPU ACTIVE'}
-          </span>
+          <span className="text-[#a6e3a1]">● WEBGL VIEWPORT</span>
+          <span className="text-[#89b4fa] font-bold">● WEBGL RENDERER ACTIVE</span>
           <span className="text-[#3d7fb8]">.XBLEND FORMAT (LINKED ASSETS DEFAULT)</span>
           <span className="text-[#4ade80] font-semibold">● STANDALONE OFFLINE</span>
           <button
