@@ -259,7 +259,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                   canUndo ? 'hover:bg-[#3d7fb8] hover:text-white' : 'text-[#666] cursor-not-allowed'
                 }`}
               >
-                <span>Undo (3-State Ring)</span>
+                <span>Undo</span>
                 <span className="text-[#888] font-mono text-[10px]">Ctrl+Z</span>
               </button>
               <button
@@ -857,8 +857,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 { id: 'navigator', label: 'Viewport Navigator' },
                 { id: 'symmetry', label: 'Symmetry & Cloning Studio' },
                 { id: 'masking', label: 'Masking & Selection Studio' },
-                { id: 'nodeGraph', label: 'Node Editor (Blender 2.8+)' },
-                { id: 'history', label: 'Undo History Ring Buffer' },
+                { id: 'uvEditor', label: 'UV Editor' },
               ].map((panel) => (
                 <button
                   key={panel.id}
