@@ -46,7 +46,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
       scale: 1.0,
       offsetX: 0,
       offsetY: 0,
-      tintColor: defaultColor || '#dabb7d'
+      tintColor: defaultColor || '#dabb7d',
+      colorAlpha: 1
     },
     {
       id: 'sand_coarse',
@@ -56,7 +57,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
       scale: 1.0,
       offsetX: 0,
       offsetY: 0,
-      tintColor: '#a5875f'
+      tintColor: '#a5875f',
+      colorAlpha: 1
     }
   ]);
 
@@ -112,7 +114,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
         scale: 1.0,
         offsetX: 0,
         offsetY: 0,
-        tintColor: preset.color
+        tintColor: preset.color,
+        colorAlpha: 1
       }
     ]);
   };
@@ -346,6 +349,13 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        <div className="w-12 h-12 shrink-0 rounded border border-[#555] overflow-hidden" style={{ background: 'repeating-conic-gradient(#333 0% 25%, #242424 0% 50%) 50% / 12px 12px' }}>
+                          {tex.dataUrl ? (
+                            <img src={tex.dataUrl} alt={tex.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full" style={{ backgroundColor: tex.tintColor || '#ffffff', opacity: tex.colorAlpha ?? 1 }} />
+                          )}
+                        </div>
                         <span className="w-5 h-5 rounded-full bg-[#333] text-[#aaa] flex items-center justify-center font-mono text-[10px] font-bold">
                           {idx + 1}
                         </span>
@@ -441,20 +451,33 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <span className="text-[#999]">Color Tint:</span>
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[#999]">Colour / RGBA / HSLA / Hex:</span>
                           <input
-                            type="color"
+                            type="text"
                             value={tex.tintColor || '#ffffff'}
                             onChange={(e) => handleTextureChange(idx, { tintColor: e.target.value })}
-                            className="w-6 h-5 bg-transparent border-0 cursor-pointer rounded"
+                            placeholder="rgba(255, 120, 40, 1)"
+                            className="w-44 bg-[#1a1a1a] border border-[#444] rounded px-2 py-1 text-[10px] text-white font-mono"
                           />
-                          <span className="font-mono text-[10px] text-[#aaa]">
-                            {tex.tintColor || '#ffffff'}
-                          </span>
                         </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#999] w-16">Separate alpha</span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={tex.colorAlpha ?? 1}
+                            onChange={(e) => handleTextureChange(idx, { colorAlpha: Number(e.target.value) })}
+                            className="flex-1 accent-[#3d7fb8]"
+                          />
+                          <span className="font-mono text-[10px] text-[#aaa] w-8 text-right">{Math.round((tex.colorAlpha ?? 1) * 100)}%</span>
+                        </div>
+                        <p className="text-[9px] text-[#777]">{tex.dataUrl ? 'Image selected: colour fields are ignored.' : 'No image selected: this row contributes the entered solid colour.'}</p>
                       </div>
+</div>
                     </div>
                   </div>
                 ))}
