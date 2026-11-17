@@ -427,8 +427,12 @@ export default function App() {
         const parent = layers.find(l => l.id === layer.groupId);
         if (parent && !parent.visible) return;
       }
+      const pbr = layer.pbrSettings || ({} as any);
+      const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(layer.channel);
+      const colorInfluence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
+      if (!colorOn || colorInfluence <= 0) return;
       ctx.save();
-      ctx.globalAlpha = layer.opacity / 100;
+      ctx.globalAlpha = (layer.opacity / 100) * colorInfluence;
       let gco: GlobalCompositeOperation = 'source-over';
       switch (layer.blendMode) {
         case 'multiply': gco = 'multiply'; break;
