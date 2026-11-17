@@ -24,7 +24,7 @@ export class LayerConversions {
       metallic: previous?.metallic ?? 0,
       bumpHeight: previous?.bumpHeight ?? 1,
       normalStrength: previous?.normalStrength ?? 1,
-      emissionStrength: previous?.emissionStrength ?? 0,
+      emissionStrength: previous?.emissionStrength ?? 1,
       emissionColor: previous?.emissionColor ?? '#ffffff',
       opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
       enableColor: true,
