@@ -1417,8 +1417,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           targetLayer.canvas.height
         );
         if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
-        updateCompositeTexture();
-        onTextureUpdated();
+        needsRenderRef.current = true;
         return;
       }
 
@@ -1518,8 +1517,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             targetLayer.canvas.height
           );
           if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
-          updateCompositeTexture();
-          onTextureUpdated();
+          needsRenderRef.current = true;
           return;
         }
 
@@ -1548,7 +1546,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       lastCompositePaintPointRef.current = null;
       brushEngine.endStroke();
       clearStabilizerTether();
-      updateCompositeTexture();
+      // onTextureUpdated schedules the canonical composite; the textureVersion
+      // effect performs the single full PBR-map rebuild after the stroke.
       if (dynamicTextureRef.current) {
         dynamicTextureRef.current.generateMipmaps = true;
         dynamicTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
