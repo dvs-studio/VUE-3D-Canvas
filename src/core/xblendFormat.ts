@@ -235,7 +235,7 @@ export class XBlendManager {
 
     for (let index = 0; index < layers.length; index++) {
       const layer = layers[index];
-      const entry = layerMapManifest(layer, index, cleanProjectName);
+      const entry = layerMapManifest(layer, index, cleanProjectName, layer.visible && !layer.isGroup && (!layer.groupId || layers.find(parent => parent.id === layer.groupId)?.visible !== false));
       const pbr = entry._pbr;
       for (const kind of mapKinds) {
         const relativePath = entry.maps[kind];
