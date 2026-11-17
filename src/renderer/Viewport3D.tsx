@@ -333,6 +333,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     let hasEmissive = false;
     for (const layer of layers) {
       if (!layer.visible || layer.isGroup) continue;
+      if (layer.groupId) {
+        const parentGroup = layers.find(candidate => candidate.id === layer.groupId);
+        if (parentGroup && !parentGroup.visible) continue;
+      }
       const saved = layer.pbrSettings || ({} as any);
       const channel = layer.channel;
       const opacity = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
