@@ -1755,7 +1755,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
               case 'difference': cctx.globalCompositeOperation = 'difference'; break;
               default: cctx.globalCompositeOperation = 'source-over'; break;
             }
-            cctx.drawImage(candidate.canvas, left, top, dirtyWidth, dirtyHeight, left, top, dirtyWidth, dirtyHeight);
+            const sourceLeft = (left / width) * candidate.canvas.width;
+            const sourceTop = (top / height) * candidate.canvas.height;
+            const sourceWidth = (dirtyWidth / width) * candidate.canvas.width;
+            const sourceHeight = (dirtyHeight / height) * candidate.canvas.height;
+            cctx.drawImage(candidate.canvas, sourceLeft, sourceTop, sourceWidth, sourceHeight, left, top, dirtyWidth, dirtyHeight);
             cctx.restore();
           }
           cctx.restore();
