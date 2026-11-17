@@ -153,7 +153,7 @@ Manual verification checklist:
 8. Toggle subdivision modes and levels, then export the model and confirm the original cage geometry is unchanged.
 9. Check the first viewport frame, studio background, theme changes, and the sphere/mountain gizmos.
 
-**Verification status:** source changes have been committed, but the Vite build, host:sync, browser checks, and Blender import have not yet been run in this workspace. The existing generated self-host/public/index.html must be rebuilt before testing these changes.
+**Verification status:** GitHub Actions successfully completed npm install, Vite build, npm run host:sync, the self-host HTML checks, ZIP packaging, and artifact upload on commit 19a59cb. Browser interaction and Blender import still require manual testing. The generated bundle is available from the VUE_3D_Canvas_SelfHost artifact; the generated self-host/public/index.html is not committed to main, so use that artifact or run host:sync locally before testing.
 
 ---
 
