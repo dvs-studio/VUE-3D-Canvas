@@ -372,3 +372,14 @@ Victory authorised autonomous work on the self-hosted Vite/React/Three.js painte
 - Keep existing axis and viewport controls functional; keep the mountain faded painting treatment deferred. Keep the UV editor marked as planned/coming soon, not implemented.
 
 This is a pre-execution note only; no implementation result is claimed here.
+
+
+## 2026-11-17 implementation checkpoint
+
+- Active scope: self-host Vite/React/Three.js painter under `src/`; generated package is `self-host/public/index.html` via `npm run host:sync`.
+- Implemented partial latency work: notifications coalesced to animation frames; common 3D paint tools recomposite clipped dirty rectangles rather than copying a full active texture on every dab. Full PBR texture rebuild still occurs on stroke completion; performance must be measured on Victory's device.
+- Temporary box/sphere/mountain gizmos use consistent X red, Y green, Z blue axis labels. GLB replacement assets and mountain faded/acoustic styling are deferred until user assets arrive.
+- Subdivision panel is visible by default and dockable/floating. Current subdivision geometry is preview geometry; destructive apply, undo, and export-safe mesh replacement are not claimed complete.
+- UV algorithms, tools and standalone workspace are expanded in `LAYER_PBR_PLAN.md`, marked documentation-only pending explicit confirmation.
+- CI: run `44196595476` succeeded and uploaded artifact `14378169255`; bundle `index-DwkyI3V_.js`. CI does not validate live browser interaction or input latency.
+- Protected: `crates/vue3d_core` untouched; safety ZIP untouched.
