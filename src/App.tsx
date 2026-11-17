@@ -873,76 +873,26 @@ export default function App() {
 
   const handleConvertToEmissive = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
-    if (target) {
-      LayerConversions.convertToEmissive(target);
+    if (!target) return;
+    LayerConversions.convertToEmissive(target);
+    undoBuffer.pushState('Convert Layer to Emissive', layers);
+    notifyTextureUpdated();
+  };
 
-      // Sample color of target layer to drive lighting
-      const ctx = target.ctx;
-      let emissiveColor = '#ffffff';
-      try {
-        const p = ctx.getImageData(512, 512, 1, 1).data;
-        if (p[3] > 10) {
-          emissiveColor = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
-        } else {
-          const img = ctx.getImageData(0, 0, 1024, 1024).data;
-          for (let i = 0; i < img.length; i += 4 * 64) {
-            if (img[i + 3] > 30) {
-              emissiveColor = `#${((1 << 24) + (img[i] << 16) + (img[i + 1] << 8) + img[i + 2]).toString(16).slice(1)}`;
-              break;
-            }
-          }
-        }
-      } catch {
-        emissiveColor = '#ffffff';
-      }
+  const handleConvertToDisplacement = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (!target || target.isTextureFill) return;
+    LayerConversions.convertToDisplacementMap(target);
+    undoBuffer.pushState('Convert Layer to Displacement', layers);
+    notifyTextureUpdated();
+  };
 
-      // Emission Conversion: Replace every input with an emission node exclusively,
-      // using the colour value directly to drive the lighting of that layer.
-      const emissionNodeId = `node_emission_${Date.now()}`;
-      const outputNode = nodes.find(n => n.type === 'material_output') || {
-        id: 'node_output',
-        type: 'material_output' as const,
-        title: 'Material Output',
-        x: 600,
-        y: 200,
-        inputs: [{ id: 'surface', name: 'Surface', type: 'shader' }],
-        outputs: [],
-        properties: {},
-      };
-
-      const newEmissionNode: GraphNode = {
-        id: emissionNodeId,
-        type: 'emission',
-        title: 'Emission (ShaderNodeEmission)',
-        x: 320,
-        y: 200,
-        inputs: [
-          { id: 'color', name: 'Color', type: 'color', value: emissiveColor },
-          { id: 'strength', name: 'Strength', type: 'float', value: 2.5 },
-        ],
-        outputs: [
-          { id: 'emission', name: 'Emission', type: 'color' },
-        ],
-        properties: {
-          color: emissiveColor,
-          strength: 2.5,
-        },
-      };
-
-      setNodes([newEmissionNode, outputNode]);
-      setConnections([
-        {
-          id: `conn_emission_${Date.now()}`,
-          fromNodeId: emissionNodeId,
-          fromSocketId: 'emission',
-          toNodeId: outputNode.id,
-          toSocketId: 'surface',
-        },
-      ]);
-
-      undoBuffer.pushState('Convert Layer to Emissive (Glow)', layers);
-      notifyTextureUpdated();
-    }
+  const handleConvertToReflection = (layerId: string) => {
+    const target = layers.find(l => l.id === layerId);
+    if (!target || target.isTextureFill) return;
+    LayerConversions.convertToReflection(target);
+    undoBuffer.pushState('Convert Layer to Reflection', layers);
+    notifyTextureUpdated();
   };
 
   const handleSelectLayer = (id: string) => {
@@ -1959,6 +1909,8 @@ export default function App() {
                             onOpenStochasticScatter={() => setIsStochasticScatterOpen(true)}
                             onOpenStitchStudio={() => setIsStitchStudioOpen(true)}
                             onConvertToBump={handleConvertToBump}
+                            onConvertToDisplacement={handleConvertToDisplacement}
+                            onConvertToReflection={handleConvertToReflection}
                             onConvertToNormal={handleConvertToNormal}
                             onConvertToClipMask={handleConvertToClipMask}
                             onConvertToEmissive={handleConvertToEmissive}
@@ -2124,6 +2076,8 @@ export default function App() {
                       onOpenStochasticScatter={() => setIsStochasticScatterOpen(true)}
                       onOpenStitchStudio={() => setIsStitchStudioOpen(true)}
                       onConvertToBump={handleConvertToBump}
+                      onConvertToDisplacement={handleConvertToDisplacement}
+                      onConvertToReflection={handleConvertToReflection}
                       onConvertToNormal={handleConvertToNormal}
                       onConvertToClipMask={handleConvertToClipMask}
                       onConvertToEmissive={handleConvertToEmissive}
