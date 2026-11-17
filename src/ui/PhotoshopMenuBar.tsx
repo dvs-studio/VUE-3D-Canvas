@@ -148,7 +148,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
             V
           </div>
           <span className="font-bold text-[#eee] tracking-tight text-[11px]">VUE 3D Canvas</span>
-          <span className="text-[9px] text-[#3d7fb8] font-mono font-medium">Rust/WASM</span>
+          <span className="text-[9px] text-[#3d7fb8] font-mono font-medium">WebGL</span>
         </div>
 
         {/* FILE MENU */}
@@ -209,21 +209,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               >
                 Export 3D Mesh (.obj)
               </button>
-              <button
-                onClick={() => { onExportBlenderSpec(); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white"
-              >
-                Export Blender .blend Material
-              </button>
-              {onImportBlenderMaterial && (
-                <button
-                  onClick={() => { onImportBlenderMaterial(); close(); }}
-                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#cba6f7]"
-                >
-                  <span>Import Blender Material (.json / dict)...</span>
-                  <span className="text-[#cba6f7] font-mono text-[10px]">PBR</span>
-                </button>
-              )}
               {onExportMultiChannelModel && (
                 <button
                   onClick={() => { onExportMultiChannelModel(); close(); }}
