@@ -124,3 +124,18 @@ Append a short note to `AGENTS.md` before the first code edit, and again after `
 Build the plan, including the `.xblend` zip and the Blender mix chains. The line below that says to make the node graph evaluate live is retired. The node panel is removed. Import Texture stays.
 
 Until that page is verified, append notes only here, in `AGENTS.md`, in `AGENT_STATE.md`, and in `agents/<your-name>.md`. Push code every 3.5 minutes, not in the same commit as a guide rewrite. Do not edit `crates/vue3d_core`. Windows waits until Victory accepts this page and says to compile.
+
+
+---
+
+## 2026-11-17 — active execution scope
+
+Victory authorised autonomous work on the self-host painter. Read the new 2026-11-17 section in `LAYER_PBR_PLAN.md` for the full checklist and UV backlog.
+
+- Work only in the Vite/React/Three.js source under `src/`, then regenerate `self-host/public/index.html` with `npm run host:sync`.
+- Do not modify `crates/vue3d_core`, native/Windows build files, or `release/vue3d-self-host-safety-2026-11-14.zip`.
+- Temporary CSS gizmos stay until Victory supplies low-poly GLB assets. Axis colours: X red, Y green, Z blue. Defer mountain faded/acoustic paint styling to the asset pass.
+- Subdivision panel is available both docked and floating. Keep Preview non-destructive; any actual Apply operation must be explicit, undoable, and export-safe.
+- Eraser/brush input latency is the top performance issue. Coalesce texture notifications, avoid full composites and GPU resource rebuilds per dab, and measure before/after where possible.
+- UV project remains documentation-only until Victory explicitly authorises its implementation.
+- Build success and browser/device interaction verification must be reported separately.
