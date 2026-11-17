@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check, Stamp, Cpu, Settings, SplitSquareVertical, LayoutGrid, Activity, Compass } from 'lucide-react';
+import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check, Stamp, Settings, SplitSquareVertical, LayoutGrid, Activity, Compass } from 'lucide-react';
 import { ThemeMode, ViewportShadingMode, SurfaceShadingMode } from '../core/types';
 
 interface PhotoshopMenuBarProps {
