@@ -1,229 +1,362 @@
 # ==============================================================================
-# VUE 3D Canvas -> Blender 2.8+ Structural Exporter & Importer Script
+# VUE 3D Canvas - Layer PBR ZIP Importer for Blender 2.80+
 # Author: Victory Ukpong
-# System Architecture: Rust (Data Engine) -> Target-Agnostic JSON -> Blender 2.8 bpy
-# Compatible with: Blender 2.80, 2.81, 2.82, 2.83 LTS & ArmorPaint D3D11 Layers
+# Reads layer_manifest.json and baked per-layer maps. Does not rebuild web nodes.
 # ==============================================================================
 
 import bpy
 import json
 import os
-import sys
+import tempfile
+import zipfile
 
-def import_vue_material_graph(json_file_or_string, target_material_name=None):
-    """
-    Parses a VUE 3D Canvas structural JSON export and constructs the exact
-    Blender 2.8+ Shader Node Graph in bpy.context.active_object.active_material.node_tree.
-    
-    Rigidly checks `node.blender_type_name`, allocates nodes via `nodes.new()`,
-    sets custom properties, and connects sockets via `links.new()`.
-    """
-    # 1. Parse JSON payload
-    if os.path.isfile(json_file_or_string):
-        with open(json_file_or_string, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+
+def _socket(node, names):
+    for name in names:
+        socket = node.inputs.get(name)
+        if socket is not None:
+            return socket
+    return None
+
+
+def _output(node, names):
+    for name in names:
+        socket = node.outputs.get(name)
+        if socket is not None:
+            return socket
+    return None
+
+
+def _set_default(node, names, value):
+    socket = _socket(node, names)
+    if socket is not None:
+        socket.default_value = value
+        return socket
+    return None
+
+
+def _new_node(nodes, node_type, label, location):
+    node = nodes.new(node_type)
+    node.label = label
+    node.location = location
+    return node
+
+
+def _safe_extract(zip_path, destination):
+    root = os.path.realpath(destination)
+    with zipfile.ZipFile(zip_path, 'r') as archive:
+        for member in archive.infolist():
+            target = os.path.realpath(os.path.join(root, member.filename))
+            if target != root and not target.startswith(root + os.sep):
+                raise ValueError("Unsafe path in VUE project ZIP: " + member.filename)
+        archive.extractall(destination)
+
+
+def _load_manifest(source_path):
+    if os.path.isdir(source_path):
+        manifest_path = os.path.join(source_path, "layer_manifest.json")
+        if not os.path.isfile(manifest_path):
+            raise FileNotFoundError("layer_manifest.json was not found in the selected folder.")
+        with open(manifest_path, "r", encoding="utf-8") as handle:
+            return json.load(handle), source_path
+
+    if zipfile.is_zipfile(source_path):
+        temp_dir = tempfile.mkdtemp(prefix="vue3d_import_")
+        _safe_extract(source_path, temp_dir)
+        manifest_path = os.path.join(temp_dir, "layer_manifest.json")
+        if not os.path.isfile(manifest_path):
+            raise FileNotFoundError("The ZIP does not contain layer_manifest.json.")
+        with open(manifest_path, "r", encoding="utf-8") as handle:
+            return json.load(handle), temp_dir
+
+    raise ValueError("Choose a VUE 3D Canvas ZIP bundle or an extracted bundle folder.")
+
+
+def _image_node(nodes, links, base_dir, relative_path, uv_name, label, location, color_space):
+    if not relative_path:
+        return None
+    image_path = os.path.realpath(os.path.join(base_dir, relative_path))
+    base = os.path.realpath(base_dir)
+    if not image_path.startswith(base + os.sep) or not os.path.isfile(image_path):
+        print("[VUE 3D Canvas] Missing or unsafe map: " + str(relative_path))
+        return None
+
+    image = bpy.data.images.load(image_path, check_existing=True)
+    try:
+        image.colorspace_settings.name = color_space
+    except Exception:
+        pass
+
+    uv = _new_node(nodes, "ShaderNodeUVMap", label + " UV", (location[0] - 220, location[1]))
+    if uv_name and hasattr(uv, "uv_map"):
+        uv.uv_map = uv_name
+
+    texture = _new_node(nodes, "ShaderNodeTexImage", label, location)
+    texture.image = image
+    uv_output = _output(uv, ["UV"])
+    vector_input = _socket(texture, ["Vector"])
+    if uv_output and vector_input:
+        links.new(uv_output, vector_input)
+    return texture
+
+
+def _alpha_factor(nodes, links, texture, strength, location, label):
+    alpha = _output(texture, ["Alpha"])
+    if alpha is None:
+        return None
+    factor = _new_node(nodes, "ShaderNodeMath", label + " opacity × influence", location)
+    factor.operation = 'MULTIPLY'
+    factor.inputs[1].default_value = max(0.0, min(1.0, float(strength)))
+    links.new(alpha, factor.inputs[0])
+    return factor.outputs[0]
+
+
+def _ramp_node(nodes, links, texture, stops, location, label):
+    bw = _new_node(nodes, "ShaderNodeRGBToBW", label + " luminance", (location[0] - 190, location[1]))
+    ramp = _new_node(nodes, "ShaderNodeValToRGB", label + " bump ramp", location)
+    color_input = _socket(bw, ["Color"])
+    color_output = _output(texture, ["Color"])
+    if color_output and color_input:
+        links.new(color_output, color_input)
+
+    ramp_data = sorted(stops or [{"position": 0.0, "height": 0.0}, {"position": 1.0, "height": 1.0}],
+                       key=lambda item: float(item.get("position", 0.0)))
+    elements = ramp.color_ramp.elements
+    while len(elements) > 2:
+        elements.remove(elements[-1])
+    for index, stop in enumerate(ramp_data):
+        position = max(0.0, min(1.0, float(stop.get("position", index))))
+        height = max(0.0, min(1.0, float(stop.get("height", position))))
+        if index < 2:
+            element = elements[index]
+        else:
+            element = elements.new(position)
+        element.position = position
+        element.color = (height, height, height, 1.0)
+    if len(ramp_data) < 2:
+        elements[0].position = 0.0
+        elements[0].color = (0.0, 0.0, 0.0, 1.0)
+        elements[1].position = 1.0
+        elements[1].color = (1.0, 1.0, 1.0, 1.0)
+    links.new(bw.outputs["Val"], ramp.inputs["Fac"])
+    return ramp.outputs["Color"]
+
+
+def _make_material(obj, name):
+    material = bpy.data.materials.get(name) or bpy.data.materials.new(name=name)
+    material.use_nodes = True
+    if obj.data.materials:
+        obj.data.materials[0] = material
     else:
-        data = json.loads(json_file_or_string)
+        obj.data.materials.append(material)
+    material.node_tree.nodes.clear()
+    return material
 
-    mat_name = target_material_name or data.get("material_name", "VUE_D3D11_Material")
 
-    # 2. Get or initialize Active Object
+def import_vue_layer_manifest(manifest_path, target_material_name=None):
+    """Import a folder containing layer_manifest.json and its layer_maps directory."""
+    with open(manifest_path, "r", encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    return _build_layer_material(manifest, os.path.dirname(os.path.realpath(manifest_path)),
+                                 target_material_name)
+
+
+def _build_layer_material(manifest, base_dir, target_material_name=None):
+    if manifest.get("format") != "VUE3D_LAYER_PBR_MANIFEST":
+        raise ValueError("Unsupported VUE manifest. Expected VUE3D_LAYER_PBR_MANIFEST.")
+
     obj = bpy.context.active_object
-    if obj is None:
-        bpy.ops.mesh.primitive_cube_add()
-        obj = bpy.context.active_object
-        print(f"[VUE 3D Exporter] Created default mesh object: {obj.name}")
+    if obj is None or not hasattr(obj.data, "materials"):
+        raise RuntimeError("Select a mesh object before importing the VUE material.")
 
-    # 3. Create or reuse Material
-    mat = bpy.data.materials.get(mat_name)
-    if mat is None:
-        mat = bpy.data.materials.new(name=mat_name)
-    mat.use_nodes = True
+    project_name = manifest.get("projectName", "VUE3D_Project")
+    material_name = target_material_name or (project_name + "_Material")
+    material = _make_material(obj, material_name)
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
 
-    # Assign to object's active material slot
-    if len(obj.data.materials) == 0:
-        obj.data.materials.append(mat)
-    else:
-        obj.data.materials[0] = mat
+    output = _new_node(nodes, "ShaderNodeOutputMaterial", "VUE Material Output", (1500, 100))
+    principled = _new_node(nodes, "ShaderNodeBsdfPrincipled", "VUE Principled BSDF", (1200, 100))
+    surface = _output(principled, ["BSDF"])
+    surface_input = _socket(output, ["Surface"])
+    if surface and surface_input:
+        links.new(surface, surface_input)
 
-    tree = mat.node_tree
-    nodes = tree.nodes
-    links = tree.links
+    _set_default(principled, ["Metallic"], 0.0)
+    _set_default(principled, ["Roughness"], 1.0)
+    _set_default(principled, ["Base Color"], (1.0, 1.0, 1.0, 1.0))
 
-    # Clear default Principled / Output nodes for a clean structural build
-    nodes.clear()
+    layers = sorted(manifest.get("layers", []), key=lambda layer: int(layer.get("order", 0)))
+    color_chain = _socket(principled, ["Base Color"])
+    roughness_chain = None
+    emission_chain = None
+    height_chain = None
+    normal_texture = None
+    normal_uv = None
+    x_color = -700
+    y_color = 700
 
-    allocated_nodes = {}
-
-    # 4. Rigorous Blender 2.8 Allocation Loop
-    for node_data in data.get("nodes", []):
-        node_id = node_data["id"]
-        type_name = node_data["blender_type_name"]
-        loc = node_data.get("location", [0.0, 0.0])
-        title = node_data.get("title", type_name)
-
-        try:
-            b_node = nodes.new(type=type_name)
-        except Exception as err:
-            print(f"[VUE 3D Exporter] Error: Could not allocate node '{type_name}': {err}")
+    for index, layer in enumerate(layers):
+        if not layer.get("visible", True):
             continue
+        maps = layer.get("maps", {})
+        uv_name = layer.get("uvChannel", "")
+        opacity = max(0.0, min(1.0, float(layer.get("opacity", 100)) / 100.0))
+        order_y = y_color - index * 260
 
-        b_node.name = node_id
-        b_node.label = title
-        # Invert Y coordinate so top-to-bottom layout matches Blender 2.8 node editor
-        b_node.location = (float(loc[0]), -float(loc[1]))
-
-        # Configure exact attributes from properties dictionary
-        props = node_data.get("properties", {})
-        for prop_key, prop_val in props.items():
-            if hasattr(b_node, prop_key):
-                try:
-                    attr_type = type(getattr(b_node, prop_key))
-                    if attr_type == bool:
-                        setattr(b_node, prop_key, str(prop_val).lower() in ("true", "1", "yes"))
-                    elif attr_type == int:
-                        setattr(b_node, prop_key, int(prop_val))
-                    elif attr_type == float:
-                        setattr(b_node, prop_key, float(prop_val))
-                    else:
-                        setattr(b_node, prop_key, str(prop_val))
-                except Exception as ex:
-                    print(f"[VUE 3D Exporter] Warning setting {node_id}.{prop_key}={prop_val}: {ex}")
-
-        # Specialized node property configurations
-        if type_name == "ShaderNodeValToRGB" and "stops" in props:
-            # Color ramp stops setup
-            pass
-
-        allocated_nodes[node_id] = b_node
-
-    # 5. Connect Links step-by-step using links.new()
-    successful_links = 0
-    for link_data in data.get("links", []):
-        from_id = link_data["from_node_id"]
-        to_id = link_data["to_node_id"]
-        from_sock_name = link_data["from_socket"]
-        to_sock_name = link_data["to_socket"]
-
-        from_node = allocated_nodes.get(from_id)
-        to_node = allocated_nodes.get(to_id)
-
-        if not from_node or not to_node:
-            print(f"[VUE 3D Exporter] Link warning: Missing node ({from_id} -> {to_id})")
-            continue
-
-        # Look up output socket by identifier or name
-        out_socket = None
-        for s in from_node.outputs:
-            if s.identifier == from_sock_name or s.name == from_sock_name:
-                out_socket = s
-                break
-        if out_socket is None and len(from_node.outputs) > 0:
-            out_socket = from_node.outputs[0]
-
-        # Look up input socket by identifier or name
-        in_socket = None
-        for s in to_node.inputs:
-            if s.identifier == to_sock_name or s.name == to_sock_name:
-                in_socket = s
-                break
-        if in_socket is None and len(to_node.inputs) > 0:
-            in_socket = to_node.inputs[0]
-
-        if out_socket and in_socket:
-            try:
-                links.new(out_socket, in_socket)
-                successful_links += 1
-            except Exception as e:
-                print(f"[VUE 3D Exporter] Link connection failed: {e}")
-
-    print("=" * 60)
-    print(f"[VUE 3D Exporter] Imported '{mat_name}' successfully!")
-    print(f"Allocated Nodes: {len(allocated_nodes)}")
-    print(f"Created Links:   {successful_links}")
-    print("=" * 60)
-    return mat
-
-
-# Quick test invocation if run directly inside Blender's Text Editor
-if __name__ == "__main__":
-    test_json_sample = {
-        "material_name": "VUE_ArmorPaint_PBR",
-        "nodes": [
-            {
-                "id": "tex_coord_1",
-                "title": "Texture Coordinate",
-                "blender_type_name": "ShaderNodeTexCoord",
-                "location": [40, 100],
-                "size": [200, 160],
-                "properties": {},
-                "inputs": [],
-                "outputs": [{"identifier": "UV", "name": "UV", "type": "NodeSocketVector"}]
-            },
-            {
-                "id": "mapping_1",
-                "title": "Vector Mapping",
-                "blender_type_name": "ShaderNodeMapping",
-                "location": [280, 100],
-                "size": [200, 160],
-                "properties": {"vector_type": "POINT"},
-                "inputs": [{"identifier": "Vector", "name": "Vector", "type": "NodeSocketVector"}],
-                "outputs": [{"identifier": "Vector", "name": "Vector", "type": "NodeSocketVector"}]
-            },
-            {
-                "id": "noise_1",
-                "title": "Noise Texture",
-                "blender_type_name": "ShaderNodeTexNoise",
-                "location": [520, 80],
-                "size": [200, 160],
-                "properties": {},
-                "inputs": [{"identifier": "Vector", "name": "Vector", "type": "NodeSocketVector"}],
-                "outputs": [
-                    {"identifier": "Color", "name": "Color", "type": "NodeSocketColor"},
-                    {"identifier": "Fac", "name": "Fac", "type": "NodeSocketFloat"}
-                ]
-            },
-            {
-                "id": "ramp_1",
-                "title": "ColorRamp",
-                "blender_type_name": "ShaderNodeValToRGB",
-                "location": [760, 140],
-                "size": [240, 160],
-                "properties": {"interpolation": "LINEAR"},
-                "inputs": [{"identifier": "Fac", "name": "Fac", "type": "NodeSocketFloat"}],
-                "outputs": [{"identifier": "Color", "name": "Color", "type": "NodeSocketColor"}]
-            },
-            {
-                "id": "principled_1",
-                "title": "Principled BSDF",
-                "blender_type_name": "ShaderNodeBsdfPrincipled",
-                "location": [1040, 80],
-                "size": [260, 240],
-                "properties": {},
-                "inputs": [
-                    {"identifier": "Base Color", "name": "Base Color", "type": "NodeSocketColor"},
-                    {"identifier": "Roughness", "name": "Roughness", "type": "NodeSocketFloat"}
-                ],
-                "outputs": [{"identifier": "BSDF", "name": "BSDF", "type": "NodeSocketShader"}]
-            },
-            {
-                "id": "output_1",
-                "title": "Material Output",
-                "blender_type_name": "ShaderNodeOutputMaterial",
-                "location": [1340, 80],
-                "size": [200, 120],
-                "properties": {"target": "ALL"},
-                "inputs": [{"identifier": "Surface", "name": "Surface", "type": "NodeSocketShader"}],
-                "outputs": []
+        # Base colour: blend modes and alpha are evaluated per layer.
+        color_path = maps.get("color") if layer.get("colorOn", True) else None
+        color_tex = _image_node(nodes, links, base_dir, color_path, uv_name,
+                                "Layer %s Colour" % layer.get("name", index),
+                                (x_color, order_y), "sRGB")
+        if color_tex:
+            influence = opacity * max(0.0, min(1.0, float(layer.get("colorInfluence", 1.0))))
+            factor = _alpha_factor(nodes, links, color_tex, influence, (x_color + 190, order_y - 110),
+                                   "Layer %s colour factor" % index)
+            mix = _new_node(nodes, "ShaderNodeMixRGB", "Layer %s colour blend" % index,
+                            (x_color + 420, order_y))
+            blend_modes = {
+                "normal": "MIX", "multiply": "MULTIPLY", "screen": "SCREEN",
+                "overlay": "OVERLAY", "darken": "DARKEN", "lighten": "LIGHTEN",
+                "hard_light": "HARD_LIGHT", "soft_light": "SOFT_LIGHT",
+                "difference": "DIFFERENCE",
             }
-        ],
-        "links": [
-            {"from_node_id": "tex_coord_1", "from_socket": "UV", "to_node_id": "mapping_1", "to_socket": "Vector"},
-            {"from_node_id": "mapping_1", "from_socket": "Vector", "to_node_id": "noise_1", "to_socket": "Vector"},
-            {"from_node_id": "noise_1", "from_socket": "Fac", "to_node_id": "ramp_1", "to_socket": "Fac"},
-            {"from_node_id": "ramp_1", "from_socket": "Color", "to_node_id": "principled_1", "to_socket": "Base Color"},
-            {"from_node_id": "principled_1", "from_socket": "BSDF", "to_node_id": "output_1", "to_socket": "Surface"}
-        ]
-    }
+            mix.blend_type = blend_modes.get(layer.get("blendMode", "normal"), "MIX")
+            if color_chain:
+                links.new(color_chain, mix.inputs["Color1"])
+            links.new(_output(color_tex, ["Color"]), mix.inputs["Color2"])
+            if factor:
+                links.new(factor, mix.inputs["Fac"])
+            else:
+                mix.inputs["Fac"].default_value = influence
+            color_chain = mix.outputs["Color"]
 
-    import_vue_material_graph(json.dumps(test_json_sample))
+        # Reflection strength is inverted into roughness; no colour blend mode is used.
+        reflection_path = maps.get("reflection") if layer.get("reflectionOn", False) else None
+        reflection_tex = _image_node(nodes, links, base_dir, reflection_path, uv_name,
+                                     "Layer %s Reflection" % layer.get("name", index),
+                                     (x_color, order_y - 300), "Non-Color")
+        if reflection_tex:
+            bw = _new_node(nodes, "ShaderNodeRGBToBW", "Reflection strength", (x_color + 210, order_y - 300))
+            links.new(_output(reflection_tex, ["Color"]), bw.inputs["Color"])
+            scaled = _new_node(nodes, "ShaderNodeMath", "Reflection influence", (x_color + 400, order_y - 300))
+            scaled.operation = 'MULTIPLY'
+            scaled.inputs[1].default_value = opacity * max(0.0, min(1.0, float(layer.get("reflectionInfluence", 0.0))))
+            links.new(bw.outputs["Val"], scaled.inputs[0])
+            invert = _new_node(nodes, "ShaderNodeMath", "Reflection to roughness", (x_color + 590, order_y - 300))
+            invert.operation = 'SUBTRACT'
+            invert.inputs[0].default_value = 1.0
+            links.new(scaled.outputs[0], invert.inputs[1])
+            factor = _alpha_factor(nodes, links, reflection_tex, 1.0, (x_color + 210, order_y - 420),
+                                   "Reflection alpha")
+            mix = _new_node(nodes, "ShaderNodeMixRGB", "Roughness layer mix", (x_color + 800, order_y - 300))
+            mix.inputs["Color1"].default_value = (1.0, 1.0, 1.0, 1.0) if roughness_chain is None else (0.5, 0.5, 0.5, 1.0)
+            if roughness_chain:
+                links.new(roughness_chain, mix.inputs["Color1"])
+            links.new(invert.outputs[0], mix.inputs["Color2"])
+            if factor:
+                links.new(factor, mix.inputs["Fac"])
+            else:
+                mix.inputs["Fac"].default_value = 0.0
+            roughness_chain = mix.outputs["Color"]
+
+        # Emission accumulates additively, independent of albedo.
+        emission_path = maps.get("emission") if layer.get("emissionOn", False) else None
+        emission_tex = _image_node(nodes, links, base_dir, emission_path, uv_name,
+                                   "Layer %s Emission" % layer.get("name", index),
+                                   (x_color, order_y - 600), "sRGB")
+        if emission_tex:
+            influence = opacity * max(0.0, min(1.0, float(layer.get("emissionInfluence", 0.0))))
+            factor = _alpha_factor(nodes, links, emission_tex, influence, (x_color + 210, order_y - 710),
+                                   "Emission factor")
+            add = _new_node(nodes, "ShaderNodeMixRGB", "Emission additive mix", (x_color + 440, order_y - 600))
+            add.blend_type = 'ADD'
+            if emission_chain:
+                links.new(emission_chain, add.inputs["Color1"])
+            else:
+                add.inputs["Color1"].default_value = (0.0, 0.0, 0.0, 1.0)
+            links.new(_output(emission_tex, ["Color"]), add.inputs["Color2"])
+            if factor:
+                links.new(factor, add.inputs["Fac"])
+            else:
+                add.inputs["Fac"].default_value = influence
+            emission_chain = add.outputs["Color"]
+
+        # Height is ramped per layer and accumulated into one scalar height chain.
+        height_path = maps.get("height") if layer.get("bumpOn", False) else None
+        height_tex = _image_node(nodes, links, base_dir, height_path, uv_name,
+                                 "Layer %s Height" % layer.get("name", index),
+                                 (x_color, order_y - 900), "Non-Color")
+        if height_tex:
+            ramp_output = _ramp_node(nodes, links, height_tex, layer.get("bumpRamp", []),
+                                     (x_color + 220, order_y - 900), "Layer %s" % index)
+            influence = opacity * max(0.0, min(1.0, float(layer.get("bumpInfluence", 0.0))))
+            factor = _alpha_factor(nodes, links, height_tex, influence, (x_color + 220, order_y - 1030),
+                                   "Height factor")
+            add = _new_node(nodes, "ShaderNodeMixRGB", "Height additive mix", (x_color + 480, order_y - 900))
+            add.blend_type = 'ADD'
+            if height_chain:
+                links.new(height_chain, add.inputs["Color1"])
+            else:
+                add.inputs["Color1"].default_value = (0.0, 0.0, 0.0, 1.0)
+            links.new(ramp_output, add.inputs["Color2"])
+            if factor:
+                links.new(factor, add.inputs["Fac"])
+            else:
+                add.inputs["Fac"].default_value = influence
+            height_chain = add.outputs["Color"]
+
+        if layer.get("normalLock", False) and maps.get("normal"):
+            normal_texture = _image_node(nodes, links, base_dir, maps.get("normal"), uv_name,
+                                         "Locked Normal - " + layer.get("name", str(index)),
+                                         (x_color + 20, order_y - 1200), "Non-Color")
+
+    if color_chain:
+        links.new(color_chain, _socket(principled, ["Base Color"]))
+    if roughness_chain:
+        links.new(roughness_chain, _socket(principled, ["Roughness"]))
+    if emission_chain:
+        emission_input = _socket(principled, ["Emission", "Emission Color"])
+        if emission_input:
+            links.new(emission_chain, emission_input)
+        _set_default(principled, ["Emission Strength"], 1.0)
+
+    if normal_texture:
+        normal_node = _new_node(nodes, "ShaderNodeNormalMap", "Single locked normal source", (850, -650))
+        links.new(_output(normal_texture, ["Color"]), normal_node.inputs["Color"])
+        normal_output = _output(normal_node, ["Normal"])
+        if normal_output:
+            links.new(normal_output, _socket(principled, ["Normal"]))
+    elif height_chain:
+        height_normal = _new_node(nodes, "ShaderNodeNormalMap", "Normal from combined height", (850, -900))
+        links.new(height_chain, height_normal.inputs["Color"])
+        links.new(_output(height_normal, ["Normal"]), _socket(principled, ["Normal"]))
+        displacement = _new_node(nodes, "ShaderNodeDisplacement", "Height displacement", (1200, -650))
+        links.new(height_chain, _socket(displacement, ["Height"]))
+        displacement_output = _output(displacement, ["Displacement"])
+        displacement_input = _socket(output, ["Displacement"])
+        if displacement_output and displacement_input:
+            links.new(displacement_output, displacement_input)
+
+    print("[VUE 3D Canvas] Imported %d layer records into one Principled material: %s" %
+          (len(layers), material.name))
+    return material
+
+
+def import_vue_layer_bundle(zip_path, target_material_name=None):
+    """Import a VUE .xblend + ZIP bundle generated by the self-hosted painter."""
+    manifest, base_dir = _load_manifest(zip_path)
+    return _build_layer_material(manifest, base_dir, target_material_name)
+
+
+# Compatibility name for older scripts. The retired web node graph is intentionally unsupported.
+def import_vue_material_graph(json_file_or_string, target_material_name=None):
+    raise ValueError(
+        "The old web node-graph importer is retired. Export a .xblend + ZIP bundle "
+        "and call import_vue_layer_bundle(zip_path) instead."
+    )
+
+
+if __name__ == "__main__":
+    print("VUE 3D Canvas importer ready. Run import_vue_layer_bundle('/path/to/project.zip') "
+          "with a mesh object selected.")
