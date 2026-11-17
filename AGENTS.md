@@ -21,7 +21,7 @@ The page is still `index-DXhSIj8p.js`. This set mixes the work that was already 
 
 ### Current implementation
 
-In progress. Repository write access has been re-authorized. Implementation is beginning with the self-hosted Vite/React/Three.js painter only. Preserve the concluded history below; do not edit `crates/vue3d_core` or the safety ZIP.
+In progress. Repository write access has been re-authorized. Active implementation is the self-hosted Vite/React/Three.js painter only. 2026-11-17 checkpoint: per-frame paint notification coalescing, dirty-region 3D brush/eraser composite updates, axis-coloured temporary gizmos, and a visible subdivision panel are landed. Full details and remaining work are in `LAYER_PBR_PLAN.md`. Preserve the concluded history below; do not edit `crates/vue3d_core` or the safety ZIP.
 
 ### Current history — concluded set
 
@@ -383,3 +383,12 @@ Victory authorised autonomous work on the self-hosted Vite/React/Three.js painte
 - Keep existing axis and viewport controls functional; keep the mountain faded painting treatment deferred. Keep the UV editor marked as planned/coming soon, not implemented.
 
 This is a pre-execution note only; no implementation result is claimed here.
+
+
+### 2026-11-17 — implementation checkpoint (not feature-complete)
+- Docs: expanded `LAYER_PBR_PLAN.md` with the viewport/model/subdivision/filter work and a detailed UV project backlog. UV implementation remains gated on Victory's explicit confirmation.
+- `src/App.tsx`: coalesces `notifyTextureUpdated` into one composite sync per animation frame; subdivision panel is visible by default and already supports docked/floating switching.
+- `src/renderer/Viewport3D.tsx`: brush, eraser, pen, blur, clone and smudge now recompose only dirty paint rectangles across visible colour-contributing layers during 3D strokes. Large-area tools retain a full-composite fallback. The full PBR map rebuild remains on stroke completion.
+- `src/renderer/boxGizmo.tsx`: temporary CSS gizmos use X red, Y green, Z blue labels; front/back are +Z/-Z and top/bottom are +Y/-Y. User-supplied GLB gizmos and mountain faded/acoustic paint treatment remain future work.
+- GitHub Actions run [44196595476](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44196595476) passed install, build, host sync, package checks and artifact upload. Generated bundle: `index-DwkyI3V_.js`; artifact ID `14378169255`. This does not verify browser interaction, device latency, mesh isolation completeness, or Blender import.
+- No before/after latency measurements were captured in this environment. Do not claim the lag is fully resolved until Victory tests it on target hardware and metrics are recorded.
