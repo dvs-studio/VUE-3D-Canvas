@@ -48,7 +48,6 @@ import { LayersPanel } from './ui/panels/LayersPanel';
 import { ColorWheelPanel } from './ui/panels/ColorWheelPanel';
 import { BrushLibraryPanel } from './ui/panels/BrushLibraryPanel';
 import { NavigatorPanel } from './ui/panels/NavigatorPanel';
-import { NodeGraphPanel } from './ui/panels/NodeGraphPanel';
 import { UndoHistoryPanel } from './ui/panels/UndoHistoryPanel';
 import { CircularCarousel } from './ui/CircularCarousel';
 import { NumpadOverlay } from './ui/NumpadOverlay';
@@ -393,7 +392,7 @@ export default function App() {
     navigator: true,
     symmetry: true,
     masking: false,
-    nodeGraph: false,
+    uvEditor: false,
     history: true,
   });
 
@@ -404,7 +403,7 @@ export default function App() {
     navigator: false,
     symmetry: false,
     masking: false,
-    nodeGraph: true,
+    uvEditor: true,
     history: false,
   });
 
@@ -1099,11 +1098,6 @@ export default function App() {
 
       setLayers(loadedLayers);
       if (loadedLayers.length > 0) setActiveLayerId(loadedLayers[0].id);
-
-      if (project.nodeGraph) {
-        setNodes(project.nodeGraph.nodes);
-        setConnections(project.nodeGraph.connections);
-      }
 
       if (project.materialProperties) {
         setMaterialProps(project.materialProperties);
@@ -2253,28 +2247,24 @@ export default function App() {
       </div>
 
       {/* Floating Panels (Torn off into floating windows) */}
-      {panelFloating.nodeGraph && activePanels.nodeGraph && (
+      {panelFloating.uvEditor && activePanels.uvEditor && (
         <DockablePanelFrame
-          id="nodeGraph"
-          title="Blender 2.83 LTS Shader Node Graph"
-          icon={<Share2 className="w-3.5 h-3.5 text-[#f97316]" />}
+          id="uvEditor"
+          title="UV Editor"
+          icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
           isFloating={true}
           initialPos={{ x: 140, y: 120 }}
-          width={640}
-          height={420}
-          minWidth={440}
-          minHeight={320}
-          onClose={() => togglePanel('nodeGraph')}
-          onToggleFloat={() => togglePanelFloat('nodeGraph')}
+          width={360}
+          height={180}
+          minWidth={280}
+          minHeight={140}
+          onClose={() => togglePanel('uvEditor')}
+          onToggleFloat={() => togglePanelFloat('uvEditor')}
         >
-          <NodeGraphPanel
-            nodes={nodes}
-            connections={connections}
-            onUpdateNodes={setNodes}
-            onUpdateConnections={setConnections}
-            onBakeToLayer={handleBakeNodeTree}
-            onExportBlenderSpec={handleExportBlenderMaterial}
-          />
+          <div className="h-full bg-[#292929] text-[#c8c8c8] flex flex-col justify-center items-center gap-2 p-5 text-center">
+            <strong className="text-sm text-[#eee]">Coming soon.</strong>
+            <span className="text-xs text-[#999]">A full-screen UV desk for this mesh. Not in this build.</span>
+          </div>
         </DockablePanelFrame>
       )}
 
@@ -2471,9 +2461,6 @@ export default function App() {
         onSavePBR={handleSaveLayerPBR}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
-        onOpenNodeEditor={() => {
-          setActivePanels(p => ({ ...p, nodeGraph: true }));
-        }}
       />
 
       {/* 13. Pattern Stamp Tool Configuration Dialog */}
