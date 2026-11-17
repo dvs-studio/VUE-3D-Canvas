@@ -48,7 +48,6 @@ import { LayersPanel } from './ui/panels/LayersPanel';
 import { ColorWheelPanel } from './ui/panels/ColorWheelPanel';
 import { BrushLibraryPanel } from './ui/panels/BrushLibraryPanel';
 import { NavigatorPanel } from './ui/panels/NavigatorPanel';
-import { UndoHistoryPanel } from './ui/panels/UndoHistoryPanel';
 import { CircularCarousel } from './ui/CircularCarousel';
 import { NumpadOverlay } from './ui/NumpadOverlay';
 import { TriplanarDialog } from './ui/TriplanarDialog';
@@ -393,7 +392,6 @@ export default function App() {
     symmetry: true,
     masking: false,
     uvEditor: false,
-    history: true,
   });
 
   const [panelFloating, setPanelFloating] = useState<Record<string, boolean>>({
@@ -404,7 +402,6 @@ export default function App() {
     symmetry: false,
     masking: false,
     uvEditor: true,
-    history: false,
   });
 
   // 3D Viewport UnrealBloomPass Post-Processing Settings
@@ -1958,26 +1955,6 @@ export default function App() {
                         />
                       ),
                     },
-                    {
-                      id: 'history',
-                      title: 'History',
-                      icon: <History className="w-3 h-3 text-[#3d7fb8]" />,
-                      content: (
-                        <div className="h-56">
-                          <UndoHistoryPanel
-                            undoBuffer={undoBuffer}
-                            layers={layers}
-                            onUndo={handleUndo}
-                            onRedo={handleRedo}
-                            onJumpToState={(idx) => {
-                              if (undoBuffer.jumpToState(idx, layers)) {
-                                notifyTextureUpdated();
-                              }
-                            }}
-                          />
-                        </div>
-                      ),
-                    },
                   ]}
                   activeTabId={dockerGroup1Tab}
                   onSelectTab={setDockerGroup1Tab}
@@ -2144,31 +2121,6 @@ export default function App() {
                       onSelectBrush={setActiveBrush}
                       onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
                       onOpenCarousel={() => setIsCarouselOpen(true)}
-                    />
-                  </DockablePanelFrame>
-                </div>
-              )}
-
-              {/* Undo History (Normalized) */}
-              {activePanels.history && !panelFloating.history && (
-                <div className="border-b border-[#444] h-52 shrink-0">
-                  <DockablePanelFrame
-                    id="history"
-                    title="Undo History (Normalized)"
-                    icon={<History className="w-3.5 h-3.5 text-[#3d7fb8]" />}
-                    onClose={() => togglePanel('history')}
-                    onToggleFloat={() => togglePanelFloat('history')}
-                  >
-                    <UndoHistoryPanel
-                      undoBuffer={undoBuffer}
-                      layers={layers}
-                      onUndo={handleUndo}
-                      onRedo={handleRedo}
-                      onJumpToState={(idx) => {
-                        if (undoBuffer.jumpToState(idx, layers)) {
-                          notifyTextureUpdated();
-                        }
-                      }}
                     />
                   </DockablePanelFrame>
                 </div>
