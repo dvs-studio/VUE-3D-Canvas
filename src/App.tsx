@@ -1083,7 +1083,7 @@ export default function App() {
             enableBump: l.channel === 'height',
             reflectionSource: 'hdri',
             reflectionIntensity: 0.8,
-            colorOn: l.colorOn ?? !['height', 'normal', 'emission'].includes(l.channel),
+            colorOn: l.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(l.channel),
             colorInfluence: l.colorInfluence ?? 1,
             reflectionOn: l.reflectionOn ?? false,
             reflectionInfluence: l.reflectionInfluence ?? 0,
