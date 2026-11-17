@@ -51,15 +51,36 @@ function sourceMesh(source: THREE.BufferGeometry): { vertices: PreviewVertex[]; 
   const positions = source.getAttribute('position');
   if (!positions) throw new Error('Subdivision preview requires a position attribute.');
   const uvAttribute = source.getAttribute('uv');
-  const vertices: PreviewVertex[] = [];
-  for (let i = 0; i < positions.count; i++) {
-    vertices.push({
-      p: [positions.getX(i), positions.getY(i), positions.getZ(i)],
-      uv: uvAttribute ? [uvAttribute.getX(i), uvAttribute.getY(i)] : [0, 0],
-    });
-  }
   const index = source.getIndex();
-  const ids = index ? Array.from(index.array) : Array.from({ length: positions.count }, (_, i) => i);
+  const vertices: PreviewVertex[] = [];
+  let ids: number[];
+
+  if (index) {
+    for (let i = 0; i < positions.count; i++) {
+      vertices.push({
+        p: [positions.getX(i), positions.getY(i), positions.getZ(i)],
+        uv: uvAttribute ? [uvAttribute.getX(i), uvAttribute.getY(i)] : [0, 0],
+      });
+    }
+    ids = Array.from(index.array);
+  } else {
+    // Weld duplicate non-indexed corners by position + UV, retaining UV seams.
+    const lookup = new Map<string, number>();
+    ids = [];
+    for (let i = 0; i < positions.count; i++) {
+      const p: Vec3 = [positions.getX(i), positions.getY(i), positions.getZ(i)];
+      const uv: Vec2 = uvAttribute ? [uvAttribute.getX(i), uvAttribute.getY(i)] : [0, 0];
+      const key = [...p, ...uv].map(value => Math.round(value * 100000)).join(':');
+      let vertexIndex = lookup.get(key);
+      if (vertexIndex === undefined) {
+        vertexIndex = vertices.length;
+        lookup.set(key, vertexIndex);
+        vertices.push({ p, uv });
+      }
+      ids.push(vertexIndex);
+    }
+  }
+
   const faces: PreviewFace[] = [];
   for (let i = 0; i + 2 < ids.length; i += 3) faces.push({ v: [ids[i], ids[i + 1], ids[i + 2]] });
   return { vertices, faces };
