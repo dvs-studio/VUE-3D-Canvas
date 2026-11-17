@@ -10,7 +10,7 @@ import * as THREE from 'three';
 export type HDRIPreset = 'studio' | 'sunset' | 'cyberpunk' | 'outdoor' | 'custom';
 
 export class HDRIManager {
-  private static cachedTextures: Map<string, THREE.CanvasTexture> = new Map();
+  private static cachedTextures: Map<string, THREE.Texture> = new Map();
 
   /**
    * Procedurally generates a 1024x512 32-bit color-range equirectangular panorama canvas
@@ -130,7 +130,7 @@ export class HDRIManager {
       const tex = loader.load(customUrl);
       tex.mapping = THREE.EquirectangularReflectionMapping;
       tex.colorSpace = THREE.SRGBColorSpace;
-      this.cachedTextures.set(key, tex as any);
+      this.cachedTextures.set(key, tex);
       return tex;
     }
 
