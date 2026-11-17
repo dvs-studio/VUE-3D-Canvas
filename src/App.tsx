@@ -299,28 +299,7 @@ export default function App() {
   const [stagedTextureName, setStagedTextureName] = useState<string>('');
   const textureFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Graphics Hardware Backend Selection (DirectX 11 Priority Default)
-  const [gpuBackend, setGpuBackend] = useState<'dx11' | 'opengl' | 'modern'>(() => {
-    try {
-      const fromWindow = (window as Window & { __VUE_GPU_BACKEND__?: string }).__VUE_GPU_BACKEND__;
-      if (fromWindow === 'dx11' || fromWindow === 'opengl' || fromWindow === 'modern') {
-        return fromWindow;
-      }
-      return (localStorage.getItem('vue3d_gpu_backend') as 'dx11' | 'opengl' | 'modern' | null) || 'dx11';
-    } catch (_) {
-      return 'dx11';
-    }
-  });
   const [isGpuDiagnosticsOpen, setIsGpuDiagnosticsOpen] = useState<boolean>(false);
-
-  const handleSetGpuBackend = (backend: 'dx11' | 'opengl' | 'modern') => {
-    setGpuBackend(backend);
-    try {
-      localStorage.setItem('vue3d_gpu_backend', backend);
-    } catch (_) {}
-    const desktop = window as Window & { ipc?: { postMessage: (message: string) => void } };
-    desktop.ipc?.postMessage(`gpu:${backend}`);
-  };
 
   // Layer Material & PBR Settings Modal
   const [isLayerSettingsOpen, setIsLayerSettingsOpen] = useState<boolean>(false);
@@ -1418,8 +1397,6 @@ export default function App() {
         onToggleIsolateSelectedGroupOnly={(checked) => setIsolateSelectedGroupOnly(checked)}
         currentTheme={currentTheme}
         onChangeTheme={setCurrentTheme}
-        gpuBackend={gpuBackend}
-        onChangeGpuBackend={handleSetGpuBackend}
         onOpenGpuDiagnostics={() => setIsGpuDiagnosticsOpen(true)}
         onOpenPreferences={() => setIsPreferencesOpen(true)}
         shadingMode={shadingMode}
@@ -2397,7 +2374,6 @@ export default function App() {
       <GpuDiagnosticsModal
         isOpen={isGpuDiagnosticsOpen}
         onClose={() => setIsGpuDiagnosticsOpen(false)}
-        activeBackend={gpuBackend}
       />
 
       {/* 17. Application Preferences & Hardware Diagnostics Modal */}
