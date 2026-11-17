@@ -784,10 +784,10 @@ export default function App() {
   };
 
   // Triplanar Box Mapping Fill Execution
-  const handleConfirmTriplanar = (config: TriplanarConfig) => {
+  const handleConfirmTriplanar = async (config: TriplanarConfig) => {
     const targetLayer = layers.find(l => l.id === activeLayerId);
     if (targetLayer) {
-      FillSuite.applyTriplanarBoxFill(targetLayer.ctx, config, activeBrush.opacity);
+      await FillSuite.applyTriplanarBoxFill(targetLayer.ctx, config, activeBrush.opacity);
       undoBuffer.pushState('Triplanar Box Mapping Fill', layers);
       notifyTextureUpdated();
     }
