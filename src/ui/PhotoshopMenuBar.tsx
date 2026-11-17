@@ -14,7 +14,6 @@ interface PhotoshopMenuBarProps {
   onOpenProject: () => void;
   onSaveProject: () => void;
   onOpenProjectSettings: () => void;
-  onExportBlenderSpec: () => void;
   onExportOBJ: () => void;
   onExportBundleZip: () => void;
   onTriggerProjectionScreenshot: () => void;
@@ -49,7 +48,6 @@ interface PhotoshopMenuBarProps {
   onChangeTheme?: (theme: ThemeMode) => void;
   onOpenEdgeWearFilter?: () => void;
   onOpenPatternStampDialog?: () => void;
-  onImportBlenderMaterial?: () => void;
   onExportMultiChannelModel?: () => void;
   gpuBackend?: 'dx11' | 'opengl' | 'modern';
   onChangeGpuBackend?: (backend: 'dx11' | 'opengl' | 'modern') => void;
@@ -73,7 +71,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onOpenProject,
   onSaveProject,
   onOpenProjectSettings,
-  onExportBlenderSpec,
   onExportOBJ,
   onExportBundleZip,
   onTriggerProjectionScreenshot,
@@ -108,7 +105,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onChangeTheme,
   onOpenEdgeWearFilter,
   onOpenPatternStampDialog,
-  onImportBlenderMaterial,
   onExportMultiChannelModel,
   gpuBackend = 'dx11',
   onChangeGpuBackend,
