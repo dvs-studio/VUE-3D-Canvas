@@ -122,14 +122,24 @@ The active implementation target is the Vite/React/Three.js painter in this dire
 
 ### Build and test sequence
 
-From the repository root:
+From the repository root (first-time setup):
 
+    npm install
     npm run host:sync
 
 Then open self-host/public/index.html directly or run the self-host server:
 
     cd self-host
     node server.js
+
+You can also build the package in GitHub without installing Node.js locally:
+
+1. Open the repository's **Actions** tab.
+2. Select **Build Self-Hosted Programme**.
+3. Click **Run workflow** on the main branch.
+4. When it finishes, download the **VUE_3D_Canvas_SelfHost** artifact.
+
+The workflow is manual-dispatch only; ordinary source commits do not start it automatically.
 
 Manual verification checklist:
 
