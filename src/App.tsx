@@ -37,7 +37,6 @@ import { FillSuite, TriplanarConfig } from './tools/fillSuite';
 import * as THREE from 'three';
 import { BUILTIN_MODELS, parseOBJ, repairArchitecturalMesh, reimportUVsFromOBJ } from './renderer/modelGeometry';
 import { UVChannelManager } from './tools/uvChannelManager';
-import { INITIAL_NODES, INITIAL_CONNECTIONS } from './nodes/defaultNodes';
 
 import { PhotoshopMenuBar } from './ui/PhotoshopMenuBar';
 import { ToolOptionsBar } from './ui/ToolOptionsBar';
@@ -62,7 +61,6 @@ import { PreferencesModal } from './ui/PreferencesModal';
 import { TextureAutoNodeModal } from './ui/TextureAutoNodeModal';
 import { PatternStampEngine } from './tools/patternStampTool';
 import { EdgeWearEngine } from './tools/edgeWearFilter';
-import { BlenderMaterialImporter } from './nodes/blenderMaterialImporter';
 import { LayerConversions } from './tools/layerConversions';
 import { GaussianBlurOptions } from './tools/gaussianBlur';
 import { StochasticScatterConfig } from './tools/stochasticScatter';
@@ -227,8 +225,6 @@ export default function App() {
   const [undoBuffer] = useState<UndoRingBuffer>(() => new UndoRingBuffer());
 
   // Procedural Node Graph
-  const [nodes, setNodes] = useState<GraphNode[]>(INITIAL_NODES);
-  const [connections, setConnections] = useState<NodeConnection[]>(INITIAL_CONNECTIONS);
   const [materialProps, setMaterialProps] = useState({
     metallic: 0.15,
     roughness: 0.35,
@@ -368,7 +364,6 @@ export default function App() {
 
   // Model & Multi-Channel Exporter Dialog
   const [isExportModelDialogOpen, setIsExportModelDialogOpen] = useState<boolean>(false);
-  const importBlenderFileInputRef = useRef<HTMLInputElement>(null);
 
   // Symmetry Tool Configuration
   const [symmetryConfig, setSymmetryConfig] = useState<SymmetryConfig>({
@@ -1008,47 +1003,6 @@ export default function App() {
     }
   };
 
-  // Blender Material Import
-  const handleImportBlenderMaterialFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (!content) return;
-
-      try {
-        const converted = BlenderMaterialImporter.parseAndConvert(content);
-
-        // Update active layer with converted PBR properties
-        setLayers(prev => prev.map(l => {
-          if (l.id === activeLayerId) {
-            return {
-              ...l,
-              name: converted.materialName,
-              pbrSettings: converted.pbrSettings,
-              channel: converted.hasEmission ? 'emission' : l.channel
-            };
-          }
-          return l;
-        }));
-
-        // Set node graph to converted nodes
-        if (converted.nodes && converted.nodes.length > 0) {
-          setNodes(converted.nodes);
-        }
-
-        undoBuffer.pushState(`Import Blender Material: ${converted.materialName}`, layers);
-        notifyTextureUpdated();
-      } catch (err) {
-        console.error('Failed to import Blender material:', err);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
   // Save / Load .xblend Project
   const handleSaveXBlend = async () => {
     const modelAsset: MeshModelAsset = {
@@ -1068,7 +1022,6 @@ export default function App() {
       embed3DAssets,
       modelAsset,
       layers,
-      { nodes, connections },
       undoBuffer,
       materialProps
     );
@@ -1142,17 +1095,6 @@ export default function App() {
     } catch (err: any) {
       console.error(err);
     }
-  };
-
-  // Export Blender .blend Material
-  const handleExportBlenderMaterial = () => {
-    const blenderJson = XBlendManager.exportBlenderMaterialSetup(
-      `${projectName}_Material`,
-      nodes,
-      connections,
-      materialProps
-    );
-    XBlendManager.downloadFile(blenderJson, `${projectName}_material.blend.json`);
   };
 
   // Export .OBJ
@@ -1442,7 +1384,6 @@ export default function App() {
         onOpenProject={() => setIsProjectSettingsOpen(true)}
         onSaveProject={handleSaveXBlend}
         onOpenProjectSettings={() => setIsProjectSettingsOpen(true)}
-        onExportBlenderSpec={handleExportBlenderMaterial}
         onExportOBJ={handleExportOBJ}
         onExportBundleZip={handleExportBundleZip}
         onTriggerProjectionScreenshot={triggerProjectionScreenshot}
@@ -1471,7 +1412,6 @@ export default function App() {
           setActiveTool('pattern_stamp');
           setIsPatternStampDialogOpen(true);
         }}
-        onImportBlenderMaterial={() => importBlenderFileInputRef.current?.click()}
         onExportMultiChannelModel={() => setIsExportModelDialogOpen(true)}
         selectedModelKey={modelKey}
         onSelectModelKey={setModelKey}
@@ -2489,14 +2429,6 @@ export default function App() {
         className="hidden"
       />
 
-      {/* Hidden file input for Blender material import */}
-      <input
-        ref={importBlenderFileInputRef}
-        type="file"
-        accept=".json,.py,.txt,.blend"
-        onChange={handleImportBlenderMaterialFile}
-        className="hidden"
-      />
     </div>
   );
 }
