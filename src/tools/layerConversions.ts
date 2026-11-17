@@ -49,13 +49,7 @@ export class LayerConversions {
    * Converts the painted pixels to a standalone grayscale displacement source.
    */
   public static convertToDisplacementMap(layer: Layer): void {
-    const image = layer.ctx.getImageData(0, 0, layer.canvas.width, layer.canvas.height);
-    const data = image.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const luminance = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-      data[i] = data[i + 1] = data[i + 2] = luminance;
-    }
-    layer.ctx.putImageData(image, 0, 0);
+    // Keep source pixels intact; the height channel is derived from luminance at bake time.
     layer.channel = 'height';
     const previous = layer.pbrSettings;
     layer.pbrSettings = {
@@ -259,14 +253,7 @@ export class LayerConversions {
    * Converts the current pixels to a grayscale reflection-strength map.
    */
   public static convertToReflection(layer: Layer): void {
-    const image = layer.ctx.getImageData(0, 0, layer.canvas.width, layer.canvas.height);
-    const data = image.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const luminance = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-      data[i] = data[i + 1] = data[i + 2] = luminance;
-    }
-    layer.ctx.putImageData(image, 0, 0);
-    layer.channel = 'roughness';
+    // Reflection strength is derived from source luminance; do not grayscale or overwrite albedo.
     const previous = layer.pbrSettings;
     layer.pbrSettings = {
       roughness: previous?.roughness ?? 0.5,
@@ -276,19 +263,19 @@ export class LayerConversions {
       emissionStrength: previous?.emissionStrength ?? 0,
       emissionColor: previous?.emissionColor ?? '#ffffff',
       opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
-      enableColor: false,
-      enableBump: false,
+      enableColor: true,
+      enableBump: previous?.enableBump ?? false,
       reflectionSource: previous?.reflectionSource ?? 'hdri',
       reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
-      colorOn: false,
-      colorInfluence: 0,
+      colorOn: true,
+      colorInfluence: previous?.colorInfluence ?? 1,
       reflectionOn: true,
       reflectionInfluence: 1,
-      emissionOn: false,
-      emissionInfluence: 0,
-      bumpOn: false,
-      bumpInfluence: 0,
-      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      emissionOn: previous?.emissionOn ?? false,
+      emissionInfluence: previous?.emissionInfluence ?? 0,
+      bumpOn: previous?.bumpOn ?? false,
+      bumpInfluence: previous?.bumpInfluence ?? 0,
+      bumpRamp: previous?.bumpRamp || [{ position: 0, height: 0 }, { position: 1, height: 1 }],
       normalLock: false,
     };
     if (!layer.name.includes('(Reflection)')) layer.name = `${layer.name} (Reflection)`;
