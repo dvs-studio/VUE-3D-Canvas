@@ -48,7 +48,23 @@ export type ViewportShadingMode =
 
 export type SurfaceShadingMode = 'default' | 'smooth' | 'flat';
 
+export interface BumpRampStop {
+  position: number;
+  height: number;
+}
+
 export interface LayerPBRSettings {
+  // Per-layer map contributions. Optional so legacy .xblend files remain valid.
+  colorOn?: boolean;
+  colorInfluence?: number;
+  reflectionOn?: boolean;
+  reflectionInfluence?: number;
+  emissionOn?: boolean;
+  emissionInfluence?: number;
+  bumpOn?: boolean;
+  bumpInfluence?: number;
+  bumpRamp?: BumpRampStop[];
+  normalLock?: boolean;
   roughness: number; // 0.0 to 1.0
   metallic: number; // 0.0 to 1.0
   bumpHeight: number; // 0.0 to 2.0
