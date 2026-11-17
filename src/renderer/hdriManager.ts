@@ -134,6 +134,24 @@ export class HDRIManager {
       return tex;
     }
 
+    if (preset === 'studio') {
+      // The self-host sync copies public/background.jpg beside index.html.
+      // Keep a procedural fallback for development servers or file layouts without the asset.
+      const tex = new THREE.TextureLoader().load(
+        './background.jpg',
+        undefined,
+        undefined,
+        () => {
+          tex.image = this.generateEquirectangularCanvas('studio');
+          tex.needsUpdate = true;
+        }
+      );
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      this.cachedTextures.set(key, tex);
+      return tex;
+    }
+
     const canvas = this.generateEquirectangularCanvas(preset);
     const tex = new THREE.CanvasTexture(canvas);
     tex.mapping = THREE.EquirectangularReflectionMapping;
