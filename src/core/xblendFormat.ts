@@ -212,7 +212,6 @@ export class XBlendManager {
     embed3DAssets: boolean,
     model: MeshModelAsset,
     layers: Layer[],
-    nodeGraph: { nodes: GraphNode[]; connections: NodeConnection[] },
     undoBuffer: UndoRingBuffer,
     materialProps: any
   ): Promise<void> {
@@ -271,97 +270,6 @@ export class XBlendManager {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(downloadUrl);
-  }
-
-  /**
-   * Exports a Blender 2.8+ compatible material specification JSON matching the exact
-   * data dictionary keys (ShaderNodeTexCoord, ShaderNodeMapping, ShaderNodeValToRGB, etc.)
-   */
-  public static exportBlenderMaterialSetup(
-    materialName: string,
-    nodes: GraphNode[],
-    connections: NodeConnection[],
-    materialProps: any
-  ): string {
-    const blenderTypeMap: Record<string, string> = {
-      tex_coord: 'ShaderNodeTexCoord',
-      uv_map: 'ShaderNodeUVMap',
-      geometry: 'ShaderNodeNewGeometry',
-      rgb: 'ShaderNodeRGB',
-      value: 'ShaderNodeValue',
-      image_texture: 'ShaderNodeTexImage',
-      noise: 'ShaderNodeTexNoise',
-      voronoi: 'ShaderNodeTexVoronoi',
-      wave: 'ShaderNodeTexWave',
-      musgrave: 'ShaderNodeTexMusgrave',
-      gradient: 'ShaderNodeTexGradient',
-      checker: 'ShaderNodeTexChecker',
-      brick: 'ShaderNodeTexBrick',
-      mix_rgb: 'ShaderNodeMixRGB',
-      invert: 'ShaderNodeInvert',
-      color_ramp: 'ShaderNodeValToRGB',
-      bright_contrast: 'ShaderNodeBrightContrast',
-      hue_saturation: 'ShaderNodeHueSaturation',
-      gamma: 'ShaderNodeGamma',
-      mapping: 'ShaderNodeMapping',
-      vector_math: 'ShaderNodeVectorMath',
-      math: 'ShaderNodeMath',
-      rgb_to_bw: 'ShaderNodeRGBToBW',
-      separate_rgb: 'ShaderNodeSeparateRGB',
-      combine_rgb: 'ShaderNodeCombineRGB',
-      separate_xyz: 'ShaderNodeSeparateXYZ',
-      combine_xyz: 'ShaderNodeCombineXYZ',
-      bump: 'ShaderNodeBump',
-      normal_map: 'ShaderNodeNormalMap',
-      mix_shader: 'ShaderNodeMixShader',
-      emission: 'ShaderNodeEmission',
-      principled_bsdf: 'ShaderNodeBsdfPrincipled',
-      material_output: 'ShaderNodeOutputMaterial',
-    };
-
-    const blenderDoc = {
-      type: "BLENDER_MATERIAL_SPECIFICATION",
-      targetBlenderVersion: "2.80+",
-      material_name: materialName || "VUE3D_PBR_Material",
-      useNodes: true,
-      nodes: nodes.map(n => {
-        const bTypeName = blenderTypeMap[n.type] || (n.type.startsWith('ShaderNode') ? n.type : 'ShaderNodeBsdfPrincipled');
-        return {
-          id: n.id,
-          title: n.title,
-          blender_type_name: bTypeName,
-          location: [n.x, n.y],
-          properties: n.properties || {},
-          inputs: n.inputs.map(inp => ({
-            identifier: inp.id,
-            name: inp.name,
-            type: inp.type,
-            value: inp.value,
-          })),
-          outputs: n.outputs.map(out => ({
-            identifier: out.id,
-            name: out.name,
-            type: out.type,
-          })),
-        };
-      }),
-      links: connections.map(c => ({
-        from_node_id: c.fromNodeId,
-        from_socket: c.fromSocketId,
-        to_node_id: c.toNodeId,
-        to_socket: c.toSocketId,
-      })),
-      principledBSDF: {
-        BaseColor: [0.8, 0.8, 0.8, 1.0],
-        Metallic: materialProps?.metallic ?? 0.15,
-        Roughness: materialProps?.roughness ?? 0.35,
-        NormalStrength: materialProps?.normalStrength ?? 1.0,
-        IOR: materialProps?.ior ?? 1.45,
-      },
-      creator: "Victory Ukpong - VUE 3D Canvas",
-    };
-
-    return JSON.stringify(blenderDoc, null, 2);
   }
 
   /**
