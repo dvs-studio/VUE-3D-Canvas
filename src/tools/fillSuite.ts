@@ -18,43 +18,102 @@ import { SelectionTool } from './selectionTool';
 
 export type { TriplanarConfig, TriplanarTextureItem, TextureFillConfig };
 
+function parseTextureColor(input: string | undefined, separateAlpha = 1): [number, number, number, number] {
+  const value = (input || '#ffffff').trim();
+  let r = 255, g = 255, b = 255, a = 1;
+  const hex = value.match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
+  if (hex) {
+    let digits = hex[1];
+    if (digits.length === 3) digits = digits.split('').map(ch => ch + ch).join('');
+    r = parseInt(digits.slice(0, 2), 16);
+    g = parseInt(digits.slice(2, 4), 16);
+    b = parseInt(digits.slice(4, 6), 16);
+    if (digits.length === 8) a = parseInt(digits.slice(6, 8), 16) / 255;
+  } else {
+    const fn = value.match(/^(rgba?|hsla?)\\((.*)\\)$/i);
+    if (fn) {
+      const parts = fn[2].split(',').map(part => part.trim());
+      const isHsl = fn[1].toLowerCase().startsWith('hsl');
+      if (isHsl && parts.length >= 3) {
+        const h = ((parseFloat(parts[0]) % 360) + 360) % 360 / 360;
+        const sat = Math.max(0, Math.min(1, parseFloat(parts[1]) / 100));
+        const light = Math.max(0, Math.min(1, parseFloat(parts[2]) / 100));
+        const chroma = (1 - Math.abs(2 * light - 1)) * sat;
+        const segment = h * 6;
+        const x = chroma * (1 - Math.abs(segment % 2 - 1));
+        let rgb: number[] = [0, 0, 0];
+        if (segment < 1) rgb = [chroma, x, 0];
+        else if (segment < 2) rgb = [x, chroma, 0];
+        else if (segment < 3) rgb = [0, chroma, x];
+        else if (segment < 4) rgb = [0, x, chroma];
+        else if (segment < 5) rgb = [x, 0, chroma];
+        else rgb = [chroma, 0, x];
+        const m = light - chroma / 2;
+        [r, g, b] = rgb.map(channel => Math.round((channel + m) * 255));
+      } else if (!isHsl && parts.length >= 3) {
+        r = Math.max(0, Math.min(255, parseFloat(parts[0])));
+        g = Math.max(0, Math.min(255, parseFloat(parts[1])));
+        b = Math.max(0, Math.min(255, parseFloat(parts[2])));
+      }
+      if (parts.length >= 4) a = Math.max(0, Math.min(1, parseFloat(parts[3])));
+    }
+  }
+  a *= Math.max(0, Math.min(1, Number.isFinite(separateAlpha) ? separateAlpha : 1));
+  return [r, g, b, a];
+}
+
+function textureCacheKey(item: TriplanarTextureItem): string {
+  const source = item.dataUrl || '';
+  let hash = 2166136261;
+  for (let i = 0; i < source.length; i++) {
+    hash ^= source.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return [item.id, source.length, hash >>> 0, item.tintColor, item.colorAlpha, item.isTransparentBlank].join('|');
+}
+
 export class FillSuite {
   // Texture buffer cache for fast sampling
   private static textureBufferCache = new Map<string, { width: number; height: number; data: Uint8ClampedArray }>();
 
   /**
-   * Generates or retrieves a pixel buffer for a triplanar texture item
+   * Loads an image texture asynchronously, or creates a solid RGBA colour swatch
+   * when the row has no image. The independent alpha slider multiplies parsed alpha.
    */
-  public static getTextureBuffer(item: TriplanarTextureItem): { width: number; height: number; data: Uint8ClampedArray } {
-    const key = item.id || item.name || 'default';
-    if (this.textureBufferCache.has(key)) {
-      return this.textureBufferCache.get(key)!;
-    }
+  public static async getTextureBuffer(item: TriplanarTextureItem): Promise<{ width: number; height: number; data: Uint8ClampedArray }> {
+    const key = textureCacheKey(item);
+    if (this.textureBufferCache.has(key)) return this.textureBufferCache.get(key)!;
 
     const size = 256;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
-
     if (item.isTransparentBlank) {
-      // Blank alpha: Completely transparent
       ctx.clearRect(0, 0, size, size);
     } else if (item.dataUrl) {
-      // Image data URL provided
-      const img = new Image();
-      img.src = item.dataUrl;
-      if (img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, 0, 0, size, size);
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      const loaded = await new Promise<boolean>(resolve => {
+        image.onload = () => resolve(true);
+        image.onerror = () => resolve(false);
+        image.src = item.dataUrl!;
+      });
+      if (loaded) {
+        ctx.drawImage(image, 0, 0, size, size);
       } else {
-        this.renderProceduralPreset(ctx, item.id || item.name, size);
+        const [r, g, b, a] = parseTextureColor(item.tintColor, item.colorAlpha ?? 1);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+        ctx.fillRect(0, 0, size, size);
       }
     } else {
-      this.renderProceduralPreset(ctx, item.id || item.name, size);
+      const [r, g, b, a] = parseTextureColor(item.tintColor, item.colorAlpha ?? 1);
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a})`;
+      ctx.fillRect(0, 0, size, size);
     }
 
-    const imgData = ctx.getImageData(0, 0, size, size);
-    const result = { width: size, height: size, data: imgData.data };
+    const imageData = ctx.getImageData(0, 0, size, size);
+    const result = { width: size, height: size, data: imageData.data };
     this.textureBufferCache.set(key, result);
     return result;
   }
@@ -259,7 +318,7 @@ export class FillSuite {
    * 4. Eliminates repetitive tiling with randomized coordinate jitter.
    * 5. Protects areas masked by the Mask brush or active selections.
    */
-  public static applyTriplanarBoxFill(
+  public static async applyTriplanarBoxFill(
     ctx: CanvasRenderingContext2D,
     config: TriplanarConfig,
     opacity = 100,
@@ -281,10 +340,10 @@ export class FillSuite {
           { id: 'sand_coarse', name: 'Coarse Grit Sand', scale: 1.0 },
         ];
 
-    const buffers = textureList.map(t => ({
-      item: t,
-      buf: this.getTextureBuffer(t),
-    }));
+    const buffers = await Promise.all(textureList.map(async item => ({
+      item,
+      buf: await this.getTextureBuffer(item),
+    })));
 
     const globalScale = Math.max(0.2, config.scale || 6.0);
     const sharpness = Math.max(0.1, config.blendSharpness || 3.0);
