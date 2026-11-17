@@ -26,7 +26,7 @@ function getLayerPbr(layer: Layer): LayerPBRSettings {
     enableBump: saved.enableBump ?? channel === 'height',
     reflectionSource: saved.reflectionSource ?? 'hdri',
     reflectionIntensity: saved.reflectionIntensity ?? 0.8,
-    colorOn: saved.colorOn ?? !['height', 'normal', 'emission'].includes(channel),
+    colorOn: saved.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(channel),
     colorInfluence: saved.colorInfluence ?? 1,
     reflectionOn: saved.reflectionOn ?? false,
     reflectionInfluence: saved.reflectionInfluence ?? 0,
