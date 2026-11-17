@@ -2392,7 +2392,6 @@ export default function App() {
         }}
         onSaveXBlend={handleSaveXBlend}
         onLoadXBlend={handleLoadXBlend}
-        onExportBlenderMaterial={handleExportBlenderMaterial}
         onExportOBJ={handleExportOBJ}
         onImportCustomModel={handleImportCustomModel}
         onExportBundleZip={handleExportBundleZip}
