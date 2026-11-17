@@ -367,7 +367,7 @@ export default function App() {
     symmetry: true,
     masking: false,
     uvEditor: false,
-    subdivision: false,
+    subdivision: true,
   });
 
   const [panelFloating, setPanelFloating] = useState<Record<string, boolean>>({
@@ -390,6 +390,16 @@ export default function App() {
   });
 
   const [textureVersion, setTextureVersion] = useState(0);
+  // Coalesce rapid paint notifications so a stroke/eraser does not composite
+  // the entire 1024² layer stack synchronously for every pointer event.
+  const compositeSyncFrameRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (compositeSyncFrameRef.current !== null) {
+      cancelAnimationFrame(compositeSyncFrameRef.current);
+      compositeSyncFrameRef.current = null;
+    }
+  }, []);
 
   const [subdivisionSettings, setSubdivisionSettings] = useState<SubdivisionPreviewOptions>({
     enabled: false,
@@ -459,8 +469,15 @@ export default function App() {
   }, [layers, compositeCanvas]);
 
   const notifyTextureUpdated = useCallback(() => {
-    syncCompositeCanvas();
-    setTextureVersion(v => v + 1);
+    // Pointer events can arrive faster than the display refresh. Keep the
+    // active layer mutation immediate, but perform the expensive full-layer
+    // composite once on the next frame rather than once per dab.
+    if (compositeSyncFrameRef.current !== null) return;
+    compositeSyncFrameRef.current = requestAnimationFrame(() => {
+      compositeSyncFrameRef.current = null;
+      syncCompositeCanvas();
+      setTextureVersion(v => v + 1);
+    });
   }, [syncCompositeCanvas]);
 
   const handleRebakeTexture = useCallback((fromChannel: string, toChannel: string, resolution: number) => {
