@@ -398,6 +398,7 @@ export interface TriplanarTextureItem {
   offsetX?: number;
   offsetY?: number;
   tintColor?: string;
+  colorAlpha?: number;
 }
 
 export interface TriplanarConfig {
