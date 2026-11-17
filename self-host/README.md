@@ -101,6 +101,52 @@ This folder is the programme to finish. It is not `vue_3d_canvas.exe`. On Window
 Zoom updates the main 3D view without a pan. Turning a tablet from portrait to landscape resizes the canvas. Triplanar, Scatter, and Edge Wear are panels, not a full-screen black layer. A stroke rebuilds mipmaps when the pen lifts, not on every dab.
 
 
-## 6. Safety copy and the next change
+## 6. Current self-host implementation and verification
+
+The active implementation target is the Vite/React/Three.js painter in this directory's source project. The Rust workspace is not part of this work.
+
+### Implemented in source
+
+- Per-layer colour, reflection, emission, and bump switches with influence values.
+- Editable bump ramps. Enabling bump on a painted colour layer keeps its colour pixels intact.
+- Combined viewport colour, emission, height, roughness, and normal maps.
+- .xblend stores the PBR layer settings and remains backward-compatible with files that do not contain the new fields.
+- ZIP export writes only the channel maps that enabled layers contribute, plus layer_manifest.json.
+- The Blender importer reads that manifest and builds one Principled BSDF material with one mix chain per channel. It does not rebuild the retired painter node graph.
+- Texture import and Auto-Texture from Folder configure layer switches instead of creating painter nodes.
+- Triplanar rows support image previews or solid colour values in rgba(), hsla(), #RGB, #RRGGBB, and #RRGGBBAA, with a separate alpha control.
+- UV Editor is a Coming Soon placeholder; Viewport2D remains available.
+- Subdivision Preview supports Catmull-Clark and Simple modes, levels 0–2, sharp-angle detection, crease and boundary controls, and optional height displacement. It is preview-only and does not alter the source mesh or exported model.
+- The first viewport render uses the direct renderer; bloom resources are allocated on the following frame.
+- public/background.jpg is the neutral equirectangular studio environment copied beside the self-hosted index.html during sync.
+
+### Build and test sequence
+
+From the repository root:
+
+    npm run host:sync
+
+Then open self-host/public/index.html directly or run the self-host server:
+
+    cd self-host
+    node server.js
+
+Manual verification checklist:
+
+1. Open a legacy .xblend project and confirm it loads without missing-field errors.
+2. Convert a painted layer to Bump and confirm its colour remains visible.
+3. Toggle each PBR contribution, change its influence, and edit the bump ramp.
+4. Export a ZIP and confirm it contains layer_manifest.json and only the expected files in layer_maps/.
+5. In Blender, select a mesh and run import_vue_layer_bundle('/path/to/project.zip'); inspect the single Principled material and its channel chains.
+6. Test Import Texture and Auto-Texture from Folder with colour, height, reflection, emission, and normal maps.
+7. Test triplanar rows with an image and with each supported solid-colour syntax; check separate alpha.
+8. Toggle subdivision modes and levels, then export the model and confirm the original cage geometry is unchanged.
+9. Check the first viewport frame, studio background, theme changes, and the sphere/mountain gizmos.
+
+**Verification status:** source changes have been committed, but the Vite build, host:sync, browser checks, and Blender import have not yet been run in this workspace. The existing generated self-host/public/index.html must be rebuilt before testing these changes.
+
+---
+
+## 7. Safety copy and the next change
 
 `release/vue3d-self-host-safety-2026-11-14.zip` at the repository root is a copy of this folder before the toggle-layer work. The work itself is `LAYER_PBR_PLAN.md`. Do not treat this folder as the Windows exe.
