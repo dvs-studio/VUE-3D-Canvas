@@ -358,3 +358,17 @@ The node editor does not drive materials. Nothing in this section is built yet. 
 The self-host worker builds `LAYER_PBR_PLAN.md`, including the export zip and the Blender per-channel chains. Import Texture stays. The node panel goes. The UV dock says Coming soon. Subdivision is preview only.
 
 Do not edit `crates/vue3d_core`. Do not rewrite the other guides until this page is verified. Push every 3.5 minutes. Notes and code are separate commits. Each worker writes `agents/<name>.md`.
+
+
+### 2026-11-17 — pre-execution (viewport responsiveness, model parts, subdivision, gizmos, UV roadmap)
+
+Victory authorised autonomous work on the self-hosted Vite/React/Three.js painter. Scope is the source under `src/` plus its generated `self-host/public/index.html` via `npm run host:sync`; do not edit `crates/vue3d_core`, Windows/native build paths, or `release/vue3d-self-host-safety-2026-11-14.zip`.
+
+- Temporary orientation gizmos remain CSS-based for now. Apply consistent axis colours (X red, Y green, Z blue) to all six directions and retain existing hit targets/navigation actions. Later replace the visual bodies with user-supplied low-poly GLB assets from a future `gizmos/` folder. The mountain's faded/acoustic painting treatment is explicitly deferred to that asset pass.
+- Subdivision UI must be available in both floating and dockable modes. Separate non-destructive preview from any explicit mesh-apply operation; applying subdivision must be undoable and must not silently mutate the source while previewing. Confirm exact current model/undo pathways before wiring it.
+- Build model-part visibility/isolation controls and keep the selected part, object visibility, framing, and viewport state synchronised.
+- Highest performance priority: profile and reduce input-to-frame latency for eraser and other paint operations. Avoid full texture/composite rebuilds, mipmap generation, BVH rebuilds, or GPU uploads in pointer-move/dab hot paths. Use dirty regions/batched uploads where correct; do not trade away visual correctness. Record measured before/after results when instrumentation permits; do not invent benchmarks.
+- UV work is documentation/backlog only until Victory explicitly confirms implementation. Add a detailed staged roadmap covering algorithms, tools, data model, interaction, packing, validation, undo, persistence, performance, and the standalone UV workspace with explicit sync contracts.
+- Keep existing axis and viewport controls functional; keep the mountain faded painting treatment deferred. Keep the UV editor marked as planned/coming soon, not implemented.
+
+This is a pre-execution note only; no implementation result is claimed here.
