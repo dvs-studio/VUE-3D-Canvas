@@ -100,6 +100,7 @@ export interface Layer {
   pbrSettings?: LayerPBRSettings;
   uvChannel?: string;
   textureFillConfig?: TextureFillConfig;
+  isTextureFill?: boolean;
 }
 
 export interface TextureFillConfig {
