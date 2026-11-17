@@ -166,6 +166,49 @@
   box-shadow: 0 0 35px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
+/* Theme the full application chrome, including dock headers, controls and scrollbars. */
+[data-theme="bw78"] .cs5-panel-header {
+  background: linear-gradient(180deg, #292929 0%, #1b1b1b 100%) !important;
+  border-color: #111 !important;
+}
+[data-theme="modern"] .cs5-panel-header {
+  background: linear-gradient(180deg, #303b4f 0%, #1e2430 100%) !important;
+  border-color: #0f131a !important;
+}
+[data-theme="ps2022"] .cs5-panel-header {
+  background: linear-gradient(180deg, #3b3b3b 0%, #282828 100%) !important;
+  border-color: #181818 !important;
+}
+[data-theme="bw78"] .cs5-outset { box-shadow: inset 1px 1px 1px rgba(255,255,255,.06), 1px 1px 2px rgba(0,0,0,.65) !important; }
+[data-theme="modern"] .cs5-outset { box-shadow: inset 1px 1px 1px rgba(255,255,255,.05), 0 4px 12px rgba(0,0,0,.24) !important; }
+[data-theme="ps2022"] .cs5-outset { box-shadow: inset 1px 1px 1px rgba(255,255,255,.08), 1px 1px 2px rgba(0,0,0,.4) !important; }
+[data-theme="bw78"] .cs5-inset { box-shadow: inset 1px 1px 3px rgba(0,0,0,.8), inset -1px -1px 1px rgba(255,255,255,.03) !important; }
+[data-theme="modern"] .cs5-inset { box-shadow: inset 1px 1px 3px rgba(0,0,0,.35), inset -1px -1px 1px rgba(255,255,255,.04) !important; }
+[data-theme="ps2022"] .cs5-inset { box-shadow: inset 1px 1px 3px rgba(0,0,0,.55), inset -1px -1px 1px rgba(255,255,255,.04) !important; }
+
+[data-theme="bw78"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+[data-theme="bw78"] select,
+[data-theme="bw78"] textarea {
+  background-color: #181818 !important; color: #e5e5e5 !important; border-color: #444 !important;
+}
+[data-theme="modern"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+[data-theme="modern"] select,
+[data-theme="modern"] textarea {
+  background-color: #161b24 !important; color: #e2e8f0 !important; border-color: #344155 !important;
+}
+[data-theme="ps2022"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+[data-theme="ps2022"] select,
+[data-theme="ps2022"] textarea {
+  background-color: #202020 !important; color: #f0f0f0 !important; border-color: #444 !important;
+}
+
+[data-theme="bw78"] ::-webkit-scrollbar-track { background: #171717 !important; }
+[data-theme="bw78"] ::-webkit-scrollbar-thumb { background: #454545 !important; }
+[data-theme="modern"] ::-webkit-scrollbar-track { background: #161b24 !important; }
+[data-theme="modern"] ::-webkit-scrollbar-thumb { background: #3b4658 !important; }
+[data-theme="ps2022"] ::-webkit-scrollbar-track { background: #202020 !important; }
+[data-theme="ps2022"] ::-webkit-scrollbar-thumb { background: #4b4b4b !important; }
+
 /* Custom scrollbars matching CS5 dark gray */
 ::-webkit-scrollbar {
   width: 8px;
