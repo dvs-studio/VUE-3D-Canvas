@@ -14,41 +14,74 @@ import { Layer } from '../core/types';
 
 export class LayerConversions {
   /**
-   * Converts target layer to a Grayscale Bump / Height Map
+   * Enables bump contribution without destroying the painted colour pixels.
+   * Height is derived from the source luminance during map composition/export.
    */
-  public static convertToBumpMap(layer: Layer, contrast = 1.2): void {
-    const ctx = layer.ctx;
-    const w = layer.canvas.width;
-    const h = layer.canvas.height;
+  public static convertToBumpMap(layer: Layer): void {
+    const previous = layer.pbrSettings;
+    layer.pbrSettings = {
+      roughness: previous?.roughness ?? 0.5,
+      metallic: previous?.metallic ?? 0,
+      bumpHeight: previous?.bumpHeight ?? 1,
+      normalStrength: previous?.normalStrength ?? 1,
+      emissionStrength: previous?.emissionStrength ?? 0,
+      emissionColor: previous?.emissionColor ?? '#ffffff',
+      opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
+      enableColor: true,
+      enableBump: true,
+      reflectionSource: previous?.reflectionSource ?? 'hdri',
+      reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
+      colorOn: true,
+      colorInfluence: 1,
+      reflectionOn: false,
+      reflectionInfluence: 0,
+      emissionOn: false,
+      emissionInfluence: 0,
+      bumpOn: true,
+      bumpInfluence: 1,
+      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      normalLock: false,
+    };
+    if (!layer.name.includes('(Bump)')) layer.name = `${layer.name} (Bump)`;
+  }
 
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
-
+  /**
+   * Converts the painted pixels to a standalone grayscale displacement source.
+   */
+  public static convertToDisplacementMap(layer: Layer): void {
+    const image = layer.ctx.getImageData(0, 0, layer.canvas.width, layer.canvas.height);
+    const data = image.data;
     for (let i = 0; i < data.length; i += 4) {
-      const a = data[i + 3];
-      if (a === 0) continue;
-
-      // Standard perceptual luminance
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      let lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-      // Contrast expansion around midpoint 128
-      lum = (lum - 128) * contrast + 128;
-      lum = Math.max(0, Math.min(255, Math.round(lum)));
-
-      data[i] = lum;
-      data[i + 1] = lum;
-      data[i + 2] = lum;
-      // Preserve alpha
+      const luminance = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+      data[i] = data[i + 1] = data[i + 2] = luminance;
     }
-
-    ctx.putImageData(imgData, 0, 0);
+    layer.ctx.putImageData(image, 0, 0);
     layer.channel = 'height';
-    if (!layer.name.includes('(Bump)')) {
-      layer.name = `${layer.name} (Bump)`;
-    }
+    const previous = layer.pbrSettings;
+    layer.pbrSettings = {
+      roughness: previous?.roughness ?? 0.5,
+      metallic: previous?.metallic ?? 0,
+      bumpHeight: previous?.bumpHeight ?? 1,
+      normalStrength: previous?.normalStrength ?? 1,
+      emissionStrength: previous?.emissionStrength ?? 0,
+      emissionColor: previous?.emissionColor ?? '#ffffff',
+      opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
+      enableColor: false,
+      enableBump: true,
+      reflectionSource: previous?.reflectionSource ?? 'hdri',
+      reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
+      colorOn: false,
+      colorInfluence: 0,
+      reflectionOn: false,
+      reflectionInfluence: 0,
+      emissionOn: false,
+      emissionInfluence: 0,
+      bumpOn: true,
+      bumpInfluence: 1,
+      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      normalLock: false,
+    };
+    if (!layer.name.includes('(Displacement)')) layer.name = `${layer.name} (Displacement)`;
   }
 
   /**
@@ -126,6 +159,30 @@ export class LayerConversions {
 
     ctx.putImageData(dstImgData, 0, 0);
     layer.channel = 'normal';
+    const previous = layer.pbrSettings;
+    layer.pbrSettings = {
+      roughness: previous?.roughness ?? 0.5,
+      metallic: previous?.metallic ?? 0,
+      bumpHeight: previous?.bumpHeight ?? 1,
+      normalStrength: previous?.normalStrength ?? 1,
+      emissionStrength: previous?.emissionStrength ?? 0,
+      emissionColor: previous?.emissionColor ?? '#ffffff',
+      opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
+      enableColor: false,
+      enableBump: false,
+      reflectionSource: previous?.reflectionSource ?? 'hdri',
+      reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
+      colorOn: false,
+      colorInfluence: 0,
+      reflectionOn: false,
+      reflectionInfluence: 0,
+      emissionOn: false,
+      emissionInfluence: 0,
+      bumpOn: false,
+      bumpInfluence: 0,
+      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      normalLock: true,
+    };
     if (!layer.name.includes('(Normal)')) {
       layer.name = `${layer.name} (Normal)`;
     }
@@ -167,28 +224,74 @@ export class LayerConversions {
   }
 
   /**
-   * Converts target layer into an Emissive glowing texture layer
+   * Uses the existing painted RGB as emission; no destructive colour boost.
    */
-  public static convertToEmissive(layer: Layer, boost = 1.5): void {
-    const ctx = layer.ctx;
-    const w = layer.canvas.width;
-    const h = layer.canvas.height;
-
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const data = imgData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i + 3] === 0) continue;
-      data[i] = Math.min(255, Math.round(data[i] * boost));
-      data[i + 1] = Math.min(255, Math.round(data[i + 1] * boost));
-      data[i + 2] = Math.min(255, Math.round(data[i + 2] * boost));
-    }
-
-    ctx.putImageData(imgData, 0, 0);
+  public static convertToEmissive(layer: Layer): void {
+    const previous = layer.pbrSettings;
     layer.channel = 'emission';
-    if (!layer.name.includes('(Emission)')) {
-      layer.name = `${layer.name} (Emission)`;
+    layer.pbrSettings = {
+      roughness: previous?.roughness ?? 0.5,
+      metallic: previous?.metallic ?? 0,
+      bumpHeight: previous?.bumpHeight ?? 1,
+      normalStrength: previous?.normalStrength ?? 1,
+      emissionStrength: previous?.emissionStrength ?? 1,
+      emissionColor: previous?.emissionColor ?? '#ffffff',
+      opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
+      enableColor: false,
+      enableBump: false,
+      reflectionSource: previous?.reflectionSource ?? 'hdri',
+      reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
+      colorOn: false,
+      colorInfluence: 0,
+      reflectionOn: false,
+      reflectionInfluence: 0,
+      emissionOn: true,
+      emissionInfluence: 1,
+      bumpOn: false,
+      bumpInfluence: 0,
+      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      normalLock: false,
+    };
+    if (!layer.name.includes('(Emission)')) layer.name = `${layer.name} (Emission)`;
+  }
+
+  /**
+   * Converts the current pixels to a grayscale reflection-strength map.
+   */
+  public static convertToReflection(layer: Layer): void {
+    const image = layer.ctx.getImageData(0, 0, layer.canvas.width, layer.canvas.height);
+    const data = image.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const luminance = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+      data[i] = data[i + 1] = data[i + 2] = luminance;
     }
+    layer.ctx.putImageData(image, 0, 0);
+    layer.channel = 'roughness';
+    const previous = layer.pbrSettings;
+    layer.pbrSettings = {
+      roughness: previous?.roughness ?? 0.5,
+      metallic: previous?.metallic ?? 0,
+      bumpHeight: previous?.bumpHeight ?? 1,
+      normalStrength: previous?.normalStrength ?? 1,
+      emissionStrength: previous?.emissionStrength ?? 0,
+      emissionColor: previous?.emissionColor ?? '#ffffff',
+      opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
+      enableColor: false,
+      enableBump: false,
+      reflectionSource: previous?.reflectionSource ?? 'hdri',
+      reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
+      colorOn: false,
+      colorInfluence: 0,
+      reflectionOn: true,
+      reflectionInfluence: 1,
+      emissionOn: false,
+      emissionInfluence: 0,
+      bumpOn: false,
+      bumpInfluence: 0,
+      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      normalLock: false,
+    };
+    if (!layer.name.includes('(Reflection)')) layer.name = `${layer.name} (Reflection)`;
   }
 
   /**
