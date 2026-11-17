@@ -1041,7 +1041,7 @@ export default function App() {
             metallic: project.materialProperties?.metallic ?? 0,
             bumpHeight: 1,
             normalStrength: project.materialProperties?.normalStrength ?? 1,
-            emissionStrength: 0,
+            emissionStrength: 1,
             emissionColor: '#ffffff',
             opacity: (l.opacity ?? 100) / 100,
             enableColor: true,
