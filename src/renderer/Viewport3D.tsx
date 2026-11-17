@@ -346,8 +346,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const emissionInfluence = Math.max(0, Math.min(1, saved.emissionInfluence ?? (channel === 'emission' ? 1 : 0)));
       const bumpOn = saved.bumpOn ?? channel === 'height';
       const bumpInfluence = Math.max(0, Math.min(1, saved.bumpInfluence ?? (channel === 'height' ? 1 : 0)));
-      const reflectionOn = saved.reflectionOn ?? false;
-      const reflectionInfluence = Math.max(0, Math.min(1, saved.reflectionInfluence ?? 0));
+      const reflectionOn = saved.reflectionOn ?? channel === 'roughness';
+      const reflectionInfluence = Math.max(0, Math.min(1, saved.reflectionInfluence ?? (channel === 'roughness' ? 1 : 0)));
       const normalLock = saved.normalLock ?? channel === 'normal';
 
       if (colorOn && colorInfluence > 0) {
