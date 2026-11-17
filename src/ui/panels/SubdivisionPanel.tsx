@@ -6,7 +6,7 @@
  */
 import React from 'react';
 import { Layers3, RefreshCw } from 'lucide-react';
-import { SubdivisionPreviewOptions } from '../../renderer/subdivisionPreview';
+import type { SubdivisionPreviewOptions } from '../../renderer/subdivisionPreview';
 
 interface SubdivisionPanelProps {
   settings: SubdivisionPreviewOptions;
