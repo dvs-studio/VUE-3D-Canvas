@@ -843,6 +843,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 { id: 'symmetry', label: 'Symmetry & Cloning Studio' },
                 { id: 'masking', label: 'Masking & Selection Studio' },
                 { id: 'uvEditor', label: 'UV Editor' },
+                { id: 'subdivision', label: 'Subdivision Preview' },
               ].map((panel) => (
                 <button
                   key={panel.id}
