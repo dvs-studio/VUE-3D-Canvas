@@ -392,3 +392,10 @@ This is a pre-execution note only; no implementation result is claimed here.
 - `src/renderer/boxGizmo.tsx`: temporary CSS gizmos use X red, Y green, Z blue labels; front/back are +Z/-Z and top/bottom are +Y/-Y. User-supplied GLB gizmos and mountain faded/acoustic paint treatment remain future work.
 - GitHub Actions run [44196595476](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44196595476) passed install, build, host sync, package checks and artifact upload. Generated bundle: `index-DwkyI3V_.js`; artifact ID `14378169255`. This does not verify browser interaction, device latency, mesh isolation completeness, or Blender import.
 - No before/after latency measurements were captured in this environment. Do not claim the lag is fully resolved until Victory tests it on target hardware and metrics are recorded.
+
+
+### 2026-11-17 — follow-up performance checkpoint
+- The dirty-region compositor now covers the full segment between consecutive pointer positions, includes symmetry dab bounds, scales source rectangles for layers with different resolutions, and uses a safe full-composite fallback for dragged-dot and large-area tools.
+- Removed redundant full PBR rebuilds from the mask-brush pointer path and the direct pointer-up path. The canonical texture notification now triggers the one full PBR-map rebuild after the stroke; the direct colour texture remains refreshed during the stroke.
+- Latest revision `d55a7ff` passed GitHub Actions run [44197313538](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44197313538). Generated bundle: `index-D6s9T1ZF.js`. Artifact `VUE_3D_Canvas_SelfHost`, ID `14380475625`.
+- This is still build/package verification only. No interactive browser run or target-device latency benchmark has been performed; do not mark responsiveness fixed until that evidence exists.
