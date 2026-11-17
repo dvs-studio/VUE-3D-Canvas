@@ -148,3 +148,11 @@ Victory authorised autonomous work on the self-host painter. Read the new 2026-1
 - Subdivision panel is visible by default and supports docked/floating mode. Preview geometry exists; destructive Apply/undo-safe replacement is not yet claimed.
 - Latest CI run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44196595476 (success). Bundle `index-DwkyI3V_.js`. Artifact `VUE_3D_Canvas_SelfHost`, ID `14378169255`.
 - Browser/device latency testing remains outstanding; no measured before/after numbers are available yet. Continue with the remaining checklist in `LAYER_PBR_PLAN.md`.
+
+
+## 2026-11-17 follow-up — stroke trail and redundant rebuilds
+
+- Dirty-region compositing now covers the segment from the prior pointer position to the current dab, as well as the bounds of symmetry points. It scales source rectangles for non-1024 layer canvases and falls back for dragged-dot/large-area tools.
+- Mask-brush pointer updates no longer trigger full PBR texture rebuilds. Pointer-up relies on the canonical texture notification to trigger one PBR rebuild rather than invoking a duplicate directly.
+- Latest code revision `d55a7ff` passed run `44197313538`; generated bundle `index-D6s9T1ZF.js`; artifact ID `14380475625`.
+- Device responsiveness remains unmeasured. Manual test on Victory's target hardware is still required.
