@@ -326,6 +326,18 @@ export interface XBlendProject {
     locked: boolean;
     channel: string;
     dataUrl: string; // PNG encoded layer
+    pbrSettings?: LayerPBRSettings;
+    colorOn?: boolean;
+    colorInfluence?: number;
+    reflectionOn?: boolean;
+    reflectionInfluence?: number;
+    emissionOn?: boolean;
+    emissionInfluence?: number;
+    bumpOn?: boolean;
+    bumpInfluence?: number;
+    bumpRamp?: BumpRampStop[];
+    normalLock?: boolean;
+    maps?: { color?: string; emission?: string; height?: string; reflection?: string; normal?: string };
   }[];
   nodeGraph: {
     nodes: GraphNode[];
