@@ -337,7 +337,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             <button
               onClick={onImportTexture}
               className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#38bdf8] rounded border border-[#505050] transition-colors"
-              title="Import Texture (Auto-Node Setup / Material Texture Fill)..."
+              title="Import Texture (Layer PBR Role / Material Texture Fill)..."
             >
               <Upload className="w-3.5 h-3.5" />
             </button>
