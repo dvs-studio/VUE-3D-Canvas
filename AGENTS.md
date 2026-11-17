@@ -21,7 +21,7 @@ The page is still `index-DXhSIj8p.js`. This set mixes the work that was already 
 
 ### Current implementation
 
-Not started. The last session rewrote guides (`f3b43f6`) and stopped. Leave those guides. Start at item 1.
+In progress. Repository write access has been re-authorized. Implementation is beginning with the self-hosted Vite/React/Three.js painter only. Preserve the concluded history below; do not edit `crates/vue3d_core` or the safety ZIP.
 
 ### Current history — concluded set
 
