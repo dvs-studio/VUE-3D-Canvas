@@ -276,6 +276,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const emissiveCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const emissiveTextureRef = useRef<THREE.CanvasTexture | null>(null);
   const hasEmissiveRef = useRef(false);
+  const heightCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const heightTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const roughnessCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const roughnessTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const normalCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const normalTextureRef = useRef<THREE.CanvasTexture | null>(null);
 
   // Light refs for HDRI light toggling
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
@@ -283,83 +289,199 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
   const rimLightRef = useRef<THREE.DirectionalLight | null>(null);
 
-  // Composite texture generator (diffuse + emissive channels)
+  // Composite colour and PBR maps. The colour path remains cheap; secondary maps rebuild on texture updates.
   const updateCompositeTexture = useCallback(() => {
     const compCanvas = compositeCanvas || compositeCanvasRef.current;
     if (!compCanvas) return;
-
     const ctx = compCanvas.getContext('2d');
     if (!ctx) return;
 
-    // Initialize or prepare emissive canvas
-    if (!emissiveCanvasRef.current) {
-      const emCvs = document.createElement('canvas');
-      emCvs.width = compCanvas.width;
-      emCvs.height = compCanvas.height;
-      emissiveCanvasRef.current = emCvs;
-    }
-    const emCanvas = emissiveCanvasRef.current;
+    const width = compCanvas.width;
+    const height = compCanvas.height;
+    const pixelCount = width * height;
+
+    const ensureCanvas = (ref: React.MutableRefObject<HTMLCanvasElement | null>, fill: string) => {
+      if (!ref.current) {
+        ref.current = document.createElement('canvas');
+        ref.current.width = width;
+        ref.current.height = height;
+      }
+      const canvas = ref.current;
+      if (canvas.width !== width) canvas.width = width;
+      if (canvas.height !== height) canvas.height = height;
+      const c = canvas.getContext('2d');
+      if (c) {
+        c.clearRect(0, 0, width, height);
+        c.fillStyle = fill;
+        c.fillRect(0, 0, width, height);
+      }
+      return canvas;
+    };
+
+    const emCanvas = ensureCanvas(emissiveCanvasRef, '#000000');
     const emCtx = emCanvas.getContext('2d');
-    if (emCtx) {
-      emCtx.fillStyle = '#000000';
-      emCtx.fillRect(0, 0, emCanvas.width, emCanvas.height);
-    }
+    const heightCanvas = ensureCanvas(heightCanvasRef, '#000000');
+    const roughnessCanvas = ensureCanvas(roughnessCanvasRef, '#ffffff');
+    const normalCanvas = ensureCanvas(normalCanvasRef, 'rgb(128,128,255)');
+    const heightValues = new Float32Array(pixelCount);
+    const reflectionValues = new Float32Array(pixelCount);
+    let lockedNormalLayer: Layer | null = null;
 
     ctx.fillStyle = '#2b2b2b';
-    ctx.fillRect(0, 0, compCanvas.width, compCanvas.height);
+    ctx.fillRect(0, 0, width, height);
 
     let hasEmissive = false;
-    layers.forEach(layer => {
-      if (!layer.visible) return;
-      ctx.save();
-      ctx.globalAlpha = layer.opacity / 100;
-      ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
-        : layer.blendMode === 'screen' ? 'screen'
-        : layer.blendMode === 'overlay' ? 'overlay'
-        : 'source-over';
-      ctx.drawImage(layer.canvas, 0, 0, compCanvas.width, compCanvas.height);
-      ctx.restore();
+    for (const layer of layers) {
+      if (!layer.visible || layer.isGroup) continue;
+      const saved = layer.pbrSettings || ({} as any);
+      const channel = layer.channel;
+      const opacity = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
+      const colorOn = saved.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(channel);
+      const colorInfluence = Math.max(0, Math.min(1, saved.colorInfluence ?? 1));
+      const emissionOn = saved.emissionOn ?? channel === 'emission';
+      const emissionInfluence = Math.max(0, Math.min(1, saved.emissionInfluence ?? (channel === 'emission' ? 1 : 0)));
+      const bumpOn = saved.bumpOn ?? channel === 'height';
+      const bumpInfluence = Math.max(0, Math.min(1, saved.bumpInfluence ?? (channel === 'height' ? 1 : 0)));
+      const reflectionOn = saved.reflectionOn ?? false;
+      const reflectionInfluence = Math.max(0, Math.min(1, saved.reflectionInfluence ?? 0));
+      const normalLock = saved.normalLock ?? channel === 'normal';
 
-      // If layer is converted to emission, composite onto emissive map
-      if (layer.channel === 'emission' && emCtx) {
+      if (colorOn && colorInfluence > 0) {
+        ctx.save();
+        ctx.globalAlpha = opacity * colorInfluence;
+        ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
+          : layer.blendMode === 'screen' ? 'screen'
+          : layer.blendMode === 'overlay' ? 'overlay'
+          : layer.blendMode === 'darken' ? 'darken'
+          : layer.blendMode === 'lighten' ? 'lighten'
+          : 'source-over';
+        ctx.drawImage(layer.canvas, 0, 0, width, height);
+        ctx.restore();
+      }
+
+      if (emissionOn && emissionInfluence > 0 && emCtx) {
         hasEmissive = true;
         emCtx.save();
-        emCtx.globalAlpha = layer.opacity / 100;
-        emCtx.drawImage(layer.canvas, 0, 0, emCanvas.width, emCanvas.height);
+        emCtx.globalCompositeOperation = 'lighter';
+        emCtx.globalAlpha = opacity * emissionInfluence;
+        emCtx.drawImage(layer.canvas, 0, 0, width, height);
         emCtx.restore();
       }
-    });
 
-    if (dynamicTextureRef.current) {
-      dynamicTextureRef.current.generateMipmaps = true;
-      dynamicTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
-      dynamicTextureRef.current.needsUpdate = true;
-    }
-    if (emissiveTextureRef.current) {
-      emissiveTextureRef.current.generateMipmaps = true;
-      emissiveTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
-      emissiveTextureRef.current.needsUpdate = true;
-    }
+      if (normalLock) {
+        // A single visible normal-locked layer is authoritative; never mix tangent-space normals.
+        lockedNormalLayer = layer;
+      }
 
-    if (meshRef.current && meshRef.current.material) {
-      const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-      if (hasEmissive) {
-        if (!mat.emissiveMap && emissiveTextureRef.current) {
-          mat.emissiveMap = emissiveTextureRef.current;
+      if ((bumpOn && bumpInfluence > 0) || (reflectionOn && reflectionInfluence > 0)) {
+        try {
+          const source = layer.ctx.getImageData(0, 0, layer.canvas.width, layer.canvas.height);
+          const sourceData = source.data;
+          const ramp = (saved.bumpRamp?.length ? saved.bumpRamp : [{ position: 0, height: 0 }, { position: 1, height: 1 }])
+            .slice().sort((a: any, b: any) => a.position - b.position);
+          const rampValue = (v: number) => {
+            if (v <= ramp[0].position) return ramp[0].height;
+            if (v >= ramp[ramp.length - 1].position) return ramp[ramp.length - 1].height;
+            for (let ri = 0; ri < ramp.length - 1; ri++) {
+              const left = ramp[ri];
+              const right = ramp[ri + 1];
+              if (v >= left.position && v <= right.position) {
+                const t = (v - left.position) / Math.max(0.000001, right.position - left.position);
+                return left.height + (right.height - left.height) * t;
+              }
+            }
+            return v;
+          };
+          for (let y = 0; y < height; y++) {
+            const sy = Math.min(layer.canvas.height - 1, Math.floor(y * layer.canvas.height / height));
+            for (let x = 0; x < width; x++) {
+              const sx = Math.min(layer.canvas.width - 1, Math.floor(x * layer.canvas.width / width));
+              const si = (sy * layer.canvas.width + sx) * 4;
+              const di = y * width + x;
+              const alpha = sourceData[si + 3] / 255;
+              if (alpha <= 0) continue;
+              const luminance = (0.299 * sourceData[si] + 0.587 * sourceData[si + 1] + 0.114 * sourceData[si + 2]) / 255;
+              if (bumpOn && bumpInfluence > 0) {
+                heightValues[di] = Math.min(1, heightValues[di] + rampValue(luminance) * bumpInfluence * opacity * alpha);
+              }
+              if (reflectionOn && reflectionInfluence > 0) {
+                reflectionValues[di] = Math.max(reflectionValues[di], luminance * reflectionInfluence * opacity * alpha);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Skipping a PBR map for a canvas that cannot be read:', error);
         }
-        mat.emissive.set(0xffffff);
-        mat.emissiveIntensity = 2.2;
-        mat.needsUpdate = true;
-      } else {
-        mat.emissiveIntensity = 0.0;
       }
     }
 
-    hasEmissiveRef.current = hasEmissive;
+    const heightContext = heightCanvas.getContext('2d');
+    const roughnessContext = roughnessCanvas.getContext('2d');
+    const normalContext = normalCanvas.getContext('2d');
+    if (heightContext && roughnessContext && normalContext) {
+      const heightImage = heightContext.createImageData(width, height);
+      const roughnessImage = roughnessContext.createImageData(width, height);
+      for (let i = 0; i < pixelCount; i++) {
+        const h = Math.round(Math.max(0, Math.min(1, heightValues[i])) * 255);
+        const r = Math.round((1 - Math.max(0, Math.min(1, reflectionValues[i]))) * 255);
+        const offset = i * 4;
+        heightImage.data[offset] = heightImage.data[offset + 1] = heightImage.data[offset + 2] = h;
+        heightImage.data[offset + 3] = 255;
+        roughnessImage.data[offset] = roughnessImage.data[offset + 1] = roughnessImage.data[offset + 2] = r;
+        roughnessImage.data[offset + 3] = 255;
+      }
+      heightContext.putImageData(heightImage, 0, 0);
+      roughnessContext.putImageData(roughnessImage, 0, 0);
 
-    if (onCompositeCanvasReady) {
-      onCompositeCanvasReady(compCanvas);
+      if (lockedNormalLayer) {
+        normalContext.clearRect(0, 0, width, height);
+        normalContext.drawImage(lockedNormalLayer.canvas, 0, 0, width, height);
+      } else {
+        const normalImage = normalContext.createImageData(width, height);
+        const getHeight = (x: number, y: number) => heightValues[Math.max(0, Math.min(height - 1, y)) * width + Math.max(0, Math.min(width - 1, x))];
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const dx = -getHeight(x - 1, y - 1) + getHeight(x + 1, y - 1) - 2 * getHeight(x - 1, y) + 2 * getHeight(x + 1, y) - getHeight(x - 1, y + 1) + getHeight(x + 1, y + 1);
+            const dy = -getHeight(x - 1, y - 1) - 2 * getHeight(x, y - 1) - getHeight(x + 1, y - 1) + getHeight(x - 1, y + 1) + 2 * getHeight(x, y + 1) + getHeight(x + 1, y + 1);
+            let nx = -dx * 2.5;
+            let ny = -dy * 2.5;
+            let nz = 1;
+            const length = Math.hypot(nx, ny, nz) || 1;
+            nx /= length; ny /= length; nz /= length;
+            const offset = (y * width + x) * 4;
+            normalImage.data[offset] = Math.round((nx * 0.5 + 0.5) * 255);
+            normalImage.data[offset + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+            normalImage.data[offset + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+            normalImage.data[offset + 3] = 255;
+          }
+        }
+        normalContext.putImageData(normalImage, 0, 0);
+      }
     }
+
+    const updateTexture = (texture: THREE.CanvasTexture | null) => {
+      if (!texture) return;
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.needsUpdate = true;
+    };
+    updateTexture(dynamicTextureRef.current);
+    updateTexture(emissiveTextureRef.current);
+    updateTexture(heightTextureRef.current);
+    updateTexture(roughnessTextureRef.current);
+    updateTexture(normalTextureRef.current);
+
+    if (meshRef.current?.material) {
+      const mat = meshRef.current.material as THREE.MeshStandardMaterial;
+      mat.emissiveMap = hasEmissive ? emissiveTextureRef.current : null;
+      mat.emissive.set(0xffffff);
+      mat.emissiveIntensity = hasEmissive ? 1 : 0;
+      mat.roughnessMap = roughnessTextureRef.current;
+      mat.normalMap = normalTextureRef.current;
+      mat.needsUpdate = true;
+    }
+    hasEmissiveRef.current = hasEmissive;
+    if (onCompositeCanvasReady) onCompositeCanvasReady(compCanvas);
   }, [layers, compositeCanvas, onCompositeCanvasReady]);
 
   // Initialize Three.js scene
@@ -470,12 +592,36 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     emTex.anisotropy = maxAniso;
     emissiveTextureRef.current = emTex;
 
+    const makeMapTexture = (ref: React.MutableRefObject<HTMLCanvasElement | null>, fill: string) => {
+      if (!ref.current) {
+        ref.current = document.createElement('canvas');
+        ref.current.width = 1024;
+        ref.current.height = 1024;
+      }
+      const mapContext = ref.current.getContext('2d');
+      if (mapContext) {
+        mapContext.fillStyle = fill;
+        mapContext.fillRect(0, 0, 1024, 1024);
+      }
+      const texture = new THREE.CanvasTexture(ref.current);
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.anisotropy = maxAniso;
+      return texture;
+    };
+    heightTextureRef.current = makeMapTexture(heightCanvasRef, '#000000');
+    roughnessTextureRef.current = makeMapTexture(roughnessCanvasRef, '#ffffff');
+    normalTextureRef.current = makeMapTexture(normalCanvasRef, 'rgb(128,128,255)');
+
     const modelPreset = BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]() : BUILTIN_MODELS.suzanne();
     const material = new THREE.MeshStandardMaterial({
       map: tex,
       emissiveMap: emTex,
       emissive: new THREE.Color(0xffffff),
       emissiveIntensity: 0.0,
+      roughnessMap: roughnessTextureRef.current,
+      normalMap: normalTextureRef.current,
       roughness: materialProps.roughness,
       metalness: materialProps.metallic,
     });
@@ -749,7 +895,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         map: dynamicTextureRef.current,
         emissiveMap: hasEmissive ? emissiveTextureRef.current || undefined : undefined,
         emissive: new THREE.Color(0xffffff),
-        emissiveIntensity: hasEmissive ? 2.2 : 0.0,
+        emissiveIntensity: hasEmissive ? 1.0 : 0.0,
+        roughnessMap: roughnessTextureRef.current,
+        normalMap: normalTextureRef.current,
         roughness: materialProps.roughness,
         metalness: materialProps.metallic,
       });
