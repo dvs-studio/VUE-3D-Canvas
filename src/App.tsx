@@ -2292,7 +2292,6 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span>UNDO: NORMALIZED (3 STATES SAVED TO .XBLEND)</span>
           <span>VICTORY UKPONG · OPEN SOURCE</span>
         </div>
       </div>
