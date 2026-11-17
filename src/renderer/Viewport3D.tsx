@@ -1666,11 +1666,14 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     // High-performance direct texture update during active stroke:
     // Fast copy active layer dab to compositeCanvas and flag WebGL texture update
-    if (compositeCanvas) {
+    const activePbr = layer.pbrSettings || ({} as any);
+    const activeColorOn = activePbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(layer.channel);
+    const activeColorInfluence = Math.max(0, Math.min(1, activePbr.colorInfluence ?? 1));
+    if (compositeCanvas && activeColorOn && activeColorInfluence > 0) {
       const cctx = compositeCanvas.getContext('2d');
       if (cctx) {
         cctx.save();
-        cctx.globalAlpha = layer.opacity / 100;
+        cctx.globalAlpha = (layer.opacity / 100) * activeColorInfluence;
         let gco: GlobalCompositeOperation = 'source-over';
         switch (layer.blendMode) {
           case 'multiply': gco = 'multiply'; break;
