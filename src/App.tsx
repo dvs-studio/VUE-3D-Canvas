@@ -5,7 +5,7 @@
  * Author / Creator: Victory Ukpong
  * 
  * High-performance, lightweight, non-raytraced 3D texturing and painting application
- * targeting DirectX 11 / OpenGL 2.0 WebGL limits, .xblend project format with 3-state ring buffer.
+ * using the browser WebGL renderer and backward-compatible .xblend project files.
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
