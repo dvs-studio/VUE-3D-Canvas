@@ -645,27 +645,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     scene.add(xrayPoints);
     xrayPointsRef.current = xrayPoints;
 
-    // UnrealBloomPass Post-Processing Composer Setup
-    const composer = new EffectComposer(renderer);
-    composerRef.current = composer;
-
-    const renderPass = new RenderPass(scene, perspCam);
-    renderPassRef.current = renderPass;
-    composer.addPass(renderPass);
-
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(width, height),
-      bloom.strength,
-      bloom.radius,
-      bloom.threshold
-    );
-    bloomPassRef.current = bloomPass;
-    composer.addPass(bloomPass);
-
-    const outputPass = new OutputPass();
-    composer.addPass(outputPass);
-
+    // Keep the first visible frame on the direct renderer. The post-processing
+    // composer and bloom GPU resources are allocated on the following frame.
     let animId: number;
+    let bloomInitFrame = 0;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
@@ -724,6 +707,25 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     };
     animate();
 
+    bloomInitFrame = requestAnimationFrame(() => {
+      if (!rendererRef.current || composerRef.current) return;
+      const composer = new EffectComposer(renderer);
+      const renderPass = new RenderPass(scene, perspCam);
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(width, height),
+        bloomSettingsRef.current.strength,
+        bloomSettingsRef.current.radius,
+        bloomSettingsRef.current.threshold
+      );
+      composer.addPass(renderPass);
+      composer.addPass(bloomPass);
+      composer.addPass(new OutputPass());
+      composerRef.current = composer;
+      renderPassRef.current = renderPass;
+      bloomPassRef.current = bloomPass;
+      needsRenderRef.current = true;
+    });
+
     const fitViewport = () => {
       const w = container.clientWidth;
       const h = container.clientHeight;
@@ -781,6 +783,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     return () => {
       cancelAnimationFrame(animId);
+      if (bloomInitFrame) cancelAnimationFrame(bloomInitFrame);
       window.removeEventListener('resize', fitViewport);
       window.removeEventListener('orientationchange', onOrient);
       window.visualViewport?.removeEventListener('resize', fitViewport);
