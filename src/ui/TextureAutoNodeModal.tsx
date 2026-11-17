@@ -1,7 +1,7 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * VUE 3D Canvas - Import Texture & Auto-Node Setup Modal
+ * VUE 3D Canvas - Import Texture Modal
  * Created by Victory Ukpong
  */
 
@@ -14,7 +14,6 @@ import {
   RotateCw, 
   Sliders, 
   Layers, 
-  Network, 
   Maximize2,
   Sparkles,
   Info,
@@ -28,7 +27,7 @@ export type TextureImportRole =
   | 'color' 
   | 'height' 
   | 'emission' 
-  | 'roughness' 
+  | 'reflection' 
   | 'normal';
 
 interface TextureAutoNodeModalProps {
@@ -40,7 +39,6 @@ interface TextureAutoNodeModalProps {
     role: TextureImportRole;
     isTextureFill: boolean;
     fillConfig?: TextureFillConfig;
-    createNodeSetup: boolean;
     layerName: string;
   }) => void;
 }
@@ -56,7 +54,6 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
   const [layerName, setLayerName] = useState(() => {
     return imageFileName.replace(/\.[^/.]+$/, '');
   });
-  const [createNodeSetup, setCreateNodeSetup] = useState(true);
 
   // Material Texture Fill Config
   const [projection, setProjection] = useState<'triplanar' | 'box'>('triplanar');
@@ -177,7 +174,6 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
       role,
       isTextureFill,
       fillConfig,
-      createNodeSetup,
       layerName: layerName.trim() || 'Imported Texture',
     });
     onClose();
@@ -191,7 +187,7 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
           <div className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4 text-[#3d7fb8]" />
             <span className="font-bold text-[#eee] uppercase tracking-wider text-[11px]">
-              Import Texture &amp; Auto-Node Setup Confirmation
+              Import Texture
             </span>
           </div>
           <button onClick={onClose} className="text-[#aaa] hover:text-white p-0.5 rounded">
@@ -265,13 +261,13 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
             </div>
           </div>
 
-          {/* Right: Channel Role & Node Setup Configuration */}
+          {/* Right: Layer channel configuration */}
           <div className="flex flex-col space-y-3">
             {/* Target Role Dropdown */}
             <div className="space-y-1">
               <label className="text-[10px] text-[#aaa] font-medium uppercase font-mono flex items-center justify-between">
-                <span>Material Target Channel</span>
-                <span className="text-[#3d7fb8] font-mono font-bold">NODE INTEGRATED</span>
+                <span>Layer Channel</span>
+                <span className="text-[#a6e3a1] font-mono font-bold">LAYER SWITCHES</span>
               </label>
               <select
                 value={role}
@@ -282,7 +278,7 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
                 <option value="color">Colour (Albedo / Diffuse BSDF)</option>
                 <option value="height">Displacement (Height / Bump Map)</option>
                 <option value="emission">Emission (Surface Glow Shader)</option>
-                <option value="roughness">Reflection Mask (Metallic / Roughness)</option>
+                <option value="reflection">Reflection Strength Map</option>
                 <option value="normal">Normal Map (RGB Tangent Seam)</option>
               </select>
             </div>
@@ -410,35 +406,19 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
               </div>
             )}
 
-            {/* Mode 2: Standard PBR Channels */}
+            {/* Layer switches are assigned automatically from the selected role. */}
             {role !== 'texture_fill' && (
-              <div className="bg-[#2a2a2a] p-2.5 rounded border border-[#444] space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-bold text-[#89b4fa]">
-                  <span className="flex items-center gap-1">
-                    <Network className="w-3.5 h-3.5" />
-                    Blender Node Setup Circuit
-                  </span>
-                  <span className="text-[9px] font-mono text-[#a6e3a1]">Auto-Configured</span>
+              <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2">
+                <div className="text-[11px] font-bold text-[#a6e3a1] flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5" />
+                  Layer contribution
                 </div>
-
-                <label className="flex items-start gap-2 cursor-pointer bg-[#323232] p-2 rounded border border-[#404040]">
-                  <input
-                    type="checkbox"
-                    checked={createNodeSetup}
-                    onChange={(e) => setCreateNodeSetup(e.target.checked)}
-                    className="mt-0.5 accent-[#3d7fb8]"
-                  />
-                  <div className="text-[11px]">
-                    <strong className="text-white block">Auto-wire into Node Editor Graph</strong>
-                    <span className="text-[#999] text-[10px] leading-snug block mt-0.5">
-                      {role === 'color' && 'Wires texture to Principled BSDF [Base Color] socket.'}
-                      {role === 'height' && 'Creates Bump Node (Normal = Bump(Height)), wired to BSDF [Normal].'}
-                      {role === 'emission' && 'Creates ShaderNodeEmission, wired to Material Output [Surface].'}
-                      {role === 'roughness' && 'Wires texture map to Principled BSDF [Roughness] & [Metallic] sockets.'}
-                      {role === 'normal' && 'Creates Normal Map node, wired to Principled BSDF [Normal] socket.'}
-                    </span>
-                  </div>
-                </label>
+                <p className="text-[10px] text-[#aaa] leading-relaxed">
+                  This role configures the new layer's PBR switches automatically. After import, open Layer Properties to enable additional contributions or adjust their influence.
+                </p>
+                <p className="text-[10px] text-[#888]">
+                  No shader nodes are created in the painter. Blender nodes are built only when you import the exported ZIP bundle in Blender.
+                </p>
               </div>
             )}
           </div>
