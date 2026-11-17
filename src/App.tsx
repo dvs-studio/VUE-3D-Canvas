@@ -16,8 +16,6 @@ import {
   BlendMode, 
   ViewportShadingMode, 
   SelectionMask, 
-  GraphNode, 
-  NodeConnection, 
   MeshModelAsset,
   BloomSettings,
   SurfaceShadingMode,
