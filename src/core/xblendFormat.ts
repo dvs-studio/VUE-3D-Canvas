@@ -86,19 +86,19 @@ function makeLayerMapDataUrl(layer: Layer, kind: LayerMapKind, pbr: LayerPBRSett
   return canvas.toDataURL('image/png');
 }
 
-function layerMapManifest(layer: Layer, index: number, projectName: string) {
+function layerMapManifest(layer: Layer, index: number, projectName: string, effectiveVisible = layer.visible && !layer.isGroup) {
   const pbr = getLayerPbr(layer);
   const maps: Partial<Record<LayerMapKind, string>> = {};
-  if (pbr.colorOn && (pbr.colorInfluence ?? 0) > 0) maps.color = mapPath(projectName, layer.id, 'color');
-  if (pbr.emissionOn && (pbr.emissionInfluence ?? 0) > 0) maps.emission = mapPath(projectName, layer.id, 'emission');
-  if (pbr.bumpOn && (pbr.bumpInfluence ?? 0) > 0) maps.height = mapPath(projectName, layer.id, 'height');
-  if (pbr.reflectionOn && (pbr.reflectionInfluence ?? 0) > 0) maps.reflection = mapPath(projectName, layer.id, 'reflection');
-  if (pbr.normalLock) maps.normal = mapPath(projectName, layer.id, 'normal');
+  if (!layer.isGroup && pbr.colorOn && (pbr.colorInfluence ?? 0) > 0) maps.color = mapPath(projectName, layer.id, 'color');
+  if (!layer.isGroup && pbr.emissionOn && (pbr.emissionInfluence ?? 0) > 0) maps.emission = mapPath(projectName, layer.id, 'emission');
+  if (!layer.isGroup && pbr.bumpOn && (pbr.bumpInfluence ?? 0) > 0) maps.height = mapPath(projectName, layer.id, 'height');
+  if (!layer.isGroup && pbr.reflectionOn && (pbr.reflectionInfluence ?? 0) > 0) maps.reflection = mapPath(projectName, layer.id, 'reflection');
+  if (!layer.isGroup && pbr.normalLock) maps.normal = mapPath(projectName, layer.id, 'normal');
   return {
     id: layer.id,
     name: layer.name,
     order: index,
-    visible: layer.visible,
+    visible: effectiveVisible,
     opacity: layer.opacity,
     blendMode: layer.blendMode,
     uvChannel: layer.uvChannel || 'uv_original',
@@ -136,7 +136,7 @@ export class XBlendManager {
     // 1. Process layers to dataURLs
     const cleanProjectName = (projectName || 'VUE3D_Project').replace(/[^a-zA-Z0-9_-]/g, '_');
     const serializedLayers = layers.map((layer, index) => {
-      const entry = layerMapManifest(layer, index, cleanProjectName);
+      const entry = layerMapManifest(layer, index, cleanProjectName, layer.visible && !layer.isGroup && (!layer.groupId || layers.find(parent => parent.id === layer.groupId)?.visible !== false));
       const { _pbr, ...manifest } = entry;
       return {
         id: layer.id,
