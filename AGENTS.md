@@ -369,3 +369,17 @@ Superseded by the PIN at the top of this file. Do not add a second status here.
 - Not built, and still the work: toggle layers, Undo / Redo / settings labels, node panel removed, UV dock says Coming soon, Import Texture kept and mapped to the switches, themes on the whole window, sphere and mountain redrawn, triplanar preview and colour mix, subdivision preview that does not write the mesh, cheap first frame, `background.jpg`, `.xblend` zip with baked maps, Blender mix chain per channel.
 - Instructions: `LAYER_PBR_PLAN.md`. Schema: `XBLEND_FORMAT_SPECIFICATION.md` section 7. Importer: the 2026-11-16 line at the top of `BLENDER_ADDON_PROMPT.md`.
 - While building, notes go only in this file, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, and `agents/<name>.md`. Push code every 3.5 minutes, separate from note commits. Do not edit `crates/vue3d_core`. Windows waits for Victory's go-ahead.
+
+
+### 2026-11-17 — pre-execution (viewport responsiveness, model parts, subdivision, gizmos, UV roadmap)
+
+Victory authorised autonomous work on the self-hosted Vite/React/Three.js painter. Scope is the source under `src/` plus its generated `self-host/public/index.html` via `npm run host:sync`; do not edit `crates/vue3d_core`, Windows/native build paths, or `release/vue3d-self-host-safety-2026-11-14.zip`.
+
+- Temporary orientation gizmos remain CSS-based for now. Apply consistent axis colours (X red, Y green, Z blue) to all six directions and retain existing hit targets/navigation actions. Later replace the visual bodies with user-supplied low-poly GLB assets from a future `gizmos/` folder. The mountain's faded/acoustic painting treatment is explicitly deferred to that asset pass.
+- Subdivision UI must be available in both floating and dockable modes. Separate non-destructive preview from any explicit mesh-apply operation; applying subdivision must be undoable and must not silently mutate the source while previewing. Confirm exact current model/undo pathways before wiring it.
+- Build model-part visibility/isolation controls and keep the selected part, object visibility, framing, and viewport state synchronised.
+- Highest performance priority: profile and reduce input-to-frame latency for eraser and other paint operations. Avoid full texture/composite rebuilds, mipmap generation, BVH rebuilds, or GPU uploads in pointer-move/dab hot paths. Use dirty regions/batched uploads where correct; do not trade away visual correctness. Record measured before/after results when instrumentation permits; do not invent benchmarks.
+- UV work is documentation/backlog only until Victory explicitly confirms implementation. Add a detailed staged roadmap covering algorithms, tools, data model, interaction, packing, validation, undo, persistence, performance, and the standalone UV workspace with explicit sync contracts.
+- Keep existing axis and viewport controls functional; keep the mountain faded painting treatment deferred. Keep the UV editor marked as planned/coming soon, not implemented.
+
+This is a pre-execution note only; no implementation result is claimed here.
