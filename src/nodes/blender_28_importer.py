@@ -42,6 +42,18 @@ def _new_node(nodes, node_type, label, location):
     return node
 
 
+def _hex_rgb(value):
+    text = str(value or "#ffffff").strip().lstrip("#")
+    if len(text) == 3:
+        text = "".join(ch * 2 for ch in text)
+    if len(text) >= 6:
+        try:
+            return tuple(int(text[index:index + 2], 16) / 255.0 for index in (0, 2, 4))
+        except Exception:
+            pass
+    return (1.0, 1.0, 1.0)
+
+
 def _safe_extract(zip_path, destination):
     root = os.path.realpath(destination)
     with zipfile.ZipFile(zip_path, 'r') as archive:
@@ -271,13 +283,20 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
             influence = opacity * max(0.0, min(1.0, float(layer.get("emissionInfluence", 0.0))))
             factor = _alpha_factor(nodes, links, emission_tex, influence, (x_color + 210, order_y - 710),
                                    "Emission factor")
-            add = _new_node(nodes, "ShaderNodeMixRGB", "Emission additive mix", (x_color + 440, order_y - 600))
+            strength = max(0.0, float(layer.get("emissionStrength", 1.0)))
+            tint = _hex_rgb(layer.get("emissionColor", "#ffffff"))
+            emission_scale = _new_node(nodes, "ShaderNodeMixRGB", "Emission tint and strength", (x_color + 430, order_y - 760))
+            emission_scale.blend_type = 'MULTIPLY'
+            emission_scale.inputs["Fac"].default_value = 1.0
+            links.new(_output(emission_tex, ["Color"]), emission_scale.inputs["Color1"])
+            emission_scale.inputs["Color2"].default_value = (tint[0] * strength, tint[1] * strength, tint[2] * strength, 1.0)
+            add = _new_node(nodes, "ShaderNodeMixRGB", "Emission additive mix", (x_color + 660, order_y - 600))
             add.blend_type = 'ADD'
             if emission_chain:
                 links.new(emission_chain, add.inputs["Color1"])
             else:
                 add.inputs["Color1"].default_value = (0.0, 0.0, 0.0, 1.0)
-            links.new(_output(emission_tex, ["Color"]), add.inputs["Color2"])
+            links.new(emission_scale.outputs["Color"], add.inputs["Color2"])
             if factor:
                 links.new(factor, add.inputs["Fac"])
             else:
@@ -337,6 +356,7 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
         links.new(height_chain, height_normal.inputs["Color"])
         links.new(_output(height_normal, ["Normal"]), _socket(principled, ["Normal"]))
         displacement = _new_node(nodes, "ShaderNodeDisplacement", "Height displacement", (1200, -650))
+        displacement.inputs["Scale"].default_value = max(0.0, min(2.0, float(layers[-1].get("bumpHeight", 1.0)))) * 0.05
         links.new(height_chain, _socket(displacement, ["Height"]))
         displacement_output = _output(displacement, ["Displacement"])
         displacement_input = _socket(output, ["Displacement"])
