@@ -9,3 +9,11 @@
 - Made the existing subdivision panel visible by default; dock/floating mode was already supported. Preview remains non-destructive; destructive Apply is not yet implemented.
 - CI run `44196595476` passed and uploaded artifact `14378169255` (bundle `index-DwkyI3V_.js`). This is build/package evidence only, not browser interaction proof.
 - Next: verify actual viewport responsiveness on device, complete dynamic mesh part isolation, filter/triplanar work, and decide the undo-safe destructive subdivision workflow. Keep `crates/vue3d_core` and the protected safety ZIP untouched.
+
+
+## 2026-11-17 follow-up — stroke trail and redundant rebuilds
+
+- Dirty-region compositing now covers the segment from the prior pointer position to the current dab, as well as the bounds of symmetry points. It scales source rectangles for non-1024 layer canvases and falls back for dragged-dot/large-area tools.
+- Mask-brush pointer updates no longer trigger full PBR texture rebuilds. Pointer-up relies on the canonical texture notification to trigger one PBR rebuild rather than invoking a duplicate directly.
+- Latest code revision `d55a7ff` passed run `44197313538`; generated bundle `index-D6s9T1ZF.js`; artifact ID `14380475625`.
+- Device responsiveness remains unmeasured. Manual test on Victory's target hardware is still required.
