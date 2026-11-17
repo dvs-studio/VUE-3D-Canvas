@@ -247,12 +247,12 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
               }}
             >
               <div className="absolute inset-0 rounded-full pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent 48%, rgba(180,210,235,.22) 49%, rgba(180,210,235,.22) 51%, transparent 52%), linear-gradient(0deg, transparent 48%, rgba(180,210,235,.18) 49%, rgba(180,210,235,.18) 51%, transparent 52%)' }} />
-              <button onClick={() => onSnapView('top')} title="Snap to Top View" className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white drop-shadow">TOP</button>
-              <button onClick={() => onSnapView('bottom')} title="Snap to Bottom View" className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white drop-shadow">BOTTOM</button>
-              <button onClick={() => onSnapView('front')} title="Snap to Front View" className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-white drop-shadow">FRONT</button>
-              <button onClick={() => onSnapView('back')} title="Snap to Back View" className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-white drop-shadow">BACK</button>
-              <button onClick={() => onSnapView('left')} title="Snap to Left View" className="absolute left-1/2 top-[30%] -translate-x-1/2 text-[8px] font-bold text-[#fbcfe8] drop-shadow">LEFT</button>
-              <button onClick={() => onSnapView('right')} title="Snap to Right View" className="absolute left-1/2 bottom-[30%] -translate-x-1/2 text-[8px] font-bold text-[#fbcfe8] drop-shadow">RIGHT</button>
+              <button onClick={() => onSnapView('top')} title="Snap to Top View" className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-[#a6e3a1] drop-shadow">TOP</button>
+              <button onClick={() => onSnapView('bottom')} title="Snap to Bottom View" className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-[#a6e3a1] drop-shadow">BOTTOM</button>
+              <button onClick={() => onSnapView('front')} title="Snap to Front View" className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-[#89b4fa] drop-shadow">FRONT</button>
+              <button onClick={() => onSnapView('back')} title="Snap to Back View" className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-[#89b4fa] drop-shadow">BACK</button>
+              <button onClick={() => onSnapView('left')} title="Snap to Left View" className="absolute left-1/2 top-[30%] -translate-x-1/2 text-[8px] font-bold text-[#f38ba8] drop-shadow">LEFT</button>
+              <button onClick={() => onSnapView('right')} title="Snap to Right View" className="absolute left-1/2 bottom-[30%] -translate-x-1/2 text-[8px] font-bold text-[#f38ba8] drop-shadow">RIGHT</button>
             </div>
           </div>
         )}
@@ -271,12 +271,12 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
                 filter: 'drop-shadow(0 4px 5px rgba(0,0,0,.45))',
               }}
             >
-              <button onClick={() => onSnapView('top')} title="Snap to Top View" className="absolute top-[8%] left-1/2 -translate-x-1/2 text-[8px] font-black text-[#17202a] drop-shadow">TOP</button>
-              <button onClick={() => onSnapView('front')} title="Snap to Front View" className="absolute top-[42%] left-[15%] text-[8px] font-bold text-white drop-shadow">FRONT</button>
-              <button onClick={() => onSnapView('back')} title="Snap to Back View" className="absolute top-[42%] right-[15%] text-[8px] font-bold text-white drop-shadow">BACK</button>
-              <button onClick={() => onSnapView('left')} title="Snap to Left View" className="absolute bottom-[18%] left-[7%] text-[8px] font-bold text-white drop-shadow">LEFT</button>
-              <button onClick={() => onSnapView('right')} title="Snap to Right View" className="absolute bottom-[18%] right-[7%] text-[8px] font-bold text-white drop-shadow">RIGHT</button>
-              <button onClick={() => onSnapView('bottom')} title="Snap to Bottom View" className="absolute bottom-[2%] left-1/2 -translate-x-1/2 text-[8px] font-bold text-white drop-shadow">BOTTOM</button>
+              <button onClick={() => onSnapView('top')} title="Snap to Top View" className="absolute top-[8%] left-1/2 -translate-x-1/2 text-[8px] font-black text-[#a6e3a1] drop-shadow">TOP</button>
+              <button onClick={() => onSnapView('front')} title="Snap to Front View" className="absolute top-[42%] left-[15%] text-[8px] font-bold text-[#89b4fa] drop-shadow">FRONT</button>
+              <button onClick={() => onSnapView('back')} title="Snap to Back View" className="absolute top-[42%] right-[15%] text-[8px] font-bold text-[#89b4fa] drop-shadow">BACK</button>
+              <button onClick={() => onSnapView('left')} title="Snap to Left View" className="absolute bottom-[18%] left-[7%] text-[8px] font-bold text-[#f38ba8] drop-shadow">LEFT</button>
+              <button onClick={() => onSnapView('right')} title="Snap to Right View" className="absolute bottom-[18%] right-[7%] text-[8px] font-bold text-[#f38ba8] drop-shadow">RIGHT</button>
+              <button onClick={() => onSnapView('bottom')} title="Snap to Bottom View" className="absolute bottom-[2%] left-1/2 -translate-x-1/2 text-[8px] font-bold text-[#a6e3a1] drop-shadow">BOTTOM</button>
             </div>
           </div>
         )}
