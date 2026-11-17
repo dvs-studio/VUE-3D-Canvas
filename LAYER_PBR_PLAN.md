@@ -427,3 +427,11 @@ No UV code is authorised by this backlog entry. Keep the current UV Editor place
 - [ ] Complete the remaining filter and triplanar per-instance source-toggle work.
 - [ ] Implement destructive subdivision only with explicit Apply, undo restoration, UV/group preservation, and export validation.
 - [ ] UV project remains documentation-only until explicit authorisation.
+
+
+## 2026-11-17 follow-up — stroke trail and redundant rebuilds
+
+- Dirty-region compositing now covers the segment from the prior pointer position to the current dab, as well as the bounds of symmetry points. It scales source rectangles for non-1024 layer canvases and falls back for dragged-dot/large-area tools.
+- Mask-brush pointer updates no longer trigger full PBR texture rebuilds. Pointer-up relies on the canonical texture notification to trigger one PBR rebuild rather than invoking a duplicate directly.
+- Latest code revision `d55a7ff` passed run `44197313538`; generated bundle `index-D6s9T1ZF.js`; artifact ID `14380475625`.
+- Device responsiveness remains unmeasured. Manual test on Victory's target hardware is still required.
