@@ -2,6 +2,16 @@ name: Build Self-Hosted Programme
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'scripts/sync_self_host.mjs'
+      - 'self-host/**'
+      - 'package.json'
+      - 'vite.config.ts'
+      - '.github/workflows/build-self-host.yml'
 
 permissions:
   contents: read
