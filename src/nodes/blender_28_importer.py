@@ -187,12 +187,12 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
     _set_default(principled, ["Base Color"], (1.0, 1.0, 1.0, 1.0))
 
     layers = sorted(manifest.get("layers", []), key=lambda layer: int(layer.get("order", 0)))
-    color_chain = _socket(principled, ["Base Color"])
+    color_chain = None
     roughness_chain = None
     emission_chain = None
     height_chain = None
     normal_texture = None
-    normal_uv = None
+    normal_strength = 1.0
     x_color = -700
     y_color = 700
 
@@ -224,6 +224,8 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
             mix.blend_type = blend_modes.get(layer.get("blendMode", "normal"), "MIX")
             if color_chain:
                 links.new(color_chain, mix.inputs["Color1"])
+            else:
+                mix.inputs["Color1"].default_value = (1.0, 1.0, 1.0, 1.0)
             links.new(_output(color_tex, ["Color"]), mix.inputs["Color2"])
             if factor:
                 links.new(factor, mix.inputs["Fac"])
@@ -310,6 +312,7 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
             normal_texture = _image_node(nodes, links, base_dir, maps.get("normal"), uv_name,
                                          "Locked Normal - " + layer.get("name", str(index)),
                                          (x_color + 20, order_y - 1200), "Non-Color")
+            normal_strength = max(0.0, min(2.0, float(layer.get("normalStrength", 1.0))))
 
     if color_chain:
         links.new(color_chain, _socket(principled, ["Base Color"]))
@@ -324,6 +327,8 @@ def _build_layer_material(manifest, base_dir, target_material_name=None):
     if normal_texture:
         normal_node = _new_node(nodes, "ShaderNodeNormalMap", "Single locked normal source", (850, -650))
         links.new(_output(normal_texture, ["Color"]), normal_node.inputs["Color"])
+        if normal_node.inputs.get("Strength") is not None:
+            normal_node.inputs["Strength"].default_value = normal_strength
         normal_output = _output(normal_node, ["Normal"])
         if normal_output:
             links.new(normal_output, _socket(principled, ["Normal"]))
