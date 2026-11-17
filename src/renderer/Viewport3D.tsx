@@ -796,7 +796,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       glCanvas.removeEventListener('webglcontextrestored', onContextRestored);
       if (composerRef.current) {
         composerRef.current.dispose();
+        composerRef.current = null;
       }
+      dynamicTextureRef.current?.dispose();
+      emissiveTextureRef.current?.dispose();
+      heightTextureRef.current?.dispose();
+      roughnessTextureRef.current?.dispose();
+      normalTextureRef.current?.dispose();
       renderer.dispose();
     };
   }, []);
