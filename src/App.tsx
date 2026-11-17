@@ -8,7 +8,7 @@
  * targeting DirectX 11 / OpenGL 2.0 WebGL limits, .xblend project format with 3-state ring buffer.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   ToolType, 
   BrushPreset, 
@@ -74,6 +74,8 @@ import { ExportTextureDialog } from './ui/ExportTextureDialog';
 import { DockerGroup, DockerTabItem } from './ui/DockerGroup';
 import { SymmetryPanel } from './ui/panels/SymmetryPanel';
 import { MaskPanel } from './ui/panels/MaskPanel';
+import { SubdivisionPanel } from './ui/panels/SubdivisionPanel';
+import { SubdivisionPreviewOptions, buildCombinedHeightMap, createSubdivisionPreviewGeometry } from './renderer/subdivisionPreview';
 import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
 import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
 import { GpuDiagnosticsModal } from './ui/GpuDiagnosticsModal';
@@ -392,6 +394,7 @@ export default function App() {
     symmetry: true,
     masking: false,
     uvEditor: false,
+    subdivision: false,
   });
 
   const [panelFloating, setPanelFloating] = useState<Record<string, boolean>>({
@@ -402,6 +405,7 @@ export default function App() {
     symmetry: false,
     masking: false,
     uvEditor: true,
+    subdivision: false,
   });
 
   // 3D Viewport UnrealBloomPass Post-Processing Settings
@@ -413,6 +417,36 @@ export default function App() {
   });
 
   const [textureVersion, setTextureVersion] = useState(0);
+
+  const [subdivisionSettings, setSubdivisionSettings] = useState<SubdivisionPreviewOptions>({
+    enabled: false,
+    algorithm: 'catmull-clark',
+    levels: 1,
+    sharpAngle: 45,
+    crease: 0.65,
+    boundary: true,
+    displacement: 0,
+  });
+  const subdivisionHeightMap = useMemo(
+    () => subdivisionSettings.enabled && subdivisionSettings.displacement > 0
+      ? buildCombinedHeightMap(layers)
+      : null,
+    [layers, subdivisionSettings.enabled, subdivisionSettings.displacement]
+  );
+  const subdivisionPreviewGeometry = useMemo(() => {
+    if (!activeGeometry || !subdivisionSettings.enabled || subdivisionSettings.levels === 0) return null;
+    try {
+      return createSubdivisionPreviewGeometry(activeGeometry, subdivisionSettings, subdivisionHeightMap);
+    } catch (error) {
+      console.warn('Subdivision preview could not be generated:', error);
+      return null;
+    }
+  }, [activeGeometry, subdivisionSettings, subdivisionHeightMap]);
+  useEffect(() => () => {
+    if (subdivisionPreviewGeometry && subdivisionPreviewGeometry !== activeGeometry) {
+      subdivisionPreviewGeometry.dispose();
+    }
+  }, [subdivisionPreviewGeometry, activeGeometry]);
 
   // Synchronously composites all visible layers into canonical compositeCanvas
   const syncCompositeCanvas = useCallback(() => {
@@ -1702,7 +1736,7 @@ export default function App() {
                 onUpdateBloomSettings={(patch) => setBloomSettings(b => ({ ...b, ...patch }))}
                 patternStampConfig={patternStampConfig}
                 meshComponentVisibility={isolateSelectedGroupOnly && meshComponentVisibility !== 'all' ? meshComponentVisibility : 'all'}
-                geometry={activeGeometry}
+                geometry={subdivisionPreviewGeometry || activeGeometry}
                 onGeometryUpdated={notifyTextureUpdated}
                 activeUVChannel={activeUVChannel}
                 isXRayBrushActive={isXRayBrushActive}
@@ -2095,6 +2129,24 @@ export default function App() {
                 </div>
               )}
 
+              {/* Non-destructive Subdivision Preview */}
+              {activePanels.subdivision && !panelFloating.subdivision && (
+                <div className="border-b border-[#444] shrink-0">
+                  <DockablePanelFrame
+                    id="subdivision"
+                    title="Subdivision Preview"
+                    icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
+                    onClose={() => togglePanel('subdivision')}
+                    onToggleFloat={() => togglePanelFloat('subdivision')}
+                  >
+                    <SubdivisionPanel
+                      settings={subdivisionSettings}
+                      onChange={(patch) => setSubdivisionSettings(current => ({ ...current, ...patch }))}
+                    />
+                  </DockablePanelFrame>
+                </div>
+              )}
+
               {/* Symmetry & Symmetrize Panel */}
               {activePanels.symmetry && !panelFloating.symmetry && (
                 <div className="border-b border-[#444] h-72 shrink-0">
@@ -2145,6 +2197,27 @@ export default function App() {
       </div>
 
       {/* Floating Panels (Torn off into floating windows) */}
+      {panelFloating.subdivision && activePanels.subdivision && (
+        <DockablePanelFrame
+          id="subdivision"
+          title="Subdivision Preview"
+          icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
+          isFloating={true}
+          initialPos={{ x: 360, y: 140 }}
+          width={300}
+          height={420}
+          minWidth={260}
+          minHeight={320}
+          onClose={() => togglePanel('subdivision')}
+          onToggleFloat={() => togglePanelFloat('subdivision')}
+        >
+          <SubdivisionPanel
+            settings={subdivisionSettings}
+            onChange={(patch) => setSubdivisionSettings(current => ({ ...current, ...patch }))}
+          />
+        </DockablePanelFrame>
+      )}
+
       {panelFloating.uvEditor && activePanels.uvEditor && (
         <DockablePanelFrame
           id="uvEditor"
