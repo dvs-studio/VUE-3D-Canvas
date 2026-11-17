@@ -6,7 +6,7 @@
  */
 
 import JSZip from 'jszip';
-import { Layer, MeshModelAsset, XBlendProject, LayerPBRSettings } from './types';
+import type { Layer, MeshModelAsset, XBlendProject, LayerPBRSettings } from './types';
 import { UndoRingBuffer } from './history';
 
 type LayerMapKind = 'color' | 'emission' | 'height' | 'reflection' | 'normal';
