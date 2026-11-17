@@ -42,7 +42,7 @@ function settingsFor(layer: Layer): LayerPBRSettings {
     reflectionSource: saved.reflectionSource ?? 'hdri',
     reflectionIntensity: saved.reflectionIntensity ?? 0.8,
     matcapPreset: saved.matcapPreset ?? 'chrome',
-    colorOn: saved.colorOn ?? (channel !== 'normal' && channel !== 'height' && channel !== 'emission'),
+    colorOn: saved.colorOn ?? (channel !== 'normal' && channel !== 'height' && channel !== 'emission' && channel !== 'roughness'),
     colorInfluence: saved.colorInfluence ?? 1,
     reflectionOn: saved.reflectionOn ?? false,
     reflectionInfluence: saved.reflectionInfluence ?? 0,
