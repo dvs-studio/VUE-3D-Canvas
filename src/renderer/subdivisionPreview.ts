@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { Layer } from '../core/types';
+import type { Layer } from '../core/types';
 
 export interface SubdivisionPreviewOptions {
   enabled: boolean;
