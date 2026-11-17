@@ -299,3 +299,115 @@ The panel is `src/ui/panels/SubdivisionPanel.tsx`, listed in the Window menu bes
 ## Done when
 
 `npm run host:sync` has inlined a new bundle. Opening Layer Properties shows the three switches and the ramp. Two painted layers with bump on move the combined height, not two normal colours. Emission from two layers adds. A Normal conversion is the only normal. Triplanar shows a preview and accepts rgba, hsla, and hex with a separate alpha. Switching theme recolours the dialogs, not only the bar. Sphere and mountain are each one shape. Edit says Undo, then Redo, then Undo & Redo Settings, and the footer no longer mentions a ring. Import Texture still opens, with no node checkbox, and a fill image still makes a material-fill layer. The node panel is gone. The dock that replaced it says Coming soon. Subdivision Preview can be turned on without changing the exported mesh. A project zip contains the baked images and the manifest, and an old `.xblend` without the new fields still opens. The Blender script builds one mix chain per channel into one Principled shader. If Blender was not run, the note says so. `public/background.jpg` is beside the self-host `index.html` after sync.
+
+
+---
+
+# 2026-11-17 — Self-host viewport, geometry, painting performance and UV roadmap
+
+This section supersedes earlier narrow task descriptions where they conflict with Victory's 2026-11-17 direction. The product remains the Vite/React/Three.js painter under `src/`, packaged into `self-host/public/index.html` with `npm run host:sync`. The safety ZIP and Rust workspace are protected.
+
+## Execution order — build now
+
+### A. Input-to-frame latency and painting hot path (highest priority)
+- [ ] Instrument pointer-down, pointer-move, dab execution, layer-canvas mutation, composite sync, GPU upload, and completed viewport frame. Use rolling measurements and development-only diagnostics; do not add permanent per-dab console logging.
+- [ ] Verify whether `notifyTextureUpdated` performs a full 1024×1024 composite for every pointer event. Coalesce repeated notifications to at most one composite/upload request per animation frame; preserve immediate visual feedback at the next frame.
+- [ ] Separate layer pixel mutation from whole-document composite work. Track dirty rectangles from brush/eraser dabs and union them per frame; only composite the affected region when blend/group dependencies allow it. Fall back to full composite for filters, visibility, opacity, blend-mode, group, undo/redo, and other global operations.
+- [ ] Keep mipmap generation deferred until stroke end. Ensure no texture allocation, full mipmap rebuild, BVH rebuild, geometry conversion, or synchronous readback occurs inside the pointer-move/dab hot path.
+- [ ] Reuse scratch canvases, typed arrays, gradient/pattern caches, and GPU textures. Avoid creating temporary canvases per dab; cache stencil images and procedural brush resources with bounded lifetime.
+- [ ] Check eraser specifically: `destination-out` should mutate only the active layer's dirty pixels; avoid an extra full-resolution composite per dab. Keep alpha, pressure, flow, blend mode, and undo semantics identical.
+- [ ] Add a repeatable benchmark scene and record median/p95 input-to-frame latency, composite time, and GPU upload time before/after. If no reliable device timing is available, mark measurements as not captured rather than inventing values.
+- [ ] Test brush, soft brush, eraser, clone, smudge, pattern stamp, symmetry, 2D painting, 3D painting, undo/redo, and tablet pressure after optimisation.
+
+### B. Model parts and isolation
+- [ ] Enumerate every imported mesh/object/mesh group with stable IDs and readable names; avoid merging distinct OBJ groups or GLB nodes in the UI inventory.
+- [ ] Add per-part visibility, isolate selected, show all, and frame/view selected controls.
+- [ ] Keep selected part, mesh visibility, paint hit testing, raycasting, and export visibility in agreement. Hidden parts must not receive paint or block raycasts.
+- [ ] Preserve hierarchy and visibility in the session; define whether visibility persists in `.xblend` only after checking the existing schema.
+- [ ] Test OBJ groups, multi-mesh GLB, nested groups, duplicate names, missing names, and a single-mesh model.
+
+### C. Subdivision workspace — floating and dockable
+- [ ] Keep the existing Catmull-Clark and Simple algorithms, sharp-angle/crease/boundary controls, and displacement preview.
+- [ ] Support both docked and floating modes, including resize, close, restore, and workspace state consistency.
+- [ ] Make the distinction explicit between **Preview** (transient, non-destructive) and **Apply Subdivision** (creates replacement geometry only after an explicit user action).
+- [ ] Applying must be undoable, update geometry bounds/normals/UVs/material groups, preserve source asset backup for undo, and never silently alter the model merely because preview is enabled.
+- [ ] Confirm level caps and memory estimates before high subdivision. Warn or refuse if projected face/vertex counts exceed safe limits.
+- [ ] Validate topology, UV seams, boundary handling, sharp edges, normals, and export/import round trips. Never claim a destructive apply is implemented until undo and export have been tested.
+
+### D. Temporary axis-coloured gizmos
+- [ ] Keep the current CSS box/sphere/mountain gizmos as temporary placeholders.
+- [ ] Use a consistent axis convention: X red, Y green, Z blue, including negative directions and all three visual styles. Keep all six view hit targets and the existing pan/zoom/orbit/ortho/reset/fit controls.
+- [ ] Retain WebGL badge and responsive orientation tracking.
+- [ ] Future asset handoff: user will provide a `gizmos/` folder with low-poly GLB samples. Add a loader with graceful CSS fallback, stable named axis groups/material slots, documented scale/origin, and no hard dependency on files that are not yet present.
+- [ ] Defer the mountain's soft/faded acoustic painting appearance to the later GLB asset pass; do not approximate or bake that effect into the temporary axis palette.
+
+### E. Painting filters and procedural fills
+- [ ] Review current filter registry and avoid duplicate implementations. Add/complete powderiser, wood grain, hatching/cross-hatching, hashing/dithering, mosaic, edge wear, cavity dirt, and scatter stamps with documented parameter ranges and deterministic seeds where appropriate.
+- [ ] Wood filter defaults to the currently selected filter colours. Only use an image texture when the user explicitly chooses one.
+- [ ] For every triplanar instance, expose a clear image-texture source toggle: checked = use that instance's own colour values; unchecked = use the selected image texture. Keep this if/else behaviour independent per instance.
+- [ ] Preserve alpha, colour-space handling, UV-less projection, layer channel assignment, and non-destructive preview/apply behaviour.
+- [ ] Profile filter previews on large canvases and avoid rebuilding the entire viewport for parameter changes that affect only a preview region.
+
+### F. Verification and packaging
+- [ ] Run TypeScript/lint and production build; run `npm run host:sync`.
+- [ ] Confirm the generated `self-host/public/index.html` has inline JS/CSS and works both through `file://` and `node self-host/server.js`.
+- [ ] Run browser interaction checks for painting, erasing, model isolation, gizmo orientation, subdivision preview/apply/undo, filters, and legacy `.xblend` compatibility.
+- [ ] Confirm the protected safety ZIP has not changed and no `crates/vue3d_core` files are included in the diff.
+- [ ] Keep CI evidence separate from manual browser/device evidence. A green build does not prove viewport responsiveness or Blender import.
+
+## UV project — detailed backlog, documentation only until explicit confirmation
+
+**Status: PLANNED / NOT AUTHORISED FOR IMPLEMENTATION.** Existing UV islands, unwrap and UV-channel features must continue to work. Do not replace them or start the standalone UV workspace until Victory explicitly says to begin UV development.
+
+### UV-1. Goals, topology and data model
+- [ ] Define a UV document model independent of viewport render objects: mesh/object ID, UV channel ID, chart/island ID, face/corner references, seam edges, pinned vertices, selection sets, and per-island transforms.
+- [ ] Preserve per-corner UV coordinates so hard seams can duplicate UV vertices without corrupting shared 3D positions or normals.
+- [ ] Define stable identifiers across geometry rebuilds and explicit invalidation rules when topology changes.
+- [ ] Support multiple UV channels per mesh and the existing per-layer active UV channel selection.
+- [ ] Document linked assets, source geometry immutability, serialization/version migration, and the relationship to `.xblend`.
+
+### UV-2. Unwrap and chart generation algorithms
+- [ ] **Smart UV / angle-based charting:** seed-face angle threshold, connected-face growth, seam cuts, chart limits, deterministic results, and explicit handling of non-manifold/boundary edges.
+- [ ] **LSCM:** least-squares conformal mapping, boundary constraints, numerical conditioning, degenerate triangles, and distortion reporting.
+- [ ] **ABF / ABF++:** angle-based flattening, angle constraints, convergence criteria, and fallback when the solver is unstable.
+- [ ] **ARAP / SLIM:** local/global optimisation, distortion energy, pinned boundary support, iteration limits, and progressive convergence.
+- [ ] **Tutte / barycentric embedding:** convex boundary mapping, flip prevention assumptions, and when it is suitable as a robust fallback.
+- [ ] **Harmonic / BFF-style methods:** cotangent weights, boundary conditions, positive-weight safeguards, and distortion trade-offs.
+- [ ] **Analytic projections:** planar, box/cube, cylindrical, spherical, camera, and triplanar-assisted chart creation with scale/orientation controls.
+- [ ] Compare methods by angular distortion, area distortion, stretch, flipped triangles, overlap, solve time, and memory.
+
+### UV-3. Editing tools and interaction
+- [ ] Island and vertex/edge/face selection; linked selection; hide/isolate; select by material/object/seam.
+- [ ] Move, rotate, scale, pivot selection, snapping, numeric transforms, proportional editing, mirror, align, straighten, and orient-to-edge.
+- [ ] Stitch/weld compatible borders with tolerance, orientation checks, seam continuity and UV overlap validation.
+- [ ] Pin/unpin vertices and edges; lock islands; relax and optimise with fixed pins.
+- [ ] Mark/clear seams in 3D and mirror seam edits where symmetry is enabled.
+- [ ] Island packing with 0–1 UDIM tile support, configurable margin, rotation, padding in pixels, texel density, scale-to-fit, and optional uniform island scale.
+- [ ] Preserve chains and islands when moving or transforming connected selections; report conflicts instead of silently breaking topology.
+- [ ] Undo/redo every operation as a compact command/delta; avoid snapshotting every full UV buffer for every drag frame.
+
+### UV-4. Validation and diagnostics
+- [ ] Detect overlap, flipped triangles, zero-area UVs, degenerate faces, out-of-tile coordinates, insufficient padding, and texel-density outliers.
+- [ ] Provide stretch/area/angle heatmaps, checker texture, selected-island bounds, seam overlays, and per-island statistics.
+- [ ] Validate before export and offer non-destructive repair suggestions; do not silently repack or alter UVs.
+- [ ] Test mirrored UVs, hard-normal seams, disconnected shells, non-manifold geometry, nested objects, and high-poly assets.
+
+### UV-5. Standalone UV workspace architecture
+- [ ] Design a dedicated full-window UV workspace that can be opened from the main painter but remains a separate interaction surface.
+- [ ] Define a versioned message contract: `OPEN_DOCUMENT`, `CLOSE_DOCUMENT`, `UV_CHANNEL_CHANGED`, `UV_SELECTION_CHANGED`, `UV_EDIT_PREVIEW`, `UV_EDIT_COMMIT`, `GEOMETRY_REVISION_CHANGED`, `TEXTURE_UPDATED`, `UNDO_REQUEST`, `REDO_REQUEST`, and `STATE_SNAPSHOT`.
+- [ ] Every message includes document ID, mesh ID, UV channel ID, geometry revision, transaction ID, and schema version where relevant.
+- [ ] Main app remains the source of truth for mesh/layer/project data. UV workspace sends commands or previews; it must not maintain a competing project copy.
+- [ ] Use preview messages during drag and one committed operation on pointer-up. Cancel restores the prior state. Stale geometry revisions must be rejected.
+- [ ] Specify reconnect, focus, keyboard shortcut ownership, clipboard, selection synchronisation, dirty-state, save/close confirmation, and error recovery.
+- [ ] Plan shared WebGL resource ownership and context-loss recovery; do not create duplicate full-resolution texture copies without a memory budget.
+
+### UV-6. Delivery gates
+1. Architecture and schema proposal.
+2. Algorithm evaluation with representative meshes and documented metrics.
+3. Editing/selection/packing interaction prototype.
+4. Undo, persistence, validation and export integration.
+5. Standalone workspace message bridge.
+6. Compatibility and performance test suite.
+7. Victory's explicit confirmation before implementation begins.
+
+No UV code is authorised by this backlog entry. Keep the current UV Editor placeholder and existing UV tools intact until the explicit go-ahead.
