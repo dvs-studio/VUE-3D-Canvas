@@ -1,16 +1,13 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
- * VUE 3D Canvas - Per-Layer PBR Node Setup & Material Settings Modal
+ * VUE 3D Canvas - Per-layer PBR map controls
  * Created by Victory Ukpong
  */
 
-import React, { useState } from 'react';
-import { Layer, LayerPBRSettings } from '../core/types';
-import { 
-  Sliders, X, Check, Sparkles, Sun, Eye, EyeOff, 
-  Workflow, Disc, Flame, Shield, Layers
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
+import { Sliders, X, Check, Sun, Flame, Shield, Layers, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 
 interface LayerSettingsModalProps {
   isOpen: boolean;
@@ -22,405 +19,174 @@ interface LayerSettingsModalProps {
   onSetUVChannel?: (layerId: string, channelId: string) => void;
 }
 
+const DEFAULT_RAMP: BumpRampStop[] = [
+  { position: 0, height: 0 },
+  { position: 1, height: 1 },
+];
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+
+function settingsFor(layer: Layer): LayerPBRSettings {
+  const saved = layer.pbrSettings || {} as LayerPBRSettings;
+  const channel = layer.channel;
+  return {
+    roughness: saved.roughness ?? 0.5,
+    metallic: saved.metallic ?? 0,
+    bumpHeight: saved.bumpHeight ?? 1,
+    normalStrength: saved.normalStrength ?? 1,
+    emissionStrength: saved.emissionStrength ?? 0,
+    emissionColor: saved.emissionColor ?? '#ffffff',
+    opacity: saved.opacity ?? (layer.opacity ?? 100) / 100,
+    enableColor: saved.enableColor ?? true,
+    enableBump: saved.enableBump ?? channel === 'height',
+    reflectionSource: saved.reflectionSource ?? 'hdri',
+    reflectionIntensity: saved.reflectionIntensity ?? 0.8,
+    matcapPreset: saved.matcapPreset ?? 'chrome',
+    colorOn: saved.colorOn ?? (channel !== 'normal' && channel !== 'height' && channel !== 'emission'),
+    colorInfluence: saved.colorInfluence ?? 1,
+    reflectionOn: saved.reflectionOn ?? false,
+    reflectionInfluence: saved.reflectionInfluence ?? 0,
+    emissionOn: saved.emissionOn ?? channel === 'emission',
+    emissionInfluence: saved.emissionInfluence ?? (channel === 'emission' ? 1 : 0),
+    bumpOn: saved.bumpOn ?? channel === 'height',
+    bumpInfluence: saved.bumpInfluence ?? (channel === 'height' ? 1 : 0),
+    bumpRamp: (saved.bumpRamp?.length ? saved.bumpRamp : DEFAULT_RAMP).map(stop => ({
+      position: clamp01(stop.position),
+      height: clamp01(stop.height),
+    })).sort((a, b) => a.position - b.position),
+    normalLock: saved.normalLock ?? channel === 'normal',
+    customNodeTreeActive: false,
+  };
+}
+
 export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
   isOpen,
   onClose,
   layer,
   onSavePBR,
-  onOpenNodeEditor,
   uvChannels = [],
   onSetUVChannel,
 }) => {
-  if (!isOpen || !layer) return null;
+  const [pbr, setPbr] = useState<LayerPBRSettings | null>(null);
 
-  const currentPbr: LayerPBRSettings = layer.pbrSettings || {
-    roughness: 0.5,
-    metallic: 0.0,
-    bumpHeight: 1.0,
-    normalStrength: 1.0,
-    emissionStrength: 0.0,
-    emissionColor: '#ffffff',
-    opacity: (layer.opacity ?? 100) / 100,
-    enableColor: true,
-    enableBump: true,
-    reflectionSource: 'hdri',
-    reflectionIntensity: 0.8,
-    matcapPreset: 'chrome',
-  };
+  useEffect(() => {
+    setPbr(layer ? settingsFor(layer) : null);
+  }, [layer?.id, layer?.pbrSettings, layer?.channel, layer?.opacity]);
 
-  const [pbr, setPbr] = useState<LayerPBRSettings>({ ...currentPbr });
-  const [activeTab, setActiveTab] = useState<'pbr' | 'reflections' | 'channels'>('pbr');
+  if (!isOpen || !layer || !pbr) return null;
 
   const update = (patch: Partial<LayerPBRSettings>) => {
-    setPbr(prev => ({ ...prev, ...patch }));
+    setPbr(previous => previous ? { ...previous, ...patch } : previous);
   };
 
-  const handleSave = () => {
-    onSavePBR(layer.id, pbr);
-    onClose();
+  const updateRamp = (index: number, patch: Partial<BumpRampStop>) => {
+    const next = [...(pbr.bumpRamp || DEFAULT_RAMP)];
+    next[index] = { ...next[index], ...patch };
+    update({ bumpRamp: next.sort((a, b) => a.position - b.position) });
   };
 
-  const handleOpenNodes = () => {
-    update({ customNodeTreeActive: true });
-    onSavePBR(layer.id, { ...pbr, customNodeTreeActive: true });
-    onClose();
-    if (onOpenNodeEditor) {
-      onOpenNodeEditor();
+  const addRampStop = () => {
+    const stops = [...(pbr.bumpRamp || DEFAULT_RAMP)].sort((a, b) => a.position - b.position);
+    let largestGap = 0;
+    let insertAt = 0;
+    for (let i = 0; i < stops.length - 1; i++) {
+      const gap = stops[i + 1].position - stops[i].position;
+      if (gap > largestGap) {
+        largestGap = gap;
+        insertAt = i;
+      }
     }
+    const position = (stops[insertAt].position + stops[insertAt + 1].position) / 2;
+    const height = (stops[insertAt].height + stops[insertAt + 1].height) / 2;
+    update({ bumpRamp: [...stops, { position, height }].sort((a, b) => a.position - b.position) });
   };
+
+  const toggleRow = (
+    title: string,
+    description: string,
+    checked: boolean,
+    onChange: (value: boolean) => void,
+    color: string,
+    influence: number,
+    onInfluence: (value: number) => void,
+  ) => (
+    <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-2">
+      <label className="flex items-center justify-between gap-3 cursor-pointer">
+        <span className="flex items-center gap-2 min-w-0">
+          {checked ? <Eye className={`w-4 h-4 shrink-0 ${color}`} /> : <EyeOff className="w-4 h-4 shrink-0 text-[#777]" />}
+          <span>
+            <strong className="block text-[#eee]">{title}</strong>
+            <small className="block text-[#888]">{description}</small>
+          </span>
+        </span>
+        <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="w-4 h-4 accent-[#3d7fb8]" />
+      </label>
+      <div className={`flex items-center gap-3 ${checked ? '' : 'opacity-40'}`}>
+        <span className="text-[10px] text-[#999] w-20">Influence</span>
+        <input type="range" min="0" max="1" step="0.01" disabled={!checked} value={influence} onChange={e => onInfluence(Number(e.target.value))} className="flex-1 accent-[#3d7fb8]" />
+        <span className="font-mono text-[#ddd] w-10 text-right">{influence.toFixed(2)}</span>
+      </div>
+    </section>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs select-none">
-      <div className="w-[540px] bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[90vh] flex flex-col font-sans">
-        {/* Header */}
+      <div className="w-[560px] max-w-[94vw] bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[90vh] flex flex-col font-sans">
         <div className="cs5-panel-header px-3 py-2 flex items-center justify-between shrink-0 bg-[#242424] border-b border-[#404040]">
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-[#3d7fb8]" />
-            <span className="text-xs font-bold text-[#eee] tracking-wider uppercase">
-              Layer Material Settings &bull; {layer.name}
-            </span>
+            <span className="text-xs font-bold text-[#eee] tracking-wider uppercase">Layer Properties · {layer.name}</span>
           </div>
-          <button 
-            onClick={onClose}
-            className="text-[#aaa] hover:text-white p-0.5 rounded cursor-pointer transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <button onClick={onClose} className="text-[#aaa] hover:text-white p-0.5 rounded cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="px-3 py-2 bg-[#262626] border-b border-[#3e3e3e] flex items-center gap-2 text-[11px]">
-          <span className="text-[#aaa] shrink-0">UV for this layer</span>
-          <select
-            value={layer.uvChannel || 'uv_original'}
-            onChange={(e) => onSetUVChannel?.(layer.id, e.target.value)}
-            className="flex-1 bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1"
-          >
-            {(uvChannels.length > 0 ? uvChannels : [{ id: 'uv_original', name: 'Original Mesh UVs' }]).map((ch) => (
-              <option key={ch.id} value={ch.id}>{ch.name}</option>
-            ))}
+          <span className="text-[#aaa] shrink-0">UV channel</span>
+          <select value={layer.uvChannel || 'uv_original'} onChange={e => onSetUVChannel?.(layer.id, e.target.value)} className="flex-1 bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1">
+            {(uvChannels.length ? uvChannels : [{ id: 'uv_original', name: 'Original Mesh UVs' }]).map(ch => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
           </select>
-          <span className="text-[10px] text-[#888] max-w-[180px] leading-tight">
-            Bake in the node panel writes onto this layer. Double-click a UV island to select it.
-          </span>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-[#3e3e3e] bg-[#222] px-2 pt-1 gap-1 shrink-0 text-[11px]">
-          <button
-            onClick={() => setActiveTab('pbr')}
-            className={`px-3 py-1.5 font-medium rounded-t border-t border-x transition-colors flex items-center gap-1.5 ${
-              activeTab === 'pbr'
-                ? 'bg-[#2d2d2d] border-[#555] text-white border-b-transparent'
-                : 'bg-[#1e1e1e] border-transparent text-[#999] hover:text-[#ccc]'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5 text-[#3d7fb8]" />
-            <span>PBR Channels</span>
-          </button>
+        <div className="p-4 flex-1 overflow-y-auto space-y-3 text-xs text-[#ccc]">
+          {toggleRow('Colour / Albedo', 'Contributes this layer to the base-colour map.', !!pbr.colorOn, value => update({ colorOn: value }), 'text-[#89b4fa]', pbr.colorInfluence ?? 1, value => update({ colorInfluence: value }))}
+          {toggleRow('Reflection', 'Contributes grayscale reflection strength; export converts it to roughness.', !!pbr.reflectionOn, value => update({ reflectionOn: value }), 'text-[#fab387]', pbr.reflectionInfluence ?? 0, value => update({ reflectionInfluence: value }))}
+          {toggleRow('Emission', 'Adds this layer to the combined emissive map.', !!pbr.emissionOn, value => update({ emissionOn: value }), 'text-[#ff9900]', pbr.emissionInfluence ?? 0, value => update({ emissionInfluence: value }))}
+          {toggleRow('Bump / Height', 'Contributes ramp-mapped luminance to the combined height map.', !!pbr.bumpOn, value => update({ bumpOn: value }), 'text-[#a6e3a1]', pbr.bumpInfluence ?? 0, value => update({ bumpInfluence: value }))}
 
-          <button
-            onClick={() => setActiveTab('channels')}
-            className={`px-3 py-1.5 font-medium rounded-t border-t border-x transition-colors flex items-center gap-1.5 ${
-              activeTab === 'channels'
-                ? 'bg-[#2d2d2d] border-[#555] text-white border-b-transparent'
-                : 'bg-[#1e1e1e] border-transparent text-[#999] hover:text-[#ccc]'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 text-[#a6e3a1]" />
-            <span>Bump &amp; Color Toggle</span>
-          </button>
+          <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-[#a6e3a1]" /><strong className="text-[#eee]">Bump colour ramp</strong></div>
+              <button type="button" onClick={addRampStop} className="px-2 py-1 rounded bg-[#333] border border-[#555] text-[#ddd] flex items-center gap-1"><Plus className="w-3 h-3" /> Add stop</button>
+            </div>
+            <div className="h-5 rounded border border-[#555]" style={{ background: `linear-gradient(90deg, ${(pbr.bumpRamp || DEFAULT_RAMP).map(stop => `rgb(${Math.round(stop.height * 255)},${Math.round(stop.height * 255)},${Math.round(stop.height * 255)}) ${Math.round(stop.position * 100)}%`).join(', ')})` }} />
+            {(pbr.bumpRamp || DEFAULT_RAMP).map((stop, index) => (
+              <div key={index} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+                <label className="text-[#999]">Position
+                  <input type="number" min="0" max="1" step="0.01" value={stop.position} onChange={e => updateRamp(index, { position: clamp01(Number(e.target.value)) })} className="mt-1 w-full bg-[#1b1b1b] border border-[#555] rounded px-2 py-1 text-[#eee]" />
+                </label>
+                <label className="text-[#999]">Height
+                  <input type="number" min="0" max="1" step="0.01" value={stop.height} onChange={e => updateRamp(index, { height: clamp01(Number(e.target.value)) })} className="mt-1 w-full bg-[#1b1b1b] border border-[#555] rounded px-2 py-1 text-[#eee]" />
+                </label>
+                <button type="button" disabled={(pbr.bumpRamp || DEFAULT_RAMP).length <= 2} onClick={() => update({ bumpRamp: (pbr.bumpRamp || DEFAULT_RAMP).filter((_, i) => i !== index) })} className="p-2 mt-4 text-[#d88] disabled:opacity-25" title="Remove ramp stop"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            ))}
+            <p className="text-[10px] text-[#888]">At least two stops are required. Position samples source luminance; height is the resulting normalized height.</p>
+          </section>
 
-          <button
-            onClick={() => setActiveTab('reflections')}
-            className={`px-3 py-1.5 font-medium rounded-t border-t border-x transition-colors flex items-center gap-1.5 ${
-              activeTab === 'reflections'
-                ? 'bg-[#2d2d2d] border-[#555] text-white border-b-transparent'
-                : 'bg-[#1e1e1e] border-transparent text-[#999] hover:text-[#ccc]'
-            }`}
-          >
-            <Sun className="w-3.5 h-3.5 text-[#fab387]" />
-            <span>Reflections (HDRI / Matcap)</span>
-          </button>
+          <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-2">
+            <div className="flex items-center gap-2"><Sun className="w-4 h-4 text-[#fab387]" /><strong className="text-[#eee]">Material preview values</strong></div>
+            <label className="flex justify-between items-center gap-3">Base roughness <input type="range" min="0" max="1" step="0.01" value={pbr.roughness} onChange={e => update({ roughness: Number(e.target.value) })} className="w-40 accent-[#fab387]" /><span className="font-mono">{pbr.roughness.toFixed(2)}</span></label>
+            <label className="flex justify-between items-center gap-3">Metallic <input type="range" min="0" max="1" step="0.01" value={pbr.metallic} onChange={e => update({ metallic: Number(e.target.value) })} className="w-40 accent-[#fab387]" /><span className="font-mono">{pbr.metallic.toFixed(2)}</span></label>
+            <label className="flex justify-between items-center gap-3">Emission strength <input type="range" min="0" max="10" step="0.1" value={pbr.emissionStrength} onChange={e => update({ emissionStrength: Number(e.target.value) })} className="w-40 accent-[#ff9900]" /><span className="font-mono">{pbr.emissionStrength.toFixed(1)}</span></label>
+            <label className="flex items-center justify-between">Emission tint <input type="color" value={pbr.emissionColor || '#ffffff'} onChange={e => update({ emissionColor: e.target.value })} className="w-8 h-6 bg-transparent border-0" /></label>
+          </section>
+
+          {pbr.normalLock && <div className="p-2 bg-[#1a2e22] border border-[#2d5a3d] rounded text-[#a6e3a1] flex items-center gap-2"><Layers className="w-4 h-4" /> This layer is the locked normal source. Other normal maps will not be mixed with it.</div>}
         </div>
 
-        {/* Content Body */}
-        <div className="p-4 flex-1 overflow-y-auto space-y-4 text-xs text-[#ccc]">
-          {/* TAB 1: PBR PROPERTIES */}
-          {activeTab === 'pbr' && (
-            <div className="space-y-3.5">
-              {/* Roughness */}
-              <div className="p-2.5 bg-[#242424] border border-[#3e3e3e] rounded space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-[#ddd]">Roughness (Microfacet Scatter)</span>
-                  <span className="font-mono text-white text-[11px]">{pbr.roughness.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={pbr.roughness}
-                  onChange={(e) => update({ roughness: parseFloat(e.target.value) })}
-                  className="w-full accent-[#3d7fb8]"
-                />
-                <div className="flex justify-between text-[10px] text-[#666]">
-                  <span>0.0 (Mirror Gloss)</span>
-                  <span>1.0 (Diffuse Matte)</span>
-                </div>
-              </div>
-
-              {/* Metallic */}
-              <div className="p-2.5 bg-[#242424] border border-[#3e3e3e] rounded space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-[#ddd]">Metallic (Conductor Value)</span>
-                  <span className="font-mono text-white text-[11px]">{pbr.metallic.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={pbr.metallic}
-                  onChange={(e) => update({ metallic: parseFloat(e.target.value) })}
-                  className="w-full accent-[#fab387]"
-                />
-                <div className="flex justify-between text-[10px] text-[#666]">
-                  <span>0.0 (Dielectric / Plastic / Wood)</span>
-                  <span>1.0 (Pure Metal / Chrome)</span>
-                </div>
-              </div>
-
-              {/* Bump / Height Depth */}
-              <div className="p-2.5 bg-[#242424] border border-[#3e3e3e] rounded space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-[#ddd]">Bump Height Depth</span>
-                  <span className="font-mono text-white text-[11px]">{pbr.bumpHeight.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.05"
-                  value={pbr.bumpHeight}
-                  onChange={(e) => update({ bumpHeight: parseFloat(e.target.value) })}
-                  className="w-full accent-[#a6e3a1]"
-                />
-              </div>
-
-              {/* Normal Strength */}
-              <div className="p-2.5 bg-[#242424] border border-[#3e3e3e] rounded space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-[#ddd]">Normal Map Tangent Scale</span>
-                  <span className="font-mono text-white text-[11px]">{pbr.normalStrength.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.05"
-                  value={pbr.normalStrength}
-                  onChange={(e) => update({ normalStrength: parseFloat(e.target.value) })}
-                  className="w-full accent-[#89b4fa]"
-                />
-              </div>
-
-              {/* Emission Strength & Color */}
-              <div className="p-2.5 bg-[#242424] border border-[#3e3e3e] rounded space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5">
-                    <Flame className="w-3.5 h-3.5 text-[#ff9900]" />
-                    <span className="font-medium text-[#ddd]">Emission / Glow</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={pbr.emissionColor || '#ffffff'}
-                      onChange={(e) => update({ emissionColor: e.target.value })}
-                      className="w-6 h-5 bg-transparent border-0 cursor-pointer rounded"
-                    />
-                    <span className="font-mono text-white text-[11px]">{pbr.emissionStrength.toFixed(1)}x</span>
-                  </div>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.2"
-                  value={pbr.emissionStrength}
-                  onChange={(e) => update({ emissionStrength: parseFloat(e.target.value) })}
-                  className="w-full accent-[#ff9900]"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: BUMP & COLOR TOGGLE */}
-          {activeTab === 'channels' && (
-            <div className="space-y-4">
-              <div className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
-                <h4 className="font-semibold text-white text-[13px] flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-[#a6e3a1]" />
-                  <span>Channel Routing &amp; Isolation</span>
-                </h4>
-                <p className="text-[11px] text-[#999] leading-relaxed">
-                  Allow <strong>Bump</strong> to remain fully enabled while <strong>Color</strong> is disabled. 
-                  This empowers you to texture paint pure height, emboss, and normal micro-details onto the 3D surface without altering existing diffuse color paint!
-                </p>
-
-                <div className="space-y-2.5 pt-2 border-t border-[#333]">
-                  {/* Enable Color Toggle */}
-                  <label className="flex items-center justify-between p-2.5 bg-[#1e1e1e] border border-[#383838] rounded cursor-pointer hover:border-[#555] transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      {pbr.enableColor ? <Eye className="w-4 h-4 text-[#3d7fb8]" /> : <EyeOff className="w-4 h-4 text-[#777]" />}
-                      <div>
-                        <span className="text-white font-medium block">Color Channel (Albedo / Diffuse)</span>
-                        <span className="text-[10px] text-[#888]">Paint diffuse RGB data to canvas</span>
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={pbr.enableColor}
-                      onChange={(e) => update({ enableColor: e.target.checked })}
-                      className="w-4 h-4 rounded bg-[#2a2a2a] border-[#444] text-[#3d7fb8] focus:ring-0"
-                    />
-                  </label>
-
-                  {/* Enable Bump Toggle */}
-                  <label className="flex items-center justify-between p-2.5 bg-[#1e1e1e] border border-[#383838] rounded cursor-pointer hover:border-[#555] transition-colors">
-                    <div className="flex items-center gap-2.5">
-                      <Shield className={`w-4 h-4 ${pbr.enableBump ? 'text-[#a6e3a1]' : 'text-[#777]'}`} />
-                      <div>
-                        <span className="text-white font-medium block">Bump &amp; Height Channel</span>
-                        <span className="text-[10px] text-[#888]">Contribute to surface displacement / Sobel normal perturbation</span>
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={pbr.enableBump}
-                      onChange={(e) => update({ enableBump: e.target.checked })}
-                      className="w-4 h-4 rounded bg-[#2a2a2a] border-[#444] text-[#a6e3a1] focus:ring-0"
-                    />
-                  </label>
-                </div>
-
-                {!pbr.enableColor && pbr.enableBump && (
-                  <div className="p-2.5 bg-[#1a2e22] border border-[#2d5a3d] rounded text-[11px] text-[#a6e3a1] flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>Pure Bump Detail Mode Active: Strokes and triplanar fills on this layer will sculpt height and normal relief while preserving underlying colors.</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: REFLECTIONS */}
-          {activeTab === 'reflections' && (
-            <div className="space-y-4">
-              <div className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-white text-[12px]">Reflection Driver Source</span>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => update({ reflectionSource: 'hdri' })}
-                      className={`px-3 py-1 rounded text-xs transition-colors ${
-                        pbr.reflectionSource === 'hdri'
-                          ? 'bg-[#3d7fb8] text-white font-bold'
-                          : 'bg-[#1a1a1a] text-[#888] hover:text-[#ccc]'
-                      }`}
-                    >
-                      HDRI Panorama
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => update({ reflectionSource: 'matcap' })}
-                      className={`px-3 py-1 rounded text-xs transition-colors ${
-                        pbr.reflectionSource === 'matcap'
-                          ? 'bg-[#fab387] text-[#1e1e1e] font-bold'
-                          : 'bg-[#1a1a1a] text-[#888] hover:text-[#ccc]'
-                      }`}
-                    >
-                      Matcap Texture
-                    </button>
-                  </div>
-                </div>
-
-                {/* Reflection Intensity Slider */}
-                <div className="space-y-1 pt-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[#bbb]">Reflection Intensity</span>
-                    <span className="font-mono text-white text-[11px]">{pbr.reflectionIntensity.toFixed(2)}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.05"
-                    value={pbr.reflectionIntensity}
-                    onChange={(e) => update({ reflectionIntensity: parseFloat(e.target.value) })}
-                    className="w-full accent-[#fab387]"
-                  />
-                  <p className="text-[10px] text-[#777]">Controls specular Fresnel intensity and reflection highlights in the viewport.</p>
-                </div>
-
-                {/* Matcap Preset Picker */}
-                {pbr.reflectionSource === 'matcap' && (
-                  <div className="space-y-2 pt-2 border-t border-[#333]">
-                    <span className="text-[11px] text-[#aaa] font-medium block">Matcap Preset Sphere</span>
-                    <div className="grid grid-cols-5 gap-2">
-                      {(['chrome', 'ceramic', 'clay', 'pearl', 'gold'] as const).map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => update({ matcapPreset: preset })}
-                          className={`p-2 rounded border flex flex-col items-center gap-1.5 transition-colors ${
-                            pbr.matcapPreset === preset
-                              ? 'bg-[#fab387]/20 border-[#fab387] text-white font-bold'
-                              : 'bg-[#1a1a1a] border-[#383838] text-[#888] hover:text-[#ccc]'
-                          }`}
-                        >
-                          <Disc className={`w-5 h-5 ${pbr.matcapPreset === preset ? 'text-[#fab387]' : 'text-[#777]'}`} />
-                          <span className="capitalize text-[10px]">{preset}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer with Advanced Node Switch */}
-        <div className="p-3 bg-[#222] border-t border-[#3e3e3e] flex items-center justify-between shrink-0">
-          {/* Advanced Material Node Switch Button */}
-          <button
-            type="button"
-            onClick={handleOpenNodes}
-            className="px-2.5 py-1.5 bg-[#1f2937] hover:bg-[#374151] border border-[#4b5563] text-[#cba6f7] hover:text-white rounded text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
-            title="Switch into custom material node setup for advanced users"
-          >
-            <Workflow className="w-3.5 h-3.5 text-[#cba6f7]" />
-            <span>Open in Node Graph</span>
-          </button>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 bg-[#333] hover:bg-[#404040] text-[#ccc] rounded text-xs font-medium cursor-pointer transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-4 py-1.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded text-xs font-bold cursor-pointer transition-colors shadow-md flex items-center gap-1.5"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Apply Material Settings</span>
-            </button>
-          </div>
+        <div className="p-3 bg-[#222] border-t border-[#3e3e3e] flex items-center justify-end gap-2 shrink-0">
+          <button type="button" onClick={onClose} className="px-3 py-1.5 bg-[#333] hover:bg-[#404040] text-[#ccc] rounded text-xs">Cancel</button>
+          <button type="button" onClick={() => { onSavePBR(layer.id, { ...pbr, bumpRamp: (pbr.bumpRamp || DEFAULT_RAMP).slice().sort((a, b) => a.position - b.position) }); onClose(); }} className="px-4 py-1.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded text-xs font-bold flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Apply Layer Properties</button>
         </div>
       </div>
     </div>
