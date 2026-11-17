@@ -363,13 +363,37 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         ctx.restore();
       }
 
-      if (emissionOn && emissionInfluence > 0 && emCtx) {
+      const emissionStrength = Math.max(0, Math.min(10, saved.emissionStrength ?? 1));
+      if (emissionOn && emissionInfluence > 0 && emissionStrength > 0 && emCtx) {
         hasEmissive = true;
-        emCtx.save();
-        emCtx.globalCompositeOperation = 'lighter';
-        emCtx.globalAlpha = opacity * emissionInfluence;
-        emCtx.drawImage(layer.canvas, 0, 0, width, height);
-        emCtx.restore();
+        const emissionSource = document.createElement('canvas');
+        emissionSource.width = layer.canvas.width;
+        emissionSource.height = layer.canvas.height;
+        const emissionSourceContext = emissionSource.getContext('2d');
+        if (emissionSourceContext) {
+          emissionSourceContext.drawImage(layer.canvas, 0, 0);
+          try {
+            const emissionPixels = emissionSourceContext.getImageData(0, 0, emissionSource.width, emissionSource.height);
+            const emissionData = emissionPixels.data;
+            const tint = String(saved.emissionColor || '#ffffff').match(/^#([0-9a-f]{6})$/i)?.[1] || 'ffffff';
+            const tintR = parseInt(tint.slice(0, 2), 16) / 255;
+            const tintG = parseInt(tint.slice(2, 4), 16) / 255;
+            const tintB = parseInt(tint.slice(4, 6), 16) / 255;
+            for (let pixel = 0; pixel < emissionData.length; pixel += 4) {
+              emissionData[pixel] = Math.min(255, emissionData[pixel] * tintR * emissionStrength);
+              emissionData[pixel + 1] = Math.min(255, emissionData[pixel + 1] * tintG * emissionStrength);
+              emissionData[pixel + 2] = Math.min(255, emissionData[pixel + 2] * tintB * emissionStrength);
+            }
+            emissionSourceContext.putImageData(emissionPixels, 0, 0);
+          } catch (error) {
+            console.warn('Emission tint skipped for an unreadable layer canvas:', error);
+          }
+          emCtx.save();
+          emCtx.globalCompositeOperation = 'lighter';
+          emCtx.globalAlpha = opacity * emissionInfluence;
+          emCtx.drawImage(emissionSource, 0, 0, width, height);
+          emCtx.restore();
+        }
       }
 
       if (normalLock) {
