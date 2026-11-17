@@ -51,6 +51,8 @@ interface LayersPanelProps {
   onOpenStochasticScatter?: (layerId: string) => void;
   onOpenStitchStudio?: (layerId: string) => void;
   onConvertToBump?: (layerId: string) => void;
+  onConvertToDisplacement?: (layerId: string) => void;
+  onConvertToReflection?: (layerId: string) => void;
   onConvertToNormal?: (layerId: string) => void;
   onConvertToClipMask?: (layerId: string) => void;
   onConvertToEmissive?: (layerId: string) => void;
@@ -92,6 +94,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onOpenStochasticScatter,
   onOpenStitchStudio,
   onConvertToBump,
+  onConvertToDisplacement,
+  onConvertToReflection,
   onConvertToNormal,
   onConvertToClipMask,
   onConvertToEmissive,
@@ -463,6 +467,30 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
             >
               Convert to Bump Map (Height)
+            </button>
+          )}
+
+          {onConvertToDisplacement && !layers.find(l => l.id === contextMenu.layerId)?.isTextureFill && (
+            <button
+              onClick={() => {
+                onConvertToDisplacement(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+            >
+              Convert to Displacement
+            </button>
+          )}
+
+          {onConvertToReflection && !layers.find(l => l.id === contextMenu.layerId)?.isTextureFill && (
+            <button
+              onClick={() => {
+                onConvertToReflection(contextMenu.layerId);
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#eee]"
+            >
+              Convert to Reflection
             </button>
           )}
 
