@@ -145,7 +145,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
           </>
         )}
         <span className="text-[#888]">·</span>
-        <span className="text-[#a6e3a1]">DX11/WASM</span>
+        <span className="text-[#a6e3a1]">WebGL</span>
       </div>
 
       {/* 3D Interactive Viewport Gizmo Container with Dynamic Zoom Pulse Scale */}
