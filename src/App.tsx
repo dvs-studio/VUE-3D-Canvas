@@ -1187,8 +1187,9 @@ export default function App() {
   const handleAutoTextureModel = async (textureMaps: MatchedTextureMap[]) => {
     if (!textureMaps || textureMaps.length === 0) return;
     const memory = WasmMemoryEngine.getInstance();
-
     const loadedLayers: Layer[] = [];
+    const normalMapIndex = textureMaps.findIndex(map => map.role === 'normal');
+
     for (let i = 0; i < textureMaps.length; i++) {
       const map = textureMaps[i];
       const cvs = document.createElement('canvas');
@@ -1199,17 +1200,17 @@ export default function App() {
 
       await new Promise<void>((resolve) => {
         const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, 1024, 1024);
-          resolve();
-        };
-        img.onerror = () => {
-          resolve();
-        };
+        img.onload = () => { ctx.drawImage(img, 0, 0, 1024, 1024); resolve(); };
+        img.onerror = () => resolve();
         img.src = map.dataUrl;
       });
 
-      const newLayer: Layer = {
+      const isColor = map.role === 'color';
+      const isHeight = map.role === 'height';
+      const isReflection = map.role === 'reflection';
+      const isEmission = map.role === 'emission';
+      const isNormal = map.role === 'normal' && i === normalMapIndex;
+      const layer: Layer = {
         id: `layer_${Date.now()}_${i}`,
         name: map.layerName,
         visible: true,
@@ -1218,9 +1219,32 @@ export default function App() {
         locked: false,
         canvas: cvs,
         ctx,
-        channel: map.role,
+        channel: (isReflection ? 'roughness' : map.role) as Layer['channel'],
+        pbrSettings: {
+          roughness: 0.5,
+          metallic: 0,
+          bumpHeight: 1,
+          normalStrength: 1,
+          emissionStrength: isEmission ? 1 : 0,
+          emissionColor: '#ffffff',
+          opacity: 1,
+          enableColor: isColor,
+          enableBump: isHeight,
+          reflectionSource: 'hdri',
+          reflectionIntensity: 0.8,
+          colorOn: isColor,
+          colorInfluence: isColor ? 1 : 0,
+          reflectionOn: isReflection,
+          reflectionInfluence: isReflection ? 1 : 0,
+          emissionOn: isEmission,
+          emissionInfluence: isEmission ? 1 : 0,
+          bumpOn: isHeight,
+          bumpInfluence: isHeight ? 1 : 0,
+          bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+          normalLock: isNormal,
+        },
       };
-      loadedLayers.push(newLayer);
+      loadedLayers.push(layer);
     }
 
     if (loadedLayers.length > 0) {
@@ -1268,17 +1292,21 @@ export default function App() {
     role: string;
     isTextureFill: boolean;
     fillConfig?: TextureFillConfig;
-    createNodeSetup: boolean;
     layerName: string;
   }) => {
+    const role = result.role === 'roughness' ? 'reflection' : result.role;
+    const isColor = role === 'color' || role === 'texture_fill';
+    const isHeight = role === 'height';
+    const isReflection = role === 'reflection';
+    const isEmission = role === 'emission';
+    const isNormal = role === 'normal';
+
     const cvs = document.createElement('canvas');
     cvs.width = 1024;
     cvs.height = 1024;
     const ctx = cvs.getContext('2d')!;
-
-    const newLayerId = `layer_${Date.now()}`;
     const newLayer: Layer = {
-      id: newLayerId,
+      id: `layer_${Date.now()}`,
       name: result.layerName,
       visible: true,
       opacity: 100,
@@ -1286,131 +1314,45 @@ export default function App() {
       locked: false,
       canvas: cvs,
       ctx,
-      channel: (result.role === 'texture_fill' ? 'color' : result.role) as any,
+      channel: (isReflection ? 'roughness' : role === 'texture_fill' ? 'color' : role) as Layer['channel'],
       isTextureFill: result.isTextureFill,
       textureFillConfig: result.fillConfig,
+      pbrSettings: {
+        roughness: 0.5,
+        metallic: 0,
+        bumpHeight: 1,
+        normalStrength: 1,
+        emissionStrength: isEmission ? 1 : 0,
+        emissionColor: '#ffffff',
+        opacity: 1,
+        enableColor: isColor,
+        enableBump: isHeight,
+        reflectionSource: 'hdri',
+        reflectionIntensity: 0.8,
+        colorOn: isColor,
+        colorInfluence: isColor ? 1 : 0,
+        reflectionOn: isReflection,
+        reflectionInfluence: isReflection ? 1 : 0,
+        emissionOn: isEmission,
+        emissionInfluence: isEmission ? 1 : 0,
+        bumpOn: isHeight,
+        bumpInfluence: isHeight ? 1 : 0,
+        bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+        normalLock: isNormal,
+      },
     };
 
     if (result.isTextureFill && result.fillConfig) {
       await FillSuite.applyMaterialTextureFill(ctx, result.fillConfig, 100);
     } else {
+      // The modal closes immediately; decode and rasterize the full image afterward.
       const img = new Image();
       img.crossOrigin = 'anonymous';
       await new Promise<void>((resolve) => {
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, 1024, 1024);
-          resolve();
-        };
+        img.onload = () => { ctx.drawImage(img, 0, 0, 1024, 1024); resolve(); };
         img.onerror = () => resolve();
         img.src = stagedTextureUrl;
       });
-    }
-
-    if (result.createNodeSetup) {
-      const texNodeId = `node_tex_${Date.now()}`;
-      const texNode: GraphNode = {
-        id: texNodeId,
-        type: 'image_texture',
-        title: `${result.layerName} (Texture)`,
-        x: 100,
-        y: result.role === 'color' ? 120 : result.role === 'height' ? 280 : 200,
-        inputs: [],
-        outputs: [
-          { id: 'color', name: 'Color', type: 'color' },
-          { id: 'alpha', name: 'Alpha', type: 'float' },
-        ],
-        properties: {
-          imageName: stagedTextureName,
-          channel: result.role,
-        },
-      };
-
-      const bsdfNode = nodes.find(n => n.type === 'principled_bsdf') || {
-        id: 'node_bsdf',
-        type: 'principled_bsdf' as const,
-        title: 'Principled BSDF',
-        x: 380,
-        y: 150,
-        inputs: [
-          { id: 'base_color', name: 'Base Color', type: 'color', value: '#ffffff' },
-          { id: 'metallic', name: 'Metallic', type: 'float', value: 0.1 },
-          { id: 'roughness', name: 'Roughness', type: 'float', value: 0.4 },
-          { id: 'normal', name: 'Normal', type: 'vector' },
-        ],
-        outputs: [{ id: 'bsdf', name: 'BSDF', type: 'shader' }],
-        properties: {},
-      };
-
-      const newNodes = [...nodes.filter(n => n.id !== bsdfNode.id), texNode, bsdfNode];
-      const newConns = [...connections];
-
-      if (result.role === 'color' || result.role === 'texture_fill') {
-        newConns.push({
-          id: `conn_${Date.now()}_color`,
-          fromNodeId: texNodeId,
-          fromSocketId: 'color',
-          toNodeId: bsdfNode.id,
-          toSocketId: 'base_color',
-        });
-      } else if (result.role === 'height') {
-        const bumpNodeId = `node_bump_${Date.now()}`;
-        const bumpNode: GraphNode = {
-          id: bumpNodeId,
-          type: 'math',
-          title: 'Bump (Height -> Normal)',
-          x: 240,
-          y: 300,
-          inputs: [
-            { id: 'a', name: 'Height', type: 'float' },
-            { id: 'b', name: 'Strength', type: 'float', value: 1.0 },
-          ],
-          outputs: [{ id: 'result', name: 'Normal', type: 'vector' }],
-          properties: { operation: 'bump' },
-        };
-        newNodes.push(bumpNode);
-        newConns.push(
-          {
-            id: `conn_${Date.now()}_h`,
-            fromNodeId: texNodeId,
-            fromSocketId: 'color',
-            toNodeId: bumpNodeId,
-            toSocketId: 'a',
-          },
-          {
-            id: `conn_${Date.now()}_norm`,
-            fromNodeId: bumpNodeId,
-            fromSocketId: 'result',
-            toNodeId: bsdfNode.id,
-            toSocketId: 'normal',
-          }
-        );
-      } else if (result.role === 'emission') {
-        const emNodeId = `node_em_${Date.now()}`;
-        const emNode: GraphNode = {
-          id: emNodeId,
-          type: 'emission',
-          title: 'Emission Shader',
-          x: 280,
-          y: 220,
-          inputs: [
-            { id: 'color', name: 'Color', type: 'color', value: '#ffffff' },
-            { id: 'strength', name: 'Strength', type: 'float', value: 2.5 },
-          ],
-          outputs: [{ id: 'emission', name: 'Emission', type: 'color' }],
-          properties: {},
-        };
-        newNodes.push(emNode);
-        newConns.push({
-          id: `conn_${Date.now()}_em`,
-          fromNodeId: texNodeId,
-          fromSocketId: 'color',
-          toNodeId: emNodeId,
-          toSocketId: 'color',
-        });
-      }
-
-      setNodes(newNodes);
-      setConnections(newConns);
     }
 
     const updatedLayers = [...layers, newLayer];
