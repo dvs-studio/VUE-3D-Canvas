@@ -1122,7 +1122,6 @@ export default function App() {
       embed3DAssets,
       modelAsset,
       layers,
-      { nodes, connections },
       undoBuffer,
       materialProps
     );
