@@ -26,7 +26,6 @@ interface ProjectSettingsModalProps {
   currentModel: MeshModelAsset;
   onSaveXBlend: () => void;
   onLoadXBlend: (jsonString: string) => void;
-  onExportBlenderMaterial: () => void;
   onExportOBJ: () => void;
   onImportCustomModel: (fileName: string, content: string, mtlContent?: string) => void;
   onExportBundleZip: () => void;
@@ -45,7 +44,6 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   currentModel,
   onSaveXBlend,
   onLoadXBlend,
-  onExportBlenderMaterial,
   onExportOBJ,
   onImportCustomModel,
   onExportBundleZip,
@@ -278,14 +276,6 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
               INTEROP &amp; ASSET CONVERSION
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={onExportBlenderMaterial}
-                className="p-1.5 bg-[#2c2c2c] hover:bg-[#383838] text-[#ccc] rounded border border-[#444] text-[10px] flex items-center justify-center gap-1.5 transition-colors"
-                title="Export Blender .blend material setup"
-              >
-                <FileText className="w-3 h-3 text-[#f97316]" />
-                Blender .blend Spec
-              </button>
               <button
                 onClick={onExportOBJ}
                 className="p-1.5 bg-[#2c2c2c] hover:bg-[#383838] text-[#ccc] rounded border border-[#444] text-[10px] flex items-center justify-center gap-1.5 transition-colors"
