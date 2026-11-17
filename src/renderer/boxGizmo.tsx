@@ -173,7 +173,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
               style={{ transform: 'translateZ(36px)' }}
             >
               <span>FRONT</span>
-              <span className="text-[8px] opacity-70 font-mono">-Y</span>
+              <span className="text-[8px] opacity-70 font-mono">+Y</span>
             </button>
 
             {/* Back Face (-Z) */}
@@ -184,7 +184,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
               style={{ transform: 'rotateY(180deg) translateZ(36px)' }}
             >
               <span>BACK</span>
-              <span className="text-[8px] opacity-70 font-mono">+Y</span>
+              <span className="text-[8px] opacity-70 font-mono">-Y</span>
             </button>
 
             {/* Right Face (+X) */}
