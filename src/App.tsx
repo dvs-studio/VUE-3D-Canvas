@@ -299,7 +299,7 @@ export default function App() {
   const [isTabletToolsOpen, setIsTabletToolsOpen] = useState<boolean>(false);
   const [isTabletOptionsOpen, setIsTabletOptionsOpen] = useState<boolean>(false);
 
-  // Texture Import & Auto-Node Setup Dialog State
+  // Texture Import Dialog State
   const [isTextureAutoNodeOpen, setIsTextureAutoNodeOpen] = useState<boolean>(false);
   const [stagedTextureUrl, setStagedTextureUrl] = useState<string>('');
   const [stagedTextureName, setStagedTextureName] = useState<string>('');
@@ -2472,7 +2472,7 @@ export default function App() {
         onUpdatePreferences={handleUpdatePreferences}
       />
 
-      {/* 18. Texture Import & Auto-Node Setup Modal */}
+      {/* 18. Texture Import Modal */}
       <TextureAutoNodeModal
         isOpen={isTextureAutoNodeOpen}
         onClose={() => setIsTextureAutoNodeOpen(false)}
