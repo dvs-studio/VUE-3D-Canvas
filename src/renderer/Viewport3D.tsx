@@ -225,6 +225,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   }, []);
 
   const isPaintingRef = useRef(false);
+  const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
 
@@ -1544,6 +1545,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     if (isPaintingRef.current) {
       isPaintingRef.current = false;
+      lastCompositePaintPointRef.current = null;
       brushEngine.endStroke();
       clearStabilizerTether();
       updateCompositeTexture();
@@ -1655,7 +1657,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
     };
 
-    // Primary stroke dab
+    // Primary stroke dab. Retain the previous input point so the dirty
+    // composite covers the complete interpolated dab trail, not just its end.
+    const previousPaintPoint = lastCompositePaintPointRef.current || { x, y };
+    lastCompositePaintPointRef.current = { x, y };
     applyDabAt(x, y);
     const changedPoints: { x: number; y: number }[] = [{ x, y }];
 
@@ -1708,21 +1713,20 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // erasing also needs the region recomposited from every visible layer so
     // lower layers show through correctly.
     const regionTools = ['brush', 'eraser', 'pen', 'blur', 'clone', 'smudge'];
-    if (compositeCanvas && regionTools.includes(activeTool)) {
+    if (compositeCanvas && regionTools.includes(activeTool) && brush.strokeType !== 'dragged-dot') {
       const cctx = compositeCanvas.getContext('2d');
       if (cctx) {
-        const radius = Math.max(4, brush.size * 1.25 + 2);
+        const radius = Math.max(4, brush.size * 3 + 4);
         const width = compositeCanvas.width;
         const height = compositeCanvas.height;
-        for (const point of changedPoints) {
-          const left = Math.max(0, Math.floor(point.x - radius));
-          const top = Math.max(0, Math.floor(point.y - radius));
-          const right = Math.min(width, Math.ceil(point.x + radius));
-          const bottom = Math.min(height, Math.ceil(point.y + radius));
-          const dirtyWidth = right - left;
-          const dirtyHeight = bottom - top;
-          if (dirtyWidth <= 0 || dirtyHeight <= 0) continue;
-
+        const trailPoints = [previousPaintPoint, ...changedPoints];
+        const left = Math.max(0, Math.floor(Math.min(...trailPoints.map(point => point.x)) - radius));
+        const top = Math.max(0, Math.floor(Math.min(...trailPoints.map(point => point.y)) - radius));
+        const right = Math.min(width, Math.ceil(Math.max(...trailPoints.map(point => point.x)) + radius));
+        const bottom = Math.min(height, Math.ceil(Math.max(...trailPoints.map(point => point.y)) + radius));
+        const dirtyWidth = right - left;
+        const dirtyHeight = bottom - top;
+        if (dirtyWidth > 0 && dirtyHeight > 0) {
           cctx.save();
           cctx.beginPath();
           cctx.rect(left, top, dirtyWidth, dirtyHeight);
