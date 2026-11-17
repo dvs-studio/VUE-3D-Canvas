@@ -411,3 +411,19 @@ This section supersedes earlier narrow task descriptions where they conflict wit
 7. Victory's explicit confirmation before implementation begins.
 
 No UV code is authorised by this backlog entry. Keep the current UV Editor placeholder and existing UV tools intact until the explicit go-ahead.
+
+
+## 2026-11-17 implementation checkpoint
+
+- [x] Record the expanded execution plan and UV project backlog (documentation only).
+- [x] Coalesce application-level paint texture notifications to one composite sync per animation frame.
+- [x] Replace full active-layer copies during common 3D brush/eraser/pen/blur/clone/smudge dabs with clipped dirty-region recompositing across visible colour layers; retain full fallback for large-area tools.
+- [x] Apply X-red, Y-green, Z-blue colour coding to the temporary box/sphere/mountain gizmos and correct face-axis labels.
+- [x] Make the existing subdivision panel visible by default; dock/floating switch is already wired. Its subdivision remains preview geometry; a destructive Apply + undo-safe replacement is still a separate unfinished task.
+- [x] CI install/build/host-sync/package checks passed on run 44196595476; generated bundle `index-DwkyI3V_.js`, artifact ID `14378169255`.
+- [ ] Capture real before/after median and p95 input-to-frame latency on target hardware. No measurements were available in CI.
+- [ ] Manually test eraser/brush responsiveness, 2D/3D paint, symmetry, model part isolation, subdivision and filter interactions on the packaged page.
+- [ ] Complete dynamic mesh-part inventory/isolation and verify hidden-part raycast behaviour.
+- [ ] Complete the remaining filter and triplanar per-instance source-toggle work.
+- [ ] Implement destructive subdivision only with explicit Apply, undo restoration, UV/group preservation, and export validation.
+- [ ] UV project remains documentation-only until explicit authorisation.
