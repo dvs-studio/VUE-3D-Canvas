@@ -6,7 +6,7 @@
  */
 
 import JSZip from 'jszip';
-import { Layer, MeshModelAsset, XBlendProject, GraphNode, NodeConnection } from './types';
+import { Layer, MeshModelAsset, XBlendProject, GraphNode, NodeConnection, LayerPBRSettings } from './types';
 import { UndoRingBuffer } from './history';
 
 type LayerMapKind = 'color' | 'emission' | 'height' | 'reflection' | 'normal';
@@ -172,7 +172,7 @@ export class XBlendManager {
       embed3DAssets,
       model: modelAssetToSave,
       layers: serializedLayers,
-      nodeGraph,
+      nodeGraph: { nodes: [], connections: [] },
       undoRingBuffer: {
         maxStates: 3,
         states: undoStatesMeta,
@@ -202,8 +202,7 @@ export class XBlendManager {
 
   /**
    * Exports project in .xblend + ZIP format:
-   * Packages project .xblend, separate texture maps, individual alpha masks, and texture_to_node_mapping.json
-   * (Triplanar filter is already applied/baked into the texture images and is omitted from procedural node exports)
+   * Packages the .xblend project, one baked map per enabled layer contribution, and the PBR manifest.
    */
   public static async exportProjectBundleZip(
     projectName: string,
@@ -229,75 +228,24 @@ export class XBlendManager {
     );
     zip.file(`${cleanProjectName}.xblend`, xblendContent);
 
-    // Folders
-    const texturesFolder = zip.folder('textures')!;
-    const alphaMasksFolder = zip.folder('alpha_masks')!;
+    // Only channel maps that a layer actually contributes are included.
     const layerMapsFolder = zip.folder('layer_maps')!;
+    const mapKinds: LayerMapKind[] = ['color', 'emission', 'height', 'reflection', 'normal'];
 
-    const textureMappingEntries: any[] = [];
-
-    // 2. Export individual layer textures & alpha masks
-    for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i];
-      const cleanLayerName = layer.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const layerManifest = layerMapManifest(layer, i, cleanProjectName);
-      const pbr = layerManifest._pbr;
-      const mapKinds: LayerMapKind[] = ['color', 'emission', 'height', 'reflection', 'normal'];
+    for (let index = 0; index < layers.length; index++) {
+      const layer = layers[index];
+      const entry = layerMapManifest(layer, index, cleanProjectName);
+      const pbr = entry._pbr;
       for (const kind of mapKinds) {
-        const relativePath = layerManifest.maps[kind];
+        const relativePath = entry.maps[kind];
         if (!relativePath) continue;
         const dataUrl = makeLayerMapDataUrl(layer, kind, pbr);
         const base64 = dataUrl.split(',')[1];
         const fileName = relativePath.slice('layer_maps/'.length);
         layerMapsFolder.file(fileName, base64, { base64: true });
       }
-
-      // Texture image blob
-      const textureDataUrl = layer.canvas.toDataURL('image/png');
-      const base64Data = textureDataUrl.split(',')[1];
-      const texFileName = `${cleanLayerName}_Texture.png`;
-      texturesFolder.file(texFileName, base64Data, { base64: true });
-
-      // Alpha mask generation
-      const alphaCanvas = document.createElement('canvas');
-      alphaCanvas.width = layer.canvas.width;
-      alphaCanvas.height = layer.canvas.height;
-      const actx = alphaCanvas.getContext('2d')!;
-      actx.drawImage(layer.canvas, 0, 0);
-
-      const imgData = actx.getImageData(0, 0, alphaCanvas.width, alphaCanvas.height);
-      const data = imgData.data;
-      for (let p = 0; p < data.length; p += 4) {
-        const alphaVal = data[p + 3];
-        data[p] = alphaVal;     // R
-        data[p + 1] = alphaVal; // G
-        data[p + 2] = alphaVal; // B
-        data[p + 3] = 255;      // Full opaque B&W
-      }
-      actx.putImageData(imgData, 0, 0);
-
-      const alphaDataUrl = alphaCanvas.toDataURL('image/png');
-      const alphaBase64 = alphaDataUrl.split(',')[1];
-      const maskFileName = `${cleanLayerName}_AlphaMask.png`;
-      alphaMasksFolder.file(maskFileName, alphaBase64, { base64: true });
-
-      // Add to texture-to-node mapping schema
-      textureMappingEntries.push({
-        layerIndex: i,
-        layerId: layer.id,
-        layerName: layer.name,
-        channel: layer.channel,
-        blendMode: layer.blendMode,
-        opacity: layer.opacity,
-        textureFile: `textures/${texFileName}`,
-        alphaMaskFile: `alpha_masks/${maskFileName}`,
-        blenderTargetSocket: i === 0 ? 'Base Color' : 'Color',
-        colorSpace: 'sRGB',
-        maskColorSpace: 'Non-Color',
-      });
     }
 
-    // Per-layer PBR manifest and baked channel maps (the supported export contract).
     const layerManifest = {
       format: 'VUE3D_LAYER_PBR_MANIFEST',
       version: '1.0.0',
@@ -310,25 +258,6 @@ export class XBlendManager {
       colorSpace: { color: 'sRGB', emission: 'sRGB', height: 'Non-Color', reflection: 'Non-Color', normal: 'Non-Color' },
     };
     zip.file('layer_manifest.json', JSON.stringify(layerManifest, null, 2));
-
-    // 3. Texture to node mapping JSON
-    const mappingDoc = {
-      format: "VUE3D_TEXTURE_TO_NODE_MAPPING",
-      version: "1.2.0",
-      targetApplication: "Blender 2.8+",
-      projectName: cleanProjectName,
-      materialName: `${cleanProjectName}_Material`,
-      textureCount: layers.length,
-      principledBSDFConfig: {
-        metallic: materialProps.metallic,
-        roughness: materialProps.roughness,
-        normalStrength: materialProps.normalStrength,
-        ior: materialProps.ior || 1.45,
-      },
-      layers: textureMappingEntries,
-      notes: "Triplanar filter is already baked into texture images and omitted from node export as per specification.",
-    };
-    zip.file('texture_to_node_mapping.json', JSON.stringify(mappingDoc, null, 2));
 
     // 4. Generate and download ZIP bundle
     const zipBlob = await zip.generateAsync({ type: 'blob' });
