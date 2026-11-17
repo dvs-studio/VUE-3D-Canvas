@@ -233,182 +233,54 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
           </div>
         )}
 
-        {/* Style 2: 3D Interactive Orientation Sphere with Axis Nodes */}
+        {/* Style 2: one spherical body with six labels on its surface */}
         {gizmoStyle === 'sphere' && (
           <div
-            className="w-full h-full relative transform-style-3d transition-transform duration-75 flex items-center justify-center"
-            style={{
-              transformStyle: 'preserve-3d',
-              transform: `rotateX(${degX}deg) rotateY(${degY}deg)`,
-            }}
+            className="w-full h-full relative flex items-center justify-center"
+            style={{ transform: `rotateX(${degX}deg) rotateY(${degY}deg)` }}
           >
-            {/* Sphere core body */}
-            <div 
-              className="absolute w-14 h-14 rounded-full border border-[#555] shadow-lg"
+            <div
+              className="relative w-16 h-16 rounded-full border border-[#718096] shadow-lg overflow-hidden"
               style={{
-                background: 'radial-gradient(circle at 35% 35%, #4a5568 0%, #1e293b 70%, #0f172a 100%)',
-                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.6), 0 0 8px rgba(0,0,0,0.4)',
-                transform: 'translateZ(0px)',
+                background: 'radial-gradient(circle at 32% 28%, #9fb4c9 0%, #52677f 28%, #26364c 68%, #101827 100%)',
+                boxShadow: 'inset -8px -8px 14px rgba(0,0,0,.55), inset 4px 4px 10px rgba(255,255,255,.22), 0 4px 12px rgba(0,0,0,.45)',
               }}
-            />
-            {/* Equator Ring (XY) */}
-            <div 
-              className="absolute w-16 h-16 rounded-full border border-sky-400/40 pointer-events-none"
-              style={{ transform: 'rotateX(90deg)' }}
-            />
-            {/* Meridian Ring (YZ) */}
-            <div 
-              className="absolute w-16 h-16 rounded-full border border-emerald-400/40 pointer-events-none"
-              style={{ transform: 'rotateY(90deg)' }}
-            />
-            {/* Meridian Ring (XZ) */}
-            <div 
-              className="absolute w-16 h-16 rounded-full border border-rose-400/40 pointer-events-none"
-              style={{ transform: 'rotateZ(0deg)' }}
-            />
-
-            {/* +Z Pole (Front) */}
-            <button
-              onClick={() => onSnapView('front')}
-              title="Snap to Front (+Z)"
-              className="absolute w-6 h-6 -ml-3 -mt-3 top-1/2 left-1/2 bg-sky-600 hover:bg-sky-400 text-white rounded-full text-[9px] font-bold font-mono flex items-center justify-center shadow-md border border-sky-200 transition-colors"
-              style={{ transform: 'translateZ(32px)' }}
             >
-              +Z
-            </button>
-            {/* -Z Pole (Back) */}
-            <button
-              onClick={() => onSnapView('back')}
-              title="Snap to Back (-Z)"
-              className="absolute w-6 h-6 -ml-3 -mt-3 top-1/2 left-1/2 bg-sky-900/90 hover:bg-sky-700 text-sky-200 rounded-full text-[9px] font-bold font-mono flex items-center justify-center shadow-md border border-sky-400/50 transition-colors"
-              style={{ transform: 'rotateY(180deg) translateZ(32px)' }}
-            >
-              -Z
-            </button>
-            {/* +X Pole (Right) */}
-            <button
-              onClick={() => onSnapView('right')}
-              title="Snap to Right (+X)"
-              className="absolute w-6 h-6 -ml-3 -mt-3 top-1/2 left-1/2 bg-rose-600 hover:bg-rose-400 text-white rounded-full text-[9px] font-bold font-mono flex items-center justify-center shadow-md border border-rose-200 transition-colors"
-              style={{ transform: 'rotateY(90deg) translateZ(32px)' }}
-            >
-              +X
-            </button>
-            {/* -X Pole (Left) */}
-            <button
-              onClick={() => onSnapView('left')}
-              title="Snap to Left (-X)"
-              className="absolute w-6 h-6 -ml-3 -mt-3 top-1/2 left-1/2 bg-rose-900/90 hover:bg-rose-700 text-rose-200 rounded-full text-[9px] font-bold font-mono flex items-center justify-center shadow-md border border-rose-400/50 transition-colors"
-              style={{ transform: 'rotateY(-90deg) translateZ(32px)' }}
-            >
-              -X
-            </button>
-            {/* +Y Pole (Top) */}
-            <button
-              onClick={() => onSnapView('top')}
-              title="Snap to Top (+Y)"
-              className="absolute w-6 h-6 -ml-3 -mt-3 top-1/2 left-1/2 bg-emerald-600 hover:bg-emerald-400 text-white rounded-full text-[9px] font-bold font-mono flex items-center justify-center shadow-md border border-emerald-200 transition-colors"
-              style={{ transform: 'rotateX(90deg) translateZ(32px)' }}
-            >
-              +Y
-            </button>
-            {/* -Y Pole (Bottom) */}
-            <button
-              onClick={() => onSnapView('bottom')}
-              title="Snap to Bottom (-Y)"
-              className="absolute w-6 h-6 -ml-3 -mt-3 top-1/2 left-1/2 bg-emerald-900/90 hover:bg-emerald-700 text-emerald-200 rounded-full text-[9px] font-bold font-mono flex items-center justify-center shadow-md border border-emerald-400/50 transition-colors"
-              style={{ transform: 'rotateX(-90deg) translateZ(32px)' }}
-            >
-              -Y
-            </button>
+              <div className="absolute inset-0 rounded-full pointer-events-none" style={{ background: 'linear-gradient(90deg, transparent 48%, rgba(180,210,235,.22) 49%, rgba(180,210,235,.22) 51%, transparent 52%), linear-gradient(0deg, transparent 48%, rgba(180,210,235,.18) 49%, rgba(180,210,235,.18) 51%, transparent 52%)' }} />
+              <button onClick={() => onSnapView('top')} title="Snap to Top View" className="absolute top-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white drop-shadow">TOP</button>
+              <button onClick={() => onSnapView('bottom')} title="Snap to Bottom View" className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-bold text-white drop-shadow">BOTTOM</button>
+              <button onClick={() => onSnapView('front')} title="Snap to Front View" className="absolute left-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-white drop-shadow">FRONT</button>
+              <button onClick={() => onSnapView('back')} title="Snap to Back View" className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-white drop-shadow">BACK</button>
+              <button onClick={() => onSnapView('left')} title="Snap to Left View" className="absolute left-1/2 top-[30%] -translate-x-1/2 text-[8px] font-bold text-[#fbcfe8] drop-shadow">LEFT</button>
+              <button onClick={() => onSnapView('right')} title="Snap to Right View" className="absolute left-1/2 bottom-[30%] -translate-x-1/2 text-[8px] font-bold text-[#fbcfe8] drop-shadow">RIGHT</button>
+            </div>
           </div>
         )}
 
-        {/* Style 3: 3D Mountain Peak with Trapezium/Triangle Faces & Elevation Gradient */}
+        {/* Style 3: one mountain silhouette with six labels on the same shape */}
         {gizmoStyle === 'mountain' && (
           <div
-            className="w-full h-full relative transform-style-3d transition-transform duration-75 flex items-center justify-center"
-            style={{
-              transformStyle: 'preserve-3d',
-              transform: `rotateX(${degX}deg) rotateY(${degY}deg)`,
-            }}
+            className="w-full h-full relative flex items-center justify-center"
+            style={{ transform: `rotateX(${degX}deg) rotateY(${degY}deg)` }}
           >
-            {/* Snow Peak / Summit (+Y / Top) */}
-            <button
-              onClick={() => onSnapView('top')}
-              title="Summit / Top View"
-              className="absolute w-9 h-9 -ml-4.5 -mt-4.5 top-1/2 left-1/2 bg-gradient-to-b from-white via-sky-100 to-slate-200 text-slate-800 rounded-xs text-[9px] font-black font-mono flex items-center justify-center shadow-md border border-white hover:scale-110 transition-transform"
+            <div
+              className="relative w-[68px] h-[64px] border border-[#8b9b9a] shadow-lg"
               style={{
-                transform: 'translateY(-22px) rotateX(90deg)',
-                boxShadow: '0 0 10px rgba(255,255,255,0.7)',
+                clipPath: 'polygon(50% 0%, 59% 19%, 69% 34%, 78% 52%, 100% 100%, 0% 100%, 22% 52%, 36% 31%)',
+                background: 'linear-gradient(155deg, #f1f5f9 0%, #cbd5e1 19%, #8b7355 37%, #355b49 68%, #18392d 100%)',
+                filter: 'drop-shadow(0 4px 5px rgba(0,0,0,.45))',
               }}
             >
-              PEAK
-            </button>
-
-            {/* Front Slope (South face) */}
-            <button
-              onClick={() => onSnapView('front')}
-              title="South Slope / Front View"
-              className="absolute w-12 h-9 -ml-6 -mt-4.5 top-1/2 left-1/2 bg-gradient-to-b from-slate-300 via-amber-800 to-emerald-800 text-white text-[9px] font-bold border border-[#52637a] flex flex-col items-center justify-center hover:brightness-125 transition-all shadow-md"
-              style={{
-                clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
-                transform: 'rotateX(-35deg) translateZ(24px)',
-              }}
-            >
-              <span className="text-[8px] font-black text-amber-200">FRONT</span>
-            </button>
-
-            {/* Back Slope (North face) */}
-            <button
-              onClick={() => onSnapView('back')}
-              title="North Slope / Back View"
-              className="absolute w-12 h-9 -ml-6 -mt-4.5 top-1/2 left-1/2 bg-gradient-to-b from-slate-400 via-slate-700 to-emerald-950 text-white text-[9px] font-bold border border-[#3b4759] flex flex-col items-center justify-center hover:brightness-125 transition-all shadow-md"
-              style={{
-                clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
-                transform: 'rotateY(180deg) rotateX(-35deg) translateZ(24px)',
-              }}
-            >
-              <span className="text-[8px] font-black text-slate-200">BACK</span>
-            </button>
-
-            {/* Right Slope (East face) */}
-            <button
-              onClick={() => onSnapView('right')}
-              title="East Slope / Right View"
-              className="absolute w-12 h-9 -ml-6 -mt-4.5 top-1/2 left-1/2 bg-gradient-to-b from-slate-300 via-rose-900 to-emerald-800 text-white text-[9px] font-bold border border-[#7a5252] flex flex-col items-center justify-center hover:brightness-125 transition-all shadow-md"
-              style={{
-                clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
-                transform: 'rotateY(90deg) rotateX(-35deg) translateZ(24px)',
-              }}
-            >
-              <span className="text-[8px] font-black text-rose-200">EAST</span>
-            </button>
-
-            {/* Left Slope (West face) */}
-            <button
-              onClick={() => onSnapView('left')}
-              title="West Slope / Left View"
-              className="absolute w-12 h-9 -ml-6 -mt-4.5 top-1/2 left-1/2 bg-gradient-to-b from-slate-400 via-stone-800 to-emerald-900 text-white text-[9px] font-bold border border-[#593b3b] flex flex-col items-center justify-center hover:brightness-125 transition-all shadow-md"
-              style={{
-                clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
-                transform: 'rotateY(-90deg) rotateX(-35deg) translateZ(24px)',
-              }}
-            >
-              <span className="text-[8px] font-black text-stone-200">WEST</span>
-            </button>
-
-            {/* Base / Valley Foothills (-Y / Bottom) */}
-            <button
-              onClick={() => onSnapView('bottom')}
-              title="Valley / Bottom View"
-              className="absolute w-16 h-16 -ml-8 -mt-8 top-1/2 left-1/2 bg-[#1b4332] border border-[#2d6a4f] text-emerald-300 rounded text-[9px] font-bold flex items-center justify-center hover:bg-[#2d6a4f] transition-colors"
-              style={{ transform: 'translateY(24px) rotateX(90deg)' }}
-            >
-              BASE
-            </button>
+              <button onClick={() => onSnapView('top')} title="Snap to Top View" className="absolute top-[8%] left-1/2 -translate-x-1/2 text-[8px] font-black text-[#17202a] drop-shadow">TOP</button>
+              <button onClick={() => onSnapView('front')} title="Snap to Front View" className="absolute top-[42%] left-[15%] text-[8px] font-bold text-white drop-shadow">FRONT</button>
+              <button onClick={() => onSnapView('back')} title="Snap to Back View" className="absolute top-[42%] right-[15%] text-[8px] font-bold text-white drop-shadow">BACK</button>
+              <button onClick={() => onSnapView('left')} title="Snap to Left View" className="absolute bottom-[18%] left-[7%] text-[8px] font-bold text-white drop-shadow">LEFT</button>
+              <button onClick={() => onSnapView('right')} title="Snap to Right View" className="absolute bottom-[18%] right-[7%] text-[8px] font-bold text-white drop-shadow">RIGHT</button>
+              <button onClick={() => onSnapView('bottom')} title="Snap to Bottom View" className="absolute bottom-[2%] left-1/2 -translate-x-1/2 text-[8px] font-bold text-white drop-shadow">BOTTOM</button>
+            </div>
           </div>
         )}
+
       </div>
 
       {/* Axis Selector & Flip View Row */}
