@@ -383,3 +383,11 @@ This is a pre-execution note only; no implementation result is claimed here.
 - UV algorithms, tools and standalone workspace are expanded in `LAYER_PBR_PLAN.md`, marked documentation-only pending explicit confirmation.
 - CI: run `44196595476` succeeded and uploaded artifact `14378169255`; bundle `index-DwkyI3V_.js`. CI does not validate live browser interaction or input latency.
 - Protected: `crates/vue3d_core` untouched; safety ZIP untouched.
+
+
+## 2026-11-17 follow-up — stroke trail and redundant rebuilds
+
+- Dirty-region compositing now covers the segment from the prior pointer position to the current dab, as well as the bounds of symmetry points. It scales source rectangles for non-1024 layer canvases and falls back for dragged-dot/large-area tools.
+- Mask-brush pointer updates no longer trigger full PBR texture rebuilds. Pointer-up relies on the canonical texture notification to trigger one PBR rebuild rather than invoking a duplicate directly.
+- Latest code revision `d55a7ff` passed run `44197313538`; generated bundle `index-D6s9T1ZF.js`; artifact ID `14380475625`.
+- Device responsiveness remains unmeasured. Manual test on Victory's target hardware is still required.
