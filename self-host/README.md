@@ -139,7 +139,7 @@ You can also build the package in GitHub without installing Node.js locally:
 3. Click **Run workflow** on the main branch.
 4. When it finishes, download the **VUE_3D_Canvas_SelfHost** artifact.
 
-The workflow is manual-dispatch only; ordinary source commits do not start it automatically.
+The workflow can be run manually and also runs automatically when relevant self-host source, public assets, build scripts, or package configuration change on main.
 
 Manual verification checklist:
 
