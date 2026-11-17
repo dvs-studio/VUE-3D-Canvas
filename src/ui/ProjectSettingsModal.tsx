@@ -12,7 +12,7 @@ import { Save, FolderOpen, Link2, Package, Check, X, FileText, Download, Upload,
 export interface MatchedTextureMap {
   fileName: string;
   dataUrl: string;
-  role: 'color' | 'normal' | 'height' | 'roughness' | 'emission';
+  role: 'color' | 'normal' | 'height' | 'reflection' | 'emission';
   layerName: string;
 }
 
@@ -128,8 +128,8 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         role = 'height';
         layerName = `[Bump] ${layerName}`;
       } else if (lowerName.includes('rough') || lowerName.includes('spec') || lowerName.includes('gloss')) {
-        role = 'roughness';
-        layerName = `[Roughness] ${layerName}`;
+        role = 'reflection';
+        layerName = `[Reflection] ${layerName}`;
       } else if (lowerName.includes('emit') || lowerName.includes('emiss') || lowerName.includes('glow')) {
         role = 'emission';
         layerName = `[Emission] ${layerName}`;
@@ -378,7 +378,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     ) : (
                       <>
                         <RefreshCw className="w-3 h-3" />
-                        <span>Auto-Texture Model &amp; Replace Layers</span>
+                        <span>Auto-Texture from Folder</span>
                       </>
                     )}
                   </button>
@@ -390,7 +390,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       <span className={`px-1.5 py-0.2 rounded text-[9px] ${
                         t.role === 'normal' ? 'bg-[#3b82f6]/30 text-[#93c5fd]' :
                         t.role === 'height' ? 'bg-[#8b5cf6]/30 text-[#c4b5fd]' :
-                        t.role === 'roughness' ? 'bg-[#f59e0b]/30 text-[#fde68a]' :
+                        t.role === 'reflection' ? 'bg-[#f59e0b]/30 text-[#fde68a]' :
                         t.role === 'emission' ? 'bg-[#ec4899]/30 text-[#fbcfe8]' :
                         'bg-[#10b981]/30 text-[#a7f3d0]'
                       }`}>
