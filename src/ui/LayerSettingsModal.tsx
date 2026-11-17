@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
+import type { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
 import { Sliders, X, Check, Sun, Flame, Shield, Layers, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 
 interface LayerSettingsModalProps {
