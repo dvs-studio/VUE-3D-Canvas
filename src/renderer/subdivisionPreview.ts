@@ -281,7 +281,7 @@ function buildGeometry(vertices: PreviewVertex[], faces: PreviewFace[], heightMa
 }
 
 export function buildCombinedHeightMap(layers: Layer[], resolution = 256): HTMLCanvasElement | null {
-  const contributors = layers.filter(layer => layer.visible && !layer.isGroup && (layer.pbrSettings?.bumpOn ?? layer.channel === 'height'));
+  const contributors = layers.filter(layer => layer.visible && !layer.isGroup && (!layer.groupId || layers.find(parent => parent.id === layer.groupId)?.visible !== false) && (layer.pbrSettings?.bumpOn ?? layer.channel === 'height'));
   if (contributors.length === 0) return null;
   const canvas = document.createElement('canvas');
   canvas.width = resolution;
