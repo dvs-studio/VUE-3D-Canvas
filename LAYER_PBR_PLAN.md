@@ -568,3 +568,11 @@ Manual testing still needed. The build confirms compile/package only; it does no
 - UV repair: Viewport3D's private geometry clone now receives typed UV channel arrays and active UV channel data; an explicit UV geometry version causes the clone and render to refresh after UV unwrap/channel selection/rebake operations. UV panel geometry updates also schedule texture composite refresh.
 - Self-host sync now replaces generated app bundles from `dist` while preserving hand-maintained Gizmo GLBs and help/signature assets. This removes stale generated hashed JS/CSS bundles rather than leaving old versions in `self-host/public/assets`.
 - Manual validation remains required for UV painting and export, wood source stacking, dust scattering, noise shader, and the replacement Suzanne import when supplied. No browser-level interaction tests or performance measurements are claimed.
+
+## Self-host folder synchronization checkpoint — 2026-11-18
+
+The latest successful self-host workflow is run #109 / ID `44308954895`. The build now commits the generated `dist` output into `self-host/public` and removes stale generated assets on each successful run. Commit `116b8d6a731df854ea36eeeea9c09ad2f3c5f533` (`chore(self-host): sync generated painter output [skip ci]`) contains the actual generated self-host output. Current public assets include the latest hashed app JS/CSS plus the four preserved Gizmo GLBs; old hashed bundles and the faulty `suzanne.obj` are removed. The build also preserves help PDFs/DOCX and signature assets.
+
+Artifact `14430270038`, name `VUE_3D_Canvas_SelfHost`, size 1,061,477 bytes, SHA-256 `c3e0d496d7141f32a58c604a5dc7fc9faaee576d28823809717561183721ad80`, expires 2027-02-16. Run URL: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44308954895
+
+Manual testing remains required for UV edits updating the 3D material and texture mapping, UV save/export, stacked wood source output, powder dust scattering, noise-shader darkening, and subdivision arrow controls. The replacement separated-item Suzanne OBJ/MTL is pending from the user; do not reintroduce the previous faulty OBJ, and do not bake subdivision into the replacement model.
