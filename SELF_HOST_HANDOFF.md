@@ -195,3 +195,12 @@ Implemented in the self-host Vite/React/Three.js source:
 - GitHub Actions run [44219704658](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44219704658) completed successfully: install, production build, `npm run host:sync`, package identity checks, ZIP packaging and artifact upload all passed.
 - Generated bundle: `index-BIQQ4eFN.js`. Latest artifact: `VUE_3D_Canvas_SelfHost`, ID `14390800060` (851,024 bytes; expires 2027-02-16).
 - This verifies source compilation and packaging, not browser behaviour. Still require manual tests for GLB appearance/load path, all six gizmo arrows, HSL round-trip, mixed triplanar rows, part inventory/raycast isolation, subdivision source/export preservation, Navigator updates, and target-device surface-normal response. No latency measurements are claimed.
+
+
+## Correction pass requested 2026-11-18 (pre-implementation checkpoint)
+
+Required repairs: constrain Triplanar dialog width/height and numeric input fields; fix HSL toggle so palette wheel canvas remains mounted and usable; use viewport height based on dynamic visible screen (`100dvh`) with bottom overflow prevented; ensure Window-menu toggles actually remove dockers in all workspace modes; add Preferences values for gizmo label spacing/margin and font size; axis arrows should follow model-local axis directions, use brighter positive and darker negative colors, and fade occluded opposite directions; integrate repository OBJ `self-host/public/assets/suzanne.obj` as built-in **Squail**, subdivided once and with a simplified UV.
+
+Filters must be image-layer operations (not brush-engine pattern presets). Wood Grain destructively writes into the selected image layer and exposes Image/Color source, edge, noise, bleed, and blur controls. Hatching, Cross-Hatching, and Hashing shift pixels in direction constrained to world/object space, with optional randomization. Bump conversion grayscale-converts the selected image and opens Levels-like controls (black input, white input, gamma, output black, output white) to tune tonal height influence.
+
+Keep scope limited to the self-hosted app source; do not touch the native Rust workspace or protected safety ZIP. CI build/package is not browser validation; report manual validation still needed. This is a requirements checkpoint only, before source edits.
