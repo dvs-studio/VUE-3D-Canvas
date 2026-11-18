@@ -121,7 +121,9 @@ export class SurfaceShadingEngine {
       return `${qx}_${qy}_${qz}`;
     };
 
-    const indexAttr = geom.getIndex();
+    // Always calculate normals from the complete source topology. The viewport
+    // temporarily swaps the active index buffer when parts are hidden/isolated.
+    const indexAttr = (geom.userData?.fullIndex as THREE.BufferAttribute | undefined) || geom.getIndex();
     const triangleCount = indexAttr ? indexAttr.count / 3 : Math.floor(vertexCount / 3);
 
     // 1. Compute and store face normal and angle weights for every triangle
@@ -289,7 +291,9 @@ export class SurfaceShadingEngine {
     const edge2 = new THREE.Vector3();
     const faceNorm = new THREE.Vector3();
 
-    const indexAttr = geom.getIndex();
+    // Always calculate normals from the complete source topology. The viewport
+    // temporarily swaps the active index buffer when parts are hidden/isolated.
+    const indexAttr = (geom.userData?.fullIndex as THREE.BufferAttribute | undefined) || geom.getIndex();
     if (indexAttr) {
       const triangleCount = indexAttr.count / 3;
       for (let t = 0; t < triangleCount; t++) {
