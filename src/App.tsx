@@ -199,7 +199,6 @@ export default function App() {
   });
   const [activeUVChannel, setActiveUVChannel] = useState<string>('uv_original');
   const [uvGeometryVersion, setUvGeometryVersion] = useState(0);
-  const notifyUVGeometryUpdated = useCallback(() => { setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }, [notifyTextureUpdated]);
   const [isXRayBrushActive, setIsXRayBrushActive] = useState<boolean>(false);
   const [xrayVertexSelection, setXrayVertexSelection] = useState<Set<number>>(new Set());
 
@@ -506,6 +505,8 @@ export default function App() {
       setTextureVersion(v => v + 1);
     });
   }, [syncCompositeCanvas]);
+
+  const notifyUVGeometryUpdated = useCallback(() => { setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }, [notifyTextureUpdated]);
 
   const handleRebakeTexture = useCallback((fromChannel: string, toChannel: string, resolution: number) => {
     if (!activeGeometry) return;
