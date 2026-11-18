@@ -42,4 +42,4 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultCol
   </div>
  </div>;
 };
-const Slider:React.FC<{label:string,value:number,min:number,max:number,onChange:(v:number)=>void}>={({label,value,min,max,onChange})=><label className="block text-[11px] space-y-1"><span className="flex justify-between gap-2"><span>{label}</span><span className="font-mono">{value}</span></span><input className="w-full accent-blue-500" type="range" min={min} max={max} step="1" value={value} onChange={e=>onChange(Number(e.target.value))}/></label>};
+const Slider:React.FC<{label:string,value:number,min:number,max:number,onChange:(v:number)=>void}>={({label,value,min,max,onChange})=><label className="block text-[11px] space-y-1"><span className="flex justify-between gap-2"><span>{label}</span><span className="font-mono">{value}</span></span><input className="w-full accent-blue-500" type="range" min={min} max={max} step="1" value={value} onChange={e=>onChange(Number(e.target.value))}/></label>;
