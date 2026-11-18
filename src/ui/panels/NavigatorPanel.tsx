@@ -183,9 +183,6 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
       newGeom = BUILTIN_MODELS.suzanne().geometry;
     }
 
-    const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
-    SurfaceShadingEngine.applySurfaceShading(newGeom, meshRef.current?.material || null, effMode);
-
     meshRef.current.geometry.dispose();
     meshRef.current.geometry = newGeom;
   }, [modelKey, customOBJText]);
@@ -198,7 +195,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
 
     const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
     SurfaceShadingEngine.applySurfaceShading(geom, meshRef.current.material, effMode);
-  }, [surfaceMode]);
+  }, [surfaceMode, modelKey, customOBJText]);
 
   // Synchronise a compact preview texture before the browser's next paint.
   // The texture object is persistent; only its 256² source canvas is refreshed.
