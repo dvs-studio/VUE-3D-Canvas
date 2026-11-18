@@ -350,42 +350,9 @@ export class SmartUVUnwrapEngine {
         });
       });
 
-      // Painting-oriented relaxation: keep it conservative to preserve projected shape.
-      // Iterative averaging must be followed by fresh bounds before island packing.
-      if (islandFaces.length > 2) {
-        const vertCoordsMap = new Map<number, { u: number; v: number; count: number }>();
-        islandFaces.forEach((face) => {
-          [face.iA, face.iB, face.iC].forEach((vIdx, localIdx) => {
-            const c = coords.get(`${face.index}_${localIdx}`)!;
-            const existing = vertCoordsMap.get(vIdx);
-            if (!existing) {
-              vertCoordsMap.set(vIdx, { u: c.u, v: c.v, count: 1 });
-            } else {
-              existing.u += c.u;
-              existing.v += c.v;
-              existing.count += 1;
-            }
-          });
-        });
-
-        // Blend interior coordinates slightly toward average for conformal relaxation
-        vertCoordsMap.forEach((val) => {
-          val.u /= val.count;
-          val.v /= val.count;
-        });
-
-        islandFaces.forEach((face) => {
-          [face.iA, face.iB, face.iC].forEach((vIdx, localIdx) => {
-            const key = `${face.index}_${localIdx}`;
-            const c = coords.get(key)!;
-            const avg = vertCoordsMap.get(vIdx)!;
-            // 85% original, 15% relaxed to prevent texture collapse
-            c.u = c.u * 0.88 + avg.u * 0.12;
-            c.v = c.v * 0.88 + avg.v * 0.12;
-          });
-        });
-      }
-
+      // The painting UV generator intentionally uses conservative planar projection.
+      // Avoid vertex averaging here: it pulls seam-adjacent corners together and can
+      // introduce local chart distortion. Keep projected coordinates unchanged.
       // Relaxation changes corner coordinates. Recompute bounds afterwards or the
       // old projection bounds will mismatch relaxed coordinates during packing,
       // producing compressed/squashed islands.
