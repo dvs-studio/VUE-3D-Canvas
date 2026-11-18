@@ -8,7 +8,7 @@
  * for 360-degree supervision without affecting or painting the actual 3D model texture.
  */
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import * as THREE from 'three';
 import { BUILTIN_MODELS, parseOBJ } from '../../renderer/modelGeometry';
 import { applyFreeCamera, quatFromSpherical, tumbleFreeCamera, yawAroundWorldUp } from '../../renderer/freeCamera';
@@ -46,6 +46,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
   const textureRef = useRef<THREE.CanvasTexture | null>(null);
+  const navigatorTextureCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
   const autoRotateRef = useRef<boolean>(false);
@@ -102,18 +103,23 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     dirRim.position.set(-4, 2, -4);
     scene.add(dirRim);
 
-    // Initial Texture
-    const fallbackCanvas = document.createElement('canvas');
-    fallbackCanvas.width = 512;
-    fallbackCanvas.height = 512;
-    const fctx = fallbackCanvas.getContext('2d');
-    if (fctx) {
-      fctx.fillStyle = '#666';
-      fctx.fillRect(0, 0, 512, 512);
+    // Navigator is a small preview: keep one low-resolution texture canvas
+    // and upload only 256² pixels per sync instead of the full 1024² paint map.
+    const navigatorCanvas = document.createElement('canvas');
+    navigatorCanvas.width = 256;
+    navigatorCanvas.height = 256;
+    const navigatorContext = navigatorCanvas.getContext('2d');
+    if (navigatorContext) {
+      navigatorContext.fillStyle = '#666';
+      navigatorContext.fillRect(0, 0, 256, 256);
+      if (compositeCanvas) navigatorContext.drawImage(compositeCanvas, 0, 0, 256, 256);
     }
-
-    const tex = new THREE.CanvasTexture(compositeCanvas || fallbackCanvas);
+    navigatorTextureCanvasRef.current = navigatorCanvas;
+    const tex = new THREE.CanvasTexture(navigatorCanvas);
     tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
     textureRef.current = tex;
 
     // Initial Mesh
@@ -153,6 +159,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
+      textureRef.current?.dispose();
       renderer.dispose();
     };
   }, []);
@@ -175,7 +182,7 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
 
     meshRef.current.geometry.dispose();
     meshRef.current.geometry = newGeom;
-  }, [modelKey, customOBJText, surfaceMode]);
+  }, [modelKey, customOBJText]);
 
   // Synchronize dynamic surface normals (Def / Smooth / Flat / Hard)
   useEffect(() => {
@@ -187,23 +194,17 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     SurfaceShadingEngine.applySurfaceShading(geom, meshRef.current.material, effMode);
   }, [surfaceMode]);
 
-  // Update Texture from main painting canvas
-  useEffect(() => {
-    if (!meshRef.current) return;
-    if (compositeCanvas) {
-      if (!textureRef.current || textureRef.current.image !== compositeCanvas) {
-        const tex = new THREE.CanvasTexture(compositeCanvas);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        textureRef.current = tex;
-        const mat = meshRef.current.material as THREE.MeshStandardMaterial;
-        if (mat) {
-          mat.map = tex;
-          mat.needsUpdate = true;
-        }
-      } else {
-        textureRef.current.needsUpdate = true;
-      }
-    }
+  // Synchronise a compact preview texture before the browser's next paint.
+  // The texture object is persistent; only its 256² source canvas is refreshed.
+  useLayoutEffect(() => {
+    const target = navigatorTextureCanvasRef.current;
+    const texture = textureRef.current;
+    if (!target || !texture || !compositeCanvas) return;
+    const ctx = target.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, target.width, target.height);
+    ctx.drawImage(compositeCanvas, 0, 0, target.width, target.height);
+    texture.needsUpdate = true;
   }, [compositeCanvas, textureVersion]);
 
   // Update Material
