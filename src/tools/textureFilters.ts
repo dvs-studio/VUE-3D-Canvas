@@ -19,10 +19,12 @@ export interface TextureFilterConfig {
   lineSpacing: number;
   mosaicSize: number;
   levels: number;
+  directionSpace: 'uv' | 'object' | 'world';
+  axis: 'X' | 'Y' | 'Z';
 }
 export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   kind: 'wood', source: 'color', color: '#8a5a35', edge: 65, noise: 25, bleed: 18, blur: 1,
-  angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5
+  angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z'
 };
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 const hash=(x:number,y:number,seed:number)=>{const n=Math.sin(x*127.1+y*311.7+seed*74.7)*43758.5453;return n-Math.floor(n);};
@@ -37,7 +39,8 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  const w=source.width,h=source.height, out=new ImageData(w,h), data=source.data, dst=out.data;
  const srcImg=cfg.kind==='wood'&&cfg.source==='image'?await imageSource(cfg.sourceImageDataUrl,w,h):null;
  const color=parseColor(cfg.color);
- const angle=cfg.angle*Math.PI/180, dx=Math.cos(angle),dy=Math.sin(angle);
+ const axisAngle=cfg.directionSpace==='uv'?cfg.angle:(cfg.axis==='X'?0:cfg.axis==='Y'?90:45);
+ const angle=axisAngle*Math.PI/180, dx=Math.cos(angle),dy=Math.sin(angle);
  const edge=cfg.edge/100, noise=cfg.noise/100, bleed=cfg.bleed/100;
  if(cfg.kind==='wood'){
    // Grain field uses anisotropic waves + seeded noise; source image or chosen colour controls palette.
