@@ -378,7 +378,6 @@ export default function App() {
     symmetry: false,
     masking: false,
     uvEditor: true,
-    subdivision: false,
   });
 
   // 3D Viewport UnrealBloomPass Post-Processing Settings
@@ -1867,6 +1866,17 @@ export default function App() {
                         />
                       ),
                     },
+                    {
+                      id: 'subdivision',
+                      title: 'Subdivision',
+                      icon: <LayersIcon className="w-3 h-3 text-[#3d7fb8]" />,
+                      content: (
+                        <SubdivisionPanel
+                          settings={subdivisionSettings}
+                          onChange={(patch) => setSubdivisionSettings(current => ({ ...current, ...patch }))}
+                        />
+                      ),
+                    },
                   ]}
                   activeTabId={dockerGroup1Tab}
                   onSelectTab={setDockerGroup1Tab}
@@ -2061,15 +2071,14 @@ export default function App() {
                 </div>
               )}
 
-              {/* Non-destructive Subdivision Preview */}
-              {activePanels.subdivision && !panelFloating.subdivision && (
+              {/* Permanent Subdivision Docker — fixed beside the Colour docker */}
+              {activePanels.subdivision && (
                 <div className="border-b border-[#444] shrink-0">
                   <DockablePanelFrame
                     id="subdivision"
                     title="Subdivision Preview"
                     icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
                     onClose={() => togglePanel('subdivision')}
-                    onToggleFloat={() => togglePanelFloat('subdivision')}
                   >
                     <SubdivisionPanel
                       settings={subdivisionSettings}
@@ -2129,27 +2138,6 @@ export default function App() {
       </div>
 
       {/* Floating Panels (Torn off into floating windows) */}
-      {panelFloating.subdivision && activePanels.subdivision && (
-        <DockablePanelFrame
-          id="subdivision"
-          title="Subdivision Preview"
-          icon={<LayersIcon className="w-3.5 h-3.5 text-[#3d7fb8]" />}
-          isFloating={true}
-          initialPos={{ x: 360, y: 140 }}
-          width={300}
-          height={420}
-          minWidth={260}
-          minHeight={320}
-          onClose={() => togglePanel('subdivision')}
-          onToggleFloat={() => togglePanelFloat('subdivision')}
-        >
-          <SubdivisionPanel
-            settings={subdivisionSettings}
-            onChange={(patch) => setSubdivisionSettings(current => ({ ...current, ...patch }))}
-          />
-        </DockablePanelFrame>
-      )}
-
       {panelFloating.uvEditor && activePanels.uvEditor && (
         <DockablePanelFrame
           id="uvEditor"
