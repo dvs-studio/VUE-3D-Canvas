@@ -21,7 +21,7 @@ interface MeshPartsPanelProps {
   onTogglePartVisibility: (id: string, visible: boolean) => void;
   onToggleIsolate: (checked: boolean) => void;
   onShowAll: () => void;
-  onFrameSelected: () => void;
+  onFrameSelected: (id?: string) => void;
 }
 
 export const MeshPartsPanel: React.FC<MeshPartsPanelProps> = ({
@@ -65,7 +65,7 @@ export const MeshPartsPanel: React.FC<MeshPartsPanelProps> = ({
                 <button type="button" onClick={() => onTogglePartVisibility(part.id, !visible)} className={`p-1 rounded ${visible ? 'text-[#a6e3a1] hover:bg-[#344b36]' : 'text-[#f38ba8] hover:bg-[#4a3035]'}`} title={visible ? 'Hide this part' : 'Show this part'}>
                   {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                 </button>
-                <button type="button" onClick={() => { onSelectPart(part.id); onToggleIsolate(true); onFrameSelected(); }} className="p-1 rounded text-[#89b4fa] hover:bg-[#303c4f]" title="Isolate and frame this part">
+                <button type="button" onClick={() => { onSelectPart(part.id); onToggleIsolate(true); onFrameSelected(part.id); }} className="p-1 rounded text-[#89b4fa] hover:bg-[#303c4f]" title="Isolate and frame this part">
                   <Focus className="w-3.5 h-3.5" />
                 </button>
               </div>
