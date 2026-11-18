@@ -350,6 +350,13 @@ export class SurfaceShadingEngine {
     this.setMaterialFlatShading(material, true);
   }
 
+  public static syncMaterialFlatShading(
+    material: THREE.Material | THREE.Material[] | null,
+    mode: SurfaceShadingType
+  ): void {
+    this.setMaterialFlatShading(material, mode === 'flat');
+  }
+
   private static setMaterialFlatShading(
     material: THREE.Material | THREE.Material[] | null,
     flat: boolean
