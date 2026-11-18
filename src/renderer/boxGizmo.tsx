@@ -69,12 +69,12 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
     return arrows[(Math.round(angle / (Math.PI / 4)) + 8) % 8];
   };
   const axisIndicators = [
-    { label: '+X', view: 'right' as const, color: '#f38ba8', point: projectAxis(1, 0, 0) },
-    { label: '-X', view: 'left' as const, color: '#f38ba8', point: projectAxis(-1, 0, 0) },
-    { label: '+Y', view: 'top' as const, color: '#a6e3a1', point: projectAxis(0, 1, 0) },
-    { label: '-Y', view: 'bottom' as const, color: '#a6e3a1', point: projectAxis(0, -1, 0) },
-    { label: '+Z', view: 'front' as const, color: '#89b4fa', point: projectAxis(0, 0, 1) },
-    { label: '-Z', view: 'back' as const, color: '#89b4fa', point: projectAxis(0, 0, -1) },
+    { label: '+X', view: 'right' as const, color: '#ff5b73', point: projectAxis(1, 0, 0), positive: true },
+    { label: '-X', view: 'left' as const, color: '#873747', point: projectAxis(-1, 0, 0), positive: false },
+    { label: '+Y', view: 'top' as const, color: '#63e18b', point: projectAxis(0, 1, 0), positive: true },
+    { label: '-Y', view: 'bottom' as const, color: '#346b45', point: projectAxis(0, -1, 0), positive: false },
+    { label: '+Z', view: 'front' as const, color: '#5ba7ff', point: projectAxis(0, 0, 1), positive: true },
+    { label: '-Z', view: 'back' as const, color: '#315d91', point: projectAxis(0, 0, -1), positive: false },
   ];
 
   const [isPanning, setIsPanning] = useState(false);
@@ -294,7 +294,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
                 onClick={() => onSnapView(axis.view)}
                 title={`Snap to ${axis.label} direction`}
                 className="absolute pointer-events-auto rounded bg-[#171717]/85 border border-[#555]/70 px-1 py-0.5 shadow whitespace-nowrap"
-                style={{ left: `calc(50% + ${axis.point.x * 31}px)`, top: `calc(50% - ${axis.point.y * 31}px)`, transform: 'translate(-50%, -50%)', color: axis.color }}
+                style={{ left: `calc(50% + ${axis.point.x * 31}px)`, top: `calc(50% - ${axis.point.y * 31}px)`, transform: 'translate(-50%, -50%)', color: axis.color, opacity: axis.positive ? (axis.point.z > 0 ? 1 : 0.72) : (axis.point.z > 0 ? 0.72 : 0.35), borderColor: axis.color, backgroundColor: axis.positive ? 'rgba(20,20,20,.9)' : 'rgba(20,20,20,.45)' }}
               >
                 {arrowFor(axis.point.x, axis.point.y)} {axis.label}
               </button>
