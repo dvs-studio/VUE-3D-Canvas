@@ -400,6 +400,8 @@ export interface TriplanarTextureItem {
   offsetY?: number;
   tintColor?: string;
   colorAlpha?: number;
+  /** Checked = use this instance's own tint/colour; unchecked = sample dataUrl when available. */
+  useInstanceColor?: boolean;
 }
 
 export interface TriplanarConfig {
