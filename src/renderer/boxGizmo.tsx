@@ -180,6 +180,34 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
         root.scale.setScalar(scale);
         root.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
         root.rotation.order = 'YXZ';
+        // Direction arrows are real Three.js geometry parented to the loaded gizmo model.
+        // Positive axes use saturated colors; opposing axes use darker colors.
+        const axisSpecs: Array<{axis:'X'|'Y'|'Z'; sign:1|-1; color:number; direction:THREE.Vector3}> = [
+          {axis:'X',sign:1,color:0xff5b73,direction:new THREE.Vector3(1,0,0)},
+          {axis:'X',sign:-1,color:0x873747,direction:new THREE.Vector3(-1,0,0)},
+          {axis:'Y',sign:1,color:0x63e18b,direction:new THREE.Vector3(0,1,0)},
+          {axis:'Y',sign:-1,color:0x346b45,direction:new THREE.Vector3(0,-1,0)},
+          {axis:'Z',sign:1,color:0x5ba7ff,direction:new THREE.Vector3(0,0,1)},
+          {axis:'Z',sign:-1,color:0x315d91,direction:new THREE.Vector3(0,0,-1)},
+        ];
+        const helpers: THREE.ArrowHelper[] = [];
+        axisSpecs.forEach(spec => {
+          const arrow = new THREE.ArrowHelper(spec.direction, center, maxDimension*0.48, spec.color, maxDimension*0.16, maxDimension*0.1);
+          arrow.userData.axisDirection = spec.direction.clone();
+          arrow.userData.baseOpacity = spec.sign > 0 ? 0.95 : 0.65;
+          arrow.traverse(child => {
+            const object = child as THREE.Mesh | THREE.Line;
+            const material = (object as any).material as THREE.Material | THREE.Material[] | undefined;
+            if (!material) return;
+            (Array.isArray(material) ? material : [material]).forEach(m => {
+              const mat = m as THREE.Material & { opacity?: number; transparent?: boolean };
+              mat.transparent = true; mat.opacity = arrow.userData.baseOpacity;
+              mat.depthWrite = false;
+            });
+          });
+          helpers.push(arrow); root.add(arrow);
+        });
+        root.userData.axisArrowHelpers = helpers;
         scene.add(root);
         modelObjectRef.current = root;
         setGizmoModelReady(true);
@@ -200,6 +228,21 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
     const camera = modelCameraRef.current;
     if (!model || !renderer || !scene || !camera) return;
     model.rotation.set(rotation.x, rotation.y, 0, 'YXZ');
+    const helpers = (model.userData.axisArrowHelpers || []) as THREE.ArrowHelper[];
+    helpers.forEach(helper => {
+      const direction = (helper.userData.axisDirection as THREE.Vector3).clone().applyEuler(model.rotation);
+      const front = direction.z >= 0;
+      const opacity = front ? (helper.userData.baseOpacity as number) : (helper.userData.baseOpacity as number) * 0.35;
+      helper.traverse(child => {
+        const object = child as THREE.Mesh | THREE.Line;
+        const material = (object as any).material as THREE.Material | THREE.Material[] | undefined;
+        if (!material) return;
+        (Array.isArray(material) ? material : [material]).forEach(m => {
+          const mat = m as THREE.Material & { opacity?: number; transparent?: boolean };
+          mat.transparent = true; mat.opacity = opacity;
+        });
+      });
+    });
     renderer.render(scene, camera);
   }, [rotation.x, rotation.y, gizmoModelReady]);
 
