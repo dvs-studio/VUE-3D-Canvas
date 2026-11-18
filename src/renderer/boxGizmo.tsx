@@ -68,6 +68,12 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
     const angle = Math.atan2(y, x);
     return arrows[(Math.round(angle / (Math.PI / 4)) + 8) % 8];
   };
+  const gizmoLabelPrefs = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('vue3d_preferences') || '{}');
+      return { margin: Math.max(18, Math.min(44, Number(stored.gizmoLabelMargin ?? 31))), fontSize: Math.max(6, Math.min(13, Number(stored.gizmoLabelFontSize ?? 8))) };
+    } catch { return { margin: 31, fontSize: 8 }; }
+  })();
   const axisIndicators = [
     { label: '+X', view: 'right' as const, color: '#ff5b73', point: projectAxis(1, 0, 0), positive: true },
     { label: '-X', view: 'left' as const, color: '#873747', point: projectAxis(-1, 0, 0), positive: false },
@@ -293,10 +299,10 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
                 type="button"
                 onClick={() => onSnapView(axis.view)}
                 title={`Snap to ${axis.label} direction`}
-                className="absolute pointer-events-auto rounded bg-[#171717]/85 border border-[#555]/70 px-1 py-0.5 shadow whitespace-nowrap"
-                style={{ left: `calc(50% + ${axis.point.x * 31}px)`, top: `calc(50% - ${axis.point.y * 31}px)`, transform: 'translate(-50%, -50%)', color: axis.color, opacity: axis.positive ? (axis.point.z > 0 ? 1 : 0.72) : (axis.point.z > 0 ? 0.72 : 0.35), borderColor: axis.color, backgroundColor: axis.positive ? 'rgba(20,20,20,.9)' : 'rgba(20,20,20,.45)' }}
+                className="absolute pointer-events-auto rounded bg-[#171717]/85 border border-[#555]/70 px-1 py-0.5 shadow whitespace-nowrap" style={{fontSize: `${gizmoLabelPrefs.fontSize}px`}}
+                style={{ left: `calc(50% + ${axis.point.x * gizmoLabelPrefs.margin}px)`, top: `calc(50% - ${axis.point.y * gizmoLabelPrefs.margin}px)`, transform: 'translate(-50%, -50%)', color: axis.color, opacity: axis.positive ? (axis.point.z > 0 ? 1 : 0.72) : (axis.point.z > 0 ? 0.72 : 0.35), borderColor: axis.color, backgroundColor: axis.positive ? 'rgba(20,20,20,.9)' : 'rgba(20,20,20,.45)' }}
               >
-                {arrowFor(axis.point.x, axis.point.y)} {axis.label}
+                {arrowFor(axis.point.x, axis.point.y)} {axis.label.replace(/[+-]/, '')}
               </button>
             ))}
           </div>
