@@ -45,7 +45,7 @@ import { LayersPanel } from './ui/panels/LayersPanel';
 import { ColorWheelPanel } from './ui/panels/ColorWheelPanel';
 import { BrushLibraryPanel } from './ui/panels/BrushLibraryPanel';
 import { NavigatorPanel } from './ui/panels/NavigatorPanel';
-import { MeshPartsPanel, MeshPartOption } from './ui/panels/MeshPartsPanel';
+import { MeshPartsPanel, type MeshPartOption } from './ui/panels/MeshPartsPanel';
 import { CircularCarousel } from './ui/CircularCarousel';
 import { NumpadOverlay } from './ui/NumpadOverlay';
 import { TriplanarDialog } from './ui/TriplanarDialog';
