@@ -700,7 +700,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 3D MESH GEOMETRY
               </div>
               {[
-                { id: 'suzanne', label: 'Suzanne (Blender Monkey)' },
+                { id: 'suzanne', label: 'Squail (Built-in OBJ)' },
                 { id: 'helmet', label: 'Cyber Armor Helmet' },
                 { id: 'pavilion', label: 'Classical Architectural Colonnade' },
                 { id: 'sphere', label: 'Showcase Sphere' },
