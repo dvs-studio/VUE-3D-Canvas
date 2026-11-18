@@ -204,3 +204,23 @@ Required repairs: constrain Triplanar dialog width/height and numeric input fiel
 Filters must be image-layer operations (not brush-engine pattern presets). Wood Grain destructively writes into the selected image layer and exposes Image/Color source, edge, noise, bleed, and blur controls. Hatching, Cross-Hatching, and Hashing shift pixels in direction constrained to world/object space, with optional randomization. Bump conversion grayscale-converts the selected image and opens Levels-like controls (black input, white input, gamma, output black, output white) to tune tonal height influence.
 
 Keep scope limited to the self-hosted app source; do not touch the native Rust workspace or protected safety ZIP. CI build/package is not browser validation; report manual validation still needed. This is a requirements checkpoint only, before source edits.
+
+## Correction pass implementation checkpoint — 2026-11-18
+
+Implemented in root self-host painter source (not native Rust):
+- Triplanar dialog responsive width/height and input containment; drag bounds updated.
+- Color wheel canvas stays mounted across Palette/HSL switches.
+- App uses dynamic viewport height (100dvh).
+- Grouped docker tab lists now filter by activePanels; Window menu includes Mesh Parts.
+- Gizmo labels use plain X/Y/Z with direction arrows; positive axes are brighter, negative axes darker, and rear/opposing indicators fade. Preference controls added for radial label spacing and font size. These are projected overlay arrows/labels aligned to the model axis projections, not arrow geometry baked into the GLB.
+- Selected-layer image filter dialog and image-processing engine added: Wood Grain (Image/Colour source, edge, noise, bleed/blend, blur), Hatching/Cross-Hatching/Hashing (pixel displacement), Powderiser, Dithering and Mosaic. Filters apply destructively to the active image layer, with an undo checkpoint and dialog preview. Preview downsamples to 320×320; Apply processes the full selected-layer canvas.
+- Bump conversion now opens grayscale Levels (black input, white input, gamma, output black, output white), previews, then converts the selected layer image to grayscale before enabling bump.
+- The repository OBJ self-host/public/assets/suzanne.obj is now imported as raw bundled text and used as the built-in Squail model; one Catmull-Clark subdivision is baked into preset geometry, and a simple planar UV is generated when OBJ has no UV attribute.
+
+Known limitations / manual validation:
+- Hatching displacement is currently computed in image/UV coordinates. Object/world axis options use a simplified angle mapping; exact per-model world/object-to-UV transform is not implemented yet.
+- Gizmo arrow direction is a projected axis overlay; the actual gizmo GLB still has no embedded material. Verify axis label overlap, rear fade, and snapping in device/browser.
+- Squail planar UV projection is intentionally simplified; validate seams/distortion and model bounds. OBJ subdivision and UV bake are CI compile-tested only.
+- Wood Grain, hatching displacement, Bump Levels, dialogs, mobile sizing, docker toggles, and color-wheel persistence require manual interaction testing. No browser-level test or measured performance run has been performed.
+
+Latest successful CI/package checkpoint: run 44269171028 (run #85), commit 92ad447447a0e9633e3d0efc649fff7aaa85e25e, artifact 14412325195 (VUE_3D_Canvas_SelfHost), 889,628 bytes, SHA-256 2bda18bb932c48b22da2bf40153893f6065c96bf791e81bda6bb5a2bf23b2124, expires 2027-02-16. Build/package pass does not establish browser behavior.
