@@ -195,7 +195,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
   };
 
   const [position, setPosition] = useState<{ x: number; y: number }>(() => ({
-    x: Math.max(20, typeof window !== 'undefined' ? window.innerWidth - 650 : 120),
+    x: Math.max(8, typeof window !== 'undefined' ? Math.min(window.innerWidth - 628, window.innerWidth - 650) : 120),
     y: 50,
   }));
   const isDraggingRef = useRef(false);
@@ -212,8 +212,10 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
-    const newX = Math.max(10, Math.min(window.innerWidth - 300, e.clientX - dragOffsetRef.current.x));
-    const newY = Math.max(40, Math.min(window.innerHeight - 150, e.clientY - dragOffsetRef.current.y));
+    const dialogWidth = Math.min(620, window.innerWidth - 16);
+    const newX = Math.max(8, Math.min(window.innerWidth - dialogWidth - 8, e.clientX - dragOffsetRef.current.x));
+    const dialogHeight = Math.min(window.innerHeight - 16, 720);
+    const newY = Math.max(8, Math.min(window.innerHeight - dialogHeight - 8, e.clientY - dragOffsetRef.current.y));
     setPosition({ x: newX, y: newY });
   };
 
@@ -235,8 +237,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
       />
 
       <div 
-        style={{ position: 'fixed', left: position.x, top: position.y, zIndex: 60 }}
-        className="w-[620px] pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[92vh] flex flex-col font-sans"
+        style={{ position: 'fixed', left: Math.max(8, Math.min(position.x, window.innerWidth - Math.min(620, window.innerWidth - 16) - 8)), top: Math.max(8, Math.min(position.y, window.innerHeight - 16)), zIndex: 60, width: 'min(620px, calc(100vw - 16px))' }}
+        className="pointer-events-auto bg-[#2d2d2d] border-2 border-[#555] rounded shadow-2xl overflow-hidden cs5-outset max-h-[calc(100dvh-16px)] flex flex-col font-sans"
       >
         {/* Header (Draggable) */}
         <div 
@@ -438,7 +440,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                     </div>
 
                     {/* Scale and Tint controls */}
-                    <div className="grid grid-cols-2 gap-3 pt-1 border-t border-[#333] text-[11px]">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[#333] text-[11px]">
                       <div className="flex items-center justify-between">
                         <span className="text-[#999]">Texture Tile Scale:</span>
                         <div className="flex items-center gap-2">
@@ -475,7 +477,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                             value={tex.tintColor || '#ffffff'}
                             onChange={(e) => handleTextureChange(idx, { tintColor: e.target.value })}
                             placeholder="rgba(255, 120, 40, 1)"
-                            className="w-44 bg-[#1a1a1a] border border-[#444] rounded px-2 py-1 text-[10px] text-white font-mono"
+                            className="w-full min-w-0 max-w-full bg-[#1a1a1a] border border-[#444] rounded px-2 py-1 text-[10px] text-white font-mono"
                           />
                         </div>
                         <div className="flex items-center gap-2">
