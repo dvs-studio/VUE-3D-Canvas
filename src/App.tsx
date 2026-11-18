@@ -1377,7 +1377,7 @@ export default function App() {
 
   return (
     <div 
-      className={`h-screen w-screen flex flex-col bg-[#333333] text-[#c8c8c8] overflow-hidden select-none font-sans theme-container theme-${currentTheme} ${currentTheme === 'bw78' ? 'theme-bw78-viewport-shadow' : ''}`}
+      className={`h-[100dvh] min-h-0 w-screen flex flex-col bg-[#333333] text-[#c8c8c8] overflow-hidden select-none font-sans theme-container theme-${currentTheme} ${currentTheme === 'bw78' ? 'theme-bw78-viewport-shadow' : ''}`}
       data-theme={currentTheme}
     >
       {/* 1. Authentic Photoshop CS5 Top Menu Bar */}
@@ -1900,7 +1900,7 @@ export default function App() {
                         />
                       ),
                     },
-                  ]}
+                  ].filter(tab => activePanels[tab.id])}
                   activeTabId={dockerGroup1Tab}
                   onSelectTab={setDockerGroup1Tab}
                   width={280}
@@ -1992,7 +1992,7 @@ export default function App() {
                         </div>
                       ),
                     },
-                  ]}
+                  ].filter(tab => activePanels[tab.id])}
                   activeTabId={dockerGroup2Tab}
                   onSelectTab={setDockerGroup2Tab}
                   width={280}
