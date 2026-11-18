@@ -345,7 +345,11 @@ export default function App() {
   useEffect(() => { setMeshComponentVisibility('all'); setHiddenMeshComponents([]); setIsolateSelectedGroupOnly(false); setFrameMeshComponentTrigger(null); }, [activeGeometry]);
   const toggleMeshPartVisibility = (id: string, visible: boolean) => setHiddenMeshComponents(current => visible ? current.filter(item => item !== id) : current.includes(id) ? current : [...current, id]);
   const showAllMeshParts = () => { setHiddenMeshComponents([]); setMeshComponentVisibility('all'); setIsolateSelectedGroupOnly(false); };
-  const frameSelectedMeshPart = (id = meshComponentVisibility) => { if (id !== 'all') setFrameMeshComponentTrigger({ id, timestamp: Date.now() }); };
+  const frameSelectedMeshPart = (id = meshComponentVisibility) => {
+    if (id === 'all') return;
+    setHiddenMeshComponents(current => current.filter(partId => partId !== id));
+    setFrameMeshComponentTrigger({ id, timestamp: Date.now() });
+  };
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', currentTheme);
     document.documentElement.className = `theme-${currentTheme}`;
