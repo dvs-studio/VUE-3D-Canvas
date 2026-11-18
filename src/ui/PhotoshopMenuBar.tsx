@@ -815,6 +815,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 { id: 'colorWheel', label: 'Color Palette & Wheel' },
                 { id: 'brushes', label: 'Brush Engine & Presets' },
                 { id: 'navigator', label: 'Viewport Navigator' },
+                { id: 'meshParts', label: 'Mesh Parts Inventory' },
                 { id: 'symmetry', label: 'Symmetry & Cloning Studio' },
                 { id: 'masking', label: 'Masking & Selection Studio' },
                 { id: 'uvEditor', label: 'UV Editor' },
