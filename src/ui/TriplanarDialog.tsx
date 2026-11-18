@@ -47,7 +47,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
       offsetX: 0,
       offsetY: 0,
       tintColor: defaultColor || '#dabb7d',
-      colorAlpha: 1
+      colorAlpha: 1,
+      useInstanceColor: true
     },
     {
       id: 'sand_coarse',
@@ -58,7 +59,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
       offsetX: 0,
       offsetY: 0,
       tintColor: '#a5875f',
-      colorAlpha: 1
+      colorAlpha: 1,
+      useInstanceColor: true
     }
   ]);
 
@@ -115,7 +117,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
         offsetX: 0,
         offsetY: 0,
         tintColor: preset.color,
-        colorAlpha: 1
+        colorAlpha: 1,
+        useInstanceColor: true
       }
     ]);
   };
@@ -148,7 +151,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
         handleTextureChange(uploadTargetIdx, {
           dataUrl,
           name: file.name.replace(/\.[^/.]+$/, ''),
-          isTransparentBlank: false
+          isTransparentBlank: false,
+          useInstanceColor: false
         });
       }
     };
@@ -350,7 +354,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-12 h-12 shrink-0 rounded border border-[#555] overflow-hidden" style={{ background: 'repeating-conic-gradient(#333 0% 25%, #242424 0% 50%) 50% / 12px 12px' }}>
-                          {tex.dataUrl ? (
+                          {tex.dataUrl && !(tex.useInstanceColor ?? !tex.dataUrl) ? (
                             <img src={tex.dataUrl} alt={tex.name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full" style={{ backgroundColor: tex.tintColor || '#ffffff', opacity: tex.colorAlpha ?? 1 }} />
@@ -403,7 +407,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                             isTransparentBlank: false,
                             dataUrl: undefined,
                             tintColor: p.color,
-                            colorAlpha: 1
+                            colorAlpha: 1,
+                            useInstanceColor: true
                           })}
                           className={`px-2 py-0.5 rounded text-[10px] border flex items-center gap-1 transition-colors ${
                             !tex.isTransparentBlank && tex.id.startsWith(p.id)
@@ -454,6 +459,16 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
 
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between gap-2">
+                          <label className="flex items-center gap-2 text-[#bbb] text-[10px]">
+                            <input
+                              type="checkbox"
+                              checked={tex.useInstanceColor ?? !tex.dataUrl}
+                              onChange={(e) => handleTextureChange(idx, { useInstanceColor: e.target.checked })}
+                              className="accent-[#3d7fb8]"
+                            />
+                            <span>Use this instance's own colour</span>
+                            <span className="text-[#777]">{(tex.useInstanceColor ?? !tex.dataUrl) ? 'COLOUR' : 'IMAGE'}</span>
+                          </label>
                           <span className="text-[#999]">Colour / RGBA / HSLA / Hex:</span>
                           <input
                             type="text"
@@ -476,7 +491,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                           />
                           <span className="font-mono text-[10px] text-[#aaa] w-8 text-right">{Math.round((tex.colorAlpha ?? 1) * 100)}%</span>
                         </div>
-                        <p className="text-[9px] text-[#777]">{tex.dataUrl ? 'Image selected: colour fields are ignored.' : 'No image selected: this row contributes the entered solid colour.'}</p>
+                        <p className="text-[9px] text-[#777]">{tex.isTransparentBlank ? 'Blank Alpha contributes transparency for an underlying merge.' : (tex.useInstanceColor ?? !tex.dataUrl) ? 'This row samples its own colour and separate alpha; an uploaded image is retained but not sampled.' : tex.dataUrl ? 'This row samples its uploaded image texture; its colour fields are bypassed.' : 'No image is selected, so the entered colour is used as a safe fallback.'}</p>
                       </div>
                     </div>
                   </div>
