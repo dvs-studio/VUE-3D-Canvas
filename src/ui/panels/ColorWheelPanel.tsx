@@ -131,10 +131,9 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
         <button type="button" onClick={() => setPickerMode('palette')} className={`flex-1 py-1 rounded text-[10px] font-semibold transition-colors ${pickerMode === 'palette' ? 'bg-[#3d7fb8] text-white' : 'text-[#999] hover:text-white'}`}>Palette</button>
         <button type="button" onClick={() => setPickerMode('hsl')} className={`flex-1 py-1 rounded text-[10px] font-semibold transition-colors ${pickerMode === 'hsl' ? 'bg-[#3d7fb8] text-white' : 'text-[#999] hover:text-white'}`}>HSL Sliders</button>
       </div>
-      {pickerMode === 'palette' ? (
-        <>
-      {/* Interactive Color Wheel Canvas */}
-      <div className="relative mb-2">
+      <>
+      {/* Keep canvas mounted across Palette/HSL switches so the drawing effect and ref remain valid. */}
+      <div className={pickerMode === 'palette' ? 'relative mb-2' : 'hidden'} aria-hidden={pickerMode !== 'palette'}>
         <canvas
           ref={wheelCanvasRef}
           width={160}
@@ -143,9 +142,7 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
           className="cursor-crosshair rounded-full border border-[#444] shadow-md cs5-inset"
         />
       </div>
-
-        </>
-      ) : (
+      {pickerMode === 'hsl' && (
         <div className="w-full space-y-3 py-1">
           <div className="h-12 rounded border border-[#555] shadow-inner" style={{ backgroundColor: currentColor }} />
           <label className="block space-y-1">
@@ -162,6 +159,7 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
           </label>
         </div>
       )}
+      </>
 
       {/* Hex and RGB Inputs */}
       <div className="w-full flex items-center justify-between gap-2 px-1 mb-2">
