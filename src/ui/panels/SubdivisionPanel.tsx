@@ -5,7 +5,7 @@
  * Created by Victory Ukpong
  */
 import React from 'react';
-import { Layers3, RefreshCw } from 'lucide-react';
+import { Layers3, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import type { SubdivisionPreviewOptions } from '../../renderer/subdivisionPreview';
 
 interface SubdivisionPanelProps {
@@ -31,10 +31,14 @@ export const SubdivisionPanel: React.FC<SubdivisionPanelProps> = ({ settings, on
           <option value="simple">Simple (linear split)</option>
         </select>
       </label>
-      <label className="block space-y-1">
-        <span className="flex justify-between"><span className="text-[#999]">Preview levels</span><strong>{settings.levels}</strong></span>
-        <input type="range" min="0" max="2" step="1" value={settings.levels} onChange={e => onChange({ levels: Number(e.target.value) as 0 | 1 | 2 })} className="w-full accent-[#3d7fb8]" />
-      </label>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[#999]">Preview levels</span>
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label="Decrease subdivision level" onClick={() => onChange({ levels: Math.max(0, settings.levels - 1) as 0 | 1 | 2 })} disabled={settings.levels <= 0} className="p-1 rounded border border-[#555] disabled:opacity-30"><ChevronDown className="w-4 h-4"/></button>
+          <strong className="min-w-5 text-center text-[#eee]">{settings.levels}</strong>
+          <button type="button" aria-label="Increase subdivision level" onClick={() => onChange({ levels: Math.min(2, settings.levels + 1) as 0 | 1 | 2 })} disabled={settings.levels >= 2} className="p-1 rounded border border-[#555] disabled:opacity-30"><ChevronUp className="w-4 h-4"/></button>
+        </div>
+      </div>
       <label className="block space-y-1">
         <span className="flex justify-between"><span className="text-[#999]">Sharp angle</span><strong>{Math.round(settings.sharpAngle)}°</strong></span>
         <input type="range" min="0" max="180" step="1" value={settings.sharpAngle} onChange={e => onChange({ sharpAngle: Number(e.target.value) })} className="w-full accent-[#3d7fb8]" />
