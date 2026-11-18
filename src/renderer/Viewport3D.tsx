@@ -1003,32 +1003,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     needsRenderRef.current = true;
   }, [meshComponentVisibility, hiddenMeshComponents, isolateSelectedGroupOnly, geometry]);
 
-  // Frame the selected part without changing the source mesh or its geometry.
-  useEffect(() => {
-    if (!frameMeshComponentTrigger || !meshRef.current) return;
-    const geom = meshRef.current.geometry;
-    const indices = (geom.userData?.componentIndices as Record<string, Uint32Array> | undefined)?.[frameMeshComponentTrigger.id];
-    const positions = geom.getAttribute('position');
-    if (!indices || !positions || indices.length === 0) return;
-    const bounds = new THREE.Box3();
-    const point = new THREE.Vector3();
-    bounds.makeEmpty();
-    for (let i = 0; i < indices.length; i++) {
-      const vertex = indices[i];
-      point.set(positions.getX(vertex), positions.getY(vertex), positions.getZ(vertex));
-      bounds.expandByPoint(point);
-    }
-    if (bounds.isEmpty()) return;
-    const sphere = bounds.getBoundingSphere(new THREE.Sphere());
-    orbitState.current.target.copy(sphere.center);
-    const radius = Math.max(sphere.radius, 0.15);
-    const fov = cameraPerspRef.current?.fov || 45;
-    orbitState.current.radius = (radius / Math.sin(THREE.MathUtils.degToRad(fov / 2))) * 1.2;
-    if (onZoomChange) onZoomChange(1.0);
-    needsRenderRef.current = true;
-    setZoomPulseTrigger(value => value + 1);
-    updateCameraPosition();
-  }, [frameMeshComponentTrigger, onZoomChange]);
+
 
   // HDRI Reflection & Viewport Lighting Controller
   useEffect(() => {
@@ -1300,6 +1275,33 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     setZoomPulseTrigger(p => p + 1);
     updateCameraPosition();
   }, [onZoomChange]);
+
+  // Frame the selected part without changing the source mesh or its geometry.
+  useEffect(() => {
+    if (!frameMeshComponentTrigger || !meshRef.current) return;
+    const geom = meshRef.current.geometry;
+    const indices = (geom.userData?.componentIndices as Record<string, Uint32Array> | undefined)?.[frameMeshComponentTrigger.id];
+    const positions = geom.getAttribute('position');
+    if (!indices || !positions || indices.length === 0) return;
+    const bounds = new THREE.Box3();
+    const point = new THREE.Vector3();
+    bounds.makeEmpty();
+    for (let i = 0; i < indices.length; i++) {
+      const vertex = indices[i];
+      point.set(positions.getX(vertex), positions.getY(vertex), positions.getZ(vertex));
+      bounds.expandByPoint(point);
+    }
+    if (bounds.isEmpty()) return;
+    const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+    orbitState.current.target.copy(sphere.center);
+    const radius = Math.max(sphere.radius, 0.15);
+    const fov = cameraPerspRef.current?.fov || 45;
+    orbitState.current.radius = (radius / Math.sin(THREE.MathUtils.degToRad(fov / 2))) * 1.2;
+    if (onZoomChange) onZoomChange(1.0);
+    needsRenderRef.current = true;
+    setZoomPulseTrigger(value => value + 1);
+    updateCameraPosition();
+  }, [frameMeshComponentTrigger, onZoomChange]);
 
   // Blender-style Drone Flight Navigator (WASD + QE + Shift boost)
   useEffect(() => {
