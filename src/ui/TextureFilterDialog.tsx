@@ -39,7 +39,7 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultCol
      {cfg.kind==='mosaic'&&<Slider label="Block Size" value={cfg.mosaicSize} min={2} max={64} onChange={v=>update({mosaicSize:v})}/>}
      {cfg.kind==='dither'&&<Slider label="Tonal Levels" value={cfg.levels} min={2} max={16} onChange={v=>update({levels:v})}/>}
      {cfg.kind==='powderiser'&&<><Slider label="Dust breakup" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Dust drift distance" value={cfg.shift} min={1} max={48} onChange={v=>update({shift:v})}/><Slider label="Drift angle" value={cfg.angle} min={-180} max={180} onChange={v=>update({angle:v})}/></>}
-     {cfg.kind==='noise-shader'&&<Slider label="Random darkness blend" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/>
+     {cfg.kind==='noise-shader'&&<Slider label="Random darkness blend" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/>}
      <button onClick={()=>setCfg({...DEFAULT_TEXTURE_FILTER,color:defaultColor})} className="w-full border border-[#555] rounded p-1.5 text-xs flex items-center justify-center gap-1"><RotateCcw className="w-3 h-3"/>Reset Settings</button>
     </section>
     <section className="min-w-0 flex flex-col gap-2">
