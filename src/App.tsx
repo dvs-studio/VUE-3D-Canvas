@@ -1686,7 +1686,7 @@ export default function App() {
                 hiddenMeshComponents={hiddenMeshComponents}
                 isolateSelectedGroupOnly={isolateSelectedGroupOnly}
                 frameMeshComponentTrigger={frameMeshComponentTrigger}
-                geometry={subdivisionPreviewGeometry || activeGeometry}
+                geometry={subdivisionPreviewGeometry && hiddenMeshComponents.length === 0 && !isolateSelectedGroupOnly ? subdivisionPreviewGeometry : activeGeometry}
                 onGeometryUpdated={notifyTextureUpdated}
                 activeUVChannel={activeUVChannel}
                 isXRayBrushActive={isXRayBrushActive}
