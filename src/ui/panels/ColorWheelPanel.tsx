@@ -188,20 +188,22 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
       </div>
 
       {/* Palette Swatches */}
-      <div className="w-full grid grid-cols-5 gap-1 pt-1.5 border-t border-[#484848]">
-        {swatches.map((color) => (
-          <button
-            key={color}
-            onClick={() => {
-              setHexInput(color);
-              onChangeColor(color);
-            }}
-            className="h-4 rounded-xs border border-[#555] hover:scale-110 transition-transform cs5-inset"
-            style={{ backgroundColor: color }}
-            title={color}
-          />
-        ))}
-      </div>
+      {pickerMode === 'palette' && (
+        <div className="w-full grid grid-cols-5 gap-1 pt-1.5 border-t border-[#484848]">
+          {swatches.map((color) => (
+            <button
+              key={color}
+              onClick={() => {
+                setHexInput(color);
+                onChangeColor(color);
+              }}
+              className="h-4 rounded-xs border border-[#555] hover:scale-110 transition-transform cs5-inset"
+              style={{ backgroundColor: color }}
+              title={color}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
