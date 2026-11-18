@@ -848,27 +848,36 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
   }, [bloom]);
 
-  // Update geometry only when its source changes. Surface-mode toggles are
-  // handled separately so they never rebuild or re-parse the model.
+  // The viewport works on a private geometry clone. Part visibility changes
+  // swap its index buffer for rendering/raycasting and must never mutate the
+  // source geometry used by UV editing, project saves, or exports.
   useEffect(() => {
     if (!meshRef.current) return;
-    let newGeom: THREE.BufferGeometry;
+    let sourceGeom: THREE.BufferGeometry;
 
     if (geometry) {
-      newGeom = geometry;
+      sourceGeom = geometry;
     } else if (customOBJText) {
-      newGeom = parseOBJ(customOBJText);
+      sourceGeom = parseOBJ(customOBJText);
     } else if (BUILTIN_MODELS[modelKey]) {
-      newGeom = BUILTIN_MODELS[modelKey]().geometry;
+      sourceGeom = BUILTIN_MODELS[modelKey]().geometry;
     } else {
-      newGeom = BUILTIN_MODELS.suzanne().geometry;
+      sourceGeom = BUILTIN_MODELS.suzanne().geometry;
     }
 
+    const newGeom = sourceGeom.clone();
+    // BufferGeometry.clone JSON-copies userData; restore typed inventory/index
+    // buffers explicitly so component filtering and full-topology normals work.
+    newGeom.userData = {
+      ...sourceGeom.userData,
+      componentIndices: sourceGeom.userData?.componentIndices,
+      excludeIndices: sourceGeom.userData?.excludeIndices,
+      componentNames: sourceGeom.userData?.componentNames,
+      fullIndex: sourceGeom.userData?.fullIndex?.clone?.() || sourceGeom.getIndex()?.clone(),
+    };
     SurfaceShadingEngine.ensureDefaultNormalsCached(newGeom);
-    if (meshRef.current.geometry !== newGeom) {
-      meshRef.current.geometry.dispose();
-      meshRef.current.geometry = newGeom;
-    }
+    meshRef.current.geometry.dispose();
+    meshRef.current.geometry = newGeom;
     needsRenderRef.current = true;
   }, [modelKey, customOBJText, geometry]);
 
