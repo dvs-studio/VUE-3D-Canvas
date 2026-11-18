@@ -86,6 +86,7 @@ interface Viewport3DProps {
   geometry?: THREE.BufferGeometry;
   onGeometryUpdated?: () => void;
   activeUVChannel?: string;
+  uvGeometryVersion?: number;
   isXRayBrushActive?: boolean;
   onToggleXRayBrush?: () => void;
   selectedVertices?: Set<number>;
@@ -874,12 +875,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       excludeIndices: sourceGeom.userData?.excludeIndices,
       componentNames: sourceGeom.userData?.componentNames,
       fullIndex: sourceGeom.userData?.fullIndex?.clone?.() || sourceGeom.getIndex()?.clone(),
+      uvChannels: Object.fromEntries(Object.entries(sourceGeom.userData?.uvChannels || {}).map(([key, value]) => [key, value instanceof Float32Array ? new Float32Array(value) : value])),
+      activeUVChannel: sourceGeom.userData?.activeUVChannel || activeUVChannel || 'uv_original',
     };
+    const activeUV = (sourceGeom.userData?.uvChannels?.[sourceGeom.userData?.activeUVChannel || activeUVChannel || 'uv_original']) as Float32Array | undefined;
+    if (activeUV && newGeom.getAttribute('uv')?.array.length === activeUV.length) {
+      (newGeom.getAttribute('uv') as THREE.BufferAttribute).copyArray(activeUV);
+      (newGeom.getAttribute('uv') as THREE.BufferAttribute).needsUpdate = true;
+    }
     SurfaceShadingEngine.ensureDefaultNormalsCached(newGeom);
     meshRef.current.geometry.dispose();
     meshRef.current.geometry = newGeom;
     needsRenderRef.current = true;
-  }, [modelKey, customOBJText, geometry]);
+  }, [modelKey, customOBJText, geometry, uvGeometryVersion, activeUVChannel]);
 
   // Apply surface shading once per mode/geometry change, then explicitly wake
   // the on-demand renderer. This prevents the old behaviour where the new
@@ -891,7 +899,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
     SurfaceShadingEngine.applySurfaceShading(geom, meshRef.current.material, effMode);
     needsRenderRef.current = true;
-  }, [surfaceMode, modelKey, customOBJText, geometry]);
+  }, [surfaceMode, modelKey, customOBJText, geometry, uvGeometryVersion, activeUVChannel]);
 
   // Sync X-Ray Selected Vertex Highlight Points in 3D
   useEffect(() => {
