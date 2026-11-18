@@ -39,8 +39,8 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  const w=source.width,h=source.height, out=new ImageData(w,h), data=source.data, dst=out.data;
  const srcImg=cfg.kind==='wood'&&cfg.source==='image'?await imageSource(cfg.sourceImageDataUrl,w,h):null;
  const color=parseColor(cfg.color);
- const axisAngle=cfg.directionSpace==='uv'?cfg.angle:(cfg.axis==='X'?0:cfg.axis==='Y'?90:45);
- const angle=axisAngle*Math.PI/180, dx=Math.cos(angle),dy=Math.sin(angle);
+ const axisAngle=cfg.directionSpace==='uv'?0:(cfg.axis==='X'?0:cfg.axis==='Y'?90:45);
+ const angle=(axisAngle+cfg.angle)*Math.PI/180, dx=Math.cos(angle),dy=Math.sin(angle);
  const edge=cfg.edge/100, noise=cfg.noise/100, bleed=cfg.bleed/100;
  if(cfg.kind==='wood'){
    // Grain field uses anisotropic waves + seeded noise; source image or chosen colour controls palette.
