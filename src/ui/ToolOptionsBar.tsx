@@ -91,8 +91,14 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
     { id: 'checker', label: 'Checker', preview: '▦' },
     { id: 'carbon', label: 'Carbon', preview: '▩' },
     { id: 'halftone', label: 'Halftone', preview: '⁖' },
+    { id: 'hatching', label: 'Hatching', preview: '╱' },
+    { id: 'crosshatching', label: 'Cross Hatch', preview: '▨' },
+    { id: 'hashing', label: 'Hashing', preview: '≋' },
+    { id: 'dither', label: 'Dither', preview: '⠿' },
+    { id: 'mosaic', label: 'Mosaic', preview: '▦' },
+    { id: 'powderiser', label: 'Powderiser', preview: '⁙' },
     { id: 'leather', label: 'Leather', preview: '≈' },
-    { id: 'wood', label: 'Wood', preview: '◎' },
+    { id: 'wood', label: 'Wood Grain', preview: '◎' },
     { id: 'weave', label: 'Weave', preview: '▥' },
   ];
 
