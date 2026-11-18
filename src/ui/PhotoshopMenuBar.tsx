@@ -422,7 +422,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                   onClick={() => { onOpenTextureFilters(); close(); }}
                   className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
                 >
-                  <span>Image Filters (Selected Layer)...</span>
+                  <span>Layer Filter (Selected Layer)...</span>
                   <span className="text-[#888] font-mono text-[10px]">Image</span>
                 </button>
               )}
