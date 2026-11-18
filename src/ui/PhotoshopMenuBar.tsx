@@ -48,6 +48,7 @@ interface PhotoshopMenuBarProps {
   currentTheme?: ThemeMode;
   onChangeTheme?: (theme: ThemeMode) => void;
   onOpenEdgeWearFilter?: () => void;
+  onOpenTextureFilters?: () => void;
   onOpenPatternStampDialog?: () => void;
   onExportMultiChannelModel?: () => void;
   onOpenGpuDiagnostics?: () => void;
@@ -104,6 +105,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   currentTheme = 'cs5',
   onChangeTheme,
   onOpenEdgeWearFilter,
+  onOpenTextureFilters,
   onOpenPatternStampDialog,
   onExportMultiChannelModel,
   onOpenGpuDiagnostics,
@@ -412,6 +414,16 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 >
                   <span>Jenny Stitch Studio (Path Stitches)...</span>
                   <span className="text-[#a6e3a1] font-mono text-[10px]">Mesh</span>
+                </button>
+              )}
+
+              {onOpenTextureFilters && (
+                <button
+                  onClick={() => { onOpenTextureFilters(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
+                >
+                  <span>Image Filters (Selected Layer)...</span>
+                  <span className="text-[#888] font-mono text-[10px]">Image</span>
                 </button>
               )}
 
