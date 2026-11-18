@@ -237,14 +237,15 @@ export class SmartUVUnwrapEngine {
       faces[i].islandId = islandId;
       const seedNormal = faces[i].normal.clone();
 
-      while (queue.length > 0) {
-        const currIdx = queue.shift()!;
+      let queueHead = 0;
+      while (queueHead < queue.length) {
+        const currIdx = queue[queueHead++];
         const currFace = faceIndexToData.get(currIdx);
         if (!currFace) continue;
 
         // Find neighboring faces sharing edges
         const getNeighbors = (fData: FaceData): number[] => {
-          const neighbors: number[] = [];
+          const neighbors = new Set<number>();
           const pts = [
             quantKey(posAttr.getX(fData.iA), posAttr.getY(fData.iA), posAttr.getZ(fData.iA)),
             quantKey(posAttr.getX(fData.iB), posAttr.getY(fData.iB), posAttr.getZ(fData.iB)),
@@ -261,11 +262,11 @@ export class SmartUVUnwrapEngine {
             const shared = edgeMap.get(k);
             if (shared) {
               for (const other of shared) {
-                if (other !== fData.index) neighbors.push(other);
+                if (other !== fData.index) neighbors.add(other);
               }
             }
           });
-          return neighbors;
+          return Array.from(neighbors);
         };
 
         const neighbors = getNeighbors(currFace);
@@ -349,8 +350,8 @@ export class SmartUVUnwrapEngine {
         });
       });
 
-      // Conformal Angle Relaxation (Stretch Minimization)
-      // Iterative smoothing of interior coordinates while preserving edge length ratios
+      // Painting-oriented relaxation: keep it conservative to preserve projected shape.
+      // Iterative averaging must be followed by fresh bounds before island packing.
       if (islandFaces.length > 2) {
         const vertCoordsMap = new Map<number, { u: number; v: number; count: number }>();
         islandFaces.forEach((face) => {
@@ -385,6 +386,14 @@ export class SmartUVUnwrapEngine {
         });
       }
 
+      // Relaxation changes corner coordinates. Recompute bounds afterwards or the
+      // old projection bounds will mismatch relaxed coordinates during packing,
+      // producing compressed/squashed islands.
+      minU = Infinity; maxU = -Infinity; minV = Infinity; maxV = -Infinity;
+      coords.forEach(({u, v}) => {
+        minU = Math.min(minU, u); maxU = Math.max(maxU, u);
+        minV = Math.min(minV, v); maxV = Math.max(maxV, v);
+      });
       const width = Math.max(1e-4, maxU - minU);
       const height = Math.max(1e-4, maxV - minV);
 
