@@ -15,6 +15,9 @@ import * as THREE from 'three';
 export type SurfaceShadingType = 'default' | 'smooth' | 'flat';
 
 export class SurfaceShadingEngine {
+  // Geometry-scoped cache: switching Def/Smooth/Flat reuses computed normal
+  // buffers instead of recalculating the same topology on every toggle.
+  private static normalCache = new WeakMap<THREE.BufferGeometry, Partial<Record<SurfaceShadingType, THREE.BufferAttribute>>>();
   /**
    * Caches original mesh normals into a 'defaultNormal' attribute if not already present.
    */
@@ -44,6 +47,14 @@ export class SurfaceShadingEngine {
     mode: SurfaceShadingType
   ): void {
     this.ensureDefaultNormalsCached(geom);
+    const cache = this.normalCache.get(geom) || {};
+    const cached = cache[mode];
+    if (cached) {
+      geom.setAttribute('normal', cached);
+      cached.needsUpdate = true;
+      this.setMaterialFlatShading(material, mode === 'flat');
+      return;
+    }
 
     switch (mode) {
       case 'default':
@@ -68,8 +79,11 @@ export class SurfaceShadingEngine {
   ): void {
     const defaultNorm = geom.getAttribute('origFileNormal') || geom.getAttribute('defaultNormal');
     if (defaultNorm) {
-      geom.setAttribute('normal', defaultNorm.clone());
-      geom.attributes.normal.needsUpdate = true;
+      geom.setAttribute('normal', defaultNorm);
+      defaultNorm.needsUpdate = true;
+      const cache = this.normalCache.get(geom) || {};
+      cache.default = defaultNorm;
+      this.normalCache.set(geom, cache);
     }
 
     this.setMaterialFlatShading(material, false);
@@ -244,8 +258,12 @@ export class SurfaceShadingEngine {
       }
     }
 
-    geom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-    geom.attributes.normal.needsUpdate = true;
+    const smoothAttribute = new THREE.BufferAttribute(normals, 3);
+    geom.setAttribute('normal', smoothAttribute);
+    smoothAttribute.needsUpdate = true;
+    const cache = this.normalCache.get(geom) || {};
+    cache.smooth = smoothAttribute;
+    this.normalCache.set(geom, cache);
 
     this.setMaterialFlatShading(material, false);
   }
@@ -322,8 +340,12 @@ export class SurfaceShadingEngine {
       }
     }
 
-    geom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-    geom.attributes.normal.needsUpdate = true;
+    const flatAttribute = new THREE.BufferAttribute(normals, 3);
+    geom.setAttribute('normal', flatAttribute);
+    flatAttribute.needsUpdate = true;
+    const cache = this.normalCache.get(geom) || {};
+    cache.flat = flatAttribute;
+    this.normalCache.set(geom, cache);
 
     this.setMaterialFlatShading(material, true);
   }
@@ -335,7 +357,7 @@ export class SurfaceShadingEngine {
     if (!material) return;
     const mats = Array.isArray(material) ? material : [material];
     for (const m of mats) {
-      if ('flatShading' in m) {
+      if ('flatShading' in m && (m as any).flatShading !== flat) {
         (m as any).flatShading = flat;
         m.needsUpdate = true;
       }
