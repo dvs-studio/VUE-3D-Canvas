@@ -62,6 +62,7 @@ import { PatternStampEngine } from './tools/patternStampTool';
 import { EdgeWearEngine } from './tools/edgeWearFilter';
 import { TextureFilterConfig, applyTextureFilterToCanvas } from './tools/textureFilters';
 import { TextureFilterDialog } from './ui/TextureFilterDialog';
+import { BumpLevelsDialog, BumpLevels, applyBumpLevelsToLayer } from './ui/BumpLevelsDialog';
 import { LayerConversions } from './tools/layerConversions';
 import { GaussianBlurOptions } from './tools/gaussianBlur';
 import { StochasticScatterConfig } from './tools/stochasticScatter';
@@ -282,6 +283,7 @@ export default function App() {
   const [isCarouselOpen, setIsCarouselOpen] = useState<boolean>(false);
   const [isTriplanarOpen, setIsTriplanarOpen] = useState<boolean>(false);
   const [isTextureFilterOpen, setIsTextureFilterOpen] = useState<boolean>(false);
+  const [bumpLevelsTargetId, setBumpLevelsTargetId] = useState<string | null>(null);
   const [isGaussianBlurOpen, setIsGaussianBlurOpen] = useState<boolean>(false);
   const [isStochasticScatterOpen, setIsStochasticScatterOpen] = useState<boolean>(false);
   const [isStitchStudioOpen, setIsStitchStudioOpen] = useState<boolean>(false);
@@ -877,11 +879,18 @@ export default function App() {
 
   const handleConvertToBump = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
-    if (target) {
-      LayerConversions.convertToBumpMap(target);
-      undoBuffer.pushState('Convert Layer to Bump Map', layers);
-      notifyTextureUpdated();
-    }
+    if (target && !target.isGroup && !target.locked) setBumpLevelsTargetId(layerId);
+  };
+
+  const handleApplyBumpLevels = (levels: BumpLevels) => {
+    const target = layers.find(layer => layer.id === bumpLevelsTargetId);
+    if (!target || target.isGroup || target.locked) return;
+    undoBuffer.pushState('Convert Layer to Grayscale Bump (Levels)', layers);
+    applyBumpLevelsToLayer(target, levels);
+    LayerConversions.convertToBumpMap(target);
+    setLayers(previous => previous.map(layer => layer.id === target.id ? target : layer));
+    notifyTextureUpdated();
+    setBumpLevelsTargetId(null);
   };
 
   const handleConvertToNormal = (layerId: string) => {
@@ -2302,6 +2311,14 @@ export default function App() {
         brushes={brushes}
         activeBrush={activeBrush}
         onSelectBrush={setActiveBrush}
+      />
+
+      {/* Bump conversion dialog: grayscale image and editable Levels before conversion. */}
+      <BumpLevelsDialog
+        isOpen={bumpLevelsTargetId !== null}
+        layer={layers.find(layer => layer.id === bumpLevelsTargetId)}
+        onClose={() => setBumpLevelsTargetId(null)}
+        onApply={handleApplyBumpLevels}
       />
 
       {/* Selected-layer image filter dialog — destructive image operation, not brush pattern. */}
