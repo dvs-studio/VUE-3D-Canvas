@@ -69,7 +69,7 @@ function textureCacheKey(item: TriplanarTextureItem): string {
     hash ^= source.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  return [item.id, source.length, hash >>> 0, item.tintColor, item.colorAlpha, item.isTransparentBlank].join('|');
+  return [item.id, source.length, hash >>> 0, item.tintColor, item.colorAlpha, item.isTransparentBlank, item.useInstanceColor].join('|');
 }
 
 export class FillSuite {
@@ -89,9 +89,10 @@ export class FillSuite {
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
+    const useInstanceColor = item.useInstanceColor ?? !item.dataUrl;
     if (item.isTransparentBlank) {
       ctx.clearRect(0, 0, size, size);
-    } else if (item.dataUrl) {
+    } else if (!useInstanceColor && item.dataUrl) {
       const image = new Image();
       image.crossOrigin = 'anonymous';
       const loaded = await new Promise<boolean>(resolve => {
