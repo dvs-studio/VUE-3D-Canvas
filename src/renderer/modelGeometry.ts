@@ -7,8 +7,6 @@
 
 import * as THREE from 'three';
 import { SurfaceShadingEngine } from './surfaceShading';
-import squailOBJText from '../../self-host/public/assets/suzanne.obj?raw';
-import { createSubdivisionPreviewGeometry } from './subdivisionPreview';
 
 export interface ModelPreset {
   id: string;
@@ -317,38 +315,13 @@ export function tagModelComponents(geom: THREE.BufferGeometry, modelKey: string)
   geom.userData.componentNames = Object.fromEntries(Object.keys(componentIndices).map(id => [id, friendlyNames[id] || id.replace(/_/g, ' ')]));
 }
 
-function createSquailGeometry(): THREE.BufferGeometry {
-  // Embedded OBJ is bundled at build time, so Squail is available offline without a runtime file request.
-  const base = parseOBJ(squailOBJText);
-  if (!base.attributes.uv) {
-    const pos = base.attributes.position;
-    const box = new THREE.Box3().setFromBufferAttribute(pos as THREE.BufferAttribute);
-    const size = box.getSize(new THREE.Vector3());
-    const uv = new Float32Array(pos.count * 2);
-    for (let i = 0; i < pos.count; i++) {
-      uv[i * 2] = size.x > 0 ? (pos.getX(i) - box.min.x) / size.x : 0.5;
-      uv[i * 2 + 1] = size.y > 0 ? (pos.getY(i) - box.min.y) / size.y : 0.5;
-    }
-    base.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  }
-  // One baked Catmull-Clark pass; this geometry is the built-in preset, not a preview-only modifier.
-  const baked = createSubdivisionPreviewGeometry(base, {
-    enabled: true, algorithm: 'catmull-clark', levels: 1,
-    sharpAngle: 45, crease: 0, boundary: true, displacement: 0,
-  });
-  base.dispose();
-  tagModelComponents(baked, 'suzanne');
-  baked.computeVertexNormals();
-  return baked;
-}
-
 export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   suzanne: () => {
-    const geom = createSquailGeometry();
+    const geom = createSuzanneGeometry();
     tagModelComponents(geom, 'suzanne');
     return {
       id: 'suzanne',
-      name: 'Squail (Built-in OBJ)',
+      name: 'Suzanne (Built-in)',
       category: 'Organic Character',
       triangleCount: geom.attributes.position.count,
       vertexCount: geom.attributes.position.count,
