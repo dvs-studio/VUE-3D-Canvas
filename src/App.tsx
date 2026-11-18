@@ -161,6 +161,8 @@ export default function App() {
       optionsBarLayout: 'clusters',
       tabletSubOperator: 'radial',
       architecturalRepair: false,
+      gizmoLabelMargin: 31,
+      gizmoLabelFontSize: 8,
     };
     try {
       const saved = localStorage.getItem('vue3d_preferences');
