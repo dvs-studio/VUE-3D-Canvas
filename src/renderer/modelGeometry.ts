@@ -307,6 +307,12 @@ export function tagModelComponents(geom: THREE.BufferGeometry, modelKey: string)
 
   geom.userData.componentIndices = componentIndices;
   geom.userData.excludeIndices = excludeIndices;
+  const friendlyNames: Record<string, string> = {
+    head: 'Main Head', eyes: 'Eyes', ears: 'Ears', muzzle: 'Muzzle',
+    dome: 'Dome Shell', visor: 'Visor Plate', chin: 'Chin Guard', sides: 'Side Mounts',
+    body: 'Main Body', caps: 'End Caps', main: 'Main Mesh',
+  };
+  geom.userData.componentNames = Object.fromEntries(Object.keys(componentIndices).map(id => [id, friendlyNames[id] || id.replace(/_/g, ' ')]));
 }
 
 export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
@@ -413,6 +419,17 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
   const finalUVs: number[] = [];
   const finalNormals: number[] = [];
   const uvFromFile: boolean[] = [];
+  const componentIndexLists: Record<string, number[]> = {};
+  const componentNames: Record<string, string> = {};
+  let currentObjectName = 'Object';
+  let currentGroupName = '';
+  let currentMaterialName = '';
+  const componentIdentity = () => {
+    const parts = [currentObjectName, currentGroupName, currentMaterialName].filter(Boolean);
+    const name = parts.join(' / ') || 'Object';
+    const id = parts.join('_').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'object';
+    return { id, name };
+  };
 
   const parseIndex = (str: string, totalCount: number): number => {
     const val = parseInt(str, 10);
@@ -433,7 +450,15 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
       uvs.push(parseFloat(parts[1]), parseFloat(parts[2]));
     } else if (tag === 'vn') {
       normals.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
+    } else if (tag === 'o') {
+      currentObjectName = parts.slice(1).join(' ') || 'Object';
+    } else if (tag === 'g') {
+      currentGroupName = parts.slice(1).join(' ');
+    } else if (tag === 'usemtl') {
+      currentMaterialName = parts.slice(1).join(' ');
     } else if (tag === 'f') {
+      const part = componentIdentity();
+      const partStart = finalVertices.length / 3;
       const faceVertices = parts.slice(1);
       if (faceVertices.length < 3) continue;
 
@@ -483,6 +508,12 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
             finalNormals.push(nx, ny, nz);
           }
         }
+      }
+      const partEnd = finalVertices.length / 3;
+      if (partEnd > partStart) {
+        const list = componentIndexLists[part.id] || (componentIndexLists[part.id] = []);
+        componentNames[part.id] = part.name;
+        for (let vertexIndex = partStart; vertexIndex < partEnd; vertexIndex++) list.push(vertexIndex);
       }
     }
   }
@@ -568,6 +599,24 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
   geom.setAttribute('normal', fileNormals);
   geom.setAttribute('origFileNormal', fileNormals.clone());
   geom.setAttribute('defaultNormal', fileNormals.clone());
+
+  // OBJ objects/groups/material sections are exposed as stable inventory parts.
+  const fullIndices = new Uint32Array(vertCount);
+  for (let i = 0; i < vertCount; i++) fullIndices[i] = i;
+  const componentIndices: Record<string, Uint32Array> = {};
+  const excludeIndices: Record<string, Uint32Array> = {};
+  const componentIds = Object.keys(componentIndexLists);
+  for (const id of componentIds) componentIndices[id] = new Uint32Array(componentIndexLists[id]);
+  for (const id of componentIds) {
+    const excluded: number[] = [];
+    for (const otherId of componentIds) if (otherId !== id) excluded.push(...componentIndexLists[otherId]);
+    excludeIndices[id] = new Uint32Array(excluded);
+  }
+  geom.setIndex(new THREE.BufferAttribute(fullIndices, 1));
+  geom.userData.fullIndex = geom.index!.clone();
+  geom.userData.componentIndices = componentIndices;
+  geom.userData.excludeIndices = excludeIndices;
+  geom.userData.componentNames = componentNames;
 
   geom.center();
   geom.computeBoundingSphere();
