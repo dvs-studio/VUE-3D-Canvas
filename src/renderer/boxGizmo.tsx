@@ -58,9 +58,24 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   gizmoStyle = 'box',
   zoomPulseTrigger = 0,
 }) => {
-  // Correctly aligned 3D angles in degrees for CSS 3D transforms
+  // Correctly aligned 3D angles for the CSS fallback and projected 2D arrows.
   const degX = (rotation.x * 180) / Math.PI;
   const degY = (rotation.y * 180) / Math.PI;
+  const gizmoEuler = new THREE.Euler(rotation.x, rotation.y, 0, 'YXZ');
+  const projectAxis = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyEuler(gizmoEuler);
+  const arrowFor = (x: number, y: number) => {
+    const arrows = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘'];
+    const angle = Math.atan2(y, x);
+    return arrows[(Math.round(angle / (Math.PI / 4)) + 8) % 8];
+  };
+  const axisIndicators = [
+    { label: '+X', view: 'right' as const, color: '#f38ba8', point: projectAxis(1, 0, 0) },
+    { label: '-X', view: 'left' as const, color: '#f38ba8', point: projectAxis(-1, 0, 0) },
+    { label: '+Y', view: 'top' as const, color: '#a6e3a1', point: projectAxis(0, 1, 0) },
+    { label: '-Y', view: 'bottom' as const, color: '#a6e3a1', point: projectAxis(0, -1, 0) },
+    { label: '+Z', view: 'front' as const, color: '#89b4fa', point: projectAxis(0, 0, 1) },
+    { label: '-Z', view: 'back' as const, color: '#89b4fa', point: projectAxis(0, 0, -1) },
+  ];
 
   const [isPanning, setIsPanning] = useState(false);
   const [isZooming, setIsZooming] = useState(false);
@@ -272,12 +287,18 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
         <canvas ref={modelCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" aria-label={`3D ${gizmoStyle} orientation model`} />
         {gizmoModelReady && (
           <div className="absolute inset-0 pointer-events-none text-[8px] font-bold font-mono">
-            <button type="button" onClick={() => onSnapView('back')} title="Back direction (-Z)" className="absolute top-0 left-0 pointer-events-auto rounded bg-[#101820]/85 px-1 py-0.5 text-[#89b4fa] shadow">↖ -Z</button>
-            <button type="button" onClick={() => onSnapView('top')} title="Top direction (+Y)" className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto rounded bg-[#102014]/85 px-1 py-0.5 text-[#a6e3a1] shadow">↑ +Y</button>
-            <button type="button" onClick={() => onSnapView('front')} title="Front direction (+Z)" className="absolute top-0 right-0 pointer-events-auto rounded bg-[#101820]/85 px-1 py-0.5 text-[#89b4fa] shadow">↗ +Z</button>
-            <button type="button" onClick={() => onSnapView('left')} title="Left direction (-X)" className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-auto rounded bg-[#201010]/85 px-1 py-0.5 text-[#f38ba8] shadow">← -X</button>
-            <button type="button" onClick={() => onSnapView('right')} title="Right direction (+X)" className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto rounded bg-[#201010]/85 px-1 py-0.5 text-[#f38ba8] shadow">+X →</button>
-            <button type="button" onClick={() => onSnapView('bottom')} title="Bottom direction (-Y)" className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-auto rounded bg-[#102014]/85 px-1 py-0.5 text-[#a6e3a1] shadow">↓ -Y</button>
+            {axisIndicators.map(axis => (
+              <button
+                key={axis.label}
+                type="button"
+                onClick={() => onSnapView(axis.view)}
+                title={`Snap to ${axis.label} direction`}
+                className="absolute pointer-events-auto rounded bg-[#171717]/85 border border-[#555]/70 px-1 py-0.5 shadow whitespace-nowrap"
+                style={{ left: `calc(50% + ${axis.point.x * 31}px)`, top: `calc(50% - ${axis.point.y * 31}px)`, transform: 'translate(-50%, -50%)', color: axis.color }}
+              >
+                {arrowFor(axis.point.x, axis.point.y)} {axis.label}
+              </button>
+            ))}
           </div>
         )}
         <div className={gizmoModelReady ? 'hidden' : 'contents'}>
