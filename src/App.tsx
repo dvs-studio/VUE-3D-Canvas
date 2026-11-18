@@ -46,7 +46,6 @@ import { ColorWheelPanel } from './ui/panels/ColorWheelPanel';
 import { BrushLibraryPanel } from './ui/panels/BrushLibraryPanel';
 import { NavigatorPanel } from './ui/panels/NavigatorPanel';
 import { MeshPartsPanel, MeshPartOption } from './ui/panels/MeshPartsPanel';
-import { MeshPartsPanel, MeshPartOption } from './ui/panels/MeshPartsPanel';
 import { CircularCarousel } from './ui/CircularCarousel';
 import { NumpadOverlay } from './ui/NumpadOverlay';
 import { TriplanarDialog } from './ui/TriplanarDialog';
@@ -347,25 +346,6 @@ export default function App() {
   const toggleMeshPartVisibility = (id: string, visible: boolean) => setHiddenMeshComponents(current => visible ? current.filter(item => item !== id) : current.includes(id) ? current : [...current, id]);
   const showAllMeshParts = () => { setHiddenMeshComponents([]); setMeshComponentVisibility('all'); setIsolateSelectedGroupOnly(false); };
   const frameSelectedMeshPart = () => { if (meshComponentVisibility !== 'all') setFrameMeshComponentTrigger({ id: meshComponentVisibility, timestamp: Date.now() }); };
-  const [hiddenMeshComponents, setHiddenMeshComponents] = useState<string[]>([]);
-  const [frameMeshComponentTrigger, setFrameMeshComponentTrigger] = useState<{ id: string; timestamp: number } | null>(null);
-  const meshPartOptions = useMemo<MeshPartOption[]>(() => {
-    const indices = activeGeometry.userData?.componentIndices as Record<string, Uint32Array> | undefined;
-    const names = activeGeometry.userData?.componentNames as Record<string, string> | undefined;
-    if (indices && Object.keys(indices).length > 0) return Object.keys(indices).map(id => ({ id, name: names?.[id] || id.replace(/_/g, ' ') }));
-    if (activeGeometry.groups?.length) return activeGeometry.groups.map((group, index) => ({ id: String(index), name: names?.[String(index)] || `Part ${index + 1}` }));
-    return [];
-  }, [activeGeometry]);
-  useEffect(() => {
-    setMeshComponentVisibility('all');
-    setHiddenMeshComponents([]);
-    setIsolateSelectedGroupOnly(false);
-    setFrameMeshComponentTrigger(null);
-  }, [activeGeometry]);
-  const toggleMeshPartVisibility = (id: string, visible: boolean) => setHiddenMeshComponents(current => visible ? current.filter(item => item !== id) : current.includes(id) ? current : [...current, id]);
-  const showAllMeshParts = () => { setHiddenMeshComponents([]); setMeshComponentVisibility('all'); setIsolateSelectedGroupOnly(false); };
-  const frameSelectedMeshPart = () => { if (meshComponentVisibility !== 'all') setFrameMeshComponentTrigger({ id: meshComponentVisibility, timestamp: Date.now() }); };
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', currentTheme);
     document.documentElement.className = `theme-${currentTheme}`;
@@ -1445,7 +1425,6 @@ export default function App() {
         onSelectModelKey={setModelKey}
         meshComponentVisibility={meshComponentVisibility}
         onSelectMeshComponentVisibility={setMeshComponentVisibility}
-        meshPartOptions={meshPartOptions}
         meshPartOptions={meshPartOptions}
         isolateSelectedGroupOnly={isolateSelectedGroupOnly}
         onToggleIsolateSelectedGroupOnly={(checked) => setIsolateSelectedGroupOnly(checked)}
