@@ -70,6 +70,9 @@ interface Viewport3DProps {
   onSelectViewLayout?: (layout: 'perspective' | 'quad') => void;
   surfaceMode?: 'default' | 'smooth' | 'flat' | 'hard';
   meshComponentVisibility?: string;
+  hiddenMeshComponents?: string[];
+  isolateSelectedGroupOnly?: boolean;
+  frameMeshComponentTrigger?: { id: string; timestamp: number } | null;
   isSymmetryX?: boolean;
   selectionMask?: SelectionMask | null;
   onUpdateSelectionMask?: (mask: SelectionMask | null) => void;
@@ -121,6 +124,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   onSelectViewLayout,
   surfaceMode = 'default',
   meshComponentVisibility = 'all',
+  hiddenMeshComponents = [],
+  isolateSelectedGroupOnly = false,
+  frameMeshComponentTrigger = null,
   isSymmetryX = false,
   selectionMask = null,
   onUpdateSelectionMask,
@@ -956,42 +962,73 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     SurfaceShadingEngine.applySurfaceShading(mesh.geometry, mesh.material, effMode);
   }, [shadingMode, materialProps, surfaceMode, layers]);
 
-  // Mesh Component Visibility Controller
+  // Mesh Parts Inventory visibility: all part changes update the same geometry
+  // index used by both rendering and raycasting, so hidden parts cannot receive paint.
   useEffect(() => {
     if (!meshRef.current) return;
     const mesh = meshRef.current;
     const geom = mesh.geometry;
-
-    if (meshComponentVisibility === 'all' || !meshComponentVisibility) {
-      mesh.visible = true;
-      if (geom.userData?.fullIndex) {
+    const parts = geom.userData?.componentIndices as Record<string, Uint32Array> | undefined;
+    if (parts && Object.keys(parts).length > 0) {
+      const allIds = Object.keys(parts);
+      const visibleIds = isolateSelectedGroupOnly && meshComponentVisibility !== 'all'
+        ? (parts[meshComponentVisibility] ? [meshComponentVisibility] : [])
+        : allIds.filter(id => !hiddenMeshComponents.includes(id));
+      if (visibleIds.length === allIds.length && hiddenMeshComponents.length === 0 && !isolateSelectedGroupOnly && geom.userData?.fullIndex) {
         geom.setIndex(geom.userData.fullIndex);
+      } else {
+        const total = visibleIds.reduce((sum, id) => sum + (parts[id]?.length || 0), 0);
+        const merged = new Uint32Array(total);
+        let offset = 0;
+        for (const id of visibleIds) {
+          const indices = parts[id];
+          if (!indices) continue;
+          merged.set(indices, offset);
+          offset += indices.length;
+        }
+        geom.setIndex(new THREE.BufferAttribute(merged, 1));
       }
       geom.setDrawRange(0, Infinity);
-      return;
+      mesh.visible = visibleIds.length > 0;
+    } else if (meshComponentVisibility === 'all' || !meshComponentVisibility) {
+      mesh.visible = true;
+      if (geom.userData?.fullIndex) geom.setIndex(geom.userData.fullIndex);
+      geom.setDrawRange(0, Infinity);
+    } else if (isolateSelectedGroupOnly && geom.groups?.length) {
+      const groupIdx = parseInt(meshComponentVisibility, 10);
+      if (!Number.isNaN(groupIdx) && geom.groups[groupIdx]) {
+        geom.setDrawRange(geom.groups[groupIdx].start, geom.groups[groupIdx].count);
+      }
     }
+    needsRenderRef.current = true;
+  }, [meshComponentVisibility, hiddenMeshComponents, isolateSelectedGroupOnly, geometry]);
 
-    if (meshComponentVisibility.startsWith('hide_')) {
-      const compKey = meshComponentVisibility.replace('hide_', '');
-      if (geom.userData?.excludeIndices && geom.userData.excludeIndices[compKey]) {
-        mesh.visible = true;
-        geom.setIndex(new THREE.BufferAttribute(geom.userData.excludeIndices[compKey], 1));
-        geom.setDrawRange(0, Infinity);
-      }
-    } else {
-      // Solo / isolate individual component
-      if (geom.userData?.componentIndices && geom.userData.componentIndices[meshComponentVisibility]) {
-        mesh.visible = true;
-        geom.setIndex(new THREE.BufferAttribute(geom.userData.componentIndices[meshComponentVisibility], 1));
-        geom.setDrawRange(0, Infinity);
-      } else if (geom.groups && geom.groups.length > 0) {
-        const groupIdx = parseInt(meshComponentVisibility, 10);
-        if (!isNaN(groupIdx) && geom.groups[groupIdx]) {
-          geom.setDrawRange(geom.groups[groupIdx].start, geom.groups[groupIdx].count);
-        }
-      }
+  // Frame the selected part without changing the source mesh or its geometry.
+  useEffect(() => {
+    if (!frameMeshComponentTrigger || !meshRef.current) return;
+    const geom = meshRef.current.geometry;
+    const indices = (geom.userData?.componentIndices as Record<string, Uint32Array> | undefined)?.[frameMeshComponentTrigger.id];
+    const positions = geom.getAttribute('position');
+    if (!indices || !positions || indices.length === 0) return;
+    const bounds = new THREE.Box3();
+    const point = new THREE.Vector3();
+    bounds.makeEmpty();
+    for (let i = 0; i < indices.length; i++) {
+      const vertex = indices[i];
+      point.set(positions.getX(vertex), positions.getY(vertex), positions.getZ(vertex));
+      bounds.expandByPoint(point);
     }
-  }, [meshComponentVisibility]);
+    if (bounds.isEmpty()) return;
+    const sphere = bounds.getBoundingSphere(new THREE.Sphere());
+    orbitState.current.target.copy(sphere.center);
+    const radius = Math.max(sphere.radius, 0.15);
+    const fov = cameraPerspRef.current?.fov || 45;
+    orbitState.current.radius = (radius / Math.sin(THREE.MathUtils.degToRad(fov / 2))) * 1.2;
+    if (onZoomChange) onZoomChange(1.0);
+    needsRenderRef.current = true;
+    setZoomPulseTrigger(value => value + 1);
+    updateCameraPosition();
+  }, [frameMeshComponentTrigger, onZoomChange]);
 
   // HDRI Reflection & Viewport Lighting Controller
   useEffect(() => {
