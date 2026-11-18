@@ -435,3 +435,65 @@ No UV code is authorised by this backlog entry. Keep the current UV Editor place
 - Mask-brush pointer updates no longer trigger full PBR texture rebuilds. Pointer-up relies on the canonical texture notification to trigger one PBR rebuild rather than invoking a duplicate directly.
 - Latest code revision `d55a7ff` passed run `44197313538`; generated bundle `index-D6s9T1ZF.js`; artifact ID `14380475625`.
 - Device responsiveness remains unmeasured. Manual test on Victory's target hardware is still required.
+
+
+---
+
+# 2026-11-18 — current implementation pass
+
+## Priority 1 — Triplanar per-instance colour/image source
+- [ ] Add an explicit source mode to each triplanar texture item/config: instance colour vs selected image texture.
+- [ ] UI must communicate the agreed semantics clearly: checked = use this row's own tint/colour; unchecked = use selected image texture. Keep the choice independent per row.
+- [ ] In `FillSuite`, select the sampling path from the row's source mode. For colour mode, use tint colour and independent alpha. For image mode, sample the selected image and apply row transforms/tint/alpha as designed without silently substituting another row's image.
+- [ ] Preserve image-less fallback, transparent-blank rows, opacity, masks, projection scale/offset, serialization and legacy project defaults.
+- [ ] Test multiple rows with mixed source modes, image changes, alpha, missing images and legacy configs.
+
+## Priority 2 — real uploaded GLB orientation gizmos
+- [ ] Load `self-host/public/assets/Gizmo/box.glb`, `sphere.glb`, `mountain.glb`, and `mountain_1.glb` through the existing Three.js GLTFLoader path (inspect contents before deciding which mountain variant is the intended default).
+- [ ] Preserve orientation tracking, existing click zones and view snapping. Use material overrides only where safe; preserve geometry and named groups.
+- [ ] Add a screen-space 2D directional arrow/axis indicator with readable +X/-X/+Y/-Y/+Z/-Z labels and consistent X-red, Y-green, Z-blue coding. It should show the current dominant direction without occluding the model or stealing existing navigation pointer events.
+- [ ] CSS placeholder remains a fallback only when the GLB is absent or fails to load. Keep all GLB requests relative to the self-host asset root.
+
+## Priority 3 — surface-normal mode toggle latency
+- [ ] Trace the default/smooth/flat mode toggle from App state through the main viewport and Navigator. Profile synchronous normal recomputation and geometry updates.
+- [ ] Avoid rebuilding normals synchronously in the input event handler. Use cached normal attributes where valid, schedule expensive recomputation off the immediate interaction path, and display a coherent previous frame until the new normals are ready.
+- [ ] Cache computed smooth/flat variants by geometry revision and mode; invalidate only when source geometry changes. Avoid mutating shared cached attributes.
+- [ ] Commit the new mode atomically to the main viewport and Navigator, and cancel stale jobs when a newer mode/model arrives.
+- [ ] Verify file normals, smooth, flat/hard modes, imported OBJ/GLB geometry, custom OBJ updates and repeated toggling.
+
+## Priority 4 — Navigator texture synchronisation
+- [ ] Replace effect-driven CanvasTexture allocation/replacement on every texture version with a persistent texture and explicit `needsUpdate` invalidation.
+- [ ] Coalesce navigator uploads to animation frames, use the latest composite canvas, and avoid allocating duplicate texture objects on every update.
+- [ ] Synchronise after a completed paint frame and ensure visibility/material changes do not wait for an unrelated state change. Keep Navigator inspection non-painting.
+- [ ] Test frequent painting, layer visibility, colour changes, texture replacement, model replacement, unmount and WebGL context loss.
+
+## Priority 5 — permanent subdivision docker
+- [ ] Remove the floating subdivision panel path and place its tab permanently in the dock group beside Colour.
+- [ ] Keep subdivision preview as a view-only enhancement. It may replace the displayed preview geometry but must never mutate source mesh, export mesh, undo source geometry, or saved vertex lists.
+- [ ] Remove/disable Apply Subdivision and any destructive commit workflow. Verify export and save always use source geometry.
+- [ ] Ensure the docker tab can be shown/hidden with the existing dock conventions and has no floating mode toggle.
+
+## Priority 6 — Colour docker Palette/HSL modes
+- [ ] Add Palette and HSL mode tabs/toggle within the existing Colour docker.
+- [ ] Palette mode preserves the existing colour wheel, swatches and current inputs.
+- [ ] HSL mode provides visual Hue (0–360), Saturation (0–100%), and Lightness (0–100%) sliders, live preview, numeric values and hex/RGB synchronization.
+- [ ] Switching modes must preserve the exact current colour; external currentColor changes update both modes. Keep keyboard/touch accessibility and existing onChange contract.
+
+## Priority 7 — dynamic model part inventory/isolation
+- [ ] Enumerate imported meshes and named groups with stable IDs and readable hierarchy.
+- [ ] Implement per-part visibility, isolate selected, show all, and frame selected.
+- [ ] Hidden parts must not intercept painting raycasts or be included in the visible viewport. Keep main view, Navigator, inventory and export visibility behaviour consistent.
+- [ ] Test GLB nodes, OBJ groups, duplicate names, nested groups, single-mesh models and geometry replacement.
+
+## Priority 8 — remaining filters
+- [ ] Complete powderiser, wood grain, hatching/cross-hatching, hashing/dithering, mosaic, edge wear, cavity dirt and scatter stamps without duplicating existing filter implementations.
+- [ ] Wood defaults to selected filter colours; image texture is used only when explicitly selected.
+- [ ] Preserve deterministic seeds, alpha, colour management, selection masks and undo.
+
+## Verification / release
+- [ ] TypeScript and production build; `npm run host:sync`; verify `file://` and local server package checks.
+- [ ] CI run must package the latest source and uploaded GLBs.
+- [ ] Browser/device testing for surface-mode response, Navigator sync, gizmo click zones, HSL colour round-trip, triplanar mixed sources, subdivision non-destructive export and model isolation.
+- [ ] Do not report latency improvements without actual measured timing. CI green is build/package evidence only.
+
+UV roadmap remains documentation-only until Victory explicitly authorises implementation.
