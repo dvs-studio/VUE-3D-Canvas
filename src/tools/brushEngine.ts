@@ -35,6 +35,7 @@ export class BrushEngine {
   // Smudge pickup buffer
   private smudgeColor: { r: number; g: number; b: number; a: number } | null = null;
   private imageMaskCache = new Map<string, HTMLImageElement>();
+  private patternCanvasCache = new Map<string, HTMLCanvasElement>();
 
   public static getInstance(): BrushEngine {
     if (!BrushEngine.instance) {
@@ -378,39 +379,108 @@ export class BrushEngine {
     patternType: BrushPatternType,
     scale: number
   ) {
-    const pCanvas = document.createElement('canvas');
-    const tileSize = Math.max(4, Math.floor(16 * scale));
-    pCanvas.width = tileSize;
-    pCanvas.height = tileSize;
-    const pctx = pCanvas.getContext('2d');
-    if (!pctx) return;
+    const tileSize = Math.max(8, Math.min(128, Math.floor(24 * scale)));
+    const cacheKey = `${patternType}|${Math.round(scale * 100)}|${color}`;
+    let pCanvas = this.patternCanvasCache.get(cacheKey);
+    if (!pCanvas) {
+      pCanvas = document.createElement('canvas');
+      pCanvas.width = tileSize;
+      pCanvas.height = tileSize;
+      const pctx = pCanvas.getContext('2d');
+      if (!pctx) return;
+      pctx.fillStyle = color;
+      pctx.fillRect(0, 0, tileSize, tileSize);
+      const line = Math.max(1, tileSize / 18);
+      const drawHatch = (reverse: boolean) => {
+        pctx.save();
+        pctx.strokeStyle = 'rgba(0,0,0,0.42)';
+        pctx.lineWidth = line;
+        for (let offset = -tileSize; offset <= tileSize * 2; offset += Math.max(4, tileSize / 4)) {
+          pctx.beginPath();
+          if (reverse) { pctx.moveTo(offset, 0); pctx.lineTo(offset + tileSize, tileSize); }
+          else { pctx.moveTo(offset, tileSize); pctx.lineTo(offset + tileSize, 0); }
+          pctx.stroke();
+        }
+        pctx.restore();
+      };
 
-    pctx.fillStyle = color;
-    pctx.fillRect(0, 0, tileSize, tileSize);
-
-    if (patternType === 'checker') {
-      pctx.fillStyle = 'rgba(0,0,0,0.45)';
-      pctx.fillRect(0, 0, tileSize / 2, tileSize / 2);
-      pctx.fillRect(tileSize / 2, tileSize / 2, tileSize / 2, tileSize / 2);
-    } else if (patternType === 'carbon') {
-      pctx.fillStyle = 'rgba(0,0,0,0.5)';
-      pctx.fillRect(0, 0, tileSize, tileSize / 2);
-      pctx.fillStyle = 'rgba(255,255,255,0.2)';
-      pctx.fillRect(0, tileSize / 2, tileSize / 2, tileSize / 2);
-    } else if (patternType === 'halftone') {
-      pctx.fillStyle = 'rgba(0,0,0,0.4)';
-      pctx.beginPath();
-      pctx.arc(tileSize / 2, tileSize / 2, tileSize * 0.35, 0, Math.PI * 2);
-      pctx.fill();
-    } else if (patternType === 'wood' || patternType === 'leather') {
-      pctx.fillStyle = 'rgba(0,0,0,0.3)';
-      pctx.fillRect(0, 0, tileSize, tileSize * 0.3);
-      pctx.fillRect(0, tileSize * 0.6, tileSize, tileSize * 0.2);
+      if (patternType === 'checker') {
+        pctx.fillStyle = 'rgba(0,0,0,0.45)';
+        pctx.fillRect(0, 0, tileSize / 2, tileSize / 2);
+        pctx.fillRect(tileSize / 2, tileSize / 2, tileSize / 2, tileSize / 2);
+      } else if (patternType === 'carbon') {
+        pctx.fillStyle = 'rgba(0,0,0,0.5)';
+        pctx.fillRect(0, 0, tileSize, tileSize / 2);
+        pctx.fillStyle = 'rgba(255,255,255,0.2)';
+        pctx.fillRect(0, tileSize / 2, tileSize / 2, tileSize / 2);
+      } else if (patternType === 'halftone' || patternType === 'dither') {
+        const cell = Math.max(3, tileSize / 4);
+        pctx.fillStyle = 'rgba(0,0,0,0.48)';
+        for (let y = cell / 2; y < tileSize; y += cell) for (let x = cell / 2; x < tileSize; x += cell) {
+          const threshold = patternType === 'dither' ? ((Math.floor(x / cell) * 3 + Math.floor(y / cell) * 5) % 4 + 1) / 4 : 0.35;
+          pctx.beginPath();
+          pctx.arc(x, y, cell * threshold, 0, Math.PI * 2);
+          pctx.fill();
+        }
+      } else if (patternType === 'hatching') {
+        drawHatch(false);
+      } else if (patternType === 'crosshatching' || patternType === 'crosshatch') {
+        drawHatch(false);
+        drawHatch(true);
+      } else if (patternType === 'hashing') {
+        pctx.strokeStyle = 'rgba(0,0,0,0.48)';
+        pctx.lineWidth = line;
+        for (let y = tileSize * 0.15; y < tileSize; y += tileSize / 3) {
+          for (let x = tileSize * 0.1; x < tileSize; x += tileSize / 3) {
+            pctx.beginPath(); pctx.moveTo(x, y); pctx.lineTo(x + tileSize / 5, y - tileSize / 5); pctx.stroke();
+            pctx.beginPath(); pctx.moveTo(x + tileSize / 10, y); pctx.lineTo(x + tileSize / 5, y + tileSize / 5); pctx.stroke();
+          }
+        }
+      } else if (patternType === 'powderiser' || patternType === 'powderizer') {
+        for (let i = 0; i < tileSize * 2; i++) {
+          const x = (i * 37.17 + 11) % tileSize;
+          const y = (i * 19.73 + 7) % tileSize;
+          const r = 0.5 + ((i * 13) % 7) * tileSize / 180;
+          pctx.fillStyle = i % 3 === 0 ? 'rgba(255,255,255,0.34)' : 'rgba(0,0,0,0.32)';
+          pctx.beginPath(); pctx.arc(x, y, r, 0, Math.PI * 2); pctx.fill();
+        }
+      } else if (patternType === 'mosaic') {
+        const cell = Math.max(3, Math.floor(tileSize / 4));
+        for (let y = 0; y < tileSize; y += cell) for (let x = 0; x < tileSize; x += cell) {
+          const shade = ((Math.floor(x / cell) * 7 + Math.floor(y / cell) * 11) % 5) * 0.055;
+          pctx.fillStyle = `rgba(0,0,0,${shade})`;
+          pctx.fillRect(x, y, cell - 1, cell - 1);
+        }
+        pctx.strokeStyle = 'rgba(255,255,255,0.16)';
+        pctx.lineWidth = 0.7;
+        for (let x = 0; x <= tileSize; x += cell) { pctx.beginPath(); pctx.moveTo(x, 0); pctx.lineTo(x, tileSize); pctx.stroke(); }
+        for (let y = 0; y <= tileSize; y += cell) { pctx.beginPath(); pctx.moveTo(0, y); pctx.lineTo(tileSize, y); pctx.stroke(); }
+      } else if (patternType === 'wood') {
+        pctx.strokeStyle = 'rgba(0,0,0,0.28)';
+        pctx.lineWidth = Math.max(1, tileSize / 24);
+        for (let i = 0; i < 5; i++) {
+          const y = (i * tileSize) / 5;
+          pctx.beginPath(); pctx.moveTo(0, y);
+          pctx.bezierCurveTo(tileSize * 0.3, y - tileSize * 0.12, tileSize * 0.65, y + tileSize * 0.12, tileSize, y);
+          pctx.stroke();
+        }
+      } else if (patternType === 'leather') {
+        pctx.fillStyle = 'rgba(0,0,0,0.3)';
+        for (let y = tileSize * 0.2; y < tileSize; y += tileSize / 3) for (let x = tileSize * 0.2; x < tileSize; x += tileSize / 3) {
+          pctx.beginPath(); pctx.arc(x, y, tileSize / 18, 0, Math.PI * 2); pctx.fill();
+        }
+      } else if (patternType === 'weave') {
+        pctx.fillStyle = 'rgba(0,0,0,0.28)';
+        for (let i = 0; i < 4; i++) { pctx.fillRect(i * tileSize / 4, 0, tileSize / 8, tileSize); pctx.fillRect(0, i * tileSize / 4, tileSize, tileSize / 8); }
+      }
+      // Keep the cache bounded for long sessions with many colours and scales.
+      if (this.patternCanvasCache.size >= 64) this.patternCanvasCache.delete(this.patternCanvasCache.keys().next().value!);
+      this.patternCanvasCache.set(cacheKey, pCanvas);
     }
 
-    const pat = ctx.createPattern(pCanvas, 'repeat');
-    if (pat) {
-      ctx.fillStyle = pat;
+    const pattern = ctx.createPattern(pCanvas, 'repeat');
+    if (pattern) {
+      ctx.fillStyle = pattern;
       ctx.beginPath();
       ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.fill();
