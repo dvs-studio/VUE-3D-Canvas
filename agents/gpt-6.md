@@ -84,3 +84,11 @@ Additional source refinements after initial checkpoint: the built-in model dropd
 Final source commit for this successful build: `cd1b12a2d8f100ef71cbccdaeab06496c1d05c3b`. CI run #97, ID `44269483757`, conclusion success. Artifact `14411732307`, name `VUE_3D_Canvas_SelfHost`, size 889,693 bytes, SHA-256 `f8d9cdcc6767686a39514b204f69859cde73aa16f62eaa3d6443175db174f0d0`, expiry 2027-02-16. Direct artifact page: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44269483757/artifacts/14411732307
 
 Manual validation remains pending: test filter image/color sources and full-resolution overwrite/undo, bump levels/grayscale preview, responsive Triplanar inputs on phone and desktop, Window-menu docker toggles in grouped and expanded layouts, HSL/Palette repeated switching, gizmo positive/negative axis color and fade, preferences spacing/font, Squail model subdivided appearance and UV distortion. Exact world/object-to-UV directional constraints are still future work.
+
+## Final post-gizmo implementation checkpoint — 2026-11-18
+
+Latest gizmo refinement: six real Three.js ArrowHelper geometries are parented to the loaded gizmo GLB root, aligned to local X/Y/Z and therefore rotate with the model. Positive directions use brighter axis colors; opposing directions use darker colors and their opacity is reduced when pointing away from the camera. The X/Y/Z text labels remain projected screen overlays for legibility and preference-based spacing/font size.
+
+Final successful build after the 3D arrows: workflow run #98 / ID 44269751711; commit 470c3b1da05ca1331fdce36dae016d8bc10786b8; artifact 14412042420 (VUE_3D_Canvas_SelfHost), size 891,319 bytes, SHA-256 1c65b4b191385e30b0d28e7351f03c687bc0a65bb450f2d9fe5e75977bb5d726, expiry 2027-02-16. Run URL https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44269751711
+
+Manual testing still needed. The build confirms compile/package only; it does not prove arrow placement, label overlap, Squail subdivision appearance, UV quality, filter quality/performance, or phone/desktop layout. Exact world/object-coordinate-to-UV directional displacement remains unimplemented; those selections currently use simplified axis-angle presets.
