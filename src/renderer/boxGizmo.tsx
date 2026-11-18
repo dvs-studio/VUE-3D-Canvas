@@ -6,6 +6,8 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { 
   Move, 
   ZoomIn, 
@@ -65,6 +67,120 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   const [zoomScale, setZoomScale] = useState(1.0);
   const lastPointerRef = useRef({ x: 0, y: 0 });
   const pulseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const modelCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const modelRendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const modelSceneRef = useRef<THREE.Scene | null>(null);
+  const modelCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const modelObjectRef = useRef<THREE.Object3D | null>(null);
+  const [gizmoModelReady, setGizmoModelReady] = useState(false);
+
+  // A small independent WebGL preview loads the GLB assets supplied in
+  // self-host/public/assets/Gizmo. CSS remains the offline/failure fallback.
+  useEffect(() => {
+    const canvas = modelCanvasRef.current;
+    if (!canvas) return;
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
+    } catch {
+      setGizmoModelReady(false);
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setSize(88, 88, false);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.01, 100);
+    camera.position.set(0, 0, 3.4);
+    camera.lookAt(0, 0, 0);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.15));
+    const key = new THREE.DirectionalLight(0xffffff, 1.7);
+    key.position.set(3, 4, 5);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xb9d8ff, 0.8);
+    fill.position.set(-4, 1, -3);
+    scene.add(fill);
+    modelRendererRef.current = renderer;
+    modelSceneRef.current = scene;
+    modelCameraRef.current = camera;
+    return () => {
+      if (modelObjectRef.current) {
+        scene.remove(modelObjectRef.current);
+        modelObjectRef.current.traverse(node => {
+          const mesh = node as THREE.Mesh;
+          if (mesh.isMesh) {
+            mesh.geometry.dispose();
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            materials.forEach(material => material.dispose());
+          }
+        });
+        modelObjectRef.current = null;
+      }
+      renderer.dispose();
+      modelRendererRef.current = null;
+      modelSceneRef.current = null;
+      modelCameraRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const scene = modelSceneRef.current;
+    const renderer = modelRendererRef.current;
+    const camera = modelCameraRef.current;
+    if (!scene || !renderer || !camera) return;
+    let disposed = false;
+    setGizmoModelReady(false);
+    if (modelObjectRef.current) {
+      const previous = modelObjectRef.current;
+      scene.remove(previous);
+      previous.traverse(node => {
+        const mesh = node as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.geometry.dispose();
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          materials.forEach(material => material.dispose());
+        }
+      });
+      modelObjectRef.current = null;
+    }
+    const loader = new GLTFLoader();
+    const file = gizmoStyle === 'sphere' ? 'sphere.glb' : gizmoStyle === 'mountain' ? 'mountain.glb' : 'box.glb';
+    const loadAsset = (filename: string, allowMountainFallback = false) => {
+      const url = new URL('assets/Gizmo/' + filename, document.baseURI).href;
+      loader.load(url, gltf => {
+        if (disposed) return;
+        const root = gltf.scene;
+        const bounds = new THREE.Box3().setFromObject(root);
+        const center = bounds.getCenter(new THREE.Vector3());
+        const size = bounds.getSize(new THREE.Vector3());
+        const maxDimension = Math.max(size.x, size.y, size.z, 0.0001);
+        const scale = 1.45 / maxDimension;
+        root.scale.setScalar(scale);
+        root.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+        root.rotation.order = 'YXZ';
+        scene.add(root);
+        modelObjectRef.current = root;
+        setGizmoModelReady(true);
+        renderer.render(scene, camera);
+      }, undefined, () => {
+        if (!disposed && allowMountainFallback) loadAsset('mountain_1.glb', false);
+        else if (!disposed) setGizmoModelReady(false);
+      });
+    };
+    loadAsset(file, gizmoStyle === 'mountain');
+    return () => { disposed = true; };
+  }, [gizmoStyle]);
+
+  useEffect(() => {
+    const model = modelObjectRef.current;
+    const renderer = modelRendererRef.current;
+    const scene = modelSceneRef.current;
+    const camera = modelCameraRef.current;
+    if (!model || !renderer || !scene || !camera) return;
+    model.rotation.set(rotation.x, rotation.y, 0, 'YXZ');
+    renderer.render(scene, camera);
+  }, [rotation.x, rotation.y, gizmoModelReady]);
 
   // Zoom feedback animation: expands slightly and springs back to original size
   useEffect(() => {
@@ -149,13 +265,22 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
       </div>
 
       {/* 3D Interactive Viewport Gizmo Container with Dynamic Zoom Pulse Scale */}
-      <div 
-        className="w-18 h-18 relative perspective-800 cursor-pointer mb-2 transition-transform duration-200 ease-out"
-        style={{ 
-          perspective: '360px',
-          transform: `scale(${zoomScale})`
-        }}
+      <div
+        className="w-[88px] h-[88px] relative cursor-pointer mb-2 transition-transform duration-200 ease-out"
+        style={{ transform: `scale(${zoomScale})` }}
       >
+        <canvas ref={modelCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none" aria-label={`3D ${gizmoStyle} orientation model`} />
+        {gizmoModelReady && (
+          <div className="absolute inset-0 pointer-events-none text-[8px] font-bold font-mono">
+            <button type="button" onClick={() => onSnapView('back')} title="Back direction (-Z)" className="absolute top-0 left-0 pointer-events-auto rounded bg-[#101820]/85 px-1 py-0.5 text-[#89b4fa] shadow">↖ -Z</button>
+            <button type="button" onClick={() => onSnapView('top')} title="Top direction (+Y)" className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto rounded bg-[#102014]/85 px-1 py-0.5 text-[#a6e3a1] shadow">↑ +Y</button>
+            <button type="button" onClick={() => onSnapView('front')} title="Front direction (+Z)" className="absolute top-0 right-0 pointer-events-auto rounded bg-[#101820]/85 px-1 py-0.5 text-[#89b4fa] shadow">↗ +Z</button>
+            <button type="button" onClick={() => onSnapView('left')} title="Left direction (-X)" className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-auto rounded bg-[#201010]/85 px-1 py-0.5 text-[#f38ba8] shadow">← -X</button>
+            <button type="button" onClick={() => onSnapView('right')} title="Right direction (+X)" className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto rounded bg-[#201010]/85 px-1 py-0.5 text-[#f38ba8] shadow">+X →</button>
+            <button type="button" onClick={() => onSnapView('bottom')} title="Bottom direction (-Y)" className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-auto rounded bg-[#102014]/85 px-1 py-0.5 text-[#a6e3a1] shadow">↓ -Y</button>
+          </div>
+        )}
+        <div className={gizmoModelReady ? 'hidden' : 'contents'}>
         {/* Style 1: 3D Isometric Orientation Box Cube */}
         {gizmoStyle === 'box' && (
           <div
@@ -281,6 +406,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
           </div>
         )}
 
+        </div>
       </div>
 
       {/* Axis Selector & Flip View Row */}
