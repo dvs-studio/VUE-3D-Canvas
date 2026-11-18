@@ -21,10 +21,17 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
   const [saturation, setSaturation] = useState(80); // 0 - 100
   const [lightness, setLightness] = useState(60); // 0 - 100
   const [hexInput, setHexInput] = useState(currentColor);
+  const [pickerMode, setPickerMode] = useState<'palette' | 'hsl'>('palette');
 
   // Synchronize hex input with external color prop
   useEffect(() => {
     setHexInput(currentColor);
+    const parsed = hexToHsl(currentColor);
+    if (parsed) {
+      setHue(parsed[0]);
+      setSaturation(parsed[1]);
+      setLightness(parsed[2]);
+    }
   }, [currentColor]);
 
   // Draw circular hue ring
@@ -119,7 +126,13 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
   ];
 
   return (
-    <div className="flex flex-col items-center p-2.5 text-xs text-[#c8c8c8] select-none bg-[#383838]">
+    <div className="flex flex-col items-center p-2.5 text-xs text-[#c8c8c8] select-none bg-[#383838] gap-2">
+      <div className="w-full flex items-center justify-between bg-[#2b2b2b] border border-[#4a4a4a] rounded p-0.5">
+        <button type="button" onClick={() => setPickerMode('palette')} className={`flex-1 py-1 rounded text-[10px] font-semibold transition-colors ${pickerMode === 'palette' ? 'bg-[#3d7fb8] text-white' : 'text-[#999] hover:text-white'}`}>Palette</button>
+        <button type="button" onClick={() => setPickerMode('hsl')} className={`flex-1 py-1 rounded text-[10px] font-semibold transition-colors ${pickerMode === 'hsl' ? 'bg-[#3d7fb8] text-white' : 'text-[#999] hover:text-white'}`}>HSL Sliders</button>
+      </div>
+      {pickerMode === 'palette' ? (
+        <>
       {/* Interactive Color Wheel Canvas */}
       <div className="relative mb-2">
         <canvas
@@ -130,6 +143,25 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
           className="cursor-crosshair rounded-full border border-[#444] shadow-md cs5-inset"
         />
       </div>
+
+        </>
+      ) : (
+        <div className="w-full space-y-3 py-1">
+          <div className="h-12 rounded border border-[#555] shadow-inner" style={{ backgroundColor: currentColor }} />
+          <label className="block space-y-1">
+            <span className="flex justify-between text-[10px]"><span>Hue</span><strong className="font-mono">{Math.round(hue)}°</strong></span>
+            <input aria-label="Hue" type="range" min="0" max="360" step="1" value={hue} onChange={e => { const value = Number(e.target.value); setHue(value); updateColorFromHsl(value, saturation, lightness); }} className="w-full accent-[#3d7fb8]" style={{ background: 'linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)' }} />
+          </label>
+          <label className="block space-y-1">
+            <span className="flex justify-between text-[10px]"><span>Saturation</span><strong className="font-mono">{Math.round(saturation)}%</strong></span>
+            <input aria-label="Saturation" type="range" min="0" max="100" step="1" value={saturation} onChange={e => { const value = Number(e.target.value); setSaturation(value); updateColorFromHsl(hue, value, lightness); }} className="w-full accent-[#3d7fb8]" style={{ background: `linear-gradient(90deg,hsl(${hue},0%,${lightness}%),hsl(${hue},100%,${lightness}%))` }} />
+          </label>
+          <label className="block space-y-1">
+            <span className="flex justify-between text-[10px]"><span>Lightness</span><strong className="font-mono">{Math.round(lightness)}%</strong></span>
+            <input aria-label="Lightness" type="range" min="0" max="100" step="1" value={lightness} onChange={e => { const value = Number(e.target.value); setLightness(value); updateColorFromHsl(hue, saturation, value); }} className="w-full accent-[#3d7fb8]" style={{ background: `linear-gradient(90deg,#000,hsl(${hue},${saturation}%,50%),#fff)` }} />
+          </label>
+        </div>
+      )}
 
       {/* Hex and RGB Inputs */}
       <div className="w-full flex items-center justify-between gap-2 px-1 mb-2">
@@ -173,6 +205,27 @@ export const ColorWheelPanel: React.FC<ColorWheelPanelProps> = ({
     </div>
   );
 };
+
+function hexToHsl(hex: string): [number, number, number] | null {
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return null;
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const delta = max - min;
+  let h = 0;
+  const l = (max + min) / 2;
+  let s = 0;
+  if (delta !== 0) {
+    s = delta / (1 - Math.abs(2 * l - 1));
+    if (max === r) h = ((g - b) / delta) % 6;
+    else if (max === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+}
 
 function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   let r, g, b;
