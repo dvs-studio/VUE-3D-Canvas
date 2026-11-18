@@ -60,6 +60,8 @@ import { PreferencesModal } from './ui/PreferencesModal';
 import { TextureAutoNodeModal } from './ui/TextureAutoNodeModal';
 import { PatternStampEngine } from './tools/patternStampTool';
 import { EdgeWearEngine } from './tools/edgeWearFilter';
+import { TextureFilterConfig, applyTextureFilterToCanvas } from './tools/textureFilters';
+import { TextureFilterDialog } from './ui/TextureFilterDialog';
 import { LayerConversions } from './tools/layerConversions';
 import { GaussianBlurOptions } from './tools/gaussianBlur';
 import { StochasticScatterConfig } from './tools/stochasticScatter';
@@ -279,6 +281,7 @@ export default function App() {
   // UI Dialogs
   const [isCarouselOpen, setIsCarouselOpen] = useState<boolean>(false);
   const [isTriplanarOpen, setIsTriplanarOpen] = useState<boolean>(false);
+  const [isTextureFilterOpen, setIsTextureFilterOpen] = useState<boolean>(false);
   const [isGaussianBlurOpen, setIsGaussianBlurOpen] = useState<boolean>(false);
   const [isStochasticScatterOpen, setIsStochasticScatterOpen] = useState<boolean>(false);
   const [isStitchStudioOpen, setIsStitchStudioOpen] = useState<boolean>(false);
@@ -858,6 +861,20 @@ export default function App() {
   };
 
   // Layer Conversion Handlers
+  const handleApplyTextureFilter = async (config: TextureFilterConfig) => {
+    const target = layers.find(layer => layer.id === activeLayerId);
+    if (!target || target.locked || target.isGroup) return;
+    try {
+      undoBuffer.pushState(`Apply ${config.kind} Image Filter`, layers);
+      await applyTextureFilterToCanvas(target.canvas, config);
+      setLayers(previous => previous.map(layer => layer.id === target.id ? target : layer));
+      notifyTextureUpdated();
+      setIsTextureFilterOpen(false);
+    } catch (error) {
+      console.error('Texture filter failed:', error);
+    }
+  };
+
   const handleConvertToBump = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
     if (target) {
@@ -1420,6 +1437,7 @@ export default function App() {
         activePanels={activePanels}
         onNumpadKey={handleNumpadKey}
         onOpenEdgeWearFilter={() => setIsEdgeWearDialogOpen(true)}
+        onOpenTextureFilters={() => setIsTextureFilterOpen(true)}
         onOpenPatternStampDialog={() => {
           setActiveTool('pattern_stamp');
           setIsPatternStampDialogOpen(true);
@@ -2284,6 +2302,15 @@ export default function App() {
         brushes={brushes}
         activeBrush={activeBrush}
         onSelectBrush={setActiveBrush}
+      />
+
+      {/* Selected-layer image filter dialog — destructive image operation, not brush pattern. */}
+      <TextureFilterDialog
+        isOpen={isTextureFilterOpen}
+        activeLayer={layers.find(layer => layer.id === activeLayerId)}
+        defaultColor={primaryColor}
+        onClose={() => setIsTextureFilterOpen(false)}
+        onApply={handleApplyTextureFilter}
       />
 
       {/* 6. Triplanar Box Mapping Confirmation Dialog */}
