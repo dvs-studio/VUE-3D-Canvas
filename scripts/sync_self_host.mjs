@@ -21,8 +21,29 @@ if (bundles.length === 0) {
   process.exit(1);
 }
 
+// Preserve hand-maintained self-host support assets while replacing all generated app bundles.
+const preserved = path.join(root, '.self-host-preserved');
+fs.rmSync(preserved, { recursive: true, force: true });
+fs.mkdirSync(preserved, { recursive: true });
+for (const rel of ['assets/Gizmo', 'help.docx', 'help.pdf', 'tutorial.pdf', 'signature.svg']) {
+  const source = path.join(pub, rel);
+  if (fs.existsSync(source)) {
+    const target = path.join(preserved, rel);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(source, target, { recursive: true });
+  }
+}
 fs.rmSync(pub, { recursive: true, force: true });
 fs.cpSync(dist, pub, { recursive: true });
+for (const rel of ['assets/Gizmo', 'help.docx', 'help.pdf', 'tutorial.pdf', 'signature.svg']) {
+  const source = path.join(preserved, rel);
+  if (fs.existsSync(source)) {
+    const target = path.join(pub, rel);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.cpSync(source, target, { recursive: true });
+  }
+}
+fs.rmSync(preserved, { recursive: true, force: true });
 
 const publicIndex = path.join(pub, 'index.html');
 let html = fs.readFileSync(publicIndex, 'utf8');
