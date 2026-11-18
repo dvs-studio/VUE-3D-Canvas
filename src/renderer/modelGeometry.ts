@@ -452,6 +452,8 @@ export function parseOBJ(objText: string): THREE.BufferGeometry {
       normals.push(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]));
     } else if (tag === 'o') {
       currentObjectName = parts.slice(1).join(' ') || 'Object';
+      currentGroupName = '';
+      currentMaterialName = '';
     } else if (tag === 'g') {
       currentGroupName = parts.slice(1).join(' ');
     } else if (tag === 'usemtl') {
