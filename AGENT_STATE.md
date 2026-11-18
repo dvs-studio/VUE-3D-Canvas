@@ -475,3 +475,14 @@ Latest gizmo refinement: six real Three.js ArrowHelper geometries are parented t
 Final successful build after the 3D arrows: workflow run #98 / ID 44269751711; commit 470c3b1da05ca1331fdce36dae016d8bc10786b8; artifact 14412042420 (VUE_3D_Canvas_SelfHost), size 891,319 bytes, SHA-256 1c65b4b191385e30b0d28e7351f03c687bc0a65bb450f2d9fe5e75977bb5d726, expiry 2027-02-16. Run URL https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44269751711
 
 Manual testing still needed. The build confirms compile/package only; it does not prove arrow placement, label overlap, Squail subdivision appearance, UV quality, filter quality/performance, or phone/desktop layout. Exact world/object-coordinate-to-UV directional displacement remains unimplemented; those selections currently use simplified axis-angle presets.
+
+## Repair pass — 2026-11-18 (post-user test feedback)
+
+- Reverted the broken bundled `suzanne.obj`/Squail substitution. Built-in model is again the existing Suzanne preset, with no subdivision baked in. The bad packaged OBJ is no longer retained by the self-host sync. Wait for the user's replacement Suzanne OBJ/MTL package; it should include named separated objects and UV data. Do not subdivide the replacement model.
+- Subdivision preview level control now uses decrement/increment arrow buttons rather than a range slider.
+- Filter command and dialog are renamed **Layer Filter**.
+- Wood Grain now supports a reorderable stack of colour/image sources, per-source numeric spreading density, and up/down/remove controls.
+- Powderiser now breaks the selected layer into scattered fading dust fragments. A separate Noise Shader darkens pixels through randomized colour blending without geometric displacement.
+- UV repair: Viewport3D's private geometry clone now receives typed UV channel arrays and active UV channel data; an explicit UV geometry version causes the clone and render to refresh after UV unwrap/channel selection/rebake operations. UV panel geometry updates also schedule texture composite refresh.
+- Self-host sync now replaces generated app bundles from `dist` while preserving hand-maintained Gizmo GLBs and help/signature assets. This removes stale generated hashed JS/CSS bundles rather than leaving old versions in `self-host/public/assets`.
+- Manual validation remains required for UV painting and export, wood source stacking, dust scattering, noise shader, and the replacement Suzanne import when supplied. No browser-level interaction tests or performance measurements are claimed.
