@@ -113,6 +113,13 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
             </div>
           </div>
 
+          {/* Section 2b: Gizmo label layout */}
+          <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2">
+            <span className="font-bold text-[#eee] text-xs">Gizmo Axis Label Layout</span>
+            <label className="block space-y-1 text-[11px]"><span className="flex justify-between"><span>Label margin / radial spacing</span><b className="font-mono">{preferences.gizmoLabelMargin ?? 31}px</b></span><input type="range" min="18" max="44" step="1" value={preferences.gizmoLabelMargin ?? 31} onChange={e=>onUpdatePreferences({gizmoLabelMargin:Number(e.target.value)})} className="w-full accent-blue-500"/></label>
+            <label className="block space-y-1 text-[11px]"><span className="flex justify-between"><span>Font size</span><b className="font-mono">{preferences.gizmoLabelFontSize ?? 8}px</b></span><input type="range" min="6" max="13" step="1" value={preferences.gizmoLabelFontSize ?? 8} onChange={e=>onUpdatePreferences({gizmoLabelFontSize:Number(e.target.value)})} className="w-full accent-blue-500"/></label>
+          </div>
+
           {/* Section 3: Tablet Mode & Brush Parameter Sub-Operator */}
           <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2.5">
             <div className="flex items-center justify-between">
