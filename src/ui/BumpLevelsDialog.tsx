@@ -5,7 +5,7 @@ export interface BumpLevels { blackInput:number; whiteInput:number; gamma:number
 export const DEFAULT_BUMP_LEVELS:BumpLevels={blackInput:0,whiteInput:255,gamma:1,blackOutput:0,whiteOutput:255};
 interface Props {isOpen:boolean; layer?:Layer; onClose:()=>void; onApply:(levels:BumpLevels)=>void;}
 function levelsPixels(image:ImageData,levels:BumpLevels){const out=new ImageData(image.width,image.height);const d=image.data,o=out.data;const black=Math.min(levels.blackInput,levels.whiteInput-1),white=Math.max(levels.whiteInput,black+1);for(let i=0;i<d.length;i+=4){const lum=(0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2]);let v=Math.max(0,Math.min(1,(lum-black)/(white-black)));v=Math.pow(v,1/Math.max(0.05,levels.gamma));v=levels.blackOutput+(levels.whiteOutput-levels.blackOutput)*v;o[i]=o[i+1]=o[i+2]=v;o[i+3]=d[i+3];}return out;}
-export const BumpLevelsDialog:React.FC<Props>={({isOpen,layer,onClose,onApply})=>{
+export const BumpLevelsDialog:React.FC<Props>=({isOpen,layer,onClose,onApply})=>{
  const [values,setValues]=useState<BumpLevels>(DEFAULT_BUMP_LEVELS);const previewRef=useRef<HTMLCanvasElement|null>(null);
  useEffect(()=>{if(!isOpen)return;setValues(DEFAULT_BUMP_LEVELS);},[isOpen,layer?.id]);
  useEffect(()=>{const canvas=previewRef.current;if(!canvas||!layer?.canvas||!isOpen)return;canvas.width=layer.canvas.width;canvas.height=layer.canvas.height;const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(layer.canvas,0,0);const image=ctx.getImageData(0,0,canvas.width,canvas.height);ctx.putImageData(levelsPixels(image,values),0,0);},[isOpen,layer,values]);
