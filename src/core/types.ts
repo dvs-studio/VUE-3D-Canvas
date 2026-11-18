@@ -128,6 +128,8 @@ export interface PreferencesState {
   optionsBarLayout: OptionsBarLayout;
   tabletSubOperator: TabletSubOperator;
   architecturalRepair: boolean;
+  gizmoLabelMargin: number;
+  gizmoLabelFontSize: number;
 }
 
 export interface BloomSettings {
