@@ -41,6 +41,7 @@ interface PhotoshopMenuBarProps {
   selectedModelKey?: string;
   onSelectModelKey?: (key: string) => void;
   meshComponentVisibility?: string;
+  meshPartOptions?: { id: string; name: string }[];
   onSelectMeshComponentVisibility?: (comp: string) => void;
   isolateSelectedGroupOnly?: boolean;
   onToggleIsolateSelectedGroupOnly?: (checked: boolean) => void;
@@ -96,6 +97,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   selectedModelKey = 'suzanne',
   onSelectModelKey,
   meshComponentVisibility = 'all',
+  meshPartOptions = [],
   onSelectMeshComponentVisibility,
   isolateSelectedGroupOnly = false,
   onToggleIsolateSelectedGroupOnly,
@@ -720,26 +722,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                   className="w-full bg-[#242424] border border-[#555] text-white rounded px-1.5 py-1 text-[10px] outline-none font-medium cursor-pointer"
                 >
                   <option value="all">Show All Components</option>
-                  {selectedModelKey === 'suzanne' ? (
-                    <optgroup label="Suzanne Parts">
-                      <option value="head">[ID: head] Main Head</option>
-                      <option value="eyes">[ID: eyes] Eyes</option>
-                      <option value="ears">[ID: ears] Ears</option>
-                      <option value="muzzle">[ID: muzzle] Muzzle</option>
-                    </optgroup>
-                  ) : selectedModelKey === 'helmet' ? (
-                    <optgroup label="Helmet Parts">
-                      <option value="dome">[ID: dome] Dome Shell</option>
-                      <option value="visor">[ID: visor] Visor Plate</option>
-                      <option value="chin">[ID: chin] Chin Guard</option>
-                      <option value="sides">[ID: sides] Side Mounts</option>
-                    </optgroup>
-                  ) : (
-                    <optgroup label="Model Parts">
-                      <option value="body">[ID: body] Main Body</option>
-                      <option value="caps">[ID: caps] End Caps</option>
-                    </optgroup>
-                  )}
+                  {meshPartOptions.map(part => <option key={part.id} value={part.id}>[ID: {part.id}] {part.name}</option>)}
                 </select>
 
                 <label className="flex items-center gap-1.5 text-[10px] text-[#ccc] hover:text-white cursor-pointer select-none pt-0.5">
