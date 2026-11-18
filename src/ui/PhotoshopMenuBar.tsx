@@ -364,6 +364,18 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           )}
         </div>
 
+        {/* Direct-access Layer Filter command: keep available even if submenu rendering is clipped. */}
+        {onOpenTextureFilters && (
+          <button
+            type="button"
+            onClick={() => onOpenTextureFilters()}
+            className="px-2 py-0.5 rounded border border-[#555] bg-[#2b2b2b] hover:bg-[#3d7fb8] hover:text-white transition-colors text-[11px]"
+            title="Open Layer Filter for the selected layer"
+          >
+            Layer Filter
+          </button>
+        )}
+
         {/* FILTER MENU */}
         <div className="relative">
           <button
