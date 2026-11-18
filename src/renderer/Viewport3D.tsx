@@ -957,10 +957,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       });
     }
 
-    // Apply Blender-style dynamic surface normal calculation
+    // A material replacement only needs its flat-shading flag synchronised;
+    // the geometry normal buffers are handled by the dedicated mode effect.
     const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
-    SurfaceShadingEngine.applySurfaceShading(mesh.geometry, mesh.material, effMode);
-  }, [shadingMode, materialProps, surfaceMode, layers]);
+    SurfaceShadingEngine.syncMaterialFlatShading(mesh.material, effMode);
+  }, [shadingMode, materialProps, layers]);
 
   // Mesh Parts Inventory visibility: all part changes update the same geometry
   // index used by both rendering and raycasting, so hidden parts cannot receive paint.
