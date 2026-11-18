@@ -459,3 +459,11 @@ Known limitations / manual validation:
 - Wood Grain, hatching displacement, Bump Levels, dialogs, mobile sizing, docker toggles, and color-wheel persistence require manual interaction testing. No browser-level test or measured performance run has been performed.
 
 Latest successful CI/package checkpoint: run 44269171028 (run #85), commit 92ad447447a0e9633e3d0efc649fff7aaa85e25e, artifact 14412325195 (VUE_3D_Canvas_SelfHost), 889,628 bytes, SHA-256 2bda18bb932c48b22da2bf40153893f6065c96bf791e81bda6bb5a2bf23b2124, expires 2027-02-16. Build/package pass does not establish browser behavior.
+
+## Final correction-pass checkpoint — 2026-11-18
+
+Additional source refinements after initial checkpoint: the built-in model dropdown now labels the retained compatible key `suzanne` as **Squail (Built-in OBJ)**. Directional filters combine selected UV/object/world axis preset with the angle-offset slider. Object/world modes remain approximate angle presets and do not yet use exact mesh-specific UV transforms.
+
+Final source commit for this successful build: `cd1b12a2d8f100ef71cbccdaeab06496c1d05c3b`. CI run #97, ID `44269483757`, conclusion success. Artifact `14411732307`, name `VUE_3D_Canvas_SelfHost`, size 889,693 bytes, SHA-256 `f8d9cdcc6767686a39514b204f69859cde73aa16f62eaa3d6443175db174f0d0`, expiry 2027-02-16. Direct artifact page: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44269483757/artifacts/14411732307
+
+Manual validation remains pending: test filter image/color sources and full-resolution overwrite/undo, bump levels/grayscale preview, responsive Triplanar inputs on phone and desktop, Window-menu docker toggles in grouped and expanded layouts, HSL/Palette repeated switching, gizmo positive/negative axis color and fade, preferences spacing/font, Squail model subdivided appearance and UV distortion. Exact world/object-to-UV directional constraints are still future work.
