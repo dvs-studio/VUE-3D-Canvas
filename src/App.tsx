@@ -198,6 +198,8 @@ export default function App() {
     return geom;
   });
   const [activeUVChannel, setActiveUVChannel] = useState<string>('uv_original');
+  const [uvGeometryVersion, setUvGeometryVersion] = useState(0);
+  const notifyUVGeometryUpdated = useCallback(() => { setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }, [notifyTextureUpdated]);
   const [isXRayBrushActive, setIsXRayBrushActive] = useState<boolean>(false);
   const [xrayVertexSelection, setXrayVertexSelection] = useState<Set<number>>(new Set());
 
@@ -516,6 +518,7 @@ export default function App() {
 
     UVChannelManager.setActiveChannel(activeGeometry, toChannel);
     setActiveUVChannel(toChannel);
+    setUvGeometryVersion(v => v + 1);
 
     undoBuffer.pushState(`Re-Bake Texture [${fromChannel} -> ${toChannel}]`, layers);
     syncCompositeCanvas();
@@ -984,6 +987,7 @@ export default function App() {
     setLayers(prev => prev.map(l => (l.id === layerId ? { ...l, uvChannel: channelId } : l)));
     if (activeGeometry && UVChannelManager.setActiveChannel(activeGeometry, channelId)) {
       setActiveUVChannel(channelId);
+      setUvGeometryVersion(v => v + 1);
     }
   };
 
@@ -1722,6 +1726,7 @@ export default function App() {
                 geometry={subdivisionPreviewGeometry && hiddenMeshComponents.length === 0 && !isolateSelectedGroupOnly ? subdivisionPreviewGeometry : activeGeometry}
                 onGeometryUpdated={notifyTextureUpdated}
                 activeUVChannel={activeUVChannel}
+                uvGeometryVersion={uvGeometryVersion}
                 isXRayBrushActive={isXRayBrushActive}
                 onToggleXRayBrush={() => setIsXRayBrushActive(v => !v)}
                 selectedVertices={xrayVertexSelection}
@@ -1757,9 +1762,9 @@ export default function App() {
                 onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
                 patternStampConfig={patternStampConfig}
                 geometry={activeGeometry}
-                onGeometryUpdated={notifyTextureUpdated}
+                onGeometryUpdated={notifyUVGeometryUpdated}
                 activeUVChannel={activeUVChannel}
-                onSelectUVChannel={setActiveUVChannel}
+                onSelectUVChannel={(channelId) => { setActiveUVChannel(channelId); setUvGeometryVersion(v => v + 1); }}
                 selectedVertices={xrayVertexSelection}
                 onRebakeTexture={handleRebakeTexture}
               />
