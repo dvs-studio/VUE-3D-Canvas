@@ -842,7 +842,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
   }, [bloom]);
 
-  // Update Geometry & Surface Shading
+  // Update geometry only when its source changes. Surface-mode toggles are
+  // handled separately so they never rebuild or re-parse the model.
   useEffect(() => {
     if (!meshRef.current) return;
     let newGeom: THREE.BufferGeometry;
@@ -862,11 +863,20 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       meshRef.current.geometry.dispose();
       meshRef.current.geometry = newGeom;
     }
+    needsRenderRef.current = true;
+  }, [modelKey, customOBJText, geometry]);
 
-    // Apply Blender-style dynamic surface shading: Def, Smooth, or Flat
+  // Apply surface shading once per mode/geometry change, then explicitly wake
+  // the on-demand renderer. This prevents the old behaviour where the new
+  // normals were computed but only became visible after camera navigation.
+  useEffect(() => {
+    if (!meshRef.current) return;
+    const geom = meshRef.current.geometry;
+    if (!geom) return;
     const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
-    SurfaceShadingEngine.applySurfaceShading(newGeom, meshRef.current.material, effMode);
-  }, [modelKey, customOBJText, geometry, surfaceMode]);
+    SurfaceShadingEngine.applySurfaceShading(geom, meshRef.current.material, effMode);
+    needsRenderRef.current = true;
+  }, [surfaceMode, modelKey, customOBJText, geometry]);
 
   // Sync X-Ray Selected Vertex Highlight Points in 3D
   useEffect(() => {
