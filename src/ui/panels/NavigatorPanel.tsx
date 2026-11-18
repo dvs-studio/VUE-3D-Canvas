@@ -25,6 +25,9 @@ interface NavigatorPanelProps {
   onToggleGizmo?: () => void;
   surfaceMode?: 'default' | 'smooth' | 'flat' | 'hard';
   shadingMode?: string;
+  meshComponentVisibility?: string;
+  hiddenMeshComponents?: string[];
+  isolateSelectedGroupOnly?: boolean;
 }
 
 export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
@@ -37,6 +40,9 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
   onToggleGizmo,
   surfaceMode = 'default',
   shadingMode,
+  meshComponentVisibility = 'all',
+  hiddenMeshComponents = [],
+  isolateSelectedGroupOnly = false,
 }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -206,6 +212,31 @@ export const NavigatorPanel: React.FC<NavigatorPanelProps> = ({
     ctx.drawImage(compositeCanvas, 0, 0, target.width, target.height);
     texture.needsUpdate = true;
   }, [compositeCanvas, textureVersion]);
+
+  // Keep the navigator's visible mesh parts in sync with the main viewport.
+  useEffect(() => {
+    const geom = meshRef.current?.geometry;
+    if (!geom) return;
+    const parts = geom.userData?.componentIndices as Record<string, Uint32Array> | undefined;
+    if (!parts) return;
+    const allIds = Object.keys(parts);
+    const visibleIds = isolateSelectedGroupOnly && meshComponentVisibility !== 'all'
+      ? (parts[meshComponentVisibility] ? [meshComponentVisibility] : [])
+      : allIds.filter(id => !hiddenMeshComponents.includes(id));
+    if (visibleIds.length === allIds.length && hiddenMeshComponents.length === 0 && !isolateSelectedGroupOnly && geom.userData?.fullIndex) {
+      geom.setIndex(geom.userData.fullIndex);
+    } else {
+      const total = visibleIds.reduce((sum, id) => sum + (parts[id]?.length || 0), 0);
+      const merged = new Uint32Array(total);
+      let offset = 0;
+      for (const id of visibleIds) {
+        const values = parts[id];
+        if (values) { merged.set(values, offset); offset += values.length; }
+      }
+      geom.setIndex(new THREE.BufferAttribute(merged, 1));
+    }
+    meshRef.current!.visible = visibleIds.length > 0;
+  }, [meshComponentVisibility, hiddenMeshComponents, isolateSelectedGroupOnly, modelKey, customOBJText]);
 
   // Update Material
   useEffect(() => {
