@@ -98,7 +98,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const i=(y*w+x)*4;let rr=0,gg=0,bb=0,aa=0;
      for(const row of stack){
        const density=clamp(Number(row.item.density)||1,1,100);
-       const mapped=cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h; const mi=(y*w+x)*3; const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0; const grain=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28; const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz; const wave=Math.sin((grain*128*dx+flow*12*dy)*(0.008+density*0.0007)+Math.sin(flow*18)*2.3)+Math.sin((grain*128*dx+flow*12*dy)*(0.002+density*0.00018))*0.7;
+       const mapped=cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h; const mi=(y*w+x)*3; const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0; const grainCoord=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28; const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz; const wave=Math.sin((grainCoord*128*dx+flow*12*dy)*(0.008+density*0.0007)+Math.sin(flow*18)*2.3)+Math.sin((grainCoord*128*dx+flow*12*dy)*(0.002+density*0.00018))*0.7;
        const n=(hash(x,y,13+stack.indexOf(row)*37)-0.5)*noise*70;
        const grain=clamp(0.5+wave*0.22+n/255,0,1);
        const base=row.image?sample(row.image,x,y):row.color;
