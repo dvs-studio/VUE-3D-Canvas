@@ -2,7 +2,7 @@
 
 **Scope:** self-host only. PBR package modes = **export only**.
 
-**Latest extension / current status (2026-11-19):** horizontal scroll rails and mode-dependent UV toolbar placement are committed. Split 3D+2D mode positions UV tools bottom-centre inside the 2D pane; dedicated 2D mode uses the top position. The supplied `src/assets/Suzanne.obj` is integrated into the Suzanne preset and the procedural Suzanne generator has been removed. The generated self-host output is committed at `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`; workflow run #177 passed. OBJ files are ignored by default except the bundled Suzanne source, and the self-host sync script preserves OBJ files under `self-host/public/` during regeneration. Remaining: manual runtime/device validation, known UV-island filter gaps, and model-edge fill artefacts.
+**Latest extension / current status (2026-11-19):** horizontal scroll rails and mode-dependent UV toolbar placement are committed. Split 3D+2D mode positions UV tools bottom-centre inside the 2D pane; dedicated 2D mode uses the top position. The supplied `src/assets/Suzanne.obj` is integrated into the Suzanne preset and the procedural Suzanne generator has been removed. The generated self-host output is committed at `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`; workflow run #178 passed. OBJ files are ignored by default except the bundled Suzanne source, and the self-host sync script preserves OBJ files under `self-host/public/` during regeneration. Remaining: manual runtime/device validation, known UV-island filter gaps, and model-edge fill artefacts.
 
 ## Upload / apply status
 
@@ -142,6 +142,6 @@ Suzanne candidate model binaries are still not available in the current conversa
 
 - The requested Suzanne OBJ replacement is implemented in source and present in the generated self-host project. Source commit: `d98df003290a1767f1655a033c5b3e0d3206ee74`. The bundled preset uses `parseOBJ(suzanneOBJ)`; the procedural Suzanne generator is gone.
 - UV toolbar placement is implemented and included in the self-host output: split view bottom-centre within the 2D pane; dedicated 2D mode top position.
-- Direct self-host output commit: `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`. Workflow run #177 passed.
+- Direct self-host output commit: `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`. Workflow run #178 passed.
 - `.gitignore` now ignores OBJ mesh files by default while allowing `src/assets/Suzanne.obj`. `scripts/sync_self_host.mjs` preserves OBJ models already in `self-host/public/` during sync.
 - Next: manually test file:// and server launch, Suzanne model load, split/dedicated UV toolbar positions, desktop scrolling, and Android touch. Then isolate the outstanding UV island-edge filter gap and model-edge fill artefact. Do not claim these are fixed yet.
