@@ -141,6 +141,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   geometry,
   onGeometryUpdated,
   activeUVChannel,
+  uvGeometryVersion = 0,
   isXRayBrushActive = false,
   onToggleXRayBrush,
   selectedVertices,
