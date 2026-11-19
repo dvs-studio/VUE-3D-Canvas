@@ -131,12 +131,12 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   };
 
   return (
-    <div className={`min-h-8 ${optionsBarLayout === 'clusters' ? 'h-auto py-1 flex-wrap' : 'h-8 overflow-x-auto'} bg-[#3c3c3c] border-b border-[#242424] px-2 flex items-center justify-between text-xs text-[#c8c8c8] select-none z-40 gap-y-1.5 gap-x-2 relative`}>
+    <div className={`min-h-8 h-8 min-w-0 overflow-x-auto overflow-y-hidden flex-nowrap bg-[#3c3c3c] border-b border-[#242424] px-2 flex items-center justify-start text-xs text-[#c8c8c8] select-none z-40 gap-x-2 relative`}>
       <input ref={maskFileRef} type="file" accept="image/*" onChange={handleUploadMask} className="hidden" />
       <input ref={patternFileRef} type="file" accept="image/*" onChange={handleUploadPattern} className="hidden" />
 
       {/* Tool-specific Parameters Cluster */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-nowrap min-w-max">
         {/* Active Tool Label */}
         <div className="flex items-center gap-1.5 font-bold text-[#eee] uppercase tracking-wider text-[11px] bg-[#303030] px-2 py-0.5 rounded border border-[#484848] cs5-inset">
           <span>{activeTool.replace('_', ' ')}</span>
