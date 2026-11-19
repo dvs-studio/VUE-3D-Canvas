@@ -37,6 +37,7 @@ interface UVNPanelProps {
   onSelectUVChannel: (channelId: string) => void;
   // Re-bake trigger
   onRebakeTexture: (fromChannel: string, toChannel: string, resolution: number) => void;
+  onSeamlessUV?: (radius: number) => void;
   // Sculpt Brush state
   isSculptModeActive: boolean;
   onToggleSculptMode: (active: boolean) => void;
@@ -59,6 +60,7 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
   activeUVChannel,
   onSelectUVChannel,
   onRebakeTexture,
+  onSeamlessUV,
   isSculptModeActive,
   onToggleSculptMode,
   sculptBrushMode,
@@ -79,6 +81,8 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
   const [seed, setSeed] = useState(1337);
   const [selectedSubmesh, setSelectedSubmesh] = useState('all');
   const [preserveOthers, setPreserveOthers] = useState(true);
+  const [randomRotation, setRandomRotation] = useState(true);
+  const [seamRadius, setSeamRadius] = useState(4);
   const [unwrapMessage, setUnwrapMessage] = useState<string | null>(null);
 
   // Re-bake local state
@@ -109,6 +113,7 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
       seed,
       submeshId: selectedSubmesh,
       preserveOthers,
+      randomRotation,
     };
 
     const result = SmartUVUnwrapEngine.unwrapGeometry(geometry, opts);
@@ -311,6 +316,11 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
               </div>
             </div>
 
+            <label className="flex items-start gap-2 text-[10px] text-[#aaa] bg-[#202020] border border-[#3e3e3e] rounded p-2 cursor-pointer">
+              <input type="checkbox" checked={randomRotation} onChange={e => setRandomRotation(e.target.checked)} className="mt-0.5 accent-[#38bdf8]" />
+              <span><strong className="block text-[#ddd]">Seeded island rotation</strong><span className="text-[#888]">Random quarter-turns; the same seed reproduces the same layout.</span></span>
+            </label>
+
             {/* Angle Limit */}
             <div className="bg-[#202020] p-2.5 rounded border border-[#3e3e3e] space-y-1">
               <div className="flex justify-between text-[10px]">
@@ -430,6 +440,15 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
                   </div>
                 );
               })}
+            </div>
+
+            <div className="bg-[#202020] p-3 rounded border border-[#3e3e3e] space-y-2">
+              <div className="text-[10px] uppercase font-bold text-[#a6e3a1] tracking-wider">Seamless Texture Gutter</div>
+              <div className="flex items-center justify-between text-[10px]"><span className="text-[#aaa]">Dilation radius</span><b className="font-mono text-[#a6e3a1]">{seamRadius}px</b></div>
+              <input aria-label="Seamless UV dilation radius" type="range" min="0" max="16" step="1" value={seamRadius} onChange={e => setSeamRadius(Number(e.target.value))} className="w-full accent-[#a6e3a1]" />
+              <button type="button" disabled={!onSeamlessUV} onClick={() => onSeamlessUV?.(seamRadius)}
+                className="w-full py-1.5 bg-[#285c3d] hover:bg-[#34744d] disabled:opacity-40 text-white rounded font-bold">Apply Seamless UV Gutter to Active Layer</button>
+              <p className="text-[9px] text-[#888]">Extends painted edge colours into transparent pixels to reduce mipmap seams. This edits the active layer texture, not the mesh UV coordinates.</p>
             </div>
 
             {/* Dynamic Texture Re-baker */}
