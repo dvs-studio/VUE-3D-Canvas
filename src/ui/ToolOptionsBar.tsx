@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef } from 'react';
+import { HorizontalScrollRail } from './HorizontalScrollRail';
 import { ToolType, BrushPreset, ViewportShadingMode, SurfaceShadingMode } from '../core/types';
 import { DEFAULT_BRUSH_PRESETS } from '../tools/brushPresets';
 import { 
@@ -131,7 +132,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
   };
 
   return (
-    <div className={`min-h-8 h-8 min-w-0 overflow-x-auto overflow-y-hidden flex-nowrap bg-[#3c3c3c] border-b border-[#242424] px-2 flex items-center justify-start text-xs text-[#c8c8c8] select-none z-40 gap-x-2 relative`}>
+    <HorizontalScrollRail className="h-8 min-h-8 min-w-0 bg-[#3c3c3c] border-b border-[#242424] text-xs text-[#c8c8c8] select-none z-40 relative" contentClassName="h-full min-w-max flex flex-nowrap items-center justify-start px-2 gap-x-2 pr-4">
       <input ref={maskFileRef} type="file" accept="image/*" onChange={handleUploadMask} className="hidden" />
       <input ref={patternFileRef} type="file" accept="image/*" onChange={handleUploadPattern} className="hidden" />
 
@@ -224,7 +225,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
 
         {/* Brush Parameters if paint tool */}
         {['brush', 'eraser', 'blur', 'clone', 'smudge', 'mask_brush'].includes(activeTool) && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-nowrap">
             {/* Core Sliders: Size & Opacity */}
             <div className="flex items-center gap-1 bg-[#303030] px-1.5 py-0.5 rounded border border-[#484848]">
               <span className="text-[10px] text-[#aaa]">Size:</span>
@@ -519,7 +520,7 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
           )}
 
           {/* Global Viewport Controls & Shading */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-nowrap">
             {/* Symmetry Toggle Button */}
             {onToggleSymmetryX && (
               <button
@@ -656,6 +657,6 @@ export const ToolOptionsBar: React.FC<ToolOptionsBarProps> = ({
           </div>
         </>
       )}
-    </div>
+    </HorizontalScrollRail>
   );
 };
