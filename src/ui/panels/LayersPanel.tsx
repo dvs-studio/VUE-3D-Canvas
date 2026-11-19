@@ -40,6 +40,9 @@ interface LayersPanelProps {
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
   onDeleteSelectedLayers?: (layerIds: string[]) => void;
+  onMergeSelectedLayers?: (layerIds: string[]) => void;
+  onMoveSelectedLayersToGroup?: (layerIds: string[], groupId: string) => void;
+  groups?: Layer[];
   onRenameGroup?: (groupId: string, name: string) => void;
   onDeleteLayer: (id: string) => void;
   onDuplicateLayer: (id: string) => void;
@@ -86,6 +89,9 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onToggleGroupCollapse,
   onGroupSelectedLayers,
   onDeleteSelectedLayers,
+  onMergeSelectedLayers,
+  onMoveSelectedLayersToGroup,
+  groups = [],
   onRenameGroup,
   onDeleteLayer,
   onDuplicateLayer,
@@ -111,6 +117,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onBakeTextureFill,
 }) => {
   const [checkedLayerIds, setCheckedLayerIds] = useState<string[]>([]);
+  const [moveTargetGroupId, setMoveTargetGroupId] = useState('');
   const [longPressMenu, setLongPressMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = React.useRef<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -379,6 +386,21 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               <button type="button" className="px-1.5 py-0.5 rounded border border-[#666] hover:bg-[#3a3a3a]"
                 onClick={() => { onGroupSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); }}>Group</button>
             )}
+            {onMergeSelectedLayers && checkedLayerIds.length >= 2 && (
+              <button type="button" className="px-1.5 py-0.5 rounded border border-[#3d7fb8] text-[#9bc9f0] hover:bg-[#3d7fb8]/25"
+                onClick={() => { onMergeSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); }}>Merge</button>
+            )}
+            {onMoveSelectedLayersToGroup && groups.length > 0 && (
+              <div className="flex items-center gap-1">
+                <select aria-label="Target layer group" value={moveTargetGroupId || groups[0].id}
+                  onChange={e => setMoveTargetGroupId(e.target.value)}
+                  className="max-w-[110px] bg-[#1f1f1f] border border-[#555] text-[#ddd] px-1 py-0.5 rounded">
+                  {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
+                </select>
+                <button type="button" className="px-1.5 py-0.5 rounded border border-[#666] hover:bg-[#3a3a3a]"
+                  onClick={() => { onMoveSelectedLayersToGroup(checkedLayerIds, moveTargetGroupId || groups[0].id); setCheckedLayerIds([]); }}>Move</button>
+              </div>
+            )}
             {onDeleteSelectedLayers && (
               <button type="button" className="px-1.5 py-0.5 rounded border border-[#666] hover:bg-[#3a3a3a] text-red-300"
                 onClick={() => { onDeleteSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); }}>Delete</button>
@@ -452,6 +474,21 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           {onGroupSelectedLayers && (
             <button type="button" className="block w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8]/40"
               onClick={() => { onGroupSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); setLongPressMenu(null); }}>Group selected</button>
+          )}
+          {onMergeSelectedLayers && checkedLayerIds.length >= 2 && (
+            <button type="button" className="block w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8]/40"
+              onClick={() => { onMergeSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); setLongPressMenu(null); }}>Merge selected</button>
+          )}
+          {onMoveSelectedLayersToGroup && groups.length > 0 && (
+            <div className="px-3 py-1.5">
+              <label className="block text-[#888] mb-1">Move to group</label>
+              <select className="w-full bg-[#1d1d1d] border border-[#555] p-1"
+                value={moveTargetGroupId || groups[0].id} onChange={e => setMoveTargetGroupId(e.target.value)}>
+                {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
+              </select>
+              <button type="button" className="mt-1 w-full text-left hover:text-white"
+                onClick={() => { onMoveSelectedLayersToGroup(checkedLayerIds, moveTargetGroupId || groups[0].id); setCheckedLayerIds([]); setLongPressMenu(null); }}>Move selected</button>
+            </div>
           )}
           {onDeleteSelectedLayers && (
             <button type="button" className="block w-full text-left px-3 py-1.5 hover:bg-red-900/40 text-red-200"
