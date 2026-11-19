@@ -137,7 +137,7 @@ node server.js
 
 Windows: double-click `self-host/start.bat`. Linux or macOS: `./start.sh`. Then use `http://localhost:3000`. You can also open `self-host/public/index.html` with `file://`. The script and CSS are inlined. An older file that still has `<script src="./assets/...">` stays blank.
 
-The page on `main` is `index-DXhSIj8p.js`. Zoom redraws the main view without a pan. A window or tablet rotation resizes the canvas instead of leaving a dead strip. Triplanar, Scatter, and Edge Wear open as panels. Live undo is 30 steps. The file still stores 3.
+The current generated bundle is `self-host/public/assets/index-Cc8o6jsJ.js`, also inlined into `self-host/public/index.html` for `file://` use. Zoom redraws the main view without a pan. A window or tablet rotation resizes the canvas instead of leaving a dead strip. Triplanar, Scatter, and Edge Wear open as panels. Live undo is 30 steps. The file still stores 3.
 
 The Windows exe in section 1 is not the current job. This folder is the painter Victory is testing. The exe, when it is built, only shows this same page.
 
@@ -150,6 +150,6 @@ From the repository root, `npm run host` starts that server. `npm run host:sync`
 - **UI Theme:** Photoshop CS5 Dark Gray (`#333333`, `#2b2b2b`, `#3c3c3c`, `#222222`)
 - **License:** Apache-2.0
 
-## 8. Next self-host change
+## 8. Current self-host status
 
-The node editor is not the material system. The next change is specified in `LAYER_PBR_PLAN.md` and is not built yet. A copy of the current `self-host/` folder is `release/vue3d-self-host-safety-2026-11-14.zip`.
+The PBR layer/export work described in `LAYER_PBR_PLAN.md` is implemented in the current self-host painter. The latest generated self-host output includes the bundled Suzanne OBJ preset and mode-dependent UV toolbar placement. The tracked generated output is under `self-host/public/`; `npm run host:sync` rebuilds it from `src/`. Manual browser/desktop/Android validation and the documented UV-island seam/model-edge artefacts remain outstanding. Preserve safety copies under `release/` and `self-host/`.
