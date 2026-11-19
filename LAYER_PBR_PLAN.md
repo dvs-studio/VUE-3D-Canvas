@@ -576,3 +576,7 @@ The latest successful self-host workflow is run #109 / ID `44308954895`. The bui
 Artifact `14430270038`, name `VUE_3D_Canvas_SelfHost`, size 1,061,477 bytes, SHA-256 `c3e0d496d7141f32a58c604a5dc7fc9faaee576d28823809717561183721ad80`, expires 2027-02-16. Run URL: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44308954895
 
 Manual testing remains required for UV edits updating the 3D material and texture mapping, UV save/export, stacked wood source output, powder dust scattering, noise-shader darkening, and subdivision arrow controls. The replacement separated-item Suzanne OBJ/MTL is pending from the user; do not reintroduce the previous faulty OBJ, and do not bake subdivision into the replacement model.
+
+
+## 2026-11-19 — UV version reference startup fix
+The current hosted blank-screen failure was caused by an undeclared local identifier in `Viewport3D`: `uvGeometryVersion` appeared in two `useEffect` dependency arrays but was missing from the component's props destructuring. It is now destructured as `uvGeometryVersion = 0`. `Viewport3DProps` already declares the optional field, and `App.tsx` supplies it. This is a JavaScript runtime failure (not a UV bake algorithm failure); it prevents the component from rendering at all. Source commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458`. Do not change UV bake/re-bake algorithms to address this startup error. Build and device validation remain pending.
