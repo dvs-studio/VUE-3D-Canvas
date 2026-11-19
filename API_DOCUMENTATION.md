@@ -372,9 +372,9 @@ Clicking `[⚡ Auto-Texture Model & Replace Layers]` converts these files into i
 
 
 
-## 13. Planned — toggle layers (not in the bundle yet)
+## 13. Historical design snapshot — toggle layers (superseded)
 
-The live bundle is still the node-editor build. The next change is specified in `LAYER_PBR_PLAN.md` and is not implemented. When it lands, the public behaviour is:
+The following bullets preserve the earlier design brief. They are not a statement of current implementation status; the live per-layer PBR implementation is described in section 17 and `self-host/README.md`.
 
 - A painted layer has three switches and an influence each: colour and reflection, bloom and emission, bump and displacement.
 - Bump maps luminance through a ramp, then all bump layers add into one height image.
@@ -391,3 +391,21 @@ The node panel is removed. A UV dock in that slot says Coming soon. Import Textu
 
 
 A Subdivision dock is specified and not built. It previews Catmull-Clark or Simple subdivision in the 3D view, keeps edges sharper than an angle, and offsets the preview by the combined height. The stored mesh is unchanged.
+
+
+## 17. 2026-11-19 — self-host export, UV and workspace task
+
+The following behaviours are implemented in the current self-host source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`:
+
+- **Export-only map package modes:** Classic writes individual selected maps; RGB+ORM writes an ORM texture with R=height-derived AO approximation, G=roughness, B=metallic; AO×Albedo writes an AO-multiplied colour map and its AO map. These modes affect downloaded image maps, not the model-file format. The AO generator samples local height differences to approximate cavities. It is not ray-traced AO or mesh-space ambient occlusion.
+- **Smart UV:** `SmartUVOptions.randomRotation` enables deterministic 0/90/180/270-degree island rotation driven by the layout seed. Same geometry and seed reproduce the same quarter-turn choices.
+- **Per-layer UV:** switching away from a layer stores its active UV channel; selecting a layer restores its assigned channel (or Original UV when unset). Changing a layer's UV assignment updates the active geometry only when that layer is selected. UV channel changes refresh the geometry/render path.
+- **Seamless UV gutter:** the UV Channels panel can dilate the active layer's texture edge colours into transparent pixels (0–16 px). This is a texture-pixel gutter operation; it does not edit UV coordinates.
+- **Bump / displacement Levels:** both conversions use the same grayscale Levels controls (input black/white, gamma, output black/white), preserving source alpha before setting the requested PBR channel.
+- **Workspace:** the desktop Tool Options bar is horizontally scrollable; Preferences stores an overall UI scale from 75.0% to 125.0% in 0.1% increments.
+- **Mountain gizmo:** Preferences imports, replaces or clears a custom binary GLB. Data is stored in IndexedDB on the current browser origin and reloaded by the gizmo. It is not cross-device sync and is not embedded into `.xblend` projects.
+- **Layer multi-select:** Merge combines visible, unlocked selected pixel layers only when their texture channel and PBR settings match; the merged layer occupies the original stack position. Move-to-Group assigns selected unlocked pixel layers to an existing group. Both operations are undo-checkpointed.
+
+**Package verification:** workflow run #156 / ID `44480073408` passed install, production build, `npm run host:sync`, blank-package checks, generated-output commit, ZIP packaging and upload. Source commit `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated self-host commit `c26301294da0465d5402b6800fbd15dab39cae59`; artifact `14508410797` (1,076,269 bytes). [Open the self-host artifact](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44480073408/artifacts/14508410797).
+
+CI is compile/package verification only. Manual checks remain for actual browser/Android behaviour, visual map correctness, AO quality and 4K processing time, UV switching/rebake/seams, Levels undo, Mountain IndexedDB persistence, layer merge ordering/undo, group movement and decimal UI scaling.
