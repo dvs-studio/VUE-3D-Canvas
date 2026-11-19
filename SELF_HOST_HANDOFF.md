@@ -4,7 +4,7 @@
 
 See **AGENTS.md** and **SELF_HOST_TASK_2026-11-19.md**.
 
-**Now (2026-11-19):** the filter/evening pack and the seven follow-up self-host tasks are implemented and packaged. Source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated self-host output `c26301294da0465d5402b6800fbd15dab39cae59`; CI run #156 passed. Latest UI extension run #166 also passed: scroll rails for options/docker/UV HUD, UV action ordering and anchor-preserving UI scaling. Suzanne candidate files remain unavailable in the current repository/attachment view; original Suzanne remains untouched. UV-island filter-edge gaps are recorded and unmodified pending a controlled fix. Next: manual visual, interaction, Android touch, UV, export-performance and undo validation. See `SELF_HOST_TASK_2026-11-19.md`.
+**Now (2026-11-19):** the follow-up self-host task set and UI extension are implemented and packaged. Source revision `f22d56f5a4f2177e50986555fd55ebc913c816f4`; generated self-host output `76d0293`; CI run #166 passed. Latest artifact: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44532889314/artifacts/14535450721. Suzanne candidates are still unavailable to this session; original Suzanne remains untouched. UV island-edge filter gaps are documented and not yet corrected. Next: manual visual, interaction, Android touch, UV, export-performance and undo validation. See `SELF_HOST_TASK_2026-11-19.md`.
 
 Safety ZIPs: do not delete. Self-host only.
 
