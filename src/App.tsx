@@ -156,6 +156,7 @@ export default function App() {
       refreshRateMode: 'on_demand',
       customRefreshRate: 60,
       gizmoStyle: 'box',
+      gizmoSizePercent: 100,
       tabletMode: false,
       navSensitivity: 1.0,
       optionsBarLayout: 'clusters',
@@ -163,6 +164,7 @@ export default function App() {
       architecturalRepair: false,
       gizmoLabelMargin: 31,
       gizmoLabelFontSize: 8,
+      autoHideFloatingDialogs: true,
     };
     try {
       const saved = localStorage.getItem('vue3d_preferences');
@@ -950,6 +952,53 @@ export default function App() {
     setLayers(prev => prev.map(l => l.id === groupId ? { ...l, collapsed: !l.collapsed } : l));
   };
 
+  const handleGroupSelectedLayers = (layerIds: string[]) => {
+    const ids = layerIds.filter(id => {
+      const layer = layers.find(l => l.id === id);
+      return layer && !layer.isGroup;
+    });
+    if (ids.length < 1) return;
+    const groupId = `group_${Date.now()}`;
+    const groupCount = layers.filter(l => l.isGroup).length + 1;
+    const newGroup: Layer = {
+      id: groupId,
+      name: `Group ${groupCount}`,
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas: document.createElement('canvas'),
+      ctx: document.createElement('canvas').getContext('2d')!,
+      channel: 'color',
+      isGroup: true,
+      collapsed: false,
+    };
+    newGroup.canvas.width = 1024;
+    newGroup.canvas.height = 1024;
+    const updated = layers.map(l => ids.includes(l.id) ? { ...l, groupId } : l);
+    updated.push(newGroup);
+    setLayers(updated);
+    setActiveLayerId(groupId);
+    undoBuffer.pushState('Group Selected Layers', updated);
+  };
+
+  const handleDeleteSelectedLayers = (layerIds: string[]) => {
+    const ids = new Set(layerIds);
+    if (ids.size === 0) return;
+    const updated = layers.filter(l => !ids.has(l.id));
+    if (updated.length === 0) return;
+    setLayers(updated);
+    if (ids.has(activeLayerId)) setActiveLayerId(updated.find(l => !l.isGroup)?.id || updated[0].id);
+    undoBuffer.pushState('Delete Selected Layers', updated);
+    notifyTextureUpdated();
+  };
+
+  const handleRenameGroup = (groupId: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setLayers(prev => prev.map(l => l.id === groupId && l.isGroup ? { ...l, name: trimmed } : l));
+  };
+
   const handleConvertToEmissive = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
     if (!target) return;
@@ -1733,6 +1782,7 @@ export default function App() {
                 selectedVertices={xrayVertexSelection}
                 onUpdateSelectedVertices={setXrayVertexSelection}
                 gizmoStyle={preferences.gizmoStyle}
+                gizmoSizePercent={preferences.gizmoSizePercent ?? 100}
                 constantRefresh={preferences.constantRefresh}
                 refreshRateMode={preferences.refreshRateMode}
                 customRefreshRate={preferences.customRefreshRate}
@@ -1883,6 +1933,9 @@ export default function App() {
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
                             onAddGroup={handleAddGroup}
+                            onGroupSelectedLayers={handleGroupSelectedLayers}
+                            onDeleteSelectedLayers={handleDeleteSelectedLayers}
+                            onRenameGroup={handleRenameGroup}
                             onToggleGroupCollapse={handleToggleGroupCollapse}
                             onDeleteLayer={handleDeleteLayer}
                             onDuplicateLayer={handleDuplicateLayer}
@@ -2052,6 +2105,9 @@ export default function App() {
                       onSelectLayer={handleSelectLayer}
                       onAddLayer={handleAddLayer}
                       onAddGroup={handleAddGroup}
+                            onGroupSelectedLayers={handleGroupSelectedLayers}
+                            onDeleteSelectedLayers={handleDeleteSelectedLayers}
+                            onRenameGroup={handleRenameGroup}
                       onToggleGroupCollapse={handleToggleGroupCollapse}
                       onDeleteLayer={handleDeleteLayer}
                       onDuplicateLayer={handleDuplicateLayer}
@@ -2336,6 +2392,7 @@ export default function App() {
         geometry={activeGeometry}
         activeUVChannel={activeUVChannel}
         defaultColor={primaryColor}
+        autoHideOnBlur={preferences.autoHideFloatingDialogs !== false}
         onClose={() => setIsTextureFilterOpen(false)}
         onApply={handleApplyTextureFilter}
       />

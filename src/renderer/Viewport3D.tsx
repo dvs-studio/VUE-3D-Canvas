@@ -92,6 +92,7 @@ interface Viewport3DProps {
   selectedVertices?: Set<number>;
   onUpdateSelectedVertices?: (verts: Set<number>) => void;
   gizmoStyle?: GizmoStyle;
+  gizmoSizePercent?: number;
   constantRefresh?: boolean;
   navSensitivity?: number;
   refreshRateMode?: 'on_demand' | '30' | '60' | '120' | 'custom' | 'uncapped';
@@ -147,6 +148,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   selectedVertices,
   onUpdateSelectedVertices,
   gizmoStyle = 'box',
+  gizmoSizePercent = 100,
   constantRefresh = false,
   navSensitivity = 1.0,
   refreshRateMode = 'on_demand',
@@ -1958,6 +1960,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           invertNav={invertNav}
           onToggleInvertNav={handleToggleInvertNav}
           gizmoStyle={gizmoStyle}
+          gizmoSizePercent={gizmoSizePercent}
           zoomPulseTrigger={zoomPulseTrigger}
         />
       )}

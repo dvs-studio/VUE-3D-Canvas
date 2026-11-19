@@ -123,6 +123,8 @@ export interface PreferencesState {
   refreshRateMode: RefreshRateMode;
   customRefreshRate: number;
   gizmoStyle: GizmoStyle;
+  /** Orientation gizmo footprint scale percent (50–200). */
+  gizmoSizePercent: number;
   tabletMode: boolean;
   navSensitivity: number;
   optionsBarLayout: OptionsBarLayout;
@@ -130,6 +132,8 @@ export interface PreferencesState {
   architecturalRepair: boolean;
   gizmoLabelMargin: number;
   gizmoLabelFontSize: number;
+  /** Hide floating filter/settings dialogs when they lose focus. */
+  autoHideFloatingDialogs: boolean;
 }
 
 export interface BloomSettings {

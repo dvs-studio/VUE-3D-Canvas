@@ -38,6 +38,7 @@ interface BoxGizmoProps {
   invertNav?: boolean;
   onToggleInvertNav?: () => void;
   gizmoStyle?: GizmoStyle;
+  gizmoSizePercent?: number;
   zoomPulseTrigger?: number;
 }
 
@@ -56,6 +57,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   invertNav = false,
   onToggleInvertNav,
   gizmoStyle = 'box',
+  gizmoSizePercent = 100,
   zoomPulseTrigger = 0,
 }) => {
   // Correctly aligned 3D angles for the CSS fallback and projected 2D arrows.
@@ -346,10 +348,11 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
     } catch {}
   };
 
+  const sizeScale = Math.max(0.5, Math.min(2, (gizmoSizePercent || 100) / 100));
   return (
-    <div className="absolute top-3 right-3 z-30 flex flex-col items-center select-none pointer-events-auto">
+    <div className="absolute top-3 right-3 z-30 flex flex-col items-center select-none pointer-events-auto" style={{ transform: `scale(${sizeScale})`, transformOrigin: 'top right' }}>
       {/* Gizmo Header Badge */}
-      {gizmoStyle==='mountain'&&<div className="mb-1 flex flex-col gap-1 w-36 rounded border border-[#555] bg-[#252525]/95 p-1.5 text-[9px] text-[#ccc]">
+      {gizmoStyle==='mountain'&&false&&<div className="mb-1 flex flex-col gap-1 w-36 rounded border border-[#555] bg-[#252525]/95 p-1.5 text-[9px] text-[#ccc]">
         <div className="flex items-center justify-between"><span>Axis colour influence</span><strong>{mountainInfluence}%</strong></div>
         <input aria-label="Mountain axis colour influence" type="range" min="0" max="100" value={mountainInfluence} onChange={e=>setMountainInfluence(Number(e.target.value))} className="w-full accent-blue-500"/>
         <button type="button" onClick={()=>mountainInputRef.current?.click()} className="rounded border border-[#666] px-2 py-1 hover:bg-[#3a3a3a]">{mountainGlbData?'Replace Mountain GLB':'Use Your Mountain GLB'}</button>
@@ -393,8 +396,8 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
                 type="button"
                 onClick={() => onSnapView(axis.view)}
                 title={`Snap to ${axis.label} direction`}
-                className="absolute pointer-events-auto rounded bg-[#171717]/85 border border-[#555]/70 px-1 py-0.5 shadow whitespace-nowrap" style={{fontSize: `${gizmoLabelPrefs.fontSize}px`}}
-                style={{ left: `calc(50% + ${axis.point.x * gizmoLabelPrefs.margin}px)`, top: `calc(50% - ${axis.point.y * gizmoLabelPrefs.margin}px)`, transform: 'translate(-50%, -50%)', color: axis.color, opacity: axis.positive ? (axis.point.z > 0 ? 1 : 0.72) : (axis.point.z > 0 ? 0.72 : 0.35), borderColor: axis.color, backgroundColor: axis.positive ? 'rgba(20,20,20,.9)' : 'rgba(20,20,20,.45)' }}
+                className="absolute pointer-events-auto rounded bg-[#171717]/85 border border-[#555]/70 px-1 py-0.5 shadow whitespace-nowrap"
+                style={{ fontSize: `${gizmoLabelPrefs.fontSize}px`, left: `calc(50% + ${axis.point.x * gizmoLabelPrefs.margin}px)`, top: `calc(50% - ${axis.point.y * gizmoLabelPrefs.margin}px)`, transform: 'translate(-50%, -50%)', color: axis.color, opacity: axis.positive ? (axis.point.z > 0 ? 1 : 0.72) : (axis.point.z > 0 ? 0.72 : 0.35), borderColor: axis.color, backgroundColor: axis.positive ? 'rgba(20,20,20,.9)' : 'rgba(20,20,20,.45)' }}
               >
                 {arrowFor(axis.point.x, axis.point.y)} {axis.label.replace(/[+-]/, '')}
               </button>

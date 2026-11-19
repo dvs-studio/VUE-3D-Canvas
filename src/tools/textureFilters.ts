@@ -23,6 +23,25 @@ export interface TextureFilterConfig {
   levels: number;
   directionSpace: 'uv' | 'object' | 'world';
   axis: 'X' | 'Y' | 'Z';
+  /** Hashing: cell size in pixels (2–64). */
+  hashSize: number;
+  /** Hashing: activation density 0–100. */
+  hashDensity: number;
+  /** Hashing: PRNG seed. */
+  hashSeed: number;
+  /** Hashing feature distribution. */
+  hashAlgorithm: 'sparse' | 'cell' | 'grid-jitter';
+  /** Wood: band, ring, or both. */
+  woodGrainType: 'band' | 'ring' | 'band+ring';
+  bandFrequency: number;
+  ringFrequency: number;
+  ringNoise: number;
+  woodRoughness: number;
+  woodSeed: number;
+  /** Optional dither pattern. */
+  ditherPattern: 'hash' | 'bayer';
+  /** Powder / noise seed. */
+  filterSeed: number;
   woodSources: WoodSource[];
   objectPositionMap?: Float32Array;
   objectMapWidth?: number;
@@ -30,7 +49,11 @@ export interface TextureFilterConfig {
 }
 export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   kind: 'wood', source: 'color', color: '#8a5a35', edge: 65, noise: 25, bleed: 18, blur: 1,
-  angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z', woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}]
+  angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z',
+  hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
+  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17,
+  ditherPattern: 'hash', filterSeed: 71,
+  woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}]
 };
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 const hash=(x:number,y:number,seed:number)=>{const n=Math.sin(x*127.1+y*311.7+seed*74.7)*43758.5453;return n-Math.floor(n);};
@@ -98,9 +121,33 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const i=(y*w+x)*4;let rr=0,gg=0,bb=0,aa=0;
      for(const row of stack){
        const density=clamp(Number(row.item.density)||1,1,100);
-       const mapped=cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h; const mi=(y*w+x)*3; const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0; const grainCoord=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28; const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz; const wave=Math.sin((grainCoord*128*dx+flow*12*dy)*(0.008+density*0.0007)+Math.sin(flow*18)*2.3)+Math.sin((grainCoord*128*dx+flow*12*dy)*(0.002+density*0.00018))*0.7;
-       const n=(hash(x,y,13+stack.indexOf(row)*37)-0.5)*noise*70;
-       const grain=clamp(0.5+wave*0.22+n/255,0,1);
+       const mapped=cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h; const mi=(y*w+x)*3; const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0;
+       const grainCoord=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28;
+       const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz;
+       const grainType=cfg.woodGrainType||'band+ring';
+       const bandFreq=0.004+(clamp(cfg.bandFrequency??40,1,100)/100)*0.04;
+       const ringFreq=2+(clamp(cfg.ringFrequency??35,1,100)/100)*48;
+       const ringN=clamp(cfg.ringNoise??25,0,100)/100;
+       const woodSeed=Math.floor(cfg.woodSeed||17);
+       const densScale=0.5+density/100;
+       // Banding: parallel waves along grain direction
+       const bandPhase=(grainCoord*128*dx+flow*12*dy)*bandFreq*densScale;
+       const bandWave=Math.sin(bandPhase+Math.sin(flow*14+woodSeed)*1.8)+0.55*Math.sin(bandPhase*0.31);
+       // Rings: radial distance in plane perpendicular to axis, warped by ring noise
+       const rx=cfg.axis==='X'?oy-0.5:cfg.axis==='Y'?ox-0.5:ox-0.5;
+       const ry=cfg.axis==='X'?oz-0.5:cfg.axis==='Y'?oz-0.5:oy-0.5;
+       const ringWarp=(hash(x,y,woodSeed+9)-0.5)*ringN*0.55+(hash(x,y,woodSeed+11)-0.5)*ringN*0.25;
+       const ringDist=Math.sqrt(rx*rx+ry*ry)+ringWarp;
+       const ringWave=Math.sin(ringDist*ringFreq+Math.sin(ringDist*6+woodSeed)*ringN*2.2);
+       let wave=0;
+       if(grainType==='band')wave=bandWave;
+       else if(grainType==='ring')wave=ringWave;
+       else wave=bandWave*0.55+ringWave*0.45;
+       const n=(hash(x,y,woodSeed+13+stack.indexOf(row)*37)-0.5)*(noise+clamp(cfg.randomization??20,0,100)/100)*55;
+       let grain=clamp(0.5+wave*0.24+n/255,0,1);
+       // Roughness frays edges by mixing local hash into contrast
+       const rough=clamp(cfg.woodRoughness??30,0,100)/100;
+       if(rough>0){const rJ=(hash(x,y,woodSeed+41)-0.5)*rough;grain=clamp(grain+rJ*0.35,0,1);}
        const base=row.image?sample(row.image,x,y):row.color;
        const contrast=clamp((grain-0.5)*(1+edge*3)+0.5,0,1);
        const tint=0.55+contrast*0.9;
@@ -127,19 +174,25 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  }
  if(cfg.kind==='dither'){
    const levels=Math.max(2,Math.round(cfg.levels));
-   for(let i=0;i<data.length;i+=4){const n=(hash((i/4)%w,Math.floor(i/4/w),71)-0.5)*noise*50;for(let k=0;k<3;k++){const v=clamp(data[i+k]+n,0,255);dst[i+k]=Math.round(v/255*(levels-1))*255/(levels-1);}dst[i+3]=data[i+3];}
+   const seed=Math.floor(cfg.filterSeed??71);
+   const bayer4=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+   for(let i=0;i<data.length;i+=4){
+     const x=(i/4)%w,y=Math.floor(i/4/w);
+     const n=cfg.ditherPattern==='bayer'?((bayer4[y&3][x&3]/15)-0.5)*noise*60:(hash(x,y,seed)-0.5)*noise*50;
+     for(let k=0;k<3;k++){const v=clamp(data[i+k]+n,0,255);dst[i+k]=Math.round(v/255*(levels-1))*255/(levels-1);}dst[i+3]=data[i+3];
+   }
    return out;
  }
  if(cfg.kind==='noise-shader'){
-   // Random darkness is blended into existing pixel colour; no geometric/pixel displacement.
-   for(let i=0;i<data.length;i+=4){const x=(i/4)%w,y=Math.floor(i/4/w);const darkness=1-hash(x,y,71)*(noise*0.78);for(let k=0;k<3;k++)dst[i+k]=clamp(data[i+k]*darkness,0,255);dst[i+3]=data[i+3];}
+   const seed=Math.floor(cfg.filterSeed??71);
+   for(let i=0;i<data.length;i+=4){const x=(i/4)%w,y=Math.floor(i/4/w);const darkness=1-hash(x,y,seed)*(noise*0.78);for(let k=0;k<3;k++)dst[i+k]=clamp(data[i+k]*darkness,0,255);dst[i+3]=data[i+3];}
    return out;
  }
  if(cfg.kind==='powderiser'){
-   // Break the layer into small dust fragments, scatter them along the chosen drift, and fade the source.
    const strength=clamp(noise/100,0,1),drift=clamp(cfg.shift||12,1,48);
-   for(let i=0;i<data.length;i+=4){const x=(i/4)%w,y=Math.floor(i/4/w),r=hash(x,y,211);
-     if(r<strength){const sx=clamp(Math.round(x+dx*drift*(0.25+hash(x,y,19))),0,w-1),sy=clamp(Math.round(y+dy*drift*(0.25+hash(x,y,29))),0,h-1);const j=(sy*w+sx)*4;dst[j]=data[i];dst[j+1]=data[i+1];dst[j+2]=data[i+2];dst[j+3]=Math.max(dst[j+3],Math.round(data[i+3]*(0.25+0.65*(1-strength))));dst[i+3]=Math.round(data[i+3]*(1-strength)*0.22);}
+   const seed=Math.floor(cfg.filterSeed??211);
+   for(let i=0;i<data.length;i+=4){const x=(i/4)%w,y=Math.floor(i/4/w),r=hash(x,y,seed);
+     if(r<strength){const sx=clamp(Math.round(x+dx*drift*(0.25+hash(x,y,seed+19))),0,w-1),sy=clamp(Math.round(y+dy*drift*(0.25+hash(x,y,seed+29))),0,h-1);const j=(sy*w+sx)*4;dst[j]=data[i];dst[j+1]=data[i+1];dst[j+2]=data[i+2];dst[j+3]=Math.max(dst[j+3],Math.round(data[i+3]*(0.25+0.65*(1-strength))));dst[i+3]=Math.round(data[i+3]*(1-strength)*0.22);}
      else {dst[i]=data[i];dst[i+1]=data[i+1];dst[i+2]=data[i+2];dst[i+3]=Math.round(data[i+3]*(1-strength*0.7));}
    }
    return out;
@@ -148,12 +201,32 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  const maskAt=(x:number,y:number,angleOffset:number,spacing:number)=>{
    const a=angle+angleOffset, nx=-Math.sin(a),ny=Math.cos(a);
    const phase=(x*nx+y*ny)/Math.max(2,spacing);
-   return Math.abs(phase-Math.round(phase))<0.22;
+   const halfWidth=0.12+0.2*(cfg.bleed/100);
+   return Math.abs(phase-Math.round(phase))<halfWidth;
+ };
+ const hashSize=Math.max(2,Math.round(cfg.hashSize||10));
+ const hashDensity=clamp((cfg.hashDensity??28)/100,0,1);
+ const hashSeed=Math.floor(cfg.hashSeed||23);
+ const hashAlgo=cfg.hashAlgorithm||'cell';
+ const hashActive=(x:number,y:number)=>{
+   if(hashAlgo==='sparse'){
+     return hash(x,y,hashSeed)<hashDensity;
+   }
+   if(hashAlgo==='grid-jitter'){
+     const jx=(hash(Math.floor(x/hashSize),Math.floor(y/hashSize),hashSeed+3)-0.5)*hashSize*0.45;
+     const jy=(hash(Math.floor(x/hashSize),Math.floor(y/hashSize),hashSeed+7)-0.5)*hashSize*0.45;
+     const cx=Math.floor((x+jx)/hashSize), cy=Math.floor((y+jy)/hashSize);
+     return hash(cx,cy,hashSeed)<hashDensity;
+   }
+   // cell: one decision per cell
+   const cx=Math.floor(x/hashSize), cy=Math.floor(y/hashSize);
+   return hash(cx,cy,hashSeed)<hashDensity;
  };
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-   let active=cfg.kind==='hashing'?hash(x,y,23)<0.28:maskAt(x,y,0,cfg.lineSpacing);
+   let active=cfg.kind==='hashing'?hashActive(x,y):maskAt(x,y,0,cfg.lineSpacing);
    if(cfg.kind==='cross-hatching')active=maskAt(x,y,0,cfg.lineSpacing)||maskAt(x,y,Math.PI/2,cfg.lineSpacing);
-   const jitter=(hash(x,y,43)-0.5)*cfg.randomization/100*cfg.shift;
+   if(cfg.kind==='hatching')active=maskAt(x,y,0,cfg.lineSpacing);
+   const jitter=(hash(x,y,hashSeed+20)-0.5)*cfg.randomization/100*cfg.shift;
    const shift=active?cfg.shift+jitter:0;
    const sx=x-dx*shift,sy=y-dy*shift;
    const p=sample(source,sx,sy);const i=(y*w+x)*4;

@@ -120,6 +120,27 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
             <label className="block space-y-1 text-[11px]"><span className="flex justify-between"><span>Font size</span><b className="font-mono">{preferences.gizmoLabelFontSize ?? 8}px</b></span><input type="range" min="6" max="13" step="1" value={preferences.gizmoLabelFontSize ?? 8} onChange={e=>onUpdatePreferences({gizmoLabelFontSize:Number(e.target.value)})} className="w-full accent-blue-500"/></label>
           </div>
 
+          {/* Section 2c: Gizmo size and floating dialog behaviour */}
+          <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2.5">
+            <span className="font-bold text-[#eee] text-xs">Gizmo size &amp; focus</span>
+            <label className="block space-y-1 text-[11px]">
+              <span className="flex justify-between"><span>Gizmo size</span><b className="font-mono">{preferences.gizmoSizePercent ?? 100}%</b></span>
+              <input type="range" min="50" max="200" step="1" value={preferences.gizmoSizePercent ?? 100}
+                onChange={e => onUpdatePreferences({ gizmoSizePercent: Number(e.target.value) })}
+                className="w-full accent-blue-500" />
+            </label>
+            <p className="text-[10px] text-[#888]">Mountain GLB replacement stays browser-local (IndexedDB). Prefer Preferences-driven size so the viewport overlay stays quiet.</p>
+            <label className="flex items-start gap-2.5 cursor-pointer bg-[#323232] p-2.5 rounded border border-[#404040]">
+              <input type="checkbox" className="mt-0.5"
+                checked={preferences.autoHideFloatingDialogs !== false}
+                onChange={e => onUpdatePreferences({ autoHideFloatingDialogs: e.target.checked })} />
+              <span>
+                <strong className="block text-[11px] text-[#eee]">Auto-hide floating dialogs when unfocused</strong>
+                <span className="text-[9px] text-[#888] block">Layer Filter and similar panels hide when focus leaves them so they do not cover the canvas.</span>
+              </span>
+            </label>
+          </div>
+
           {/* Section 3: Tablet Mode & Brush Parameter Sub-Operator */}
           <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2.5">
             <div className="flex items-center justify-between">

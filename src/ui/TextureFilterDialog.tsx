@@ -5,9 +5,9 @@ import * as THREE from 'three';
 import { buildObjectSpacePositionMap } from '../tools/textureFilters';
 import { DEFAULT_TEXTURE_FILTER, TextureFilterConfig, TextureFilterKind, WoodSource, transformTexturePixels } from '../tools/textureFilters';
 
-interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
+interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; autoHideOnBlur?:boolean; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
 const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic'};
-export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,onClose,onApply})=>{
+export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,autoHideOnBlur=false,onClose,onApply})=>{
  const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor});
  const [windowOffset,setWindowOffset]=useState({x:0,y:0});
  const dragRef=useRef<{x:number;y:number;left:number;top:number}|null>(null);
@@ -35,8 +35,8 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,a
  useEffect(()=>{const canvas=previewCanvas.current;if(!canvas||!preview)return;canvas.width=preview.width;canvas.height=preview.height;canvas.getContext('2d')?.putImageData(preview,0,0);},[preview]);
  const isWood=cfg.kind==='wood';const isDirectional=['hatching','cross-hatching','hashing'].includes(cfg.kind);
  if(!isOpen)return null;
- return <div className="fixed inset-0 z-[70] bg-black/65 flex items-center justify-center p-2 sm:p-4">
-  <div style={{transform:`translate(${windowOffset.x}px, ${windowOffset.y}px)`}} className="w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd]">
+ return <div className="fixed inset-0 z-[70] bg-black/65 flex items-center justify-center p-2 sm:p-4" onMouseDown={e=>{if(autoHideOnBlur&&e.target===e.currentTarget)onClose();}}>
+  <div tabIndex={-1} style={{transform:`translate(${windowOffset.x}px, ${windowOffset.y}px)`}} className="w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd] outline-none">
    <header onPointerDown={handleHeaderPointerDown} onPointerMove={handleHeaderPointerMove} onPointerUp={handleHeaderPointerUp} onPointerCancel={handleHeaderPointerUp} style={{touchAction:touchDragArmed?"none":"pan-y"}} className="flex items-center justify-between p-3 bg-[#252525] border-b border-[#444] shrink-0 cursor-move select-none"><div className="flex items-center gap-2 text-sm font-bold"><Move className="w-3 h-3 text-[#888]"/><Filter className="w-4 h-4 text-blue-400"/> Layer Filter — Selected Layer</div><button onClick={onClose} aria-label="Close"><X className="w-4 h-4"/></button></header>
    <div className="flex-1 min-h-0 overflow-auto p-3 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] gap-3">
     <section className="space-y-3 min-w-0">
@@ -55,12 +55,26 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,a
       </div>)}
       <p className="text-[10px] text-[#999]">Each stacked source contributes grain. Density is a numeric per-source influence weight and spatial frequency.</p>
      </div>}
-     {isWood&&<><Slider label="Edge Definition" value={cfg.edge} min={0} max={100} onChange={v=>update({edge:v})}/><Slider label="Noise" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Bleed / Grain Blend" value={cfg.bleed} min={0} max={100} onChange={v=>update({bleed:v})}/><Slider label="Blur" value={cfg.blur} min={0} max={20} onChange={v=>update({blur:v})}/></>}
+     {isWood&&<><label className="block text-xs">Grain type<select value={cfg.woodGrainType||'band+ring'} onChange={e=>update({woodGrainType:e.target.value as TextureFilterConfig['woodGrainType']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2"><option value="band">Banding</option><option value="ring">Rings</option><option value="band+ring">Band + Ring</option></select></label><Slider label="Band frequency" value={cfg.bandFrequency??40} min={1} max={100} onChange={v=>update({bandFrequency:v})}/><Slider label="Ring frequency" value={cfg.ringFrequency??35} min={1} max={100} onChange={v=>update({ringFrequency:v})}/><Slider label="Ring noise" value={cfg.ringNoise??25} min={0} max={100} onChange={v=>update({ringNoise:v})}/><Slider label="Roughness" value={cfg.woodRoughness??30} min={0} max={100} onChange={v=>update({woodRoughness:v})}/><Slider label="Randomisation" value={cfg.randomization} min={0} max={100} onChange={v=>update({randomization:v})}/><Slider label="Wood seed" value={cfg.woodSeed??17} min={1} max={999} onChange={v=>update({woodSeed:v})}/><Slider label="Edge Definition" value={cfg.edge} min={0} max={100} onChange={v=>update({edge:v})}/><Slider label="Noise" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Bleed / Grain Blend" value={cfg.bleed} min={0} max={100} onChange={v=>update({bleed:v})}/><Slider label="Blur" value={cfg.blur} min={0} max={20} onChange={v=>update({blur:v})}/></>}
      {isDirectional&&<><label className="block text-xs">Direction Constraint<select value={cfg.directionSpace} onChange={e=>update({directionSpace:e.target.value as TextureFilterConfig['directionSpace']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2"><option value="uv">UV / Image</option><option value="object">Object Axis</option><option value="world">World Axis</option></select></label>{cfg.directionSpace!=='uv'&&<label className="block text-xs">Axis<select value={cfg.axis} onChange={e=>update({axis:e.target.value as TextureFilterConfig['axis']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2"><option value="X">X</option><option value="Y">Y</option><option value="Z">Z</option></select></label>}<Slider label={cfg.directionSpace==='uv'?'Direction Angle':'Axis Angle Offset'} value={cfg.angle} min={-180} max={180} onChange={v=>update({angle:v})}/><Slider label="Pixel Shift" value={cfg.shift} min={0} max={40} onChange={v=>update({shift:v})}/><Slider label="Line Spacing" value={cfg.lineSpacing} min={2} max={80} onChange={v=>update({lineSpacing:v})}/><Slider label="Randomization" value={cfg.randomization} min={0} max={100} onChange={v=>update({randomization:v})}/><p className="text-[10px] text-[#aaa]">Displacement is computed in image/UV coordinates. Object/world axis controls currently use a simplified UV angle mapping; a per-model UV/world transform is still needed for exact coordinate-space displacement.</p></>}
+     {cfg.kind==='hashing'&&<div className="space-y-2 p-2 border border-[#555] rounded">
+      <div className="text-xs font-semibold">Hashing</div>
+      <label className="block text-xs">Algorithm
+        <select value={cfg.hashAlgorithm||'cell'} onChange={e=>update({hashAlgorithm:e.target.value as TextureFilterConfig['hashAlgorithm']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2">
+          <option value="sparse">Sparse (per-pixel)</option>
+          <option value="cell">Cell (block decision)</option>
+          <option value="grid-jitter">Grid + jitter</option>
+        </select>
+      </label>
+      <Slider label="Hash cell size (px)" value={cfg.hashSize??10} min={2} max={64} onChange={v=>update({hashSize:v})}/>
+      <Slider label="Hash density %" value={cfg.hashDensity??28} min={1} max={100} onChange={v=>update({hashDensity:v})}/>
+      <Slider label="Hash seed" value={cfg.hashSeed??23} min={1} max={999} onChange={v=>update({hashSeed:v})}/>
+      <p className="text-[10px] text-[#aaa]">Cell size controls feature scale. Density is how many cells/pixels activate the directional shift. Seed keeps results stable when re-applying.</p>
+     </div>}
      {cfg.kind==='mosaic'&&<Slider label="Block Size" value={cfg.mosaicSize} min={2} max={64} onChange={v=>update({mosaicSize:v})}/>}
-     {cfg.kind==='dither'&&<Slider label="Tonal Levels" value={cfg.levels} min={2} max={16} onChange={v=>update({levels:v})}/>}
-     {cfg.kind==='powderiser'&&<><Slider label="Dust breakup" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Dust drift distance" value={cfg.shift} min={1} max={48} onChange={v=>update({shift:v})}/><Slider label="Drift angle" value={cfg.angle} min={-180} max={180} onChange={v=>update({angle:v})}/></>}
-     {cfg.kind==='noise-shader'&&<Slider label="Random darkness blend" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/>}
+     {cfg.kind==='dither'&&<><Slider label="Tonal Levels" value={cfg.levels} min={2} max={16} onChange={v=>update({levels:v})}/><label className="block text-xs">Pattern<select value={cfg.ditherPattern||'hash'} onChange={e=>update({ditherPattern:e.target.value as TextureFilterConfig['ditherPattern']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2"><option value="hash">Hash</option><option value="bayer">Bayer 4x4</option></select></label><Slider label="Pattern seed" value={cfg.filterSeed??71} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
+     {cfg.kind==='powderiser'&&<><Slider label="Dust breakup" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Dust drift distance" value={cfg.shift} min={1} max={48} onChange={v=>update({shift:v})}/><Slider label="Drift angle" value={cfg.angle} min={-180} max={180} onChange={v=>update({angle:v})}/><Slider label="Powder seed" value={cfg.filterSeed??211} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
+     {cfg.kind==='noise-shader'&&<><Slider label="Random darkness blend" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Noise seed" value={cfg.filterSeed??71} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
      <button onClick={()=>setCfg({...DEFAULT_TEXTURE_FILTER,color:defaultColor})} className="w-full border border-[#555] rounded p-1.5 text-xs flex items-center justify-center gap-1"><RotateCcw className="w-3 h-3"/>Reset Settings</button>
     </section>
     <section className="min-w-0 flex flex-col gap-2">

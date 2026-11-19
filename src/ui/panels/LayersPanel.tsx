@@ -38,6 +38,9 @@ interface LayersPanelProps {
   onAddLayer: () => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
+  onGroupSelectedLayers?: (layerIds: string[]) => void;
+  onDeleteSelectedLayers?: (layerIds: string[]) => void;
+  onRenameGroup?: (groupId: string, name: string) => void;
   onDeleteLayer: (id: string) => void;
   onDuplicateLayer: (id: string) => void;
   onToggleVisibility: (id: string) => void;
@@ -81,6 +84,9 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onAddLayer,
   onAddGroup,
   onToggleGroupCollapse,
+  onGroupSelectedLayers,
+  onDeleteSelectedLayers,
+  onRenameGroup,
   onDeleteLayer,
   onDuplicateLayer,
   onToggleVisibility,
@@ -104,6 +110,9 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onImportTexture,
   onBakeTextureFill,
 }) => {
+  const [checkedLayerIds, setCheckedLayerIds] = useState<string[]>([]);
+  const [longPressMenu, setLongPressMenu] = useState<{ x: number; y: number } | null>(null);
+  const longPressTimer = React.useRef<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -228,6 +237,15 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               key={layer.id}
               onClick={() => onSelectLayer(layer.id)}
               onContextMenu={(e) => handleContextMenu(e, layer.id)}
+              onPointerDown={(e) => {
+                if (checkedLayerIds.length < 2 || !checkedLayerIds.includes(layer.id)) return;
+                if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+                longPressTimer.current = window.setTimeout(() => {
+                  setLongPressMenu({ x: e.clientX, y: e.clientY });
+                }, 480);
+              }}
+              onPointerUp={() => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }}
+              onPointerLeave={() => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }}
               className={`flex items-center gap-1.5 p-1.5 rounded cursor-pointer transition-colors border relative ${
                 layer.groupId ? 'ml-4 border-l-2 border-l-[#e5a038]' : ''
               } ${
@@ -236,6 +254,17 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                   : 'bg-[#303030] border-[#444] text-[#ccc] hover:bg-[#393939]'
               }`}
             >
+              <input
+                type="checkbox"
+                className="w-3 h-3 accent-blue-500 shrink-0"
+                checked={checkedLayerIds.includes(layer.id)}
+                title="Select layer for group / multi actions"
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setCheckedLayerIds(prev => e.target.checked ? [...prev, layer.id] : prev.filter(id => id !== layer.id));
+                }}
+              />
               {/* Visibility eye */}
               <button
                 onClick={(e) => {
@@ -342,7 +371,23 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               <Upload className="w-3.5 h-3.5" />
             </button>
           )}
-          {onAddGroup && (
+          
+        {checkedLayerIds.length > 0 && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-[#2a2a2a] border-b border-[#444] text-[10px]">
+            <span className="text-[#aaa]">{checkedLayerIds.length} selected</span>
+            {onGroupSelectedLayers && (
+              <button type="button" className="px-1.5 py-0.5 rounded border border-[#666] hover:bg-[#3a3a3a]"
+                onClick={() => { onGroupSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); }}>Group</button>
+            )}
+            {onDeleteSelectedLayers && (
+              <button type="button" className="px-1.5 py-0.5 rounded border border-[#666] hover:bg-[#3a3a3a] text-red-300"
+                onClick={() => { onDeleteSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); }}>Delete</button>
+            )}
+            <button type="button" className="px-1.5 py-0.5 rounded border border-[#555] text-[#888]"
+              onClick={() => setCheckedLayerIds([])}>Clear</button>
+          </div>
+        )}
+        {onAddGroup && (
             <button
               onClick={onAddGroup}
               className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#e5a038] rounded border border-[#505050] transition-colors"
@@ -399,7 +444,24 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       </div>
 
       {/* Layer Right-Click Context Menu */}
-      {contextMenu && (
+      
+      {longPressMenu && checkedLayerIds.length >= 2 && (
+        <div className="fixed z-[80] bg-[#2b2b2b] border border-[#555] rounded shadow-xl text-[11px] py-1 min-w-[160px]"
+          style={{ left: longPressMenu.x, top: longPressMenu.y }}
+          onMouseLeave={() => setLongPressMenu(null)}>
+          {onGroupSelectedLayers && (
+            <button type="button" className="block w-full text-left px-3 py-1.5 hover:bg-[#3d7fb8]/40"
+              onClick={() => { onGroupSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); setLongPressMenu(null); }}>Group selected</button>
+          )}
+          {onDeleteSelectedLayers && (
+            <button type="button" className="block w-full text-left px-3 py-1.5 hover:bg-red-900/40 text-red-200"
+              onClick={() => { onDeleteSelectedLayers(checkedLayerIds); setCheckedLayerIds([]); setLongPressMenu(null); }}>Delete selected</button>
+          )}
+          <button type="button" className="block w-full text-left px-3 py-1.5 hover:bg-[#444] text-[#888]"
+            onClick={() => setLongPressMenu(null)}>Cancel</button>
+        </div>
+      )}
+{contextMenu && (
         <div
           className="fixed z-50 bg-[#303030] border border-[#555] rounded shadow-2xl py-1 text-xs w-64 cs5-outset"
           style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
