@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
-import { X, Filter, Upload, RotateCcw } from 'lucide-react';
+import { X, Filter, Upload, RotateCcw, Move } from 'lucide-react';
 import { Layer } from '../core/types';
 import { DEFAULT_TEXTURE_FILTER, TextureFilterConfig, TextureFilterKind, WoodSource, transformTexturePixels } from '../tools/textureFilters';
 
@@ -7,6 +7,24 @@ interface Props { isOpen:boolean; activeLayer?:Layer; defaultColor:string; onClo
 const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic'};
 export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultColor,onClose,onApply})=>{
  const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor});
+ const [windowOffset,setWindowOffset]=useState({x:0,y:0});
+ const dragRef=useRef<{x:number;y:number;left:number;top:number}|null>(null);
+ const lastTapRef=useRef(0);
+ const [touchDragArmed,setTouchDragArmed]=useState(false);
+ const handleHeaderPointerDown=(e:React.PointerEvent<HTMLDivElement>)=>{
+  if(e.pointerType==='touch'){
+   const now=Date.now();
+   if(now-lastTapRef.current<360){setTouchDragArmed(true);dragRef.current={x:e.clientX,y:e.clientY,left:windowOffset.x,top:windowOffset.y};e.currentTarget.setPointerCapture(e.pointerId);e.preventDefault();}
+   lastTapRef.current=now;return;
+  }
+  if(e.button!==0)return;
+  dragRef.current={x:e.clientX,y:e.clientY,left:windowOffset.x,top:windowOffset.y};e.currentTarget.setPointerCapture(e.pointerId);
+ };
+ const handleHeaderPointerMove=(e:React.PointerEvent<HTMLDivElement>)=>{
+  const drag=dragRef.current;if(!drag)return;
+  setWindowOffset({x:Math.max(-window.innerWidth/2,Math.min(window.innerWidth/2,drag.left+e.clientX-drag.x)),y:Math.max(-window.innerHeight/2,Math.min(window.innerHeight/2,drag.top+e.clientY-drag.y))});
+ };
+ const handleHeaderPointerUp=()=>{dragRef.current=null;setTouchDragArmed(false);};
  const [sourceImage,setSourceImage]=useState<string|undefined>();const [preview,setPreview]=useState<ImageData|null>(null);const previewCanvas=useRef<HTMLCanvasElement|null>(null);const uploadRef=useRef<HTMLInputElement|null>(null);
  const update=(patch:Partial<TextureFilterConfig>)=>setCfg(c=>({...c,...patch}));
  useEffect(()=>{if(!isOpen)return;setCfg(c=>({...c,color:defaultColor}));},[isOpen,defaultColor]);
@@ -15,8 +33,8 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultCol
  const isWood=cfg.kind==='wood';const isDirectional=['hatching','cross-hatching','hashing'].includes(cfg.kind);
  if(!isOpen)return null;
  return <div className="fixed inset-0 z-[70] bg-black/65 flex items-center justify-center p-2 sm:p-4">
-  <div className="w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd]">
-   <header className="flex items-center justify-between p-3 bg-[#252525] border-b border-[#444] shrink-0"><div className="flex items-center gap-2 text-sm font-bold"><Filter className="w-4 h-4 text-blue-400"/> Layer Filter — Selected Layer</div><button onClick={onClose} aria-label="Close"><X className="w-4 h-4"/></button></header>
+  <div style={{transform:`translate(${windowOffset.x}px, ${windowOffset.y}px)`}} className="w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd]">
+   <header onPointerDown={handleHeaderPointerDown} onPointerMove={handleHeaderPointerMove} onPointerUp={handleHeaderPointerUp} onPointerCancel={handleHeaderPointerUp} style={{touchAction:touchDragArmed?"none":"pan-y"}} className="flex items-center justify-between p-3 bg-[#252525] border-b border-[#444] shrink-0 cursor-move select-none"><div className="flex items-center gap-2 text-sm font-bold"><Move className="w-3 h-3 text-[#888]"/><Filter className="w-4 h-4 text-blue-400"/> Layer Filter — Selected Layer</div><button onClick={onClose} aria-label="Close"><X className="w-4 h-4"/></button></header>
    <div className="flex-1 min-h-0 overflow-auto p-3 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] gap-3">
     <section className="space-y-3 min-w-0">
      <label className="block text-xs">Filter
