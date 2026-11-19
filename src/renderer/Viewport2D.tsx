@@ -74,6 +74,7 @@ interface Viewport2DProps {
   selectedVertices?: Set<number>;
   onRebakeTexture?: (from: string, to: string, res: number) => void;
   onSeamlessUV?: (radius: number) => void;
+  isSplitView?: boolean;
 }
 
 export const Viewport2D: React.FC<Viewport2DProps> = ({
@@ -100,6 +101,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   selectedVertices = new Set(),
   onRebakeTexture,
   onSeamlessUV,
+  isSplitView = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1034,7 +1036,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       />
 
       {/* Top Left: 2D UV Map HUD Controls */}
-      <HorizontalScrollRail className="absolute top-2 left-2 z-30 h-9 max-w-[calc(100%-9rem)]" contentClassName="h-full w-max min-w-max flex items-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
+      <HorizontalScrollRail className={`${isSplitView ? "absolute bottom-3 left-1/2 -translate-x-1/2 z-30 h-9 w-[calc(100%-2rem)] max-w-[calc(100%-2rem)]" : "absolute top-2 left-2 z-30 h-9 max-w-[calc(100%-9rem)]"}`} contentClassName="h-full w-max min-w-max flex items-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
         <div className="order-0 flex items-center gap-1 font-bold text-[#eee] uppercase text-[10px] shrink-0">
           <Paintbrush className="w-3.5 h-3.5 text-[#3d7fb8]" />
           <span>2D UV CANVAS</span>
