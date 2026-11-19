@@ -37,6 +37,7 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
   // Movable window position state
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 80, y: 70 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const lastTouchTapRef = useRef(0);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
     mouseX: 0,
     mouseY: 0,
@@ -45,9 +46,15 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
   });
 
   // Handle window dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only drag on left click and not on buttons
-    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
+  const handleMouseDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    if (e.pointerType === 'touch') {
+      const now = Date.now();
+      if (now - lastTouchTapRef.current > 360) { lastTouchTapRef.current = now; return; }
+      lastTouchTapRef.current = 0;
+      e.preventDefault();
+    } else if (e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
     dragStartRef.current = {
       mouseX: e.clientX,
@@ -58,7 +65,7 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
   };
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: PointerEvent) => {
       if (!isDragging) return;
       const dx = e.clientX - dragStartRef.current.mouseX;
       const dy = e.clientY - dragStartRef.current.mouseY;
@@ -72,12 +79,12 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
     };
 
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointermove', handleMouseMove);
+      window.addEventListener('pointerup', handleMouseUp);
     }
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointermove', handleMouseMove);
+      window.removeEventListener('pointerup', handleMouseUp);
     };
   }, [isDragging]);
 
@@ -195,7 +202,8 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
       >
         {/* Header - Draggable Grab Bar */}
         <div 
-          onMouseDown={handleMouseDown}
+          onPointerDown={handleMouseDown}
+          style={{ touchAction: "none" }}
           className="cs5-panel-header px-3 py-2 flex items-center justify-between shrink-0 bg-[#252525] border-b border-[#404040] cursor-move active:bg-[#1f1f1f]"
           title="Click and drag to move window anywhere on screen"
         >
