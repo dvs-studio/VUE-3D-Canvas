@@ -19,7 +19,7 @@ The active product is the Vite/React/Three.js painter in `src/`, packaged into `
 
 **Still required:** manual browser/desktop/Android interaction tests and performance checks. AO is a height-derived cavity approximation, not true geometry AO. Do not claim manual testing from CI success.
 
-**Latest UI checkpoint:** run #166 passed; horizontal drag-scroll rails, UV top-toolbar ordering and anchor-preserving UI scaling are now in source. Suzanne integration is pending the actual candidate binaries; the original built-in model is untouched. UV island-edge filter gaps remain documented and deliberately unmodified.
+**Latest UI checkpoint:** run #169 passed; horizontal drag-scroll rails, split-view UV tools/scrollbar at the bottom-centre of the 2D pane, dedicated 2D UV tools at the top-left, and anchor-preserving UI scaling are now in source. Suzanne integration is pending the actual candidate binaries; the original built-in model is untouched. UV island-edge filter gaps remain documented and deliberately unmodified.
 
 **Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)
 
