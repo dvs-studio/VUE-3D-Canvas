@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import suzanneOBJ from '../assets/Suzanne.obj?raw';
 import { SurfaceShadingEngine } from './surfaceShading';
 
 export interface ModelPreset {
@@ -15,66 +16,6 @@ export interface ModelPreset {
   triangleCount: number;
   vertexCount: number;
   geometry: THREE.BufferGeometry;
-}
-
-/**
- * Procedural low-poly Monkey Head (Suzanne-inspired) geometry for resource-constrained hardware
- */
-/**
- * High-Fidelity Procedural Monkey Head (Suzanne-inspired) geometry
- * Generated with high-density subdivided topology for smooth organic rendering
- */
-function createSuzanneGeometry(): THREE.BufferGeometry {
-  const geom = new THREE.IcosahedronGeometry(1.6, 4);
-  const pos = geom.attributes.position;
-  
-  // High-precision deformation to sculpt detailed monkey features
-  for (let i = 0; i < pos.count; i++) {
-    let x = pos.getX(i);
-    let y = pos.getY(i);
-    let z = pos.getZ(i);
-
-    // Brow ridge definition
-    if (y > 0.35 && z > 0.5) {
-      const browFactor = Math.cos((x * 1.8)) * 0.4;
-      z += 0.35 + Math.max(0, browFactor);
-      y += 0.18;
-    }
-    // Muzzle forward extrusion & mouth cavity
-    if (y < 0.25 && y > -0.85 && z > 0.2) {
-      const muzzleProfile = Math.max(0, 1.0 - Math.hypot(x * 1.2, (y + 0.3) * 1.4));
-      z += 0.65 * muzzleProfile;
-      x *= 0.88;
-    }
-    // Eye sockets depression with distinct orb protrusion
-    const eyeDistL = Math.hypot(x + 0.65, y - 0.3, z - 0.7);
-    const eyeDistR = Math.hypot(x - 0.65, y - 0.3, z - 0.7);
-    if (eyeDistL < 0.45 || eyeDistR < 0.45) {
-      const eyeDist = Math.min(eyeDistL, eyeDistR);
-      if (eyeDist > 0.2) {
-        z -= 0.25 * (1.0 - eyeDist);
-      } else {
-        z += 0.15; // Eye bulb
-      }
-    }
-    // Ears flare with curvature
-    if (Math.abs(x) > 1.15 && y > -0.2) {
-      const earTaper = Math.max(0, 1.0 - Math.abs(y - 0.2) * 1.2);
-      x *= 1.0 + 0.55 * earTaper;
-      z -= 0.22 * earTaper;
-    }
-    // Taper chin and jaw
-    if (y < -0.8) {
-      x *= 0.65;
-      z *= 0.82;
-    }
-
-    pos.setXYZ(i, x, y, z);
-  }
-
-  geom.computeVertexNormals();
-  ensureUVs(geom, true);
-  return geom;
 }
 
 /**
