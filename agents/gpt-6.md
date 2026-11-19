@@ -111,3 +111,11 @@ The latest successful self-host workflow is run #109 / ID `44308954895`. The bui
 Artifact `14430270038`, name `VUE_3D_Canvas_SelfHost`, size 1,061,477 bytes, SHA-256 `c3e0d496d7141f32a58c604a5dc7fc9faaee576d28823809717561183721ad80`, expires 2027-02-16. Run URL: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44308954895
 
 Manual testing remains required for UV edits updating the 3D material and texture mapping, UV save/export, stacked wood source output, powder dust scattering, noise-shader darkening, and subdivision arrow controls. The replacement separated-item Suzanne OBJ/MTL is pending from the user; do not reintroduce the previous faulty OBJ, and do not bake subdivision into the replacement model.
+
+
+## 2026-11-19 — hosted blank-screen repair
+- Read `AGENTS.md`, `AGENT_STATE.md`, `SELF_HOST_HANDOFF.md`, `LAYER_PBR_PLAN.md`, `HANDOFF_PROMPT.md`, and `self-host/SAFETY_BACKUP.md` before touching source. Confirmed the canonical safety ZIP path and self-host reference; neither was modified.
+- Root cause: `Viewport3D` effect dependency arrays referenced `uvGeometryVersion`, but the component parameter destructuring omitted it. The undeclared identifier throws during component render and blocks all UI mounting, consistent with the blank screen across desktop and Android.
+- Fixed by adding `uvGeometryVersion = 0` to the destructured props. Existing type declaration and `App.tsx` prop wiring were already correct.
+- Commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458`.
+- Source diff verified. CI production build/package and manual desktop/Android checks have not yet been confirmed. Do not infer runtime verification from a successful compile alone.
