@@ -8,7 +8,8 @@ A numbered line is one item inside a set. A history task is a whole set that has
 
 Work **only** on the Vite/React/Three.js painter and `self-host/`. Do **not** edit `crates/vue3d_core`. Dedicated full UV desk / NURBS / LTM stay **later** — do not start them in this set.
 
-Read **`LAYER_PBR_PLAN.md` → section `2026-11-19 — Self-host export, Smart UV, UI, layer UV`** for full technical detail. Creative freedom is allowed on structure and helpers as long as behaviour matches that section and paint performance does not regress.
+**Authoritative brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)  
+Also see [`LAYER_PBR_PLAN.md`](LAYER_PBR_PLAN.md) (pointer + recovery note). Creative freedom on structure/helpers if behaviour matches the brief and paint performance does not regress.
 
 1. Continue toggle-layer PBR work already in the plan (colour+reflection, emission, bump+ramp, normalLock) if not finished.
 2. **Export modes:** Classic multi-map; **RGB albedo + ORM** (R=AO, G=Roughness, B=Metallic); optional **multiply ORM AO into albedo**. User chooses before export.
@@ -19,7 +20,7 @@ Read **`LAYER_PBR_PLAN.md` → section `2026-11-19 — Self-host export, Smart U
 7. **Tool Options Bar — desktop scroll:** mode where items overflow **to the right** with a **horizontal scrollbar** (fix inner `flex-wrap` fighting `overflow-x-auto` in `ToolOptionsBar.tsx`).
 8. **Preferences → UI scale:** percentage with **decimal** support (e.g. 112.5). Persist on `PreferencesState`; scale chrome, not canvas buffers.
 9. Keep Import Texture / Auto-Texture; UV Editor dock Coming soon; subdivision preview only; `npm run host:sync`.
-10. Fix **Known code issues** listed in the plan section when touching those files.
+10. Fix **Known code issues** listed in `SELF_HOST_TASK_2026-11-19.md` when touching those files.
 
 ### Current implementation
 
@@ -30,7 +31,7 @@ In progress. Self-hosted Vite/React/Three.js painter only. 2026-11-17+ checkpoin
 - Also under the self-host folder: `self-host/vue3d-self-host-safety-2026-11-14.zip`
 - See `self-host/SAFETY_BACKUP.md`
 
-**2026-11-19 — Export / Smart UV / UI task:** Full instructions in `LAYER_PBR_PLAN.md` section `2026-11-19 — Self-host export, Smart UV, UI, layer UV`. Creative freedom on implementation structure; do not start the dedicated UV desk/NURBS work in this set.
+**2026-11-19 — Export / Smart UV / UI task:** Follow `SELF_HOST_TASK_2026-11-19.md`. Do not start the dedicated UV desk/NURBS work in this set.
 
 ### Current history — concluded set
 
@@ -46,4 +47,4 @@ Read past this line only if absolutely necessary. The log below grows and is not
 
 2026-11-09 navigation set, concluded. Free tumble, file normals, full Smooth, UV islands, `file://`.
 
-Gizmo / wood-grain / touch-drag implementation notes from 2026-11-19 remain in git history at commits `61cfb469` and `e592e9e9`. Prefer the PIN and `LAYER_PBR_PLAN.md` task section for current work.
+Gizmo / wood-grain / touch-drag implementation notes from 2026-11-19 remain in git history at commits `61cfb469` and `e592e9e9`. Prefer the PIN and `SELF_HOST_TASK_2026-11-19.md` for current work.
