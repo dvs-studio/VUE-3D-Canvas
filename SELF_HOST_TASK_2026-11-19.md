@@ -1,45 +1,54 @@
-# Self-host task — 2026-11-19 (combined status)
+# Self-host task — 2026-11-19 (combined + filter pass)
 
-**Scope:** self-host only. No `crates/vue3d_core`. No UV desk / NURBS / LTM this set.
+**Scope:** self-host only. No native shell. PBR package modes = **export only**.
 
-**PBR package modes are export-only.** Standard image import stays as today.
+## Upload status
 
-## Done in source (evening pass — needs build/sync verification)
+| Stage | State |
+|-------|--------|
+| Agentic MD pre-instructions | This file / AGENTS PIN |
+| Evening source (gizmo, multi-select, hashing) | Local / patch — **upload after filter edits** |
+| Wood + filter upgrades | **In progress after MD push** |
+| Post-completion MD note | After source upload |
 
-| Item | Status |
-|------|--------|
-| `gizmoSizePercent` + Preferences slider | Done |
-| `autoHideFloatingDialogs` + Preferences checkbox | Done |
-| Gizmo footprint scales; mountain overlay import hidden | Done |
-| Hashing: size, density, seed, algorithm + dialog UI | Done |
-| Filter backdrop dismiss when auto-hide on | Done |
-| Layer checkboxes + multi Group/Delete toolbar | Done |
-| Long-press multi menu (group/delete) | Done |
-| App: group selected / delete selected / rename group | Done |
+## Layer filters — required upgrades (implement before marking done)
 
-## Still to do
+### Wood Grain (priority)
 
-| Item | Notes |
-|------|--------|
-| Export Classic / RGB+ORM / AO×albedo | Export dialog + bake pack |
-| Smart UV simple upgrades | Cuts, relax, pack, target channel |
-| Layer UV wiring end-to-end | Selector exists; honour in paint/export |
-| Seamless UV button | Minimal dedicated set fill 0–1 |
-| Bump+displacement via Levels | Single menu path |
-| Options bar desktop horizontal scroll | `flex-nowrap` + overflow-x |
-| UI scale % decimals | Preferences + chrome only |
-| Mountain GLB picker in Preferences | Wire IndexedDB from Preferences |
-| Multi-select merge + move-to-group | Long-press extensions |
-| host:sync + device check | After push |
+Current wood uses stacked sources + object-space grain along an axis. Add:
 
-## Hashing (reference)
+| Control | Meaning | Suggested range |
+|---------|---------|-----------------|
+| **Grain type** | `band` · `ring` · `band+ring` mix | enum |
+| **Band frequency** | Parallel band tightness | 1–100 |
+| **Ring frequency** | Concentric ring tightness | 1–100 |
+| **Ring noise** | Warps rings so they are not perfect circles | 0–100 |
+| **Roughness** | Softens / frays grain edges | 0–100 |
+| **Randomisation** | Seed + spatial jitter for band and ring | 0–100 + seed |
 
-- **hashSize** 2–64 px cell size
-- **hashDensity** 1–100% activation
-- **hashSeed** stable re-apply
-- **hashAlgorithm** sparse | cell | grid-jitter
-- Then directional shift (angle/shift/randomization) on active pixels
+**Hook:** `src/tools/textureFilters.ts` wood branch in `transformTexturePixels`. Add fields on `TextureFilterConfig`. Expose in `TextureFilterDialog` when `kind==='wood'`.
 
-## Creative freedom
+Ring: distance from centre (or axis-perpendicular) as phase: `sin(length(perp)*ringFreq + noise*ringNoise)`. Band: parameterise directional wave frequency separately from density.
 
-Structure/helpers free if behaviour matches and paint latency does not regress. Safety ZIPs never deleted.
+### Other filters (upgrade if cheap)
+
+| Filter | Upgrade |
+|--------|--------|
+| Hashing | size, density, seed, algorithm — keep |
+| Hatching / cross | Line width (bleed); optional second angle |
+| Powderiser | Seed; fragment size |
+| Dither | Bayer vs hash; seed |
+| Mosaic | Soft edge optional |
+| Noise-shader | Seed; scale |
+
+### Still open product work
+
+Export ORM, Smart UV, seamless UV, bump/levels merge, options-bar scroll, UI scale %, Preferences GLB, multi merge/move-to-group.
+
+## Completion checklist
+
+1. MD pre-upload on GitHub.
+2. Implement wood banding/rings/noise/roughness/randomisation + dialog.
+3. Small upgrades to other filters where hooked.
+4. Upload source (evening + filter).
+5. Update AGENTS: **uploaded, filter pass complete; next agent starts Still open 1–6.**
