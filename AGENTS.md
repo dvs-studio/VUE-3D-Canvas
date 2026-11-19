@@ -2,47 +2,38 @@
 
 ## PIN — read only this far
 
-A numbered line is one item inside a set. A history task is a whole set that has been concluded. Checking one line does not make a history task. The `STOP` line comes after History.
+### Agent status (2026-11-19 filter pass)
 
-### To do — this set (self-host only)
+**Source code for the evening + filter upgrades is NOT fully on `main` until the implementing agent finishes and updates this PIN to “uploaded”.**  
+Until then: apply `self-host-evening-2026-11-19.patch` if present, or continue from local tree. Do not assume hashing/multi-select/gizmo size are on GitHub until the completion note below says so.
 
-Work **only** on the Vite/React/Three.js painter and `self-host/`. Do **not** edit `crates/vue3d_core`. Dedicated UV desk / NURBS / LTM stay **later**.
+**Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)
 
-**Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)  
-**Source patch (evening landed work):** see [`PATCH_README.md`](PATCH_README.md) — apply `self-host-evening-2026-11-19.patch` then build/sync.
+### Still open (self-host only)
 
-#### Still open
-1. Toggle-layer PBR polish if any gaps remain.
-2. **Export modes:** Classic multi-map; RGB+ORM; optional AO×albedo — **export only**.
-3. **Smart UV (simple):** better cuts + light relax/pack; planar fallback; target channel write.
-4. **Layer UV end-to-end:** honour `layer.uvChannel` in paint/composite/export.
-5. **Seamless UV button (minimal):** dedicated set fills 0–1.
-6. **Merge bump/displacement** through Bump Levels + keep-colour.
-7. **Tool Options Bar desktop scroll:** `flex-nowrap` + horizontal scrollbar.
-8. **UI scale %** with decimals.
-9. Mountain **GLB import fully in Preferences**.
-10. Multi-select: **merge** and **move to existing group** on long-press.
-11. `npm run host:sync` after patch applied.
+1. Export modes: Classic / RGB+ORM / AO×albedo — **export only**.
+2. Smart UV simple upgrades; layer UV end-to-end; seamless UV button.
+3. Merge bump/displacement via Bump Levels.
+4. Options bar desktop horizontal scroll; UI scale % decimals.
+5. Mountain GLB picker fully in Preferences.
+6. Multi-select: merge + move-to-group.
+7. **Layer filter upgrades (this pass — see task file):**
+   - Wood: **banding** and **ring** grain types; **ring noise**; **roughness**; stronger **randomisation** controls.
+   - Other filters: expose/upgrade missing useful params (hatching width, powder seed, dither pattern, etc.).
+8. `npm run host:sync` after upload; never edit `crates/vue3d_core`.
 
-#### Landed in source (apply patch to get these)
-- Preferences: `gizmoSizePercent`, `autoHideFloatingDialogs` + Preferences UI.
-- Gizmo scales by size %; mountain overlay import quieted.
-- Layer filter **hashing:** hashSize, hashDensity, hashSeed, hashAlgorithm + dialog.
-- Filter dialog backdrop close when auto-hide on.
-- Layers: checkbox multi-select, Group/Delete toolbar, long-press Group/Delete, App group/delete/rename wiring.
+### Landed offline / in patch (verify after upload)
 
-### Current implementation
+- gizmoSizePercent, autoHideFloatingDialogs, hashing params, multi-select group/delete.
 
-Self-host only. Safety ZIPs must not be deleted.
+### When THIS agent finishes
 
-### Current history — concluded set
+Replace this status block with: code uploaded, list commits, and **“Next agent: start Still open items 1–6; filter wood/ring work is done.”**
 
-2026-11-14 view set. `index-DXhSIj8p.js` / `a1dd03d`.
+### Safety
 
-### History — concluded set
-
-2026-11-12 filter set.
+Do not delete `release/vue3d-self-host-safety-2026-11-14.zip` or `self-host/vue3d-self-host-safety-2026-11-14.zip`.
 
 ## STOP
 
-2026-11-09 navigation set, concluded.
+Older history in git. Prefer PIN + SELF_HOST_TASK.
