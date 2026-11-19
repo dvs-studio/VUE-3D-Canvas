@@ -6,11 +6,11 @@ Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes af
 
 ### To do — manual validation remaining
 
-No remaining source implementation items from the 2026-11-19 self-host task list. Manual interaction and performance validation remain open; see the latest checkpoint appended below and `SELF_HOST_TASK_2026-11-19.md`.
+No remaining source implementation items from the 2026-11-19 self-host task set. Manual browser/desktop/Android interaction and performance validation remain open. UV island-edge filter gaps and model-edge fill artefacts remain known defects.
 
 ### Current implementation
 
-Self-host task and latest UI extension implemented in source revision `8ef43083078ce650e7c9ddda2de2a99ff41b2378`; generated page/package synced at `6ca5b70`. Build/package run #169 passed. Latest follow-up places split-view UV tools at the bottom-centre of the 2D pane and dedicated 2D UV tools at the top-left; package run #169 passed. Suzanne candidate binaries are not yet available; existing Suzanne remains unchanged. Filter gaps around UV island edges are documented and intentionally not patched. The self-host target is `self-host/public/index.html`; do not use the stale bundle name below as the current build.
+The latest source changes include the supplied `src/assets/Suzanne.obj` wired into the Suzanne preset (procedural Suzanne generation removed), plus the mode-dependent UV toolbar positioning. Generated self-host output is committed at `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`; workflow run #177 succeeded. `.gitignore` ignores OBJ files by default but keeps the bundled Suzanne exception. The self-host sync script now preserves OBJ files under `self-host/public/` when refreshing generated output. See the newest checkpoint at the end of this file.
 
 ### Current history — concluded set
 
@@ -627,3 +627,12 @@ Suzanne candidate model binaries are still not available in the current conversa
 - `Viewport2D` receives `isSplitView={viewMode === 'split'}` from `App.tsx`. Split mode positions the 2D tools/options rail bottom-centre; dedicated 2D mode keeps it top-left. The draggable circular scrollbar remains attached to the strip.
 - This is a UI placement-only change. UV algorithms, unwrap, packing, channel assignment, rebake, filter sampling and model geometry were not modified.
 - Build/package run #169 passed for source revision `8ef43083078ce650e7c9ddda2de2a99ff41b2378`. Manual visual testing remains required.
+
+
+## 2026-11-19 — OBJ integration, self-host sync protection and latest stop point
+
+- Supplied Wavefront mesh is committed at `src/assets/Suzanne.obj`; `src/renderer/modelGeometry.ts` imports it as raw OBJ text and parses it for the Suzanne preset. The procedural Suzanne generator is removed. The existing user asset is retained in source.
+- UV toolbar placement is mode-dependent: split 3D+2D view uses bottom-centre within the 2D pane; dedicated 2D view uses the top position.
+- These source changes were built into the tracked self-host output. Generated self-host commit: `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`. Workflow run #177 / ID `44552675389` succeeded. The generated bundle `self-host/public/assets/index-Cc8o6jsJ.js` contains the Suzanne preset markers and the new UV layout classes.
+- OBJ protection was added: `.gitignore` ignores `*.obj` except `src/assets/Suzanne.obj`; `scripts/sync_self_host.mjs` now copies OBJ files out before replacing `self-host/public/` and restores them after the Vite build is copied in. This is necessary because Git ignore alone does not protect files from script deletion.
+- Last stopped: implementation and repository self-host sync are complete for this requested pass. Next work is manual runtime testing (desktop and Android/touch), followed by the known UV-island filter seam/gap and model-edge fill artefacts. Do not claim these are fixed without reproduction and visual verification.
