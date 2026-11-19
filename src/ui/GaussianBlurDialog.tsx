@@ -132,7 +132,14 @@ export const GaussianBlurDialog: React.FC<GaussianBlurDialogProps> = ({
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
+  const lastTouchTapRef = useRef(0);
   const handlePointerDownHeader = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      const now = Date.now();
+      if (now - lastTouchTapRef.current > 360) { lastTouchTapRef.current = now; return; }
+      lastTouchTapRef.current = 0;
+      e.preventDefault();
+    } else if (e.button !== 0) return;
     isDraggingRef.current = true;
     dragOffsetRef.current = {
       x: e.clientX - position.x,
@@ -166,6 +173,8 @@ export const GaussianBlurDialog: React.FC<GaussianBlurDialogProps> = ({
           onPointerDown={handlePointerDownHeader}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ touchAction: "none" }}
           className="cs5-panel-header px-3 py-2 flex items-center justify-between cursor-move"
           title="Drag to reposition dialog"
         >
