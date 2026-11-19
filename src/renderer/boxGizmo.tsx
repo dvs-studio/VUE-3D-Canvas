@@ -22,6 +22,7 @@ import {
   Mountain as MountainIcon
 } from 'lucide-react';
 import { GizmoStyle } from '../core/types';
+import { loadMountainGizmoGLB, saveMountainGizmoGLB } from './mountainGizmoStorage';
 
 interface BoxGizmoProps {
   rotation: { x: number; y: number };
@@ -98,28 +99,13 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   const [gizmoModelReady, setGizmoModelReady] = useState(false);
   const [mountainGlbData, setMountainGlbData] = useState<ArrayBuffer | null>(null);
   const [mountainInfluence, setMountainInfluence] = useState(65);
-  const mountainInputRef = useRef<HTMLInputElement | null>(null);
-  const saveMountainModel = async (data: ArrayBuffer) => {
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open('vue3d-user-assets', 1);
-      request.onupgradeneeded = () => request.result.createObjectStore('models');
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => { const db=request.result; const tx=db.transaction('models','readwrite'); tx.objectStore('models').put(data,'mountain-gizmo'); tx.oncomplete=()=>{db.close();resolve();}; tx.onerror=()=>{db.close();reject(tx.error);}; };
-    });
-  };
   useEffect(() => {
-    let cancelled=false;
-    const request=indexedDB.open('vue3d-user-assets',1);
-    request.onupgradeneeded=()=>request.result.createObjectStore('models');
-    request.onsuccess=()=>{const db=request.result;const tx=db.transaction('models','readonly');const get=tx.objectStore('models').get('mountain-gizmo');get.onsuccess=()=>{if(!cancelled&&get.result instanceof ArrayBuffer)setMountainGlbData(get.result);};tx.oncomplete=()=>db.close();};
-    return()=>{cancelled=true;};
+    let cancelled = false;
+    const refresh = () => loadMountainGizmoGLB().then(data => { if (!cancelled) setMountainGlbData(data); }).catch(() => {});
+    refresh();
+    window.addEventListener('vue3d-mountain-gizmo-updated', refresh);
+    return () => { cancelled = true; window.removeEventListener('vue3d-mountain-gizmo-updated', refresh); };
   }, []);
-  const handleMountainUpload=(event:React.ChangeEvent<HTMLInputElement>)=>{
-    const file=event.target.files?.[0];if(!file)return;
-    if(!file.name.toLowerCase().endsWith('.glb')){window.alert('Please choose a binary GLB model (.glb).');event.target.value='';return;}
-    file.arrayBuffer().then(async data=>{await saveMountainModel(data);setMountainGlbData(data);}).catch(()=>window.alert('The model could not be saved in this browser storage. Try a smaller GLB or clear unused site storage.'));
-    event.target.value='';
-  };
 
   // A small independent WebGL preview loads the GLB assets supplied in
   // self-host/public/assets/Gizmo. CSS remains the offline/failure fallback.
@@ -352,13 +338,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   return (
     <div className="absolute top-3 right-3 z-30 flex flex-col items-center select-none pointer-events-auto" style={{ transform: `scale(${sizeScale})`, transformOrigin: 'top right' }}>
       {/* Gizmo Header Badge */}
-      {gizmoStyle==='mountain'&&false&&<div className="mb-1 flex flex-col gap-1 w-36 rounded border border-[#555] bg-[#252525]/95 p-1.5 text-[9px] text-[#ccc]">
-        <div className="flex items-center justify-between"><span>Axis colour influence</span><strong>{mountainInfluence}%</strong></div>
-        <input aria-label="Mountain axis colour influence" type="range" min="0" max="100" value={mountainInfluence} onChange={e=>setMountainInfluence(Number(e.target.value))} className="w-full accent-blue-500"/>
-        <button type="button" onClick={()=>mountainInputRef.current?.click()} className="rounded border border-[#666] px-2 py-1 hover:bg-[#3a3a3a]">{mountainGlbData?'Replace Mountain GLB':'Use Your Mountain GLB'}</button>
-        <input ref={mountainInputRef} type="file" accept=".glb,model/gltf-binary" className="hidden" onChange={handleMountainUpload}/>
-        <span className="text-[8px] text-[#888]">Stored in this browser on this device</span>
-      </div>}
+
       <div className="text-[9px] text-[#9a9a9a] font-mono tracking-wider mb-2 flex items-center gap-1.5 bg-[#252525]/90 px-2 py-0.5 rounded border border-[#444] shadow-md backdrop-blur-xs">
         {gizmoStyle === 'box' && (
           <>
