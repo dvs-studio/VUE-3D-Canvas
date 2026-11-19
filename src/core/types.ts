@@ -125,6 +125,8 @@ export interface PreferencesState {
   gizmoStyle: GizmoStyle;
   /** Orientation gizmo footprint scale percent (50–200). */
   gizmoSizePercent: number;
+  /** Overall application UI zoom, stored as a percentage (75–125). */
+  uiScalePercent: number;
   tabletMode: boolean;
   navSensitivity: number;
   optionsBarLayout: OptionsBarLayout;
