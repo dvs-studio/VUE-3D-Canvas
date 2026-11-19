@@ -11,7 +11,7 @@ import type { Layer } from '../core/types';
 export interface SubdivisionPreviewOptions {
   enabled: boolean;
   algorithm: 'catmull-clark' | 'simple';
-  levels: 0 | 1 | 2;
+  levels: number;
   sharpAngle: number;
   crease: number;
   boundary: boolean;
