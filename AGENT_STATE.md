@@ -4,7 +4,7 @@
 
 Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
 
-### To do — this set, not started
+### To do — manual validation remaining
 
 No remaining source implementation items from the 2026-11-19 self-host task list. Manual interaction and performance validation remain open; see the latest checkpoint appended below and `SELF_HOST_TASK_2026-11-19.md`.
 
