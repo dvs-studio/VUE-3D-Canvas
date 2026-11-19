@@ -35,6 +35,7 @@ import { FillSuite, TriplanarConfig } from './tools/fillSuite';
 import * as THREE from 'three';
 import { BUILTIN_MODELS, parseOBJ, repairArchitecturalMesh, reimportUVsFromOBJ } from './renderer/modelGeometry';
 import { UVChannelManager } from './tools/uvChannelManager';
+import { SmartUVUnwrapEngine } from './tools/smartUVUnwrap';
 
 import { PhotoshopMenuBar } from './ui/PhotoshopMenuBar';
 import { ToolOptionsBar } from './ui/ToolOptionsBar';
@@ -523,12 +524,21 @@ export default function App() {
 
     UVChannelManager.setActiveChannel(activeGeometry, toChannel);
     setActiveUVChannel(toChannel);
+    setLayers(prev => prev.map(layer => layer.id === activeLayer.id ? { ...layer, uvChannel: toChannel } : layer));
     setUvGeometryVersion(v => v + 1);
 
     undoBuffer.pushState(`Re-Bake Texture [${fromChannel} -> ${toChannel}]`, layers);
     syncCompositeCanvas();
     setTextureVersion(v => v + 1);
   }, [activeGeometry, layers, activeLayerId, undoBuffer, syncCompositeCanvas]);
+
+  const handleSeamlessUV = useCallback((radius: number) => {
+    const target = layers.find(layer => layer.id === activeLayerId);
+    if (!target || target.isGroup || target.locked) return;
+    undoBuffer.pushState('Apply Seamless UV Gutter', layers);
+    SmartUVUnwrapEngine.dilateTextureSeams(target.canvas, Math.max(0, Math.min(16, radius)));
+    notifyTextureUpdated();
+  }, [layers, activeLayerId, undoBuffer, notifyTextureUpdated]);
 
   const handleSymmetrize = useCallback((allLayers = false) => {
     if (allLayers) {
@@ -1089,20 +1099,27 @@ export default function App() {
   };
 
   const handleSelectLayer = (id: string) => {
-    setActiveLayerId(id);
     const layer = layers.find(l => l.id === id);
-    if (layer?.uvChannel && activeGeometry) {
-      if (UVChannelManager.setActiveChannel(activeGeometry, layer.uvChannel)) {
-        setActiveUVChannel(layer.uvChannel);
+    if (activeLayerId !== id && activeGeometry) {
+      setLayers(prev => prev.map(item => item.id === activeLayerId && !item.isGroup ? { ...item, uvChannel: activeUVChannel } : item));
+    }
+    setActiveLayerId(id);
+    if (layer && !layer.isGroup && activeGeometry) {
+      const nextChannel = layer.uvChannel || 'uv_original';
+      if (UVChannelManager.setActiveChannel(activeGeometry, nextChannel)) {
+        setActiveUVChannel(nextChannel);
+        setUvGeometryVersion(v => v + 1);
+        notifyTextureUpdated();
       }
     }
   };
 
   const handleSetLayerUV = (layerId: string, channelId: string) => {
     setLayers(prev => prev.map(l => (l.id === layerId ? { ...l, uvChannel: channelId } : l)));
-    if (activeGeometry && UVChannelManager.setActiveChannel(activeGeometry, channelId)) {
+    if (layerId === activeLayerId && activeGeometry && UVChannelManager.setActiveChannel(activeGeometry, channelId)) {
       setActiveUVChannel(channelId);
       setUvGeometryVersion(v => v + 1);
+      notifyTextureUpdated();
     }
   };
 
