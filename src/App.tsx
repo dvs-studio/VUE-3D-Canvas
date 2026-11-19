@@ -905,7 +905,7 @@ export default function App() {
   const handleApplyBumpLevels = (levels: BumpLevels) => {
     const target = layers.find(layer => layer.id === bumpLevelsTargetId);
     if (!target || target.isGroup || target.locked) return;
-    undoBuffer.pushState('Convert Layer to Grayscale Bump (Levels)', layers);
+    undoBuffer.pushState(bumpLevelsMode === 'displacement' ? 'Convert Layer to Displacement (Levels)' : 'Convert Layer to Grayscale Bump (Levels)', layers);
     applyBumpLevelsToLayer(target, levels);
     if (bumpLevelsMode === 'displacement') LayerConversions.convertToDisplacementMap(target);
     else LayerConversions.convertToBumpMap(target);
@@ -1009,11 +1009,16 @@ export default function App() {
   };
 
   const handleMergeSelectedLayers = (layerIds: string[]) => {
-    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup);
-    if (selected.length < 2 || selected.some(layer => layer.locked)) return;
+    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && !layer.locked && layer.visible);
+    if (selected.length < 2) return;
     const channel = selected[0].channel;
     if (selected.some(layer => layer.channel !== channel)) {
-      window.alert('Merge selected layers with the same texture channel only.');
+      window.alert('Merge selected visible layers with the same texture channel only.');
+      return;
+    }
+    const pbrSignature = JSON.stringify(selected[0].pbrSettings ?? null);
+    if (selected.some(layer => JSON.stringify(layer.pbrSettings ?? null) !== pbrSignature)) {
+      window.alert('Merge layers with matching PBR settings only. This preserves their material response.');
       return;
     }
     const canvas = document.createElement('canvas');
@@ -1051,7 +1056,7 @@ export default function App() {
       ...(selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
     };
     const remaining = layers.filter(layer => !selectedIds.has(layer.id));
-    remaining.splice(Math.max(0, firstIndex - layers.slice(0, firstIndex).filter(layer => !selectedIds.has(layer.id)).length), 0, merged);
+    remaining.splice(Math.max(0, firstIndex), 0, merged);
     setLayers(remaining);
     setActiveLayerId(merged.id);
     undoBuffer.pushState('Merge Selected Layers', remaining);
