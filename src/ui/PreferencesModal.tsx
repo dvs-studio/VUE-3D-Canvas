@@ -206,6 +206,25 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
             </div>
           </div>
 
+          {/* Interface scale — decimal percentage for fine adjustment. */}
+          <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[#eee] text-xs">Interface Scale</span>
+              <b className="font-mono text-[#a6e3a1]">{(preferences.uiScalePercent ?? 100).toFixed(1)}%</b>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="range" min="75" max="125" step="0.1"
+                value={preferences.uiScalePercent ?? 100}
+                onChange={e => onUpdatePreferences({ uiScalePercent: Number(e.target.value) })}
+                className="flex-1 accent-[#3d7fb8]" />
+              <input type="number" min="75" max="125" step="0.1"
+                value={(preferences.uiScalePercent ?? 100).toFixed(1)}
+                onChange={e => onUpdatePreferences({ uiScalePercent: Math.max(75, Math.min(125, Number(e.target.value) || 100)) })}
+                className="w-16 bg-[#1c1c1c] border border-[#555] rounded px-1.5 py-1 text-right text-[#eee] font-mono" />
+            </div>
+            <p className="text-[10px] text-[#888]">Scales the complete self-host workspace. Fine adjustment is available in 0.1% steps.</p>
+          </div>
+
           {/* Section 4: Options Bar Layout (Overlap Prevention) */}
           <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2.5">
             <div className="flex items-center justify-between">
