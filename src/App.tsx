@@ -1916,7 +1916,8 @@ export default function App() {
                 selectedVertices={xrayVertexSelection}
                 onRebakeTexture={handleRebakeTexture}
                 onSeamlessUV={handleSeamlessUV}
-              />
+              isSplitView={viewMode === 'split'}
+                />
             </div>
           )}
 
