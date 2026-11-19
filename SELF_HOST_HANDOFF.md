@@ -4,7 +4,11 @@
 
 See **AGENTS.md** and **SELF_HOST_TASK_2026-11-19.md**.
 
-**Now (2026-11-19):** source revision `8ef43083078ce650e7c9ddda2de2a99ff41b2378`; generated self-host output `6ca5b70`; CI run #169 passed. Latest artifact: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44538905738/artifacts/14536189234. In combined 3D+2D split mode, the UV tools/scroll rail are bottom-centred inside the 2D pane; dedicated 2D mode keeps them top-left. No UV algorithm or model geometry was changed. Suzanne OBJ integration, UV island filter gaps and model-edge fill artefacts remain open. See `SELF_HOST_TASK_2026-11-19.md`.
+**Now (2026-11-19):** source commits `d98df003290a1767f1655a033c5b3e0d3206ee74` (Suzanne OBJ preset) and `7635dbb43bf8aee4d855ad2f0133bae826d5e217` (UV toolbar placement) are built into the tracked `self-host/public/` output at commit `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`. Workflow run #177 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44552675389. The bundled Suzanne preset now parses `src/assets/Suzanne.obj`; the procedural Suzanne generator is removed. Split-view UV tools are bottom-centred inside the 2D pane; dedicated 2D mode uses the top position.
+
+OBJ files are ignored by default in `.gitignore`, with `src/assets/Suzanne.obj` explicitly retained. The self-host sync script preserves OBJ model files under `self-host/public/` across generated-build replacement. Git ignore by itself does not prevent a script from deleting files.
+
+**Last stopped:** requested source changes and direct self-host repository sync are complete. Remaining work is manual desktop/Android interaction validation, then the known UV island-edge filter gaps and model-edge fill artefact. These are not claimed fixed.
 
 Safety ZIPs: do not delete. Self-host only.
 
@@ -107,3 +111,10 @@ Suzanne candidate model binaries are still not available in the current conversa
 - `Viewport2D` receives `isSplitView={viewMode === 'split'}` from `App.tsx`. Split mode positions the 2D tools/options rail bottom-centre; dedicated 2D mode keeps it top-left. The draggable circular scrollbar remains attached to the strip.
 - This is a UI placement-only change. UV algorithms, unwrap, packing, channel assignment, rebake, filter sampling and model geometry were not modified.
 - Build/package run #169 passed for source revision `8ef43083078ce650e7c9ddda2de2a99ff41b2378`. Manual visual testing remains required.
+
+
+## 2026-11-19 — latest completed self-host checkpoint
+
+- Verified the generated self-host bundle directly on `main`, not only an artifact. The bundle includes the Suzanne OBJ preset and current UV toolbar placement.
+- Added OBJ ignore/protection rules and updated `scripts/sync_self_host.mjs` so OBJ files already under `self-host/public/` survive the folder refresh.
+- Workflow run #177 passed. Continue with manual visual/runtime checks; do not start the UV seam or model-edge fixes without reproducing them and preserving the working baseline.
