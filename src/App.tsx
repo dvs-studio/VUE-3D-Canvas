@@ -2333,6 +2333,8 @@ export default function App() {
       <TextureFilterDialog
         isOpen={isTextureFilterOpen}
         activeLayer={layers.find(layer => layer.id === activeLayerId)}
+        geometry={activeGeometry}
+        activeUVChannel={activeUVChannel}
         defaultColor={primaryColor}
         onClose={() => setIsTextureFilterOpen(false)}
         onApply={handleApplyTextureFilter}
