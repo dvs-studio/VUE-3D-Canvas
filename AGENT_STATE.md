@@ -494,3 +494,11 @@ The latest successful self-host workflow is run #109 / ID `44308954895`. The bui
 Artifact `14430270038`, name `VUE_3D_Canvas_SelfHost`, size 1,061,477 bytes, SHA-256 `c3e0d496d7141f32a58c604a5dc7fc9faaee576d28823809717561183721ad80`, expires 2027-02-16. Run URL: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44308954895
 
 Manual testing remains required for UV edits updating the 3D material and texture mapping, UV save/export, stacked wood source output, powder dust scattering, noise-shader darkening, and subdivision arrow controls. The replacement separated-item Suzanne OBJ/MTL is pending from the user; do not reintroduce the previous faulty OBJ, and do not bake subdivision into the replacement model.
+
+
+## 2026-11-19 — blank-screen root cause and repair
+- Reviewed the agent handover documents and safety-backup instructions before editing. The canonical backup `release/vue3d-self-host-safety-2026-11-14.zip` and its self-host reference remain unchanged.
+- Root cause: `src/renderer/Viewport3D.tsx` referenced `uvGeometryVersion` in the geometry-refresh and shading effect dependency arrays, but the component's parameter destructuring omitted the prop. That free identifier throws a `ReferenceError` while rendering, preventing both desktop and hosted Android UI startup.
+- Fix: destructure `uvGeometryVersion = 0` alongside `activeUVChannel`; the prop is already declared optional in `Viewport3DProps` and passed from `App.tsx`. This keeps initial renders safe and lets UV edits trigger the intended geometry refresh.
+- Commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458` (`fix(self-host): bind UV geometry version in viewport`).
+- Verification status: source diff inspected; CI production build/package and manual desktop/Android runtime verification remain pending. The error boundary added in `src/main.tsx` now reports future React render failures rather than silently showing a blank screen.
