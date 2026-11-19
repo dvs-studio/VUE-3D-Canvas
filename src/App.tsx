@@ -1903,9 +1903,10 @@ export default function App() {
                 geometry={activeGeometry}
                 onGeometryUpdated={notifyUVGeometryUpdated}
                 activeUVChannel={activeUVChannel}
-                onSelectUVChannel={(channelId) => { setActiveUVChannel(channelId); setUvGeometryVersion(v => v + 1); }}
+                onSelectUVChannel={(channelId) => { setActiveUVChannel(channelId); setLayers(prev => prev.map(layer => layer.id === activeLayerId ? { ...layer, uvChannel: channelId } : layer)); setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }}
                 selectedVertices={xrayVertexSelection}
                 onRebakeTexture={handleRebakeTexture}
+                onSeamlessUV={handleSeamlessUV}
               />
             </div>
           )}
