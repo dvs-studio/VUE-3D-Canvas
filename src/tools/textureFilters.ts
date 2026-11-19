@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 /**
  * Image-layer filter algorithms. These are destructive image operations, not brush tools.
  * The selected layer's pixel buffer is transformed and written back by the caller.
@@ -23,6 +24,9 @@ export interface TextureFilterConfig {
   directionSpace: 'uv' | 'object' | 'world';
   axis: 'X' | 'Y' | 'Z';
   woodSources: WoodSource[];
+  objectPositionMap?: Float32Array;
+  objectMapWidth?: number;
+  objectMapHeight?: number;
 }
 export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   kind: 'wood', source: 'color', color: '#8a5a35', edge: 65, noise: 25, bleed: 18, blur: 1,
@@ -37,6 +41,47 @@ async function imageSource(dataUrl?:string,width=256,height=256):Promise<ImageDa
  ctx.drawImage(img,0,0,width,height);return ctx.getImageData(0,0,width,height);
 }
 function sample(src:ImageData,x:number,y:number){x=clamp(Math.round(x),0,src.width-1);y=clamp(Math.round(y),0,src.height-1);const i=(y*src.width+x)*4;return [src.data[i],src.data[i+1],src.data[i+2],src.data[i+3]];}
+
+export function buildObjectSpacePositionMap(geometry: THREE.BufferGeometry, width: number, height: number, uvArray?: Float32Array): Float32Array {
+  const position = geometry.getAttribute('position');
+  const uv = uvArray || geometry.getAttribute('uv')?.array as Float32Array | undefined;
+  if (!position || !uv || uv.length < position.count * 2) throw new Error('The selected mesh needs position and active UV data.');
+  const bounds = new THREE.Box3().setFromBufferAttribute(position as THREE.BufferAttribute);
+  const size = bounds.getSize(new THREE.Vector3());
+  const map = new Float32Array(width * height * 3);
+  const index = geometry.getIndex();
+  const count = index ? index.count : position.count;
+  for (let tri = 0; tri + 2 < count; tri += 3) {
+    const a = index ? index.getX(tri) : tri;
+    const b = index ? index.getX(tri + 1) : tri + 1;
+    const c = index ? index.getX(tri + 2) : tri + 2;
+    const ax = uv[a * 2] * width, ay = (1 - uv[a * 2 + 1]) * height;
+    const bx = uv[b * 2] * width, by = (1 - uv[b * 2 + 1]) * height;
+    const cx = uv[c * 2] * width, cy = (1 - uv[c * 2 + 1]) * height;
+    const denom = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
+    if (Math.abs(denom) < 1e-8) continue;
+    const minX = Math.max(0, Math.floor(Math.min(ax, bx, cx))), maxX = Math.min(width - 1, Math.ceil(Math.max(ax, bx, cx)));
+    const minY = Math.max(0, Math.floor(Math.min(ay, by, cy))), maxY = Math.min(height - 1, Math.ceil(Math.max(ay, by, cy)));
+    const pa = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, a);
+    const pb = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, b);
+    const pc = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, c);
+    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+      const wa = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / denom;
+      const wb = ((cy - ay) * (x - cx) + (ax - cx) * (y - cy)) / denom;
+      const wc = 1 - wa - wb;
+      if (wa < -0.002 || wb < -0.002 || wc < -0.002) continue;
+      const px = wa * pa.x + wb * pb.x + wc * pc.x;
+      const py = wa * pa.y + wb * pb.y + wc * pc.y;
+      const pz = wa * pa.z + wb * pb.z + wc * pc.z;
+      const at = (y * width + x) * 3;
+      map[at] = clamp((px - bounds.min.x) / Math.max(size.x, 1e-8), 0, 1);
+      map[at + 1] = clamp((py - bounds.min.y) / Math.max(size.y, 1e-8), 0, 1);
+      map[at + 2] = clamp((pz - bounds.min.z) / Math.max(size.z, 1e-8), 0, 1);
+    }
+  }
+  return map;
+}
+
 export async function transformTexturePixels(source:ImageData,cfg:TextureFilterConfig):Promise<ImageData>{
  const w=source.width,h=source.height, out=new ImageData(w,h), data=source.data, dst=out.data;
  const srcImg=cfg.kind==='wood'&&cfg.source==='image'?await imageSource(cfg.sourceImageDataUrl,w,h):null;
@@ -53,7 +98,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const i=(y*w+x)*4;let rr=0,gg=0,bb=0,aa=0;
      for(const row of stack){
        const density=clamp(Number(row.item.density)||1,1,100);
-       const wave=Math.sin((x*dx+y*dy)*(0.008+density*0.0007)+Math.sin(y*0.018)*2.3)+Math.sin((x*dx+y*dy)*(0.002+density*0.00018))*0.7;
+       const mapped=cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h; const mi=(y*w+x)*3; const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0; const grain=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28; const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz; const wave=Math.sin((grain*128*dx+flow*12*dy)*(0.008+density*0.0007)+Math.sin(flow*18)*2.3)+Math.sin((grain*128*dx+flow*12*dy)*(0.002+density*0.00018))*0.7;
        const n=(hash(x,y,13+stack.indexOf(row)*37)-0.5)*noise*70;
        const grain=clamp(0.5+wave*0.22+n/255,0,1);
        const base=row.image?sample(row.image,x,y):row.color;
