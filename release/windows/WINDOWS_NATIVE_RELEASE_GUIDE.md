@@ -1,4 +1,4 @@
-> Do not start this until Victory accepts the self-host work in `LAYER_PBR_PLAN.md`. The Windows window hosts that page. It does not reimplement the layers.
+Self-host development was completed and packaged before this Windows handover. This document describes an aspirational native renderer, not current capabilities; read the current architecture note below.
 
 # VUE 3D Canvas - Native Windows Release Guide (DirectX 11 / OpenGL)
 
