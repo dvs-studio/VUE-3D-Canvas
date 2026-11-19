@@ -94,7 +94,7 @@ If you make modifications to the source code in `src/`:
    ```
    `host:sync` runs `vite build`, then `scripts/sync_self_host.mjs`.
 
-This folder is the programme to finish. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat` for `http://localhost:3000`, or open `public/index.html` with `file://`. Both use the same inlined page. The current bundle is `index-DXhSIj8p.js`. Do not open an older `index.html` that still points at `<script src="./assets/...">`.
+This folder is the programme to finish. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat` for `http://localhost:3000`, or open `public/index.html` with `file://`. Both use the same inlined page. The current generated bundle is `assets/index-Cc8o6jsJ.js`, also inlined into `public/index.html` for `file://` use. Do not open an older `index.html` that still points at `<script src="./assets/...">`.
 
 `npm run host:sync` from the repository root is the only rebuild. It runs the Vite build and then inlines the script and CSS. Copying `dist/` by hand leaves a page that needs a server.
 
@@ -153,7 +153,7 @@ Manual verification checklist:
 8. Toggle subdivision modes and levels, then export the model and confirm the original cage geometry is unchanged.
 9. Check the first viewport frame, studio background, theme changes, and the sphere/mountain gizmos.
 
-**Latest verification status (2026-11-19):** GitHub Actions run #156 (`44480073408`) completed npm install, Vite production build, `npm run host:sync`, self-host HTML validation, generated-output commit, ZIP packaging and artifact upload. Source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated self-host output commit `c26301294da0465d5402b6800fbd15dab39cae59`. Artifact `VUE_3D_Canvas_SelfHost` is 1,076,269 bytes: [download from the workflow artifact page](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44480073408/artifacts/14508410797). Browser interaction and Blender import still require manual testing.
+**Latest verification status (2026-11-19):** The generated self-host page was committed directly to `main` at `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`; workflow run #177 passed and verified the build/package. The follow-up OBJ-preservation sync-script change was tested by workflow run #178 (`44593598091`), which also passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44593598091. The current app bundle includes the supplied Suzanne OBJ preset and the split/dedicated UV toolbar placement. Manual browser interaction and Blender import still require testing.
 
 ---
 
