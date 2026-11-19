@@ -8,35 +8,36 @@ A numbered line is one item inside a set. A history task is a whole set that has
 
 Work **only** on the Vite/React/Three.js painter and `self-host/`. Do **not** edit `crates/vue3d_core`. Dedicated UV desk / NURBS / LTM stay **later**.
 
-**Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)
+**Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)  
+**Source patch (evening landed work):** see [`PATCH_README.md`](PATCH_README.md) — apply `self-host-evening-2026-11-19.patch` then build/sync.
 
 #### Still open
-1. Toggle-layer PBR polish if any gaps remain (colour+reflection, emission, bump+ramp, normalLock).
+1. Toggle-layer PBR polish if any gaps remain.
 2. **Export modes:** Classic multi-map; RGB+ORM; optional AO×albedo — **export only**.
 3. **Smart UV (simple):** better cuts + light relax/pack; planar fallback; target channel write.
-4. **Layer UV end-to-end:** paint/composite/export honour `layer.uvChannel` (selector UI exists).
-5. **Seamless UV button (minimal):** dedicated set fills 0–1; selectable on layers/import.
-6. **Merge bump/displacement** through Bump Levels + keep-colour option; menu labels.
-7. **Tool Options Bar desktop scroll:** `flex-nowrap` + horizontal scrollbar (fix inner wrap).
-8. **UI scale %** with decimals on `PreferencesState`.
-9. Mountain **GLB import fully in Preferences** (viewport overlay already quieted).
-10. Multi-select: **merge layers** and **move to existing group** on long-press.
-11. `npm run host:sync` after code lands; do not edit `crates/vue3d_core`.
+4. **Layer UV end-to-end:** honour `layer.uvChannel` in paint/composite/export.
+5. **Seamless UV button (minimal):** dedicated set fills 0–1.
+6. **Merge bump/displacement** through Bump Levels + keep-colour.
+7. **Tool Options Bar desktop scroll:** `flex-nowrap` + horizontal scrollbar.
+8. **UI scale %** with decimals.
+9. Mountain **GLB import fully in Preferences**.
+10. Multi-select: **merge** and **move to existing group** on long-press.
+11. `npm run host:sync` after patch applied.
 
-#### Landed in source (2026-11-19 evening pass — verify after sync)
+#### Landed in source (apply patch to get these)
 - Preferences: `gizmoSizePercent`, `autoHideFloatingDialogs` + Preferences UI.
-- Gizmo scales by size %; mountain import panel removed from always-on overlay.
-- Layer filter **hashing:** `hashSize`, `hashDensity`, `hashSeed`, `hashAlgorithm` (sparse/cell/grid-jitter) + dialog sliders.
-- Filter dialog backdrop close when auto-hide is on.
-- Layers: checkbox multi-select, Group/Delete toolbar, long-press Group/Delete, group rename handler, App wiring for group/delete selected.
+- Gizmo scales by size %; mountain overlay import quieted.
+- Layer filter **hashing:** hashSize, hashDensity, hashSeed, hashAlgorithm + dialog.
+- Filter dialog backdrop close when auto-hide on.
+- Layers: checkbox multi-select, Group/Delete toolbar, long-press Group/Delete, App group/delete/rename wiring.
 
 ### Current implementation
 
-Self-host painter only. Safety ZIP: `release/vue3d-self-host-safety-2026-11-14.zip` and `self-host/vue3d-self-host-safety-2026-11-14.zip` — do not delete.
+Self-host only. Safety ZIPs must not be deleted.
 
 ### Current history — concluded set
 
-2026-11-14 view set. Bundle `index-DXhSIj8p.js`, commit `a1dd03d`.
+2026-11-14 view set. `index-DXhSIj8p.js` / `a1dd03d`.
 
 ### History — concluded set
 
@@ -44,4 +45,4 @@ Self-host painter only. Safety ZIP: `release/vue3d-self-host-safety-2026-11-14.z
 
 ## STOP
 
-2026-11-09 navigation set, concluded. Gizmo/wood-grain notes at `61cfb469` / `e592e9e9`.
+2026-11-09 navigation set, concluded.
