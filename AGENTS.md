@@ -44,3 +44,7 @@ Read past this line only if absolutely necessary. The log below grows and is not
 2026-11-09 navigation set, concluded, moved here so the pin stays short. Free tumble, file normals, full Smooth, UV islands, and `file://` on the inlined page. Do not rebuild it.
 
 SEE_FULL_LOG_IN_PARENT_COMMIT_fbdcf54_AND_SELF_HOST_HANDOFF — temporary pin-only restore after accidental PLACEHOLDER overwrite. Re-append the long handover log from commit fbdcf54 if missing from git history.
+
+
+### 2026-11-19 — UV viewport startup repair
+The hosted app's blank-screen error was traced to `Viewport3D` referencing `uvGeometryVersion` in two effect dependency arrays without destructuring that prop from `Viewport3DProps`. This caused a render-time `ReferenceError` on both desktop and Android, before the UI could mount. Fixed by binding `uvGeometryVersion = 0` in the component props destructuring. Source commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458`. The 2026-11-14 safety ZIP remains untouched. Build/package verification is pending; do not describe the hosted runtime as verified until CI and manual device tests pass.
