@@ -8,7 +8,7 @@ The active product is the Vite/React/Three.js painter in `src/`, packaged into `
 - The supplied Suzanne OBJ is committed as `src/assets/Suzanne.obj` and is used by the Suzanne preset. The procedural Suzanne generator was removed.
 - Generated self-host bundle contains the Suzanne OBJ preset and current UV toolbar layout.
 
-**Latest commits:** source integration `d98df003290a1767f1655a033c5b3e0d3206ee74`; UV layout `7635dbb43bf8aee4d855ad2f0133bae826d5e217`; generated self-host output `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`. Self-host workflow run #177 succeeded: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44552675389
+**Latest commits:** source integration `d98df003290a1767f1655a033c5b3e0d3206ee74`; UV layout `7635dbb43bf8aee4d855ad2f0133bae826d5e217`; generated self-host output `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`. Self-host workflow run #178 succeeded: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44593598091
 
 **OBJ protection:** `.gitignore` now ignores `*.obj` by default while explicitly keeping `src/assets/Suzanne.obj` tracked. `scripts/sync_self_host.mjs` preserves OBJ files already present anywhere under `self-host/public/` while replacing generated bundles. Git ignore does not prevent deletion by scripts; the sync script now handles that preservation explicitly.
 
