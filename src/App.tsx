@@ -157,6 +157,7 @@ export default function App() {
       customRefreshRate: 60,
       gizmoStyle: 'box',
       gizmoSizePercent: 100,
+      uiScalePercent: 100,
       tabletMode: false,
       navSensitivity: 1.0,
       optionsBarLayout: 'clusters',
@@ -1525,6 +1526,7 @@ export default function App() {
     <div 
       className={`h-[100dvh] min-h-0 w-screen flex flex-col bg-[#333333] text-[#c8c8c8] overflow-hidden select-none font-sans theme-container theme-${currentTheme} ${currentTheme === 'bw78' ? 'theme-bw78-viewport-shadow' : ''}`}
       data-theme={currentTheme}
+      style={{ zoom: Math.max(0.75, Math.min(1.25, (preferences.uiScalePercent ?? 100) / 100)) } as React.CSSProperties}
     >
       {/* 1. Authentic Photoshop CS5 Top Menu Bar */}
       <PhotoshopMenuBar
