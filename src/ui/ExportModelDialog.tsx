@@ -34,6 +34,7 @@ export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
   const [modelName, setModelName] = useState<string>(activeModelName);
   const [resolution, setResolution] = useState<number>(2048);
   const [embedTextures, setEmbedTextures] = useState<boolean>(true);
+  const [exportMode, setExportMode] = useState<'classic' | 'rgb_orm' | 'ao_albedo'>('classic');
 
   const [channels, setChannels] = useState({
     albedo: true,
@@ -66,6 +67,7 @@ export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
         modelName,
         textureResolution: resolution,
         embedTextures,
+        exportMode,
         exportChannels: channels,
       };
 
@@ -85,12 +87,20 @@ export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
         ? 'TightMap' 
         : (activeUVChannel === 'uv_original' ? 'OriginalUV' : activeUVChannel.replace(/^uv_/, ''));
 
-      if (channels.albedo) ModelExporterEngine.triggerImageDownload(`${modelName}_albedo_${uvTag}.png`, separated.albedo);
+      if (exportMode === 'classic') {
+        if (channels.albedo) ModelExporterEngine.triggerImageDownload(`${modelName}_albedo_${uvTag}.png`, separated.albedo);
+        if (channels.roughness) ModelExporterEngine.triggerImageDownload(`${modelName}_roughness_${uvTag}.png`, separated.roughness);
+        if (channels.metallic) ModelExporterEngine.triggerImageDownload(`${modelName}_metallic_${uvTag}.png`, separated.metallic);
+      } else if (exportMode === 'rgb_orm') {
+        ModelExporterEngine.triggerImageDownload(`${modelName}_ORM_R-AO_G-Roughness_B-Metallic_${uvTag}.png`, separated.orm);
+        if (channels.albedo) ModelExporterEngine.triggerImageDownload(`${modelName}_albedo_${uvTag}.png`, separated.albedo);
+      } else {
+        ModelExporterEngine.triggerImageDownload(`${modelName}_AOxAlbedo_${uvTag}.png`, separated.aoAlbedo);
+        ModelExporterEngine.triggerImageDownload(`${modelName}_AO_${uvTag}.png`, separated.ambientOcclusion);
+      }
       if (channels.normal) ModelExporterEngine.triggerImageDownload(`${modelName}_normal_${uvTag}.png`, separated.normal);
       if (channels.emission) ModelExporterEngine.triggerImageDownload(`${modelName}_emission_${uvTag}.png`, separated.emission);
       if (channels.displacement) ModelExporterEngine.triggerImageDownload(`${modelName}_displacement_${uvTag}.png`, separated.displacement);
-      if (channels.roughness) ModelExporterEngine.triggerImageDownload(`${modelName}_roughness_${uvTag}.png`, separated.roughness);
-      if (channels.metallic) ModelExporterEngine.triggerImageDownload(`${modelName}_metallic_${uvTag}.png`, separated.metallic);
 
       setIsExporting(false);
       setExportComplete(true);
@@ -187,6 +197,25 @@ export const ExportModelDialog: React.FC<ExportModelDialogProps> = ({
                 <option value={4096}>4096 x 4096 (Ultra 4K Crisp)</option>
               </select>
             </div>
+          </div>
+
+          {/* Export-only map packing mode */}
+          <div className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-2">
+            <span className="font-semibold text-white text-[12px] block">Texture Map Package Mode</span>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                ['classic', 'Classic', 'Separate maps'],
+                ['rgb_orm', 'RGB + ORM', 'R: AO · G: Rough · B: Metal'],
+                ['ao_albedo', 'AO × Albedo', 'Multiply AO into colour'],
+              ] as const).map(([id, label, description]) => (
+                <button key={id} type="button" onClick={() => setExportMode(id)}
+                  className={`p-2 border rounded text-left transition-colors ${exportMode === id ? 'bg-[#3d7fb8]/25 border-[#3d7fb8] text-white' : 'bg-[#1e1e1e] border-[#444] text-[#aaa] hover:text-white'}`}>
+                  <strong className="block text-[10px]">{label}</strong>
+                  <span className="block text-[9px] text-[#888] mt-1">{description}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-[#888]">This changes the downloaded texture maps only. AO is a height-derived cavity approximation (not ray-traced or geometry-baked AO); the selected model-file format remains the standard export.</p>
           </div>
 
           {/* Automated Channel Separation Toggles */}
