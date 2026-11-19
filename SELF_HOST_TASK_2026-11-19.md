@@ -85,3 +85,12 @@ Self-host source now includes:
 **Suzanne status:** No Suzanne model binary was visible in the current conversation attachments or in the main branch tree at this checkpoint. The existing built-in Suzanne source/model was not removed or overwritten. Integration remains pending until the reported separate-mesh and vertex-group candidates are accessible. Preserve the existing source asset and integrate into a separate candidate first; validate welded topology, normals and holes before promoting it.
 
 **UV seam status:** The reported filter gap/line around UV island edges remains an explicit known defect. No UV unwrap, rebake, channel, gutter or filter-sampling correction was attempted in this UI pass. Keep the current working UV editor as the baseline and isolate any future seam fix with a rollback path. CI does not replace manual visual testing; scroll/touch drag, scale anchoring, split UV toolbar layout, and Android behaviour still need manual validation.
+
+
+## 2026-11-19 — final UV HUD ordering and verified self-host package (run #167)
+
+The 2D UV HUD now places status badges after the primary actions, keeping the workflow order: Smart UV Unwrap → UV Set → UV Overlay → Overlay Opacity → UV N-Panel → selection/mask status. This is a UI-only adjustment; UV geometry, unwrap, rebake, channel assignment and filter sampling were not changed.
+
+Latest source revision: fe5c1e3d102363434d8c61bd2440ff21ca5ac9b8. GitHub Actions run #167 / ID 44533278135 passed all steps: install, Vite production build, host:sync, blank-package validation, generated self-host output commit, ZIP and artifact upload. Generated output commit: c4cc4bd. Artifact VUE_3D_Canvas_SelfHost ID 14535151799 (1,079,747 bytes), SHA-256 4132e7f6469f75e3bb62d70171f68a8c3c4a0207ac22a2923e8fd509d3962f7e. Download: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44533278135/artifacts/14535151799
+
+Suzanne candidate model binaries are still not available in the current conversation attachment list or main branch asset tree. No Suzanne source/model was removed or overwritten. The original remains preserved; candidate integration is blocked until the two reported files are accessible. UV island-edge filter gaps remain documented and intentionally unmodified. Manual browser/desktop/Android visual and interaction testing remains outstanding.
