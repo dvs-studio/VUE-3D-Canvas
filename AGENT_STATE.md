@@ -10,7 +10,7 @@ No remaining source implementation items from the 2026-11-19 self-host task list
 
 ### Current implementation
 
-Self-host task implemented in source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated page/package synced at `c26301294da0465d5402b6800fbd15dab39cae59`. Build/package run #156 passed. Latest UI extension is source revision f22d56f5a4f2177e50986555fd55ebc913c816f4, package run #166 passed, generated output commit 76d0293. Suzanne candidate binaries are not yet available; existing Suzanne remains unchanged. Filter gaps around UV island edges are documented and intentionally not patched. The self-host target is `self-host/public/index.html`; do not use the stale bundle name below as the current build.
+Self-host task and latest UI extension implemented in source revision `f22d56f5a4f2177e50986555fd55ebc913c816f4`; generated page/package synced at `76d0293`. Build/package run #166 passed. Latest UI extension is source revision f22d56f5a4f2177e50986555fd55ebc913c816f4, package run #166 passed, generated output commit 76d0293. Suzanne candidate binaries are not yet available; existing Suzanne remains unchanged. Filter gaps around UV island edges are documented and intentionally not patched. The self-host target is `self-host/public/index.html`; do not use the stale bundle name below as the current build.
 
 ### Current history — concluded set
 
