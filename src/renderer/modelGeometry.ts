@@ -258,13 +258,13 @@ export function tagModelComponents(geom: THREE.BufferGeometry, modelKey: string)
 
 export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   suzanne: () => {
-    const geom = createSuzanneGeometry();
-    tagModelComponents(geom, 'suzanne');
+    // Bundled Wavefront asset: preserve the supplied OBJ's UVs, normals and named head/eye groups.
+    const geom = parseOBJ(suzanneOBJ);
     return {
       id: 'suzanne',
-      name: 'Suzanne (Built-in)',
+      name: 'Suzanne (Bundled OBJ)',
       category: 'Organic Character',
-      triangleCount: geom.attributes.position.count,
+      triangleCount: (geom.index?.count ?? geom.attributes.position.count) / 3,
       vertexCount: geom.attributes.position.count,
       geometry: geom,
     };
