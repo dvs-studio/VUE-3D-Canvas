@@ -1,18 +1,11 @@
 # Self-host handover
 
-## PIN — read only this far
+## PIN
 
-**Combined 2026-11-19 task + evening progress:** see [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md) and [`AGENTS.md`](AGENTS.md) PIN (open vs landed).
+See **AGENTS.md** and **SELF_HOST_TASK_2026-11-19.md**.
 
-Self-host only. Do not edit `crates/vue3d_core`. Do not delete safety ZIPs.
+**Now:** layer filter pass (wood banding/rings) + upload of evening source. Code may lag MD until completion note.
 
-### Safety
-- `release/vue3d-self-host-safety-2026-11-14.zip`
-- `self-host/vue3d-self-host-safety-2026-11-14.zip`
-
-### Run
-- `npm run host:sync` then `self-host/` via `node server.js` or `file://` public index
+Safety ZIPs: do not delete. Self-host only.
 
 ## STOP
-
-Older history lives in git. Prefer PIN files above.
