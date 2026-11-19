@@ -47,3 +47,18 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 
 ## 2026-11-19 — blank-screen repair
 `Viewport3D` used `uvGeometryVersion` in effect dependency arrays without receiving it in the component parameter destructuring. This free identifier caused a render-time `ReferenceError`, explaining the blank screen on both desktop and hosted Android. The prop is now destructured with a safe default (`0`); `App.tsx` already passes the version. Commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458`. The safety archive dated 2026-11-14 was not modified. CI and manual device checks are still required before calling the hosted build verified.
+
+
+## 2026-11-19 — user-requested gizmo and interaction development checkpoint
+
+Implemented source changes on the self-hosted painter:
+- Box and Sphere orientation gizmos are now generated from built-in Three.js geometry in application code; they no longer require the external Box/Sphere GLB files. Their materials are replaced with axis-coloured, non-image materials. Box faces use solid axis colours; Sphere uses vertex-colour blending across axes.
+- Mountain now has a built-in procedural fallback and a Mountain-only axis-colour influence slider. A user can select a replacement binary GLB; the model is loaded with GLTFLoader and its image materials are discarded/replaced by position-derived vertex colours. The selected GLB is stored in IndexedDB under the browser's local origin, not localStorage, to avoid its small quota. It remains on that browser/device and is not automatically synced to another device or included in exported project files.
+- Subdivision preview level type and controls no longer cap the level at 2. Increasing levels remains user-controlled; memory and processing costs grow rapidly with each level.
+- UV panel tab order now places Sculpt before Mirror, with updated tooltips.
+- Wood Grain now generates opaque output even when the selected layer is initially transparent/empty, so the user does not need to pre-paint the layer.
+- The Layer Filter dialog header supports mouse dragging and a double-tap touch drag gesture.
+
+Source commits: 2fcff5500d6a8b589eed22ab1189fd4c4bde976c, 8637d1779a72f1e2a11b8dfd5b980c2be265ba36, 70217e62400998cfe578e9518288eb4e57fad58b, 576f0e91e3c4e48b2e6626063064b9844c2927ec, 5ed97845f1622b190ab6a46c5c41fb9e690f9a6e, and d249c4ba751bf41d7beeeda7024b8c48a43cddf7.
+
+Remaining work in this request: Wood Grain still needs true object-space sampling derived from mesh positions/normals (not the current UV/image-space grain calculation); touch-drag support must be applied consistently to the other floating filter windows, not only Layer Filter; review and refine the full 2D UV tool information architecture beyond the initial tab-order adjustment. Confirm whether the built-in Mountain fallback's silhouette meets the intended design after visual testing. Build/CI and browser/device interaction tests have not yet been run for this checkpoint. Do not mark these remaining items complete based on source edits alone. The 2026-11-14 safety archive remains protected and unchanged.
