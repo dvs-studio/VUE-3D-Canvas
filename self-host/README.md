@@ -116,7 +116,7 @@ The active implementation target is the Vite/React/Three.js painter in this dire
 - Texture import and Auto-Texture from Folder configure layer switches instead of creating painter nodes.
 - Triplanar rows support image previews or solid colour values in rgba(), hsla(), #RGB, #RRGGBB, and #RRGGBBAA, with a separate alpha control.
 - UV Editor is a Coming Soon placeholder; Viewport2D remains available.
-- Subdivision Preview supports Catmull-Clark and Simple modes, levels 0–2, sharp-angle detection, crease and boundary controls, and optional height displacement. It is preview-only and does not alter the source mesh or exported model.
+- Subdivision Preview supports Catmull-Clark and Simple modes with user-controlled levels and no artificial level-2 cap, plus sharp-angle detection, crease and boundary controls, and optional height displacement. It is preview-only and does not alter the source mesh or exported model; high levels can consume substantial memory and processing time.
 - The first viewport render uses the direct renderer; bloom resources are allocated on the following frame.
 - public/background.jpg is the neutral equirectangular studio environment copied beside the self-hosted index.html during sync.
 
@@ -153,10 +153,22 @@ Manual verification checklist:
 8. Toggle subdivision modes and levels, then export the model and confirm the original cage geometry is unchanged.
 9. Check the first viewport frame, studio background, theme changes, and the sphere/mountain gizmos.
 
-**Verification status:** GitHub Actions successfully completed npm install, Vite build, npm run host:sync, the self-host HTML checks, ZIP packaging, and artifact upload on commit 19a59cb. Browser interaction and Blender import still require manual testing. The generated bundle is available from the VUE_3D_Canvas_SelfHost artifact; the generated self-host/public/index.html is not committed to main, so use that artifact or run host:sync locally before testing.
+**Latest verification status (2026-11-19):** GitHub Actions run #156 (`44480073408`) completed npm install, Vite production build, `npm run host:sync`, self-host HTML validation, generated-output commit, ZIP packaging and artifact upload. Source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated self-host output commit `c26301294da0465d5402b6800fbd15dab39cae59`. Artifact `VUE_3D_Canvas_SelfHost` is 1,076,269 bytes: [download from the workflow artifact page](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44480073408/artifacts/14508410797). Browser interaction and Blender import still require manual testing.
 
 ---
 
-## 7. Safety copy and the next change
+## 7. Safety copy and maintenance
 
-`release/vue3d-self-host-safety-2026-11-14.zip` at the repository root is a copy of this folder before the toggle-layer work. The work itself is `LAYER_PBR_PLAN.md`. Do not treat this folder as the Windows exe.
+`release/vue3d-self-host-safety-2026-11-14.zip` at the repository root is a copy of this folder before the toggle-layer work. The active self-host work is tracked in `SELF_HOST_TASK_2026-11-19.md` and `LAYER_PBR_PLAN.md`. Do not treat this folder as the Windows exe.
+
+
+## 7. 2026-11-19 self-host feature update
+
+- Export-only texture package modes: Classic separate maps, RGB+ORM packing (R=height-derived AO approximation, G=roughness, B=metallic), and AO×Albedo. AO is an approximation derived from local height differences, not geometry-baked or ray-traced AO. Model-file format output remains the standard exporter.
+- Smart UV supports deterministic seeded quarter-turn island rotation. Layer selection restores that layer's UV channel; channel edits persist to the selected layer. The UV Channels panel includes a 0–16 px seamless gutter action for the active layer's texture pixels.
+- Bump and Displacement conversions share grayscale Levels controls.
+- The desktop Tool Options bar scrolls horizontally. Preferences provides 75.0–125.0% UI scale with 0.1% steps.
+- Preferences imports/replaces/clears the Mountain gizmo GLB. It is persisted in IndexedDB for the current browser origin, not synced between devices.
+- Layer multi-select supports Merge and Move-to-Group. Merge requires visible unlocked layers with the same channel and PBR settings; the merged result remains at the source stack position.
+
+Manual validation is still required for Android touch and desktop interactions, AO export quality/performance, UV switching/rebake/seam appearance, Levels undo, Mountain GLB persistence after reload, and layer merge/group operations. A successful CI run confirms compilation and packaging, not these runtime behaviours.
