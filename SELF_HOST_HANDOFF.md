@@ -117,4 +117,4 @@ Suzanne candidate model binaries are still not available in the current conversa
 
 - Verified the generated self-host bundle directly on `main`, not only an artifact. The bundle includes the Suzanne OBJ preset and current UV toolbar placement.
 - Added OBJ ignore/protection rules and updated `scripts/sync_self_host.mjs` so OBJ files already under `self-host/public/` survive the folder refresh.
-- Workflow run #177 passed. Continue with manual visual/runtime checks; do not start the UV seam or model-edge fixes without reproducing them and preserving the working baseline.
+- Workflow run #178 passed; generated self-host output commit: `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`. Continue with manual visual/runtime checks; do not start the UV seam or model-edge fixes without reproducing them and preserving the working baseline.
