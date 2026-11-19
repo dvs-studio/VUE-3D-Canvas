@@ -1544,11 +1544,20 @@ export default function App() {
     setPanelFloating(prev => ({ ...prev, [panelName]: !prev[panelName] }));
   };
 
+  // Scale the visual workspace without changing its viewport-sized layout box.
+  // Inverse CSS dimensions keep dockers/floating windows anchored to the same extremes.
+  const uiScale = Math.max(0.75, Math.min(1.25, (preferences.uiScalePercent ?? 100) / 100));
+
   return (
     <div 
       className={`h-[100dvh] min-h-0 w-screen flex flex-col bg-[#333333] text-[#c8c8c8] overflow-hidden select-none font-sans theme-container theme-${currentTheme} ${currentTheme === 'bw78' ? 'theme-bw78-viewport-shadow' : ''}`}
       data-theme={currentTheme}
-      style={{ zoom: Math.max(0.75, Math.min(1.25, (preferences.uiScalePercent ?? 100) / 100)) } as React.CSSProperties}
+      style={{
+        transform: `scale(${uiScale})`,
+        transformOrigin: 'top left',
+        width: `${100 / uiScale}vw`,
+        height: `${100 / uiScale}dvh`,
+      } as React.CSSProperties}
     >
       {/* 1. Authentic Photoshop CS5 Top Menu Bar */}
       <PhotoshopMenuBar
