@@ -289,6 +289,7 @@ export default function App() {
   const [isTriplanarOpen, setIsTriplanarOpen] = useState<boolean>(false);
   const [isTextureFilterOpen, setIsTextureFilterOpen] = useState<boolean>(false);
   const [bumpLevelsTargetId, setBumpLevelsTargetId] = useState<string | null>(null);
+  const [bumpLevelsMode, setBumpLevelsMode] = useState<'bump' | 'displacement'>('bump');
   const [isGaussianBlurOpen, setIsGaussianBlurOpen] = useState<boolean>(false);
   const [isStochasticScatterOpen, setIsStochasticScatterOpen] = useState<boolean>(false);
   const [isStitchStudioOpen, setIsStitchStudioOpen] = useState<boolean>(false);
@@ -887,7 +888,7 @@ export default function App() {
 
   const handleConvertToBump = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
-    if (target && !target.isGroup && !target.locked) setBumpLevelsTargetId(layerId);
+    if (target && !target.isGroup && !target.locked) { setBumpLevelsMode('bump'); setBumpLevelsTargetId(layerId); }
   };
 
   const handleApplyBumpLevels = (levels: BumpLevels) => {
@@ -895,7 +896,8 @@ export default function App() {
     if (!target || target.isGroup || target.locked) return;
     undoBuffer.pushState('Convert Layer to Grayscale Bump (Levels)', layers);
     applyBumpLevelsToLayer(target, levels);
-    LayerConversions.convertToBumpMap(target);
+    if (bumpLevelsMode === 'displacement') LayerConversions.convertToDisplacementMap(target);
+    else LayerConversions.convertToBumpMap(target);
     setLayers(previous => previous.map(layer => layer.id === target.id ? target : layer));
     notifyTextureUpdated();
     setBumpLevelsTargetId(null);
@@ -1072,10 +1074,9 @@ export default function App() {
 
   const handleConvertToDisplacement = (layerId: string) => {
     const target = layers.find(l => l.id === layerId);
-    if (!target || target.isTextureFill) return;
-    LayerConversions.convertToDisplacementMap(target);
-    undoBuffer.pushState('Convert Layer to Displacement', layers);
-    notifyTextureUpdated();
+    if (!target || target.isGroup || target.isTextureFill || target.locked) return;
+    setBumpLevelsMode('displacement');
+    setBumpLevelsTargetId(layerId);
   };
 
   const handleConvertToReflection = (layerId: string) => {
@@ -2447,6 +2448,7 @@ export default function App() {
       <BumpLevelsDialog
         isOpen={bumpLevelsTargetId !== null}
         layer={layers.find(layer => layer.id === bumpLevelsTargetId)}
+        mode={bumpLevelsMode}
         onClose={() => setBumpLevelsTargetId(null)}
         onApply={handleApplyBumpLevels}
       />
