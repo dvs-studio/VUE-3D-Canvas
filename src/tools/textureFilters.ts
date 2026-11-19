@@ -65,7 +65,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const bleedMix=clamp(bleed*0.45,0,0.45);
      dst[i]=clamp(rr*(1-bleedMix)+color[0]*bleedMix,0,255);
      dst[i+1]=clamp(gg*(1-bleedMix)+color[1]*bleedMix,0,255);
-     dst[i+2]=clamp(bb*(1-bleedMix)+color[2]*bleedMix,0,255);dst[i+3]=aa;
+     dst[i+2]=clamp(bb*(1-bleedMix)+color[2]*bleedMix,0,255);dst[i+3]=255; // Wood Grain is a generated surface layer and does not require pre-existing layer pixels.
    }
    if(cfg.blur>0){
      const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d')!.putImageData(out,0,0);
