@@ -15,7 +15,7 @@ The active product is the Vite/React/Three.js painter in `src/`, packaged into `
 - Multi-select Merge and Move-to-Group, alongside Group/Delete.
 - Final `npm run host:sync`, package identity validation, ZIP packaging, and artifact upload passed in run #156.
 
-**Current source:** `5ec840915c3812eacb68f1577659c1ab6b8509e2`. Generated self-host output: `c26301294da0465d5402b6800fbd15dab39cae59`. Artifact: [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44480073408/artifacts/14508410797).
+**Current source:** `f22d56f5a4f2177e50986555fd55ebc913c816f4` (horizontal scroll rails, UV toolbar ordering and anchor-preserving scale). Generated self-host output: `76d0293`. Latest artifact: [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44532889314/artifacts/14535450721).
 
 **Still required:** manual browser/desktop/Android interaction tests and performance checks. AO is a height-derived cavity approximation, not true geometry AO. Do not claim manual testing from CI success.
 
