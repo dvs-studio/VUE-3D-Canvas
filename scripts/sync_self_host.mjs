@@ -7,7 +7,7 @@ const dist = path.join(root, 'dist');
 const pub = path.join(root, 'self-host', 'public');
 const index = path.join(dist, 'index.html');
 
-if (!fs.existsSync(index)) {
+if (!fs.existsSync(index) || fs.statSync(index).size < 200) {
   console.error('dist/index.html is missing. Run npm run build first.');
   process.exit(1);
 }
@@ -16,7 +16,7 @@ const assetsDir = path.join(dist, 'assets');
 const bundles = fs.existsSync(assetsDir)
   ? fs.readdirSync(assetsDir).filter((name) => name.endsWith('.js'))
   : [];
-if (bundles.length === 0) {
+if (bundles.length === 0 || bundles.some((name) => fs.statSync(path.join(assetsDir, name)).size < 1000)) {
   console.error('dist/assets has no JavaScript bundle. Refusing to publish a blank self-host.');
   process.exit(1);
 }
@@ -63,6 +63,10 @@ html = html.replace(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g, 
   return `<script type="module">\n${js}\n</script>`;
 });
 fs.writeFileSync(publicIndex, html);
+if (html.length < 500 || !html.includes('id="root"') || !html.includes('type="module"')) {
+  console.error('Generated self-host index is empty or missing the React mount/module entry.');
+  process.exit(1);
+}
 if (/src="[^"]+\.js"/.test(html)) {
   console.error('self-host/public/index.html still points at an external script.');
   process.exit(1);
