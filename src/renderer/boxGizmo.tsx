@@ -247,7 +247,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
     const createBuiltin=()=>{
       if(gizmoStyle==='box'){
         const geometry=new THREE.BoxGeometry(1.15,1.15,1.15);
-        const materials=[0x315d91,0x5ba7ff,0x346b45,0x63e18b,0x873747,0xff5b73].map(color=>new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.05}));
+        const materials=[0xff5b73,0x873747,0x63e18b,0x346b45,0x5ba7ff,0x315d91].map(color=>new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.05}));
         const mesh=new THREE.Mesh(geometry,materials);finish(mesh,'box');return;
       }
       if(gizmoStyle==='sphere'){
