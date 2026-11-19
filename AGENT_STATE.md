@@ -10,7 +10,7 @@ No remaining source implementation items from the 2026-11-19 self-host task set.
 
 ### Current implementation
 
-The latest source changes include the supplied `src/assets/Suzanne.obj` wired into the Suzanne preset (procedural Suzanne generation removed), plus the mode-dependent UV toolbar positioning. Generated self-host output is committed at `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`; workflow run #177 succeeded. `.gitignore` ignores OBJ files by default but keeps the bundled Suzanne exception. The self-host sync script now preserves OBJ files under `self-host/public/` when refreshing generated output. See the newest checkpoint at the end of this file.
+The latest source changes include the supplied `src/assets/Suzanne.obj` wired into the Suzanne preset (procedural Suzanne generation removed), plus the mode-dependent UV toolbar positioning. Generated self-host output is committed at `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`; workflow run #178 succeeded. `.gitignore` ignores OBJ files by default but keeps the bundled Suzanne exception. The self-host sync script now preserves OBJ files under `self-host/public/` when refreshing generated output. See the newest checkpoint at the end of this file.
 
 ### Current history — concluded set
 
@@ -633,6 +633,6 @@ Suzanne candidate model binaries are still not available in the current conversa
 
 - Supplied Wavefront mesh is committed at `src/assets/Suzanne.obj`; `src/renderer/modelGeometry.ts` imports it as raw OBJ text and parses it for the Suzanne preset. The procedural Suzanne generator is removed. The existing user asset is retained in source.
 - UV toolbar placement is mode-dependent: split 3D+2D view uses bottom-centre within the 2D pane; dedicated 2D view uses the top position.
-- These source changes were built into the tracked self-host output. Generated self-host commit: `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`. Workflow run #177 / ID `44552675389` succeeded. The generated bundle `self-host/public/assets/index-Cc8o6jsJ.js` contains the Suzanne preset markers and the new UV layout classes.
+- These source changes were built into the tracked self-host output. Generated self-host commit: `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`. Workflow run #178 / ID `44593598091` succeeded. The generated bundle `self-host/public/assets/index-Cc8o6jsJ.js` contains the Suzanne preset markers and the new UV layout classes.
 - OBJ protection was added: `.gitignore` ignores `*.obj` except `src/assets/Suzanne.obj`; `scripts/sync_self_host.mjs` now copies OBJ files out before replacing `self-host/public/` and restores them after the Vite build is copied in. This is necessary because Git ignore alone does not protect files from script deletion.
 - Last stopped: implementation and repository self-host sync are complete for this requested pass. Next work is manual runtime testing (desktop and Android/touch), followed by the known UV-island filter seam/gap and model-edge fill artefacts. Do not claim these are fixed without reproduction and visual verification.
