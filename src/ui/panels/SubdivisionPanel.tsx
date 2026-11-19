@@ -34,9 +34,9 @@ export const SubdivisionPanel: React.FC<SubdivisionPanelProps> = ({ settings, on
       <div className="flex items-center justify-between gap-3">
         <span className="text-[#999]">Preview levels</span>
         <div className="flex items-center gap-2">
-          <button type="button" aria-label="Decrease subdivision level" onClick={() => onChange({ levels: Math.max(0, settings.levels - 1) as 0 | 1 | 2 })} disabled={settings.levels <= 0} className="p-1 rounded border border-[#555] disabled:opacity-30"><ChevronDown className="w-4 h-4"/></button>
+          <button type="button" aria-label="Decrease subdivision level" onClick={() => onChange({ levels: Math.max(0, settings.levels - 1) })} disabled={settings.levels <= 0} className="p-1 rounded border border-[#555] disabled:opacity-30"><ChevronDown className="w-4 h-4"/></button>
           <strong className="min-w-5 text-center text-[#eee]">{settings.levels}</strong>
-          <button type="button" aria-label="Increase subdivision level" onClick={() => onChange({ levels: Math.min(2, settings.levels + 1) as 0 | 1 | 2 })} disabled={settings.levels >= 2} className="p-1 rounded border border-[#555] disabled:opacity-30"><ChevronUp className="w-4 h-4"/></button>
+          <button type="button" aria-label="Increase subdivision level" onClick={() => onChange({ levels: settings.levels + 1 })}  className="p-1 rounded border border-[#555] disabled:opacity-30"><ChevronUp className="w-4 h-4"/></button>
         </div>
       </div>
       <label className="block space-y-1">
@@ -57,7 +57,7 @@ export const SubdivisionPanel: React.FC<SubdivisionPanelProps> = ({ settings, on
       </label>
     </div>
     <div className="border-t border-[#414141] pt-2 text-[10px] text-[#888] leading-relaxed">
-      Preview only. The original cage, UV coordinates and exported mesh are never modified. Levels are limited to 0–2 to keep the preview responsive.
+      Preview only. The original cage, UV coordinates and exported mesh are never modified. There is no fixed subdivision-level ceiling. Higher levels can require substantially more memory and processing time.
     </div>
     <button onClick={() => onChange({ enabled: false, levels: 0, displacement: 0 })} className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-[#333] border border-[#555] rounded text-[#ccc] hover:text-white">
       <RefreshCw className="w-3 h-3" /> Reset preview
