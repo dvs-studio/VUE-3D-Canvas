@@ -1076,7 +1076,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* UV Wireframe Opacity Adjuster when active */}
         {showUVOverlay && (
-          <div className="order-20 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
+          <div className="order-40 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
             <span className="text-[9px] text-[#888]">Opac:</span>
             <input
               type="range"
@@ -1093,7 +1093,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         )}
 
         {/* UV Set Dropdown */}
-        <div className="order-40 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
+        <div className="order-20 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
           <Compass className="w-3 h-3 text-[#38bdf8]" />
           <span className="text-[9px] text-[#888]">UV Set:</span>
           <select
