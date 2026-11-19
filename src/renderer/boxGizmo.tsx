@@ -94,6 +94,30 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   const modelCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const modelObjectRef = useRef<THREE.Object3D | null>(null);
   const [gizmoModelReady, setGizmoModelReady] = useState(false);
+  const [mountainGlbData, setMountainGlbData] = useState<ArrayBuffer | null>(null);
+  const [mountainInfluence, setMountainInfluence] = useState(65);
+  const mountainInputRef = useRef<HTMLInputElement | null>(null);
+  const saveMountainModel = async (data: ArrayBuffer) => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('vue3d-user-assets', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('models');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { const db=request.result; const tx=db.transaction('models','readwrite'); tx.objectStore('models').put(data,'mountain-gizmo'); tx.oncomplete=()=>{db.close();resolve();}; tx.onerror=()=>{db.close();reject(tx.error);}; };
+    });
+  };
+  useEffect(() => {
+    let cancelled=false;
+    const request=indexedDB.open('vue3d-user-assets',1);
+    request.onupgradeneeded=()=>request.result.createObjectStore('models');
+    request.onsuccess=()=>{const db=request.result;const tx=db.transaction('models','readonly');const get=tx.objectStore('models').get('mountain-gizmo');get.onsuccess=()=>{if(!cancelled&&get.result instanceof ArrayBuffer)setMountainGlbData(get.result);};tx.oncomplete=()=>db.close();};
+    return()=>{cancelled=true;};
+  }, []);
+  const handleMountainUpload=(event:React.ChangeEvent<HTMLInputElement>)=>{
+    const file=event.target.files?.[0];if(!file)return;
+    if(!file.name.toLowerCase().endsWith('.glb')){window.alert('Please choose a binary GLB model (.glb).');event.target.value='';return;}
+    file.arrayBuffer().then(async data=>{await saveMountainModel(data);setMountainGlbData(data);}).catch(()=>window.alert('The model could not be saved in this browser storage. Try a smaller GLB or clear unused site storage.'));
+    event.target.value='';
+  };
 
   // A small independent WebGL preview loads the GLB assets supplied in
   // self-host/public/assets/Gizmo. CSS remains the offline/failure fallback.
@@ -146,80 +170,100 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   }, []);
 
   useEffect(() => {
-    const scene = modelSceneRef.current;
-    const renderer = modelRendererRef.current;
-    const camera = modelCameraRef.current;
-    if (!scene || !renderer || !camera) return;
-    let disposed = false;
+    const scene=modelSceneRef.current, renderer=modelRendererRef.current, camera=modelCameraRef.current;
+    if(!scene||!renderer||!camera)return;
+    let disposed=false;
     setGizmoModelReady(false);
-    if (modelObjectRef.current) {
-      const previous = modelObjectRef.current;
-      scene.remove(previous);
-      previous.traverse(node => {
-        const mesh = node as THREE.Mesh;
-        if (mesh.isMesh) {
-          mesh.geometry.dispose();
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-          materials.forEach(material => material.dispose());
-        }
-      });
-      modelObjectRef.current = null;
+    if(modelObjectRef.current){
+      const old=modelObjectRef.current;scene.remove(old);
+      old.traverse(node=>{const mesh=node as THREE.Mesh;if(mesh.isMesh){mesh.geometry.dispose();const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];mats.forEach(m=>m.dispose());}});
+      modelObjectRef.current=null;
     }
-    const loader = new GLTFLoader();
-    const file = gizmoStyle === 'sphere' ? 'sphere.glb' : gizmoStyle === 'mountain' ? 'mountain.glb' : 'box.glb';
-    const loadAsset = (filename: string, allowMountainFallback = false) => {
-      const url = new URL('assets/Gizmo/' + filename, document.baseURI).href;
-      loader.load(url, gltf => {
-        if (disposed) return;
-        const root = gltf.scene;
-        const bounds = new THREE.Box3().setFromObject(root);
-        const center = bounds.getCenter(new THREE.Vector3());
-        const size = bounds.getSize(new THREE.Vector3());
-        const maxDimension = Math.max(size.x, size.y, size.z, 0.0001);
-        const scale = 1.45 / maxDimension;
-        root.scale.setScalar(scale);
-        root.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
-        root.rotation.order = 'YXZ';
-        // Direction arrows are real Three.js geometry parented to the loaded gizmo model.
-        // Positive axes use saturated colors; opposing axes use darker colors.
-        const axisSpecs: Array<{axis:'X'|'Y'|'Z'; sign:1|-1; color:number; direction:THREE.Vector3}> = [
-          {axis:'X',sign:1,color:0xff5b73,direction:new THREE.Vector3(1,0,0)},
-          {axis:'X',sign:-1,color:0x873747,direction:new THREE.Vector3(-1,0,0)},
-          {axis:'Y',sign:1,color:0x63e18b,direction:new THREE.Vector3(0,1,0)},
-          {axis:'Y',sign:-1,color:0x346b45,direction:new THREE.Vector3(0,-1,0)},
-          {axis:'Z',sign:1,color:0x5ba7ff,direction:new THREE.Vector3(0,0,1)},
-          {axis:'Z',sign:-1,color:0x315d91,direction:new THREE.Vector3(0,0,-1)},
-        ];
-        const helpers: THREE.ArrowHelper[] = [];
-        axisSpecs.forEach(spec => {
-          const arrow = new THREE.ArrowHelper(spec.direction, center, maxDimension*0.48, spec.color, maxDimension*0.16, maxDimension*0.1);
-          arrow.userData.axisDirection = spec.direction.clone();
-          arrow.userData.baseOpacity = spec.sign > 0 ? 0.95 : 0.65;
-          arrow.traverse(child => {
-            const object = child as THREE.Mesh | THREE.Line;
-            const material = (object as any).material as THREE.Material | THREE.Material[] | undefined;
-            if (!material) return;
-            (Array.isArray(material) ? material : [material]).forEach(m => {
-              const mat = m as THREE.Material & { opacity?: number; transparent?: boolean };
-              mat.transparent = true; mat.opacity = arrow.userData.baseOpacity;
-              mat.depthWrite = false;
-            });
-          });
-          helpers.push(arrow); root.add(arrow);
-        });
-        root.userData.axisArrowHelpers = helpers;
-        scene.add(root);
-        modelObjectRef.current = root;
-        setGizmoModelReady(true);
-        renderer.render(scene, camera);
-      }, undefined, () => {
-        if (!disposed && allowMountainFallback) loadAsset('mountain_1.glb', false);
-        else if (!disposed) setGizmoModelReady(false);
+    const axisSpecs=[
+      {color:0xff5b73,direction:new THREE.Vector3(1,0,0),sign:1},
+      {color:0x873747,direction:new THREE.Vector3(-1,0,0),sign:-1},
+      {color:0x63e18b,direction:new THREE.Vector3(0,1,0),sign:1},
+      {color:0x346b45,direction:new THREE.Vector3(0,-1,0),sign:-1},
+      {color:0x5ba7ff,direction:new THREE.Vector3(0,0,1),sign:1},
+      {color:0x315d91,direction:new THREE.Vector3(0,0,-1),sign:-1},
+    ];
+    const applyMountainVertexColors=(root:THREE.Object3D)=>{
+      root.traverse(node=>{
+        const mesh=node as THREE.Mesh;if(!mesh.isMesh)return;
+        const geometry=mesh.geometry.clone();const position=geometry.getAttribute('position');
+        const box=new THREE.Box3().setFromBufferAttribute(position as THREE.BufferAttribute);
+        const size=box.getSize(new THREE.Vector3());const influence=mountainInfluence/100;
+        const colors:number[]=[];
+        for(let i=0;i<position.count;i++){
+          const x=(position.getX(i)-box.min.x)/Math.max(size.x,1e-5);
+          const y=(position.getY(i)-box.min.y)/Math.max(size.y,1e-5);
+          const z=(position.getZ(i)-box.min.z)/Math.max(size.z,1e-5);
+          const wx=Math.pow(Math.abs(x-.5)*2,1.4),wy=Math.pow(Math.abs(y-.5)*2,1.4),wz=Math.pow(z,1.4);
+          const total=Math.max(1e-5,wx+wy+wz);const base=[0.95,0.34,0.42],green=[0.34,0.9,0.48],blue=[0.32,0.58,1];
+          const r=(wx*base[0]+wy*green[0]+wz*blue[0])/total;
+          const g=(wx*base[1]+wy*green[1]+wz*blue[1])/total;
+          const b=(wx*base[2]+wy*green[2]+wz*blue[2])/total;
+          const neutral=0.72;colors.push(neutral+(r-neutral)*influence,neutral+(g-neutral)*influence,neutral+(b-neutral)*influence);
+        }
+        geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+        const old=Array.isArray(mesh.material)?mesh.material:[mesh.material];old.forEach(m=>m.dispose());
+        mesh.geometry=geometry;mesh.material=new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.72,metalness:.05});
       });
     };
-    loadAsset(file, gizmoStyle === 'mountain');
-    return () => { disposed = true; };
-  }, [gizmoStyle]);
+    const finish=(root:THREE.Object3D, style:'box'|'sphere'|'mountain')=>{
+      if(disposed)return;
+      root.traverse(node=>{
+        const mesh=node as THREE.Mesh;if(!mesh.isMesh)return;
+        if(style==='mountain')return;
+        const geometry=mesh.geometry.clone();const pos=geometry.getAttribute('position');
+        if(style==='sphere'){
+          const colors:number[]=[];
+          for(let i=0;i<pos.count;i++){
+            const v=new THREE.Vector3(pos.getX(i),pos.getY(i),pos.getZ(i)).normalize();
+            const weights=[Math.pow(Math.abs(v.x),3),Math.pow(Math.abs(v.y),3),Math.pow(Math.abs(v.z),3)];
+            const sum=Math.max(1e-5,weights[0]+weights[1]+weights[2]);
+            const rgb=[(weights[0]*1+weights[1]*.38+weights[2]*.34)/sum,(weights[0]*.34+weights[1]*1+weights[2]*.55)/sum,(weights[0]*.45+weights[1]*.38+weights[2]*1)/sum];
+            colors.push(...rgb);
+          }
+          geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+          mesh.geometry=geometry;mesh.material=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.48,metalness:.08});
+        }else{
+          const materials=[0x873747,0xff5b73,0x346b45,0x63e18b,0x315d91,0x5ba7ff].map(color=>new THREE.MeshStandardMaterial({color,roughness:.58,metalness:.08}));
+          mesh.geometry=geometry;mesh.material=materials;
+        }
+      });
+      const bounds=new THREE.Box3().setFromObject(root);const center=bounds.getCenter(new THREE.Vector3());const size=bounds.getSize(new THREE.Vector3());
+      const scale=1.45/Math.max(size.x,size.y,size.z,.0001);root.scale.setScalar(scale);root.position.set(-center.x*scale,-center.y*scale,-center.z*scale);root.rotation.order='YXZ';
+      const normalizedCenter=new THREE.Vector3(0,0,0);
+      const helpers:THREE.ArrowHelper[]=[];
+      axisSpecs.forEach(spec=>{
+        const arrow=new THREE.ArrowHelper(spec.direction,normalizedCenter,0.72,spec.color,.22,.14);
+        arrow.userData.axisDirection=spec.direction.clone();arrow.userData.baseOpacity=spec.sign>0?.95:.65;
+        arrow.traverse(child=>{const material=(child as THREE.Mesh|THREE.Line).material as THREE.Material|THREE.Material[]|undefined;if(!material)return;(Array.isArray(material)?material:[material]).forEach(m=>{const mat=m as THREE.Material&{opacity?:number;transparent?:boolean};mat.transparent=true;mat.opacity=arrow.userData.baseOpacity;mat.depthWrite=false;});});
+        helpers.push(arrow);root.add(arrow);
+      });
+      root.userData.axisArrowHelpers=helpers;scene.add(root);modelObjectRef.current=root;setGizmoModelReady(true);renderer.render(scene,camera);
+    };
+    const createBuiltin=()=>{
+      if(gizmoStyle==='box'){
+        const geometry=new THREE.BoxGeometry(1.15,1.15,1.15);
+        const materials=[0x315d91,0x5ba7ff,0x346b45,0x63e18b,0x873747,0xff5b73].map(color=>new THREE.MeshStandardMaterial({color,roughness:.62,metalness:.05}));
+        const mesh=new THREE.Mesh(geometry,materials);finish(mesh,'box');return;
+      }
+      if(gizmoStyle==='sphere'){
+        const mesh=new THREE.Mesh(new THREE.SphereGeometry(.72,40,28),new THREE.MeshStandardMaterial({vertexColors:true}));finish(mesh,'sphere');return;
+      }
+      const geometry=new THREE.PlaneGeometry(1.25,1.25,48,48);geometry.rotateX(-Math.PI/2);
+      const pos=geometry.getAttribute('position');
+      for(let i=0;i<pos.count;i++){const x=pos.getX(i),z=pos.getZ(i);const peak1=Math.exp(-((x+.22)**2+(z-.08)**2)*18)*.72;const peak2=Math.exp(-((x-.3)**2+(z+.2)**2)*25)*.48;pos.setY(i,peak1+peak2+.06*Math.sin(x*12)*Math.cos(z*9));}
+      geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,side:THREE.DoubleSide}));applyMountainVertexColors(mesh);finish(mesh,'mountain');
+    };
+    if(gizmoStyle!=='mountain'){createBuiltin();return()=>{disposed=true;};}
+    if(mountainGlbData){
+      new GLTFLoader().parse(mountainGlbData.slice(0),'',gltf=>{if(disposed)return;const root=gltf.scene;applyMountainVertexColors(root);finish(root,'mountain');},()=>{if(!disposed)createBuiltin();});
+    }else createBuiltin();
+    return()=>{disposed=true;};
+  }, [gizmoStyle,mountainGlbData,mountainInfluence]);
 
   useEffect(() => {
     const model = modelObjectRef.current;
@@ -305,6 +349,13 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   return (
     <div className="absolute top-3 right-3 z-30 flex flex-col items-center select-none pointer-events-auto">
       {/* Gizmo Header Badge */}
+      {gizmoStyle==='mountain'&&<div className="mb-1 flex flex-col gap-1 w-36 rounded border border-[#555] bg-[#252525]/95 p-1.5 text-[9px] text-[#ccc]">
+        <div className="flex items-center justify-between"><span>Axis colour influence</span><strong>{mountainInfluence}%</strong></div>
+        <input aria-label="Mountain axis colour influence" type="range" min="0" max="100" value={mountainInfluence} onChange={e=>setMountainInfluence(Number(e.target.value))} className="w-full accent-blue-500"/>
+        <button type="button" onClick={()=>mountainInputRef.current?.click()} className="rounded border border-[#666] px-2 py-1 hover:bg-[#3a3a3a]">{mountainGlbData?'Replace Mountain GLB':'Use Your Mountain GLB'}</button>
+        <input ref={mountainInputRef} type="file" accept=".glb,model/gltf-binary" className="hidden" onChange={handleMountainUpload}/>
+        <span className="text-[8px] text-[#888]">Stored in this browser on this device</span>
+      </div>}
       <div className="text-[9px] text-[#9a9a9a] font-mono tracking-wider mb-2 flex items-center gap-1.5 bg-[#252525]/90 px-2 py-0.5 rounded border border-[#444] shadow-md backdrop-blur-xs">
         {gizmoStyle === 'box' && (
           <>
