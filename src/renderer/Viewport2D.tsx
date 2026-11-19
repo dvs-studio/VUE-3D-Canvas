@@ -26,6 +26,7 @@ import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
 import { SmartUVUnwrapEngine } from '../tools/smartUVUnwrap';
 import { StitchStudioEngine } from '../tools/stitchStudio';
 import { UVNPanel } from '../ui/UVNPanel';
+import { HorizontalScrollRail } from '../ui/HorizontalScrollRail';
 import { UVSculptEngine } from '../tools/uvSculptEngine';
 import { UVSculptMode } from '../core/types';
 import { UVChannelManager } from '../tools/uvChannelManager';
@@ -1033,8 +1034,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       />
 
       {/* Top Left: 2D UV Map HUD Controls */}
-      <div className="absolute top-2 left-2 z-30 flex items-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
-        <div className="flex items-center gap-1 font-bold text-[#eee] uppercase text-[10px]">
+      <HorizontalScrollRail className="absolute top-2 left-2 z-30 h-9 max-w-[calc(100%-9rem)]" contentClassName="h-full w-max min-w-max flex items-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
+        <div className="order-0 flex items-center gap-1 font-bold text-[#eee] uppercase text-[10px] shrink-0">
           <Paintbrush className="w-3.5 h-3.5 text-[#3d7fb8]" />
           <span>2D UV CANVAS</span>
         </div>
@@ -1048,7 +1049,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* UV WIREFRAME MESH OVERLAY TOGGLE */}
         <button
           onClick={() => setShowUVOverlay(v => !v)}
-          className={`px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1.5 transition-colors border ${
+          className={`order-30 px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1.5 transition-colors border ${
             showUVOverlay
               ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
               : 'bg-[#333] hover:bg-[#404040] text-[#888] border-[#555]'
@@ -1062,7 +1063,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* Toggle UV Suite N-Panel */}
         <button
           onClick={() => setIsNPanelOpen(o => !o)}
-          className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors ${
+          className={`order-50 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors ${
             isNPanelOpen
               ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
               : 'bg-[#222] hover:bg-[#333] text-[#aaa] border-[#555]'
@@ -1075,7 +1076,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* UV Wireframe Opacity Adjuster when active */}
         {showUVOverlay && (
-          <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444]">
+          <div className="order-20 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
             <span className="text-[9px] text-[#888]">Opac:</span>
             <input
               type="range"
@@ -1092,7 +1093,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         )}
 
         {/* UV Set Dropdown */}
-        <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444]">
+        <div className="order-40 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
           <Compass className="w-3 h-3 text-[#38bdf8]" />
           <span className="text-[9px] text-[#888]">UV Set:</span>
           <select
@@ -1110,7 +1111,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* Smart UV Generation Button (Exists ONLY inside 2D UV Map editor view) */}
         <button
           onClick={() => setShowSmartUVModal(true)}
-          className="px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-[#a6e3a1] border border-[#22c55e]/50 shadow-xs transition-colors"
+          className="order-10 px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-[#a6e3a1] border border-[#22c55e]/50 shadow-xs transition-colors"
           title="Open Smart UV Projection and Automatic Unwrap Engine"
         >
           <Wand2 className="w-3 h-3 text-[#a6e3a1]" />
@@ -1137,7 +1138,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
             <span className="text-[#bbb]">Erase = Dark (Protected)</span>
           </div>
         )}
-      </div>
+      </HorizontalScrollRail>
 
       {/* Top Right: Touch Navigation & View Reset Tools */}
       <div className="absolute top-2 right-2 z-30 flex items-center gap-1 bg-[#2a2a2a]/95 p-1 rounded border border-[#444] shadow-md cs5-inset">
