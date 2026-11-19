@@ -213,10 +213,22 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
               ? 'border-[#38bdf8] text-[#38bdf8] bg-[#2a2a2a]'
               : 'border-transparent text-[#888] hover:text-[#bbb] hover:bg-[#252525]'
           }`}
-          title="Multi-UV Channels & Dynamic Re-baker"
+          title="Manage UV maps and texture channels"
         >
           <Layers className="w-3 h-3" />
           <span>Channels</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('sculpt')}
+          className={`flex-1 py-2 text-center transition-colors border-b-2 flex items-center justify-center gap-1 ${
+            activeTab === 'sculpt'
+              ? 'border-[#ec4899] text-[#f472b6] bg-[#2a2a2a]'
+              : 'border-transparent text-[#888] hover:text-[#bbb] hover:bg-[#252525]'
+          }`}
+          title="Sculpt and adjust UV island positions"
+        >
+          <Paintbrush className="w-3 h-3" />
+          <span>Sculpt</span>
         </button>
         <button
           onClick={() => setActiveTab('symmetrize')}
@@ -229,18 +241,6 @@ export const UVNPanel: React.FC<UVNPanelProps> = ({
         >
           <FlipHorizontal2 className="w-3 h-3" />
           <span>Mirror</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('sculpt')}
-          className={`flex-1 py-2 text-center transition-colors border-b-2 flex items-center justify-center gap-1 ${
-            activeTab === 'sculpt'
-              ? 'border-[#ec4899] text-[#f472b6] bg-[#2a2a2a]'
-              : 'border-transparent text-[#888] hover:text-[#bbb] hover:bg-[#252525]'
-          }`}
-          title="2D UV Interactive Sculpt Brushes"
-        >
-          <Paintbrush className="w-3 h-3" />
-          <span>Sculpt</span>
         </button>
       </div>
 
