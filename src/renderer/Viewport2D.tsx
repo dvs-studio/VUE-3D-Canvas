@@ -72,6 +72,7 @@ interface Viewport2DProps {
   onSelectUVChannel?: (id: string) => void;
   selectedVertices?: Set<number>;
   onRebakeTexture?: (from: string, to: string, res: number) => void;
+  onSeamlessUV?: (radius: number) => void;
 }
 
 export const Viewport2D: React.FC<Viewport2DProps> = ({
@@ -97,6 +98,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   onSelectUVChannel,
   selectedVertices = new Set(),
   onRebakeTexture,
+  onSeamlessUV,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1352,6 +1354,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           if (onSelectUVChannel) onSelectUVChannel(chId);
           drawOverlay();
         }}
+        onSeamlessUV={onSeamlessUV}
         onRebakeTexture={(from, to, res) => {
           if (onRebakeTexture) {
             onRebakeTexture(from, to, res);
