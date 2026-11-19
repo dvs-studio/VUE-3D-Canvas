@@ -1,11 +1,13 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import { X, Filter, Upload, RotateCcw, Move } from 'lucide-react';
 import { Layer } from '../core/types';
+import * as THREE from 'three';
+import { buildObjectSpacePositionMap } from '../tools/textureFilters';
 import { DEFAULT_TEXTURE_FILTER, TextureFilterConfig, TextureFilterKind, WoodSource, transformTexturePixels } from '../tools/textureFilters';
 
-interface Props { isOpen:boolean; activeLayer?:Layer; defaultColor:string; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
+interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
 const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic'};
-export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultColor,onClose,onApply})=>{
+export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,onClose,onApply})=>{
  const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor});
  const [windowOffset,setWindowOffset]=useState({x:0,y:0});
  const dragRef=useRef<{x:number;y:number;left:number;top:number}|null>(null);
@@ -27,8 +29,9 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultCol
  const handleHeaderPointerUp=()=>{dragRef.current=null;setTouchDragArmed(false);};
  const [sourceImage,setSourceImage]=useState<string|undefined>();const [preview,setPreview]=useState<ImageData|null>(null);const previewCanvas=useRef<HTMLCanvasElement|null>(null);const uploadRef=useRef<HTMLInputElement|null>(null);
  const update=(patch:Partial<TextureFilterConfig>)=>setCfg(c=>({...c,...patch}));
+ const previewObjectMap=useMemo(()=>{if(!geometry)return undefined;try{return buildObjectSpacePositionMap(geometry,320,320,geometry.userData?.uvChannels?.[activeUVChannel] as Float32Array|undefined);}catch{return undefined;}},[geometry,activeUVChannel]);
  useEffect(()=>{if(!isOpen)return;setCfg(c=>({...c,color:defaultColor}));},[isOpen,defaultColor]);
- useEffect(()=>{let cancelled=false;const run=async()=>{if(!isOpen||!activeLayer?.canvas)return;try{const copy=document.createElement('canvas');copy.width=320;copy.height=320;const c=copy.getContext('2d');if(!c)return;c.drawImage(activeLayer.canvas,0,0,copy.width,copy.height);const pixels=c.getImageData(0,0,copy.width,copy.height);const result=await transformTexturePixels(pixels,cfg);if(!cancelled)setPreview(result);}catch{if(!cancelled)setPreview(null);}};run();return()=>{cancelled=true};},[isOpen,activeLayer,cfg]);
+ useEffect(()=>{let cancelled=false;const run=async()=>{if(!isOpen||!activeLayer?.canvas)return;try{const copy=document.createElement('canvas');copy.width=320;copy.height=320;const c=copy.getContext('2d');if(!c)return;c.drawImage(activeLayer.canvas,0,0,copy.width,copy.height);const pixels=c.getImageData(0,0,copy.width,copy.height);const result=await transformTexturePixels(pixels,cfg.kind==='wood'?{...cfg,objectPositionMap:previewObjectMap,objectMapWidth:320,objectMapHeight:320}:cfg);if(!cancelled)setPreview(result);}catch{if(!cancelled)setPreview(null);}};run();return()=>{cancelled=true};},[isOpen,activeLayer,cfg,previewObjectMap]);
  useEffect(()=>{const canvas=previewCanvas.current;if(!canvas||!preview)return;canvas.width=preview.width;canvas.height=preview.height;canvas.getContext('2d')?.putImageData(preview,0,0);},[preview]);
  const isWood=cfg.kind==='wood';const isDirectional=['hatching','cross-hatching','hashing'].includes(cfg.kind);
  if(!isOpen)return null;
@@ -64,7 +67,7 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,defaultCol
      <div className="text-xs font-semibold">Preview</div><div className="bg-[#1c1c1c] border border-[#555] rounded p-1 min-h-[200px] flex items-center justify-center overflow-hidden"><canvas ref={previewCanvas} className="max-w-full max-h-[340px] object-contain"/></div><div className="text-[10px] text-[#999]">Preview is calculated from the active layer image. Apply replaces the selected layer image pixels.</div>
     </section>
    </div>
-   <footer className="border-t border-[#444] p-3 flex justify-end gap-2"><button onClick={onClose} className="px-3 py-1.5 border border-[#555] rounded">Cancel</button><button onClick={()=>onApply(cfg)} disabled={!activeLayer||activeLayer.locked} className="px-4 py-1.5 bg-blue-600 disabled:opacity-40 rounded text-white font-semibold">Apply to Selected Layer</button></footer>
+   <footer className="border-t border-[#444] p-3 flex justify-end gap-2"><button onClick={onClose} className="px-3 py-1.5 border border-[#555] rounded">Cancel</button><button onClick={()=>{if(cfg.kind==='wood'&&geometry&&activeLayer?.canvas){try{const map=buildObjectSpacePositionMap(geometry,activeLayer.canvas.width,activeLayer.canvas.height,geometry.userData?.uvChannels?.[activeUVChannel] as Float32Array|undefined);onApply({...cfg,objectPositionMap:map,objectMapWidth:activeLayer.canvas.width,objectMapHeight:activeLayer.canvas.height});}catch(error){window.alert(error instanceof Error?error.message:'Unable to map wood grain to this mesh');}}else onApply(cfg);}} disabled={!activeLayer||activeLayer.locked} className="px-4 py-1.5 bg-blue-600 disabled:opacity-40 rounded text-white font-semibold">Apply to Selected Layer</button></footer>
   </div>
  </div>;
 };
