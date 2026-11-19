@@ -13,7 +13,11 @@ Self-host development was completed and packaged before this Windows handover. T
 
 ---
 
-## 1. Current architecture and prerequisites\n\nRead the **Current Windows redevelopment handover** appended at the end of this file before changing the Windows build. The current shell uses `crates/vue3d_core/src/main.rs` and `desktop.rs`, Wry/Tao + WebView2, and an adjacent `ui/` folder. ANGLE routes WebGL to D3D11 by default; this is not direct native D3D11 rendering. The current manual workflow is `.github/workflows/build-windows-app.yml`; the local builder is `scripts\\build_standalone_desktop.bat`.\n\n## 1. Prerequisites Setup
+## 1. Current architecture and prerequisites
+
+Read the **Current Windows redevelopment handover** appended at the end of this file before changing the Windows build. The current shell uses `crates/vue3d_core/src/main.rs` and `desktop.rs`, Wry/Tao + WebView2, and an adjacent `ui/` folder. ANGLE routes WebGL to D3D11 by default; this is not direct native D3D11 rendering. The current manual workflow is `.github/workflows/build-windows-app.yml`; the local builder is `scripts\build_standalone_desktop.bat`.
+
+## 1. Prerequisites Setup
 
 You only need lightweight command-line tools and Visual Studio Code:
 
