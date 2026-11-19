@@ -1120,7 +1120,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* Physical Selection Shading Status Badge */}
         {selectionMask && selectionMask.active && (
-          <div className="flex items-center gap-1.5 bg-[#141824] px-2 py-0.5 rounded border border-[#3d7fb8] text-[10px] shadow-xs">
+          <div className="order-60 flex items-center gap-1.5 bg-[#141824] px-2 py-0.5 rounded border border-[#3d7fb8] text-[10px] shadow-xs shrink-0">
             <span className="w-2 h-2 rounded-full bg-[#a6e3a1] animate-pulse" />
             <span className="font-bold text-[#89b4fa]">SELECTION:</span>
             <span className="text-[#a6e3a1] font-mono">Light = Editable</span>
@@ -1131,7 +1131,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* Mask Brush Active Mode Badge */}
         {activeTool === 'mask_brush' && (
-          <div className="flex items-center gap-1.5 bg-[#2a1a12] px-2 py-0.5 rounded border border-[#e5a038] text-[10px] shadow-xs">
+          <div className="order-70 flex items-center gap-1.5 bg-[#2a1a12] px-2 py-0.5 rounded border border-[#e5a038] text-[10px] shadow-xs shrink-0">
             <span className="font-bold text-[#f5a942]">MASK BRUSH:</span>
             <span className="text-[#eee]">Paint = Light (Editable)</span>
             <span className="text-[#666]">|</span>
