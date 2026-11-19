@@ -982,6 +982,69 @@ export default function App() {
     undoBuffer.pushState('Group Selected Layers', updated);
   };
 
+  const handleMoveSelectedLayersToGroup = (layerIds: string[], groupId: string) => {
+    const group = layers.find(layer => layer.id === groupId && layer.isGroup);
+    if (!group) return;
+    const ids = new Set(layerIds.filter(id => {
+      const layer = layers.find(item => item.id === id);
+      return !!layer && !layer.isGroup && !layer.locked;
+    }));
+    if (!ids.size) return;
+    const updated = layers.map(layer => ids.has(layer.id) ? { ...layer, groupId } : layer);
+    setLayers(updated);
+    undoBuffer.pushState('Move Selected Layers to Group', updated);
+  };
+
+  const handleMergeSelectedLayers = (layerIds: string[]) => {
+    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup);
+    if (selected.length < 2 || selected.some(layer => layer.locked)) return;
+    const channel = selected[0].channel;
+    if (selected.some(layer => layer.channel !== channel)) {
+      window.alert('Merge selected layers with the same texture channel only.');
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const operation: Record<string, GlobalCompositeOperation> = {
+      normal: 'source-over', multiply: 'multiply', screen: 'screen', overlay: 'overlay',
+      darken: 'darken', lighten: 'lighten', hard_light: 'hard-light',
+      soft_light: 'soft-light', difference: 'difference',
+    };
+    selected.forEach(layer => {
+      if (!layer.visible) return;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
+      ctx.globalCompositeOperation = operation[layer.blendMode] || 'source-over';
+      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
+      ctx.restore();
+    });
+    const selectedIds = new Set(selected.map(layer => layer.id));
+    const firstIndex = layers.findIndex(layer => selectedIds.has(layer.id));
+    const sameGroup = selected.every(layer => layer.groupId === selected[0].groupId);
+    const merged: Layer = {
+      id: `layer_merged_${Date.now()}`,
+      name: `Merged ${selected.length} Layers`,
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas,
+      ctx,
+      channel,
+      ...(sameGroup && selected[0].groupId ? { groupId: selected[0].groupId } : {}),
+      ...(selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
+    };
+    const remaining = layers.filter(layer => !selectedIds.has(layer.id));
+    remaining.splice(Math.max(0, firstIndex - layers.slice(0, firstIndex).filter(layer => !selectedIds.has(layer.id)).length), 0, merged);
+    setLayers(remaining);
+    setActiveLayerId(merged.id);
+    undoBuffer.pushState('Merge Selected Layers', remaining);
+    notifyTextureUpdated();
+  };
+
   const handleDeleteSelectedLayers = (layerIds: string[]) => {
     const ids = new Set(layerIds);
     if (ids.size === 0) return;
@@ -1934,6 +1997,9 @@ export default function App() {
                             onAddLayer={handleAddLayer}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
+                            groups={layers.filter(layer => layer.isGroup)}
+                            onMoveSelectedLayersToGroup={handleMoveSelectedLayersToGroup}
+                            onMergeSelectedLayers={handleMergeSelectedLayers}
                             onDeleteSelectedLayers={handleDeleteSelectedLayers}
                             onRenameGroup={handleRenameGroup}
                             onToggleGroupCollapse={handleToggleGroupCollapse}
