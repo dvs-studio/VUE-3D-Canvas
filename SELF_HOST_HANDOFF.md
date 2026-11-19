@@ -43,3 +43,7 @@ Read this file first. The product to finish is the self-hosted painter. Do not s
 - Open `self-host/public/index.html` with `file://`, or `node server.js` / `npm run host` for `http://`
 - Rebuild with `npm run host:sync`
 - Do not edit `crates/vue3d_core`. Do not delete `self-host/vue3d-self-host-safety-2026-11-14.zip` or `release/vue3d-self-host-safety-2026-11-14.zip`.
+
+
+## 2026-11-19 — blank-screen repair
+`Viewport3D` used `uvGeometryVersion` in effect dependency arrays without receiving it in the component parameter destructuring. This free identifier caused a render-time `ReferenceError`, explaining the blank screen on both desktop and hosted Android. The prop is now destructured with a safe default (`0`); `App.tsx` already passes the version. Commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458`. The safety archive dated 2026-11-14 was not modified. CI and manual device checks are still required before calling the hosted build verified.
