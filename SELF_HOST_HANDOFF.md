@@ -4,7 +4,7 @@
 
 See **AGENTS.md** and **SELF_HOST_TASK_2026-11-19.md**.
 
-**Now:** layer filter pass (wood banding/rings) + upload of evening source. Code may lag MD until completion note.
+**Now (2026-11-19):** the filter/evening pack and the seven follow-up self-host tasks are implemented and packaged. Source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated self-host output `c26301294da0465d5402b6800fbd15dab39cae59`; CI run #156 passed. Next: manual visual, interaction, Android touch, UV, export-performance and undo validation. See `SELF_HOST_TASK_2026-11-19.md`.
 
 Safety ZIPs: do not delete. Self-host only.
 
