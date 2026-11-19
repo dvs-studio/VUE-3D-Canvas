@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { X, Minus, Move, Layers, Plus } from 'lucide-react';
+import { HorizontalScrollRail } from './HorizontalScrollRail';
 
 export interface DockerTabItem {
   id: string;
@@ -106,7 +107,7 @@ export const DockerGroup: React.FC<DockerGroupProps> = ({
         }`}
       >
         {/* Tab Headers */}
-        <div className="flex items-center gap-0.5 overflow-x-auto max-w-[85%]">
+        <HorizontalScrollRail className="h-7 min-w-0 max-w-[85%]" contentClassName="h-full w-max min-w-max flex items-center gap-0.5 pr-3">
           {tabs.map((tab) => {
             const isActive = tab.id === currentTab.id;
 
@@ -168,7 +169,7 @@ export const DockerGroup: React.FC<DockerGroupProps> = ({
               )}
             </div>
           )}
-        </div>
+        </HorizontalScrollRail>
 
         {/* Window Controls */}
         <div className="flex items-center gap-1 text-[#aaa] pr-1 pb-1">
