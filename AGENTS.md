@@ -1,25 +1,18 @@
-# AGENTS.md - VUE 3D Canvas Developer Handover
+### Agent status (2026-11-19 — self-host bundle and OBJ preservation updated)
 
-## PIN — read only this far
+The active product is the Vite/React/Three.js painter in `src/`, packaged into `self-host/public/`. The 2026-11-19 generated self-host output is committed on `main`.
 
-### Agent status (2026-11-19 — self-host task implemented and packaged)
+**Completed and present in source/self-host bundle:**
+- Existing follow-up feature set: Classic / RGB+ORM / AO×Albedo export packages; seeded Smart UV rotation; per-layer UV channel persistence and gutter; shared Bump/Displacement Levels; horizontal options rails and decimal UI scale; Mountain GLB preference; multi-select Merge and Move-to-Group.
+- Split-view UV tools are bottom-centred inside the 2D pane; dedicated 2D tools remain at the top.
+- The supplied Suzanne OBJ is committed as `src/assets/Suzanne.obj` and is used by the Suzanne preset. The procedural Suzanne generator was removed.
+- Generated self-host bundle contains the Suzanne OBJ preset and current UV toolbar layout.
 
-The active product is the Vite/React/Three.js painter in `src/`, packaged into `self-host/public/`. The evening/filter upload pack is already committed at `3c9983eff0c02e94da2728bba17711e09a717e51`; do not apply or recreate an offline patch.
+**Latest commits:** source integration `d98df003290a1767f1655a033c5b3e0d3206ee74`; UV layout `7635dbb43bf8aee4d855ad2f0133bae826d5e217`; generated self-host output `1ac11ec10f349346e6ad0604bc764f09e7a8aa07`. Self-host workflow run #177 succeeded: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44552675389
 
-**Completed task set:**
-- Classic / RGB+ORM / AO×Albedo export-only texture packages.
-- Seeded Smart UV quarter-turn rotation, per-layer UV channel persistence, and active-layer seamless texture gutter.
-- Shared Levels conversion flow for Bump and Displacement.
-- Horizontal scrolling desktop options bar and decimal UI scale preference.
-- Mountain GLB import/reset in Preferences using browser-local IndexedDB.
-- Multi-select Merge and Move-to-Group, alongside Group/Delete.
-- Final `npm run host:sync`, package identity validation, ZIP packaging, and artifact upload passed in run #156.
+**OBJ protection:** `.gitignore` now ignores `*.obj` by default while explicitly keeping `src/assets/Suzanne.obj` tracked. `scripts/sync_self_host.mjs` preserves OBJ files already present anywhere under `self-host/public/` while replacing generated bundles. Git ignore does not prevent deletion by scripts; the sync script now handles that preservation explicitly.
 
-**Current source:** `8ef43083078ce650e7c9ddda2de2a99ff41b2378` (split-view UV toolbar bottom-centre; dedicated 2D UV toolbar top-left). Generated self-host output: `6ca5b70`. Latest artifact: [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44538905738/artifacts/14536189234).
-
-**Still required:** manual browser/desktop/Android interaction tests and performance checks. AO is a height-derived cavity approximation, not true geometry AO. Do not claim manual testing from CI success.
-
-**Latest UI checkpoint:** run #169 passed; horizontal drag-scroll rails, split-view UV tools/scrollbar at the bottom-centre of the 2D pane, dedicated 2D UV tools at the top-left, and anchor-preserving UI scaling are now in source. Suzanne integration is pending the actual candidate binaries; the original built-in model is untouched. UV island-edge filter gaps remain documented and deliberately unmodified.
+**Still required:** manual browser/desktop/Android interaction tests and performance checks. UV island-edge filter gaps and model-edge fill artefacts remain open. AO is a height-derived cavity approximation, not true geometry AO. CI success is not manual runtime verification.
 
 **Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)
 
@@ -30,7 +23,6 @@ Do not delete safety ZIPs under `release/` or `self-host/`.
 ## STOP
 
 Older history in git.
-
 
 ## 2026-11-19 — pre-execution: remaining self-host task set
 
