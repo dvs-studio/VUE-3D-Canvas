@@ -35,7 +35,20 @@ jobs:
       - name: Build and sync self-host
         run: npm run host:sync
 
-      - name: Commit the current self-host output and remove stale bundles
+      - name: Refuse an incomplete or blank self-host build
+        run: |
+          set -euo pipefail
+          test -s self-host/public/index.html
+          test -f self-host/server.js
+          grep -q "VUE 3D Canvas" self-host/public/index.html
+          grep -q 'id="root"' self-host/public/index.html
+          grep -q 'type="module"' self-host/public/index.html
+          if grep -q 'src="[^"]*\.js"' self-host/public/index.html; then
+            echo "index.html still loads an external script, so file:// may be blank."
+            exit 1
+          fi
+
+      - name: Commit the validated self-host output and remove stale bundles
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -46,18 +59,6 @@ jobs:
             git push origin HEAD:main
           else
             echo "self-host/public already matches the current build."
-          fi
-
-      - name: Refuse a package that is not the painter
-        run: |
-          set -euo pipefail
-          test -f self-host/public/index.html
-          test -f self-host/server.js
-          grep -q "VUE 3D Canvas" self-host/public/index.html
-          grep -q 'type="module"' self-host/public/index.html
-          if grep -q 'src="[^"]*\.js"' self-host/public/index.html; then
-            echo "index.html still loads an external script, so file:// will be blank."
-            exit 1
           fi
 
       - name: Zip the self-host folder
