@@ -6,11 +6,11 @@ Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes af
 
 ### To do — this set, not started
 
-The ten items in the `AGENTS.md` pin. Detail is `LAYER_PBR_PLAN.md`. Not built.
+No remaining source implementation items from the 2026-11-19 self-host task list. Manual interaction and performance validation remain open; see the latest checkpoint appended below and `SELF_HOST_TASK_2026-11-19.md`.
 
 ### Current implementation
 
-Not started. `f3b43f6` only rewrote guides. Do not continue that. Page `index-DXhSIj8p.js`.
+Self-host task implemented in source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2`; generated page/package synced at `c26301294da0465d5402b6800fbd15dab39cae59`. Build/package run #156 passed. The self-host target is `self-host/public/index.html`; do not use the stale bundle name below as the current build.
 
 ### Current history — concluded set
 
