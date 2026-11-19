@@ -59,7 +59,14 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
+  const lastTouchTapRef = useRef(0);
   const handlePointerDownHeader = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      const now = Date.now();
+      if (now - lastTouchTapRef.current > 360) { lastTouchTapRef.current = now; return; }
+      lastTouchTapRef.current = 0;
+      e.preventDefault();
+    } else if (e.button !== 0) return;
     isDraggingRef.current = true;
     dragOffsetRef.current = {
       x: e.clientX - position.x,
@@ -92,6 +99,8 @@ export const EdgeWearDialog: React.FC<EdgeWearDialogProps> = ({
           onPointerDown={handlePointerDownHeader}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ touchAction: "none" }}
           className="cs5-panel-header px-3 py-2 flex items-center justify-between shrink-0 bg-[#252525] border-b border-[#404040] cursor-move"
           title="Drag to reposition dialog"
         >
