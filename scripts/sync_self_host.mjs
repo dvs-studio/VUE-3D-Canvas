@@ -22,6 +22,22 @@ if (bundles.length === 0 || bundles.some((name) => fs.statSync(path.join(assetsD
 }
 
 // Preserve hand-maintained self-host support assets while replacing all generated app bundles.
+// Copy every Wavefront OBJ model found under a directory, preserving its relative path.
+// OBJ files are user mesh assets, not disposable Vite output.
+function copyObjFiles(sourceRoot, targetRoot) {
+  if (!fs.existsSync(sourceRoot)) return;
+  for (const entry of fs.readdirSync(sourceRoot, { withFileTypes: true })) {
+    const source = path.join(sourceRoot, entry.name);
+    const target = path.join(targetRoot, entry.name);
+    if (entry.isDirectory()) {
+      copyObjFiles(source, target);
+    } else if (entry.isFile() && path.extname(entry.name).toLowerCase() === '.obj') {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.copyFileSync(source, target);
+    }
+  }
+}
+
 const preserved = path.join(root, '.self-host-preserved');
 fs.rmSync(preserved, { recursive: true, force: true });
 fs.mkdirSync(preserved, { recursive: true });
@@ -33,6 +49,8 @@ for (const rel of ['assets/Gizmo', 'help.docx', 'help.pdf', 'tutorial.pdf', 'sig
     fs.cpSync(source, target, { recursive: true });
   }
 }
+// Preserve OBJ models anywhere in self-host/public before its generated contents are replaced.
+copyObjFiles(pub, preserved);
 fs.rmSync(pub, { recursive: true, force: true });
 fs.cpSync(dist, pub, { recursive: true });
 for (const rel of ['assets/Gizmo', 'help.docx', 'help.pdf', 'tutorial.pdf', 'signature.svg']) {
@@ -43,6 +61,8 @@ for (const rel of ['assets/Gizmo', 'help.docx', 'help.pdf', 'tutorial.pdf', 'sig
     fs.cpSync(source, target, { recursive: true });
   }
 }
+// Restore user OBJ mesh files after copying the fresh Vite build.
+copyObjFiles(preserved, pub);
 fs.rmSync(preserved, { recursive: true, force: true });
 
 const publicIndex = path.join(pub, 'index.html');
