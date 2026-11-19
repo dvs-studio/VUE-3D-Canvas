@@ -119,3 +119,15 @@ Manual testing remains required for UV edits updating the 3D material and textur
 - Fixed by adding `uvGeometryVersion = 0` to the destructured props. Existing type declaration and `App.tsx` prop wiring were already correct.
 - Commit: `e6c3201a0d3d93a540599ec21d2cab2eaca19458`.
 - Source diff verified. CI production build/package and manual desktop/Android checks have not yet been confirmed. Do not infer runtime verification from a successful compile alone.
+
+## 2026-11-19 — self-host task implementation and package verification
+
+- Read all 22 Markdown files on `main` before editing and followed the self-host-only scope. The filter/evening pack was already committed at `3c9983eff0c02e94da2728bba17711e09a717e51`; did not reapply the missing offline patch.
+- Implemented Classic / RGB+ORM / AO×Albedo export-only map packages. AO is explicitly a height-derived cavity approximation, not true geometry or ray-traced AO.
+- Added deterministic Smart UV quarter-turn rotation, persisted per-layer UV channel switching, and active-layer seamless texture gutter action.
+- Routed Bump and Displacement through shared grayscale Levels conversion.
+- Added desktop options-bar horizontal scrolling, 0.1%-step UI scale, Mountain GLB import/reset in Preferences using shared IndexedDB storage, and multi-select Merge / Move-to-Group.
+- Corrected merge insertion to preserve original stack order and require matching PBR settings; hidden/locked layers are not consumed by Merge.
+- Updated AGENTS.md, AGENT_STATE.md, SELF_HOST_HANDOFF.md, LAYER_PBR_PLAN.md, SELF_HOST_TASK_2026-11-19.md, API_DOCUMENTATION.md, self-host/README.md, and PATCH_README.md.
+- Source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2` passed workflow run #156 (`44480073408`). Generated self-host output commit `c26301294da0465d5402b6800fbd15dab39cae59`; artifact `14508410797` (1,076,269 bytes).
+- CI proves build/package only. Manual desktop/Android/browser tests, export visual quality and performance, UV seams/rebake, Mountain persistence, Levels undo, and merge/group interactions remain outstanding. Protected safety ZIPs and crates/vue3d_core were not changed.
