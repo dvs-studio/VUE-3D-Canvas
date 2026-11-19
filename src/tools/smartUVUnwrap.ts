@@ -21,6 +21,7 @@ export interface SmartUVOptions {
   seed?: number;                // Randomization seed for layout variety
   submeshId?: string;           // 'all' or specific submesh ID to isolate
   preserveOthers?: boolean;     // Whether to keep unselected submesh UVs intact
+  randomRotation?: boolean;     // Seeded quarter-turn rotation for island variety
   packMode?: 'tight_conformal' | 'stochastic_grid' | 'shelf';
 }
 
@@ -317,7 +318,7 @@ export class SmartUVUnwrapEngine {
       }
       const vAxis = new THREE.Vector3().crossVectors(avgNormal, uAxis).normalize();
 
-      const islandRotation = 0;
+      const islandRotation = options.randomRotation === false ? 0 : Math.floor(prng.next() * 4) * (Math.PI / 2);
 
       const cosR = Math.cos(islandRotation);
       const sinR = Math.sin(islandRotation);
