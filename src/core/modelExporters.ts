@@ -25,6 +25,9 @@ export interface ExportedChannelMaps {
   normal: string;       // Tangent-space RGB Sobel PNG
   roughness: string;    // Grayscale roughness PNG
   metallic: string;     // Grayscale metallic PNG
+  ambientOcclusion: string; // Height-derived cavity approximation, white = unoccluded
+  orm: string;          // glTF ORM packing: R=AO, G=roughness, B=metallic
+  aoAlbedo: string;     // Albedo multiplied by derived AO
 }
 
 export interface ModelExportOptions {
@@ -32,6 +35,7 @@ export interface ModelExportOptions {
   modelName: string;
   textureResolution: number; // e.g. 1024, 2048, 4096
   embedTextures: boolean;
+  exportMode?: 'classic' | 'rgb_orm' | 'ao_albedo';
   exportChannels: {
     albedo: boolean;
     emission: boolean;
@@ -127,6 +131,35 @@ export class ModelExporterEngine {
     const normalBuf = createBuffer();
     this.bakeSobelNormalMap(heightBuf.canvas, normalBuf.ctx, 2.5);
 
+    // No dedicated AO layer channel exists yet. Derive a clearly documented
+    // height-cavity approximation; a flat height field correctly yields white AO.
+    const aoBuf = createBuffer();
+    this.bakeHeightOcclusion(heightBuf.canvas, aoBuf.ctx);
+    const ormBuf = createBuffer();
+    const aoPixels = aoBuf.ctx.getImageData(0, 0, resolution, resolution).data;
+    const roughPixels = roughnessBuf.ctx.getImageData(0, 0, resolution, resolution).data;
+    const metalPixels = metallicBuf.ctx.getImageData(0, 0, resolution, resolution).data;
+    const ormImage = ormBuf.ctx.createImageData(resolution, resolution);
+    for (let i = 0; i < ormImage.data.length; i += 4) {
+      ormImage.data[i] = aoPixels[i];
+      ormImage.data[i + 1] = roughPixels[i];
+      ormImage.data[i + 2] = metalPixels[i];
+      ormImage.data[i + 3] = 255;
+    }
+    ormBuf.ctx.putImageData(ormImage, 0, 0);
+
+    const aoAlbedoBuf = createBuffer();
+    const albedoPixels = albedoBuf.ctx.getImageData(0, 0, resolution, resolution).data;
+    const aoAlbedoImage = aoAlbedoBuf.ctx.createImageData(resolution, resolution);
+    for (let i = 0; i < aoAlbedoImage.data.length; i += 4) {
+      const ao = aoPixels[i] / 255;
+      aoAlbedoImage.data[i] = Math.round(albedoPixels[i] * ao);
+      aoAlbedoImage.data[i + 1] = Math.round(albedoPixels[i + 1] * ao);
+      aoAlbedoImage.data[i + 2] = Math.round(albedoPixels[i + 2] * ao);
+      aoAlbedoImage.data[i + 3] = albedoPixels[i + 3];
+    }
+    aoAlbedoBuf.ctx.putImageData(aoAlbedoImage, 0, 0);
+
     return {
       albedo: albedoBuf.canvas.toDataURL('image/png'),
       emission: emissionBuf.canvas.toDataURL('image/png'),
@@ -134,7 +167,39 @@ export class ModelExporterEngine {
       normal: normalBuf.canvas.toDataURL('image/png'),
       roughness: roughnessBuf.canvas.toDataURL('image/png'),
       metallic: metallicBuf.canvas.toDataURL('image/png'),
+      ambientOcclusion: aoBuf.canvas.toDataURL('image/png'),
+      orm: ormBuf.canvas.toDataURL('image/png'),
+      aoAlbedo: aoAlbedoBuf.canvas.toDataURL('image/png'),
     };
+  }
+
+  /**
+   * Height-derived cavity approximation for export packaging. This is not
+   * geometry ray-traced AO: it darkens pixels whose local height is lower
+   * than nearby samples. Flat/no-height surfaces remain fully unoccluded.
+   */
+  private static bakeHeightOcclusion(srcCanvas: HTMLCanvasElement, outCtx: CanvasRenderingContext2D): void {
+    const w = srcCanvas.width, h = srcCanvas.height;
+    const src = srcCanvas.getContext('2d')!.getImageData(0, 0, w, h).data;
+    const out = outCtx.createImageData(w, h);
+    const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const lum = (x: number, y: number) => {
+      const i = (Math.max(0, Math.min(h - 1, y)) * w + Math.max(0, Math.min(w - 1, x))) * 4;
+      return (src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114) / 255;
+    };
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const center = lum(x, y);
+      let cavity = 0;
+      for (const [dx, dy] of dirs) {
+        cavity += Math.max(0, lum(x + dx * 2, y + dy * 2) - center) * 0.55;
+        cavity += Math.max(0, lum(x + dx * 6, y + dy * 6) - center) * 0.25;
+      }
+      const value = Math.round(255 * (1 - Math.min(0.72, cavity)));
+      const i = (y * w + x) * 4;
+      out.data[i] = out.data[i + 1] = out.data[i + 2] = value;
+      out.data[i + 3] = 255;
+    }
+    outCtx.putImageData(out, 0, 0);
   }
 
   /**
