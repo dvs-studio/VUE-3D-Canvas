@@ -5,7 +5,8 @@
  * Created by Victory Ukpong
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
+import { saveMountainGizmoGLB, clearMountainGizmoGLB } from '../renderer/mountainGizmoStorage';
 import { 
   X, 
   Settings, 
@@ -34,6 +35,24 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
   preferences,
   onUpdatePreferences,
 }) => {
+  const mountainFileRef = useRef<HTMLInputElement>(null);
+  const handleMountainFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.glb')) {
+      window.alert('Please select a binary glTF (.glb) file.');
+      event.target.value = '';
+      return;
+    }
+    try {
+      await saveMountainGizmoGLB(await file.arrayBuffer());
+      window.alert('Mountain gizmo saved in this browser. It will load after this preference window closes.');
+    } catch (error) {
+      console.error(error);
+      window.alert('Could not save this GLB in browser storage. Try a smaller file or clear unused site data.');
+    }
+    event.target.value = '';
+  };
   if (!isOpen) return null;
 
   return (
@@ -111,6 +130,22 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
                 <span className="text-[9px] text-[#888] leading-tight">Trapezium Peaks with Elevation Colors</span>
               </button>
             </div>
+          </div>
+
+          <div className="bg-[#2a2a2a] p-3 rounded border border-[#444] space-y-2">
+            <span className="font-bold text-[#eee] text-xs">Mountain Gizmo Model</span>
+            <p className="text-[10px] text-[#999] leading-snug">Import a binary GLB to replace the built-in Mountain shape. Image textures are discarded; the gizmo generates its own axis-coloured gradient. Stored locally in this browser using IndexedDB.</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => mountainFileRef.current?.click()}
+                className="px-3 py-1.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded border border-[#5796c8] font-semibold">
+                Choose / Replace Mountain GLB…
+              </button>
+              <button type="button" onClick={() => clearMountainGizmoGLB().then(() => window.alert('Custom Mountain GLB cleared. The built-in fallback will be used.')).catch(() => window.alert('Could not clear the saved Mountain GLB.'))}
+                className="px-3 py-1.5 bg-[#333] hover:bg-[#484848] text-[#ddd] rounded border border-[#555]">
+                Restore Built-in Mountain
+              </button>
+            </div>
+            <input ref={mountainFileRef} type="file" accept=".glb,model/gltf-binary" className="hidden" onChange={handleMountainFile} />
           </div>
 
           {/* Section 2b: Gizmo label layout */}
