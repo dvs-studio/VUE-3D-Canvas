@@ -24,7 +24,7 @@ export const HorizontalScrollRail: React.FC<HorizontalScrollRailProps> = ({
     if (!viewport || !rail) return;
     const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
     const railWidth = rail.clientWidth;
-    const thumb = Math.max(18, maxScroll > 0 ? railWidth * viewport.clientWidth / viewport.scrollWidth : railWidth);
+    const thumb = 14;
     const travel = Math.max(0, railWidth - thumb);
     setMetrics({
       left: maxScroll > 0 ? (viewport.scrollLeft / maxScroll) * travel : 0,
@@ -59,6 +59,7 @@ export const HorizontalScrollRail: React.FC<HorizontalScrollRailProps> = ({
       <div
         ref={viewportRef}
         onScroll={measure}
+        onPointerDown={e => e.stopPropagation()}
         className="w-full h-full overflow-x-auto overflow-y-hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
       >
@@ -69,6 +70,7 @@ export const HorizontalScrollRail: React.FC<HorizontalScrollRailProps> = ({
         className={`absolute left-2 right-2 bottom-0.5 h-1.5 rounded-full bg-[#1c1c1c]/70 ${railClassName}`}
         style={{ display: metrics.visible ? 'block' : 'none', touchAction: 'none' }}
         onPointerDown={e => {
+          e.stopPropagation();
           e.preventDefault();
           draggingRef.current = true;
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
