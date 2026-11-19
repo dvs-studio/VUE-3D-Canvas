@@ -2,29 +2,24 @@
 
 ## PIN — read only this far
 
-### Agent status (2026-11-19 filter pass — COMPLETE offline)
+### Agent status (2026-11-19 — self-host task implemented and packaged)
 
-**Filter + evening source is implemented locally and packaged as** `self-host-full-evening-filter.patch` (artifacts / agent workspace).  
-**If that patch is not yet committed on `main`, apply it first**, then `npm run build && npm run host:sync`.
+The active product is the Vite/React/Three.js painter in `src/`, packaged into `self-host/public/`. The evening/filter upload pack is already committed at `3c9983eff0c02e94da2728bba17711e09a717e51`; do not apply or recreate an offline patch.
+
+**Completed task set:**
+- Classic / RGB+ORM / AO×Albedo export-only texture packages.
+- Seeded Smart UV quarter-turn rotation, per-layer UV channel persistence, and active-layer seamless texture gutter.
+- Shared Levels conversion flow for Bump and Displacement.
+- Horizontal scrolling desktop options bar and decimal UI scale preference.
+- Mountain GLB import/reset in Preferences using browser-local IndexedDB.
+- Multi-select Merge and Move-to-Group, alongside Group/Delete.
+- Final `npm run host:sync`, package identity validation, ZIP packaging, and artifact upload passed in run #156.
+
+**Current source:** `5ec840915c3812eacb68f1577659c1ab6b8509e2`. Generated self-host output: `c26301294da0465d5402b6800fbd15dab39cae59`. Artifact: [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44480073408/artifacts/14508410797).
+
+**Still required:** manual browser/desktop/Android interaction tests and performance checks. AO is a height-derived cavity approximation, not true geometry AO. Do not claim manual testing from CI success.
 
 **Brief:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md)
-
-### Done this pass (after patch apply)
-
-- Wood: grain type band / ring / band+ring; band frequency; ring frequency; ring noise; roughness; wood seed; randomisation
-- Hashing: size, density, seed, algorithm
-- Dither: Bayer vs hash + seed; powder/noise seeds
-- Gizmo size %, auto-hide dialogs, multi-select group/delete
-
-### Next agent — start here (Still open)
-
-1. Export modes: Classic / RGB+ORM / AO×albedo (**export only**).
-2. Smart UV simple upgrades; layer UV end-to-end; seamless UV button.
-3. Merge bump/displacement via Bump Levels.
-4. Options bar desktop horizontal scroll; UI scale % decimals.
-5. Mountain GLB picker fully in Preferences.
-6. Multi-select: merge + move-to-group.
-7. Confirm patch applied + `host:sync`. Do not edit `crates/vue3d_core`.
 
 ### Safety
 
