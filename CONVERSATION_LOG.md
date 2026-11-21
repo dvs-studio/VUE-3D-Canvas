@@ -52,7 +52,7 @@ Held from earlier Grok design discussions; **not fully implemented** as a standa
 
 ## 2026-11-21 — Grok
 
-### Where this session stopped
+### Where this session stopped (earlier)
 - Halfway source is on `main` at `18a80cb8c784be3c61c21010455c3d2c07bb5a0f`. Docs for the hand-off are a later commit. The self-host HTML bundle was **not** rebuilt in the session. `build-self-host.yml` should do that on the `src/**` push. The next agent pulls that generated commit before judging the painter.
 - No browser, desktop, or Android pass. Do not tell Victory the seam is fixed until the synced page has been looked at.
 
@@ -62,7 +62,7 @@ Held from earlier Grok design discussions; **not fully implemented** as a standa
 - **Hatching, cross-hatching, hashing:** Feature scale % (100 = old spacing), Position jitter %, Angle jitter °. Both jitters default to 0 so old results stay put. Still seeded.
 - **Suzanne.zip:** `Suzanne.obj` in the zip is one group (`off` holds every face — a Blender "grouping off" export). `Suzanne x.obj` is two objects (head 13824 tris, eyes 480). Eye verts are not on the socket boundary, so they were **not welded**. Candidate committed as `src/assets/Suzanne.head-eyes.obj` with objects `Head` and `Eyes`, preset id `suzanneHeadEyes`, menu label "Suzanne Head + Eyes". Original `src/assets/Suzanne.obj` unchanged. Squail remains that original.
 
-### Procedure for the next agent
+### Procedure for the next agent (seam package)
 1. Read only the PIN in `AGENTS.md` unless Victory asks for history.
 2. `git pull` `main`. Confirm `18a80cb` is an ancestor. Find the following `chore(self-host): sync generated painter output [skip ci]` commit, or the failed Actions run.
 3. If the workflow failed, `npm run host:sync` and commit `self-host/public` only. Do not edit `crates/vue3d_core`. Do not delete ZIPs. Do not overwrite `src/assets/Suzanne.obj`. Do not weld the eyes.
@@ -72,12 +72,17 @@ Held from earlier Grok design discussions; **not fully implemented** as a standa
 ### Known non-blocking typecheck
 `npx tsc --noEmit` fails on older files (`xblendFormat.ts` duplicate keys, `hdriManager.ts`, `surfaceShading.ts`, `MeshPartsPanel.tsx`, wood `stack.indexOf`). Those errors were already on `main`. The package build is Vite, not `tsc`.
 
-### 2026-11-21 later — Matcap layer added to the to-do only
+### Matcap layer (to-do only)
 Victory asked for a new self-host task, not an implementation in this note.
 - **Dedicated Matcap layer**, separate from the existing per-layer reflection source (HDRI vs matcap presets). The matcap image is the material. Brushing writes only the alpha mask. Convert-to-colour summarises the cookie from dominant colours toward lesser colours, then adds 20% of the colour value on the middle line of the image. Until converted, Blender export is a normal-to-view-to-screen matcap lookup mixed with MixRGB, and that path belongs to this layer type only. Any image format in; store and export JPG, not EXR.
 - **Layers Add UI:** on a narrow panel, special layer types (Material texture fill, Matcap, Group) group under one Add button. On a wide panel they stay spread in a row. Ordinary paint remains the default add.
-- Recorded in the AGENTS PIN as items 9 and 10. Not built. No `src/` change in this note.
+- Recorded in the AGENTS PIN. Not built.
 
-
+### Evening — torn fabric, cloth filter, mask layers (design only)
+Victory’s prompt (quota-cut on prior chat) continued here:
+- Announced F1–F6 in `AGENTS.md` PIN **before** full write-up.
+- Full algorithms and execution order in **`LAYER_FABRIC_MASK_PLAN.md`** (torn green-key layer, cloth world-space filter + wool/cotton/bamboo, cylindrical wrap + bandaid fallback, strip stack ramps, PS-style mask beside vs independent).
+- **Victory handles testing** unless he asks the agent to test for errors.
+- No `src/` implementation in this note.
 
 ---
