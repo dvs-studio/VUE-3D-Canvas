@@ -4,13 +4,13 @@
 
 Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
 
-### To do — manual validation remaining
+### To do — continue from 2026-11-21 source commit `18a80cb`
 
-No remaining source implementation items from the 2026-11-19 self-host task set. Manual browser/desktop/Android interaction and performance validation remain open. UV island-edge filter gaps and model-edge fill artefacts remain known defects.
+Do not re-implement that commit. Pull `main` and use the self-host bundle produced by `build-self-host.yml` after it (or run `npm run host:sync` only if that run failed). Then visually test UV-island filter lines, model-edge fills, the Suzanne Head + Eyes preset, and hatch scale/jitter. Manual browser/desktop/Android checks are still open. Specialised UV research and Windows shell work are not this slice. See the PIN in `AGENTS.md`.
 
 ### Current implementation
 
-The latest source changes include the supplied `src/assets/Suzanne.obj` wired into the Suzanne preset (procedural Suzanne generation removed), plus the mode-dependent UV toolbar positioning. Generated self-host output is committed at `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`; workflow run #178 succeeded. `.gitignore` ignores OBJ files by default but keeps the bundled Suzanne exception. The self-host sync script now preserves OBJ files under `self-host/public/` when refreshing generated output. See the newest checkpoint at the end of this file.
+`18a80cb` changes `src/tools/textureFilters.ts`, `src/tools/fillSuite.ts`, `src/App.tsx`, `src/ui/TextureFilterDialog.tsx`, `src/renderer/modelGeometry.ts`, `src/ui/PhotoshopMenuBar.tsx`, `.gitignore`, and adds `src/assets/Suzanne.head-eyes.obj`. `src/assets/Suzanne.obj` was not modified. `self-host/public` was not regenerated in the editing session. `npx tsc --noEmit` already failed on older files before this commit; do not block on those unless the Vite build fails.
 
 ### Current history — concluded set
 

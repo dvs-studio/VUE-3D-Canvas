@@ -49,3 +49,28 @@ Held from earlier Grok design discussions; **not fully implemented** as a standa
 - Conversation log (this file): append-only, daily, personified engine name.
 
 ---
+
+## 2026-11-21 — Grok
+
+### Where this session stopped
+- Halfway source is on `main` at `18a80cb8c784be3c61c21010455c3d2c07bb5a0f`. Docs for the hand-off are a later commit. The self-host HTML bundle was **not** rebuilt in the session. `build-self-host.yml` should do that on the `src/**` push. The next agent pulls that generated commit before judging the painter.
+- No browser, desktop, or Android pass. Do not tell Victory the seam is fixed until the synced page has been looked at.
+
+### What was implemented (do not redo)
+- **Cause recorded for the island line:** neighbourhood filters (especially wood blur) mix transparent UV gutters into the island, and the object-position map left cracks whose value was the bounding-box corner `(0,0,0)`. Triplanar and material texture fill projected a sphere from canvas UV, so a character atlas broke along island cuts and along the model edge.
+- **Minimal fix, UV editor left as baseline:** conservative raster plus gutter dilation in `rasterizeMeshSurface`; wood ignores uncovered (`NaN`) texels; blur and filter apply pad opaque color into transparent gutters; triplanar and material fill sample mesh position and normal when `App.tsx` passes geometry, then pad the island edge. `smartUVUnwrap` packing/cuts were not replaced.
+- **Hatching, cross-hatching, hashing:** Feature scale % (100 = old spacing), Position jitter %, Angle jitter °. Both jitters default to 0 so old results stay put. Still seeded.
+- **Suzanne.zip:** `Suzanne.obj` in the zip is one group (`off` holds every face — a Blender "grouping off" export). `Suzanne x.obj` is two objects (head 13824 tris, eyes 480). Eye verts are not on the socket boundary, so they were **not welded**. Candidate committed as `src/assets/Suzanne.head-eyes.obj` with objects `Head` and `Eyes`, preset id `suzanneHeadEyes`, menu label "Suzanne Head + Eyes". Original `src/assets/Suzanne.obj` unchanged. Squail remains that original.
+
+### Procedure for the next agent
+1. Read only the PIN in `AGENTS.md` unless Victory asks for history.
+2. `git pull` `main`. Confirm `18a80cb` is an ancestor. Find the following `chore(self-host): sync generated painter output [skip ci]` commit, or the failed Actions run.
+3. If the workflow failed, `npm run host:sync` and commit `self-host/public` only. Do not edit `crates/vue3d_core`. Do not delete ZIPs. Do not overwrite `src/assets/Suzanne.obj`. Do not weld the eyes.
+4. Open the synced self-host page. Check wood, hatch, triplanar, and material fill on island UVs and on a clean 0–1 UV. Check Head + Eyes parts. Check the three new sliders at their defaults.
+5. Re-check export packages and the 2026-11-19 UI behaviour listed in the PIN. Append this log; do not rewrite it.
+
+### Known non-blocking typecheck
+`npx tsc --noEmit` fails on older files (`xblendFormat.ts` duplicate keys, `hdriManager.ts`, `surfaceShading.ts`, `MeshPartsPanel.tsx`, wood `stack.indexOf`). Those errors were already on `main`. The package build is Vite, not `tsc`.
+
+
+---

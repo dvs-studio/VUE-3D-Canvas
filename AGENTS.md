@@ -2,27 +2,48 @@
 
 ## PIN — read only this far (unless absolutely necessary)
 
-### Agent status — 2026-11-20 (Grok)
+### Agent status — 2026-11-21 (Grok)
 
-**Product path:** Vite/React/Three.js under `src/`. **Every feature change must update the running self-host package:** edit `src/`, then `npm run host:sync` so `self-host/public/` stays current. Do not stop at documentation-only commits.
+**Product path:** Vite/React/Three.js under `src/`. **Every feature change must update the running self-host package:** edit `src/`, then `npm run host:sync` so `self-host/public/` stays current. Do not stop at documentation-only commits. A push that touches `src/**` also starts `.github/workflows/build-self-host.yml`, which runs `host:sync` and commits `self-host/public` as `chore(self-host): sync generated painter output [skip ci]`. Pull that commit before editing `self-host/public` by hand.
 
 **Do not edit** `crates/vue3d_core` unless Victory explicitly orders Windows-shell work. **Do not delete** safety ZIPs under `release/` or `self-host/`.
 
 **Conversation log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) — append-only, one section per day, personified by AI engine name. Read the full log only when Victory asks; never delete history.
 
-**Assets:** `Suzanne.zip` is at **repo root**. Existing tracked mesh: `src/assets/Suzanne.obj`. Prefer preserve-original + separate candidate for head/eyes candidates inside the zip; validate before promote.
+**Assets:** `Suzanne.zip` is at **repo root**. Existing tracked mesh: `src/assets/Suzanne.obj` — **do not overwrite**. Separate candidate: `src/assets/Suzanne.head-eyes.obj` (Objects `Head` and `Eyes`). `.gitignore` ignores `*.obj` except those two paths.
 
 **Briefs:** [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md) · [`SELF_HOST_HANDOFF.md`](SELF_HOST_HANDOFF.md) · [`LAYER_PBR_PLAN.md`](LAYER_PBR_PLAN.md)
 
+### Stopped here — 2026-11-21 (Grok) — read this before writing code
+
+Source commit on `main`: `18a80cb8c784be3c61c21010455c3d2c07bb5a0f` (`fix(self-host): pad UV edges, hatch jitter, head-eyes Suzanne`). **Not visually verified. Not a claim that the seam or model-edge line is gone.**
+
+**Already in that commit (do not re-implement):**
+- `src/tools/textureFilters.ts` — `rasterizeMeshSurface` (conservative UV raster + 4px gutter). `buildObjectSpacePositionMap` now returns that map and uses `NaN` off the mesh. Wood grain skips `NaN` texels instead of painting the bounding-box corner. Blur dilates opaque color before the canvas blur. `applyTextureFilterToCanvas` dilates transparent gutters 8px before and after neighbourhood filters. Hatching / cross-hatching / hashing read `featureScale` (default 100), `positionJitter` (default 0), `angleJitter` (default 0).
+- `src/ui/TextureFilterDialog.tsx` — those three sliders on the directional filters.
+- `src/tools/fillSuite.ts` — `surfaceFrame`. Triplanar and material texture fill use real object position/normal when geometry is passed, then `padIslandEdges`. No geometry still uses the old spherical mapping.
+- `src/App.tsx` — triplanar confirm, texture-fill import, and bake pass `activeGeometry` plus `userData.uvChannels[activeUVChannel]`.
+- `src/assets/Suzanne.head-eyes.obj` + preset `suzanneHeadEyes` in `src/renderer/modelGeometry.ts` + Options menu label **Suzanne Head + Eyes**.
+- Original `src/assets/Suzanne.obj` byte-identical to the commit before `18a80cb`.
+
+**Explicitly not done:**
+- No `npm run host:sync` in the agent session. The running page is whatever CI produces after `18a80cb`. Confirm the Actions run, then test **that** bundle.
+- No browser, desktop, or Android check. No export-package retest (Classic / RGB+ORM / AO×albedo), layer UV persistence, seamless UV button, Bump/Levels, options-bar scroll, UI scale, Mountain GLB, or multi-select merge/move-to-group after this edit.
+- UV editor baseline was not rewritten (`smartUVUnwrap` island split/pack, channels, rebake logic unchanged). `dilateTextureSeams` in `smartUVUnwrap.ts` was not edited.
+- Eyes were **not welded**. On `Suzanne x.obj`, head sockets and the eye shell do not meet (median gap about 0.07; 0 verts within 1e-4). Welding would leave a hole or a double surface. Keep two objects.
+- `npx tsc --noEmit` already fails on `main` from older files (`src/core/xblendFormat.ts`, `src/renderer/hdriManager.ts`, `src/renderer/surfaceShading.ts`, `src/ui/panels/MeshPartsPanel.tsx`, and `stack.indexOf` in the wood loop). Do not treat that as a regression from `18a80cb`. Vite is the build that matters.
+- A plane-grid raster check (gutter 0 and gutter 2) showed no interior holes. That is not a Suzanne/filter screenshot.
+
 ### Combined to-do (self-host first)
 
-1. **Manual QA:** browser / desktop / Android interaction and paint performance (CI ≠ device proof).
-2. **UV island-edge filter gap** and **model-edge fill artefact** — isolate cause; minimal fix; keep current UV editor as baseline.
-3. **Suzanne.zip integration** (aside from generic UV research): inspect zip contents; preserve original Suzanne; optional multi-mesh head/eyes candidate; weld/validate; wire preset only after inspection.
-4. **Specialised / dedicated 2D UV technology** — when Victory asks to develop it further: **research and expand in detail** (unwrap cuts, relax/pack, texel density, gutters, seamless/tiling sets, optional NURBS-like authoring, LTM-style UV identity clusters, per-layer UV channels, export hierarchy). Do not half-implement a second UV product without a clear slice. See `CONVERSATION_LOG.md` 2026-11-20.
-5. Confirm export packages (Classic / RGB+ORM / AO×albedo), layer UV persistence, seamless UV trigger, Bump/Levels merge, options-bar scroll, UI scale, Mountain GLB prefs, multi-select merge/move-to-group remain correct on current `main` after any edit.
-6. Hatching / hashing user-facing size + jitter controls if still thin in UI.
-7. Windows native redevelopment stays **later** and separate; shell is WebView2, not a D3D paint engine.
+1. **Pull `main`.** If the self-host workflow for `18a80cb` is still running, wait. If it failed, run `npm run host:sync` locally, commit only `self-host/public`, and push. Do not hand-edit generated bundles.
+2. **Visual check of the seam fix** on the synced page: Suzanne with Smart UV islands, wood grain (blur on), hatching, triplanar fill, and material texture fill. The line to look for is at island borders and along the model silhouette. If it remains, record the mesh, UV channel, filter, and whether the layer was transparent in the gutter. Minimal follow-up only. Do not replace the UV editor.
+3. **Model menu:** Squail stays the original OBJ. Suzanne Head + Eyes must load as parts `Head` and `Eyes`. Do not promote it over Squail.
+4. **Hatching / hashing UI:** Feature scale %, Position jitter %, Angle jitter °. Defaults must match the old spacing (scale 100, both jitters 0). Seeded. Confirm they actually change the preview.
+5. **Re-check** export packages, layer UV channel, seamless gutter button, Bump/Levels, options scroll, UI scale, Mountain GLB prefs, multi-select merge/move-to-group on this bundle.
+6. **Manual QA** in a browser (desktop and a phone-sized viewport). CI is not device proof.
+7. **Specialised / dedicated 2D UV** stays research-only until Victory asks to develop it. Do not start a second UV product.
+8. Windows native redevelopment stays **later**. Shell is WebView2, not a D3D paint engine.
 
 ### Work rules for every AI
 
