@@ -18,9 +18,9 @@
 |----|---------|
 | F1 | Torn fabric layer + **convert paint → torn** + procedural white edges + export bake |
 | F1b | Mesh / UV **influence switch** (per layer control) |
-| F2–F5 | Cloth filter family — **ON HOLD** until Victory gives go-ahead |
+| F2–F5 | **Cloth filter family** (menu item) — active plan; implement when ordered |
 | F6 | Photoshop-style mask layer |
-| F7 | **Logo fabric** layer filter (colour isolate + weave + bump/thread dispersal) |
+| F7 | **Logo fabric** filter — **ON HOLD** until Victory gives go-ahead |
 | F8 | **Merge** Convert-to-Bump and Convert-to-Displacement into one greyscale Levels tool |
 | — | Matcap layer + narrow Add menu (still planned) |
 
@@ -31,8 +31,8 @@ Full algorithms: **`LAYER_FABRIC_MASK_PLAN.md`**.
 1. Seam/QA of `18a80cb` package when touching paint (Victory tests by default).
 2. Matcap layer + narrow Add menu when ordered.
 3. **F8** merge bump/displacement conversion UI (Levels → 100% bump surface).
-4. **F1 / F1b / F7 / F6** when ordered — see plan file.
-5. **F2–F5 cloth** remains on hold until explicit go-ahead.
+4. **F1 / F1b / F2–F5 / F6** when ordered — see plan file.
+5. **F7 logo fabric** remains on hold until explicit go-ahead.
 6. Specialised UV desk research-only until asked. Windows shell later.
 
 ### Work rules
