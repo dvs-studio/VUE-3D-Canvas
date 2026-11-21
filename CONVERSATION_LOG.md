@@ -72,5 +72,12 @@ Held from earlier Grok design discussions; **not fully implemented** as a standa
 ### Known non-blocking typecheck
 `npx tsc --noEmit` fails on older files (`xblendFormat.ts` duplicate keys, `hdriManager.ts`, `surfaceShading.ts`, `MeshPartsPanel.tsx`, wood `stack.indexOf`). Those errors were already on `main`. The package build is Vite, not `tsc`.
 
+### 2026-11-21 later — Matcap layer added to the to-do only
+Victory asked for a new self-host task, not an implementation in this note.
+- **Dedicated Matcap layer**, separate from the existing per-layer reflection source (HDRI vs matcap presets). The matcap image is the material. Brushing writes only the alpha mask. Convert-to-colour summarises the cookie from dominant colours toward lesser colours, then adds 20% of the colour value on the middle line of the image. Until converted, Blender export is a normal-to-view-to-screen matcap lookup mixed with MixRGB, and that path belongs to this layer type only. Any image format in; store and export JPG, not EXR.
+- **Layers Add UI:** on a narrow panel, special layer types (Material texture fill, Matcap, Group) group under one Add button. On a wide panel they stay spread in a row. Ordinary paint remains the default add.
+- Recorded in the AGENTS PIN as items 9 and 10. Not built. No `src/` change in this note.
+
+
 
 ---

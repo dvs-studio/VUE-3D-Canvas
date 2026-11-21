@@ -44,6 +44,13 @@ Source commit on `main`: `18a80cb8c784be3c61c21010455c3d2c07bb5a0f` (`fix(self-h
 6. **Manual QA** in a browser (desktop and a phone-sized viewport). CI is not device proof.
 7. **Specialised / dedicated 2D UV** stays research-only until Victory asks to develop it. Do not start a second UV product.
 8. Windows native redevelopment stays **later**. Shell is WebView2, not a D3D paint engine.
+9. **Matcap layer (new, not built).** A layer type of its own. Do not reuse the existing per-layer reflection switch (`reflectionSource: 'hdri' | 'matcap'` and the chrome/ceramic/clay/pearl/gold presets). That switch stays as it is.
+   - The matcap image is the material (fake reflection or any other matcap look). Painting on this layer writes **only an alpha mask** for where that material shows. Do not paint colour into the cookie.
+   - **Convert to colour** turns it into a normal colour layer. Summarise the cookie: average from the dominant colours down toward the lesser ones, then add **20%** of the colour value taken from the **middle line** of the matcap. That summary is the layer colour. After conversion, export uses the normal colour path.
+   - **Export while it is still a matcap layer:** normal → view vector → screen-space matcap lookup, then **MixRGB** in Blender. This mix is only for this layer type.
+   - Source image may be any format. Store and export the matcap as **JPG**, not EXR.
+   - Old `.xblend` files must still open. Undo applies. Paint performance stays off the full-canvas rebuild path.
+10. **Add-button layout.** When the layers UI is too narrow, every special layer type sits under one Add button. When the panel is wide enough, those same actions sit in a row as they do today. Special types for this menu: Material texture fill, Matcap, and Group. Ordinary paint stays the default add. Do not hide them on a large layout.
 
 ### Work rules for every AI
 

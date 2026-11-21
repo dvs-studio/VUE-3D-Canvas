@@ -1,5 +1,7 @@
 # Toggle layers — task for the next agent
 
+**Current self-host task brief:** the live list is the PIN in [`AGENTS.md`](AGENTS.md). Visual checks from 2026-11-21 are still open. New and **not built:** dedicated Matcap layer and the narrow-panel Add menu (AGENTS PIN items 9 and 10).
+
 **Current self-host task brief (2026-11-19):** see [`SELF_HOST_TASK_2026-11-19.md`](SELF_HOST_TASK_2026-11-19.md) for export modes (RGB+ORM), Smart UV upgrades, layer UV, seamless UV button, bump/levels merge, desktop options-bar scroll, and UI scale %.
 
 The full historical plan body (toggle layers, subdivision, import texture, Blender export chains, UV project backlog, 2026-11-17/18 checkpoints, etc.) remains in **git history** at commit `61cfb469` and its parents. It was briefly replaced by a placeholder during a docs push and is not re-inlined here to avoid another oversized failed write.

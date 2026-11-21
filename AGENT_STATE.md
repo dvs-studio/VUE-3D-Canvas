@@ -6,7 +6,11 @@ Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes af
 
 ### To do — continue from 2026-11-21 source commit `18a80cb`
 
-Do not re-implement that commit. Pull `main` and use the self-host bundle produced by `build-self-host.yml` after it (or run `npm run host:sync` only if that run failed). Then visually test UV-island filter lines, model-edge fills, the Suzanne Head + Eyes preset, and hatch scale/jitter. Manual browser/desktop/Android checks are still open. Specialised UV research and Windows shell work are not this slice. See the PIN in `AGENTS.md`.
+Do not re-implement that commit. The self-host bundle after it is `03b8ebd`. Visually test UV-island filter lines, model-edge fills, the Suzanne Head + Eyes preset, and hatch scale/jitter. Manual browser/desktop/Android checks are still open.
+
+**New to-do, not implemented:** dedicated Matcap layer (paint = alpha mask only; convert to colour by dominant-to-lesser average plus 20% of the middle-line colour; export is normal-to-screen matcap mixed with MixRGB in Blender until converted; any source image, stored as JPG not EXR). When the layers panel is narrow, special adds (Material texture fill, Matcap, Group) collapse under one Add button; when it is wide, show them in a row. Do not confuse this with the existing HDRI-versus-matcap reflection switch.
+
+Specialised UV research and Windows shell work are not this slice. See the PIN in `AGENTS.md`.
 
 ### Current implementation
 
