@@ -2,35 +2,36 @@
 
 **Rules (all agents):**
 - **Append only.** Never delete or rewrite prior day sections.
-- **One update per calendar day** (UTC or session day): add a new dated section if the day’s block does not exist; otherwise append bullets under that day.
-- **Read-only full history** unless the user explicitly asks to read the entire conversation log.
-- Each day section is **personified by the AI engine** that wrote it (e.g. Grok, Claude).
-- Store **public summaries** of decisions and product direction — not secrets or credentials.
+- **Every AI engine** must add a dated section for the day it worked if not already present.
+- Sections **by date**: `## YYYY-MM-DD — EngineName`. Append bullets under that day.
+- **Read-only full history** unless Victory explicitly asks to read the entire log.
+- Personify by engine name (Grok, Claude, …). Public summaries only — no secrets.
 
 ---
 
 ## 2026-11-20 — Grok
 
-(See git history for full 2026-11-20 body if needed; unchanged in spirit.)
+- Repo access as `dvs-studio`; `Suzanne.zip` at root; self-host product path confirmed.
+- Agentic hygiene: PIN in AGENTS; append-only conversation log introduced.
+- Specialised UV / NURBS / LTM held as research backlog.
 
 ---
 
 ## 2026-11-21 — Grok
 
-### Earlier same day
-- Seam source at `18a80cb`; Suzanne head-eyes; hatch jitter; Matcap + narrow Add planned; F1–F6 fabric/mask announced; cloth specified.
+### Product / seam
+- Source `18a80cb` (UV pad, hatch jitter, Suzanne head-eyes); self-host sync via workflow; Victory tests by default.
 
-### Late — torn convert, logo fabric, mesh influence, merge bump (design only)
-Victory expanded the torn-fabric design:
-- **Convert paint → torn** so users can paint visuals first.
-- Roles: **black/transparent** = show below; **white** = torn edge (procedural auto-edge in panel); **green** = true tear / how many layers below are affected.
-- **Convert torn → normal:** erase open regions on targets below; bake torn patch onto the layer directly below.
-- **Export:** auto-apply tear bake before export, then **reverse** restore session state.
-- **Mesh influence switch** (default off): limit paint/tear to selected mesh UV.
-- **Logo fabric filter** (own filter, not cloth): isolate colours, weave, unique bump + thread dispersal; requires visible pixels.
-- **Cloth F2–F5 ON HOLD** until go-ahead.
-- **F8:** Convert-to-bump and convert-to-displacement are the **same job** — one Levels greyscale tool → 100% bump surface.
+### Feature design (docs only — not built)
+- **F1 torn fabric:** convert from paint; black/transparent = hole; white = edge (procedural); green = influence; apply-down bake; export apply then reverse restore.
+- **F1b** mesh/UV influence switch (default off).
+- **F2–F5 cloth filter family:** **active plan** (layer filter menu).
+- **F6** mask layer (beside / independent).
+- **F7 logo fabric:** **ON HOLD** until Victory go-ahead (corrected: hold is logo fabric, not cloth).
+- **F8** merge convert-to-bump and convert-to-displacement (one Levels → 100% bump).
+- Matcap layer + narrow Add menu still planned.
 
-Docs: `AGENTS.md` PIN + expanded `LAYER_FABRIC_MASK_PLAN.md`. No `src/` this note.
+### Log discipline
+- AGENTS PIN now requires every AI to append a dated conversation log section if missing.
 
 ---
