@@ -15,8 +15,50 @@
 
 import { SelectionMask, TriplanarConfig, TriplanarTextureItem, TextureFillConfig } from '../core/types';
 import { SelectionTool } from './selectionTool';
+import type { BufferGeometry } from 'three';
+import { dilateImageData, rasterizeMeshSurface, type MeshSurfaceMap } from './textureFilters';
 
 export type { TriplanarConfig, TriplanarTextureItem, TextureFillConfig };
+
+function surfaceFrame(
+  surface: MeshSurfaceMap | null,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): { px: number; py: number; pz: number; nx: number; ny: number; nz: number } | null {
+  if (surface) {
+    const s = y * w + x;
+    if (!surface.covered[s]) return null;
+    const o = s * 3;
+    return {
+      px: surface.position[o],
+      py: surface.position[o + 1],
+      pz: surface.position[o + 2],
+      nx: surface.normal[o],
+      ny: surface.normal[o + 1],
+      nz: surface.normal[o + 2],
+    };
+  }
+  const u = x / w;
+  const v = y / h;
+  const phi = (u - 0.5) * Math.PI * 2.0;
+  const theta = (v - 0.5) * Math.PI;
+  const cosTheta = Math.cos(theta);
+  const sinTheta = Math.sin(theta);
+  const cosPhi = Math.cos(phi);
+  const sinPhi = Math.sin(phi);
+  const px = cosTheta * cosPhi;
+  const py = sinTheta;
+  const pz = cosTheta * sinPhi;
+  return { px, py, pz, nx: px, ny: py, nz: pz };
+}
+
+function padIslandEdges(ctx: CanvasRenderingContext2D): void {
+  const image = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+  dilateImageData(image, 4);
+  ctx.putImageData(image, 0, 0);
+}
 
 function parseTextureColor(input: string | undefined, separateAlpha = 1): [number, number, number, number] {
   const value = (input || '#ffffff').trim();
@@ -323,7 +365,9 @@ export class FillSuite {
     ctx: CanvasRenderingContext2D,
     config: TriplanarConfig,
     opacity = 100,
-    mask: SelectionMask | null = null
+    mask: SelectionMask | null = null,
+    geometry?: BufferGeometry | null,
+    uvArray?: Float32Array,
   ) {
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
@@ -365,11 +409,10 @@ export class FillSuite {
     const offX = config.offsetX || 0;
     const offY = config.offsetY || 0;
     const offZ = config.offsetZ || 0;
+    const surface = geometry ? rasterizeMeshSurface(geometry, w, h, uvArray, 4) : null;
 
     for (let y = 0; y < h; y++) {
-      const v = y / h;
       for (let x = 0; x < w; x++) {
-        const u = x / w;
         const idx = (y * w + x) * 4;
 
         // Selection & Mask Brush Check: Protect area outside selection
@@ -381,22 +424,18 @@ export class FillSuite {
           continue;
         }
 
-        // Spherical polar projection to 3D surface position & normal
-        const phi = (u - 0.5) * Math.PI * 2.0;
-        const theta = (v - 0.5) * Math.PI;
-
-        const cosTheta = Math.cos(theta);
-        const sinTheta = Math.sin(theta);
-        const cosPhi = Math.cos(phi);
-        const sinPhi = Math.sin(phi);
-
-        const px = cosTheta * cosPhi + offX;
-        const py = sinTheta + offY;
-        const pz = cosTheta * sinPhi + offZ;
-
-        const nx = cosTheta * cosPhi;
-        const ny = sinTheta;
-        const nz = cosTheta * sinPhi;
+        const frame = surfaceFrame(surface, x, y, w, h);
+        if (!frame) {
+          data[idx] = origData[idx];
+          data[idx + 1] = origData[idx + 1];
+          data[idx + 2] = origData[idx + 2];
+          data[idx + 3] = origData[idx + 3];
+          continue;
+        }
+        const px = frame.px + offX;
+        const py = frame.py + offY;
+        const pz = frame.pz + offZ;
+        const { nx, ny, nz } = frame;
 
         // Normal-based projection weights
         let wx = Math.pow(Math.abs(nx), sharpness);
@@ -543,6 +582,7 @@ export class FillSuite {
     }
 
     ctx.putImageData(outImgData, 0, 0);
+    if (surface) padIslandEdges(ctx);
   }
 
   /**
@@ -634,7 +674,9 @@ export class FillSuite {
   public static applyMaterialTextureFill(
     ctx: CanvasRenderingContext2D,
     fillConfig: TextureFillConfig,
-    opacity = 100
+    opacity = 100,
+    geometry?: BufferGeometry | null,
+    uvArray?: Float32Array,
   ): Promise<void> {
     return new Promise((resolve) => {
       const img = new Image();
@@ -660,29 +702,17 @@ export class FillSuite {
         const sinR = Math.sin(rotRad);
         const isTriplanar = fillConfig.projection === 'triplanar';
         const randomize = fillConfig.randomize;
+        const surface = geometry ? rasterizeMeshSurface(geometry, w, h, uvArray, 4) : null;
 
         for (let y = 0; y < h; y++) {
-          const v = y / h;
           for (let x = 0; x < w; x++) {
-            const u = x / w;
             const idx = (y * w + x) * 4;
-
-            // 3D coordinates from spherical polar mapping
-            const phi = (u - 0.5) * Math.PI * 2.0;
-            const theta = (v - 0.5) * Math.PI;
-
-            const cosTheta = Math.cos(theta);
-            const sinTheta = Math.sin(theta);
-            const cosPhi = Math.cos(phi);
-            const sinPhi = Math.sin(phi);
-
-            const px = cosTheta * cosPhi;
-            const py = sinTheta;
-            const pz = cosTheta * sinPhi;
-
-            const nx = px;
-            const ny = py;
-            const nz = pz;
+            const frame = surfaceFrame(surface, x, y, w, h);
+            if (!frame) {
+              data[idx + 3] = 0;
+              continue;
+            }
+            const { px, py, pz, nx, ny, nz } = frame;
 
             let r = 0, g = 0, b = 0, a = 255;
 
@@ -758,6 +788,7 @@ export class FillSuite {
         }
 
         ctx.putImageData(outImgData, 0, 0);
+        if (surface) padIslandEdges(ctx);
         resolve();
       };
       img.onerror = () => resolve();

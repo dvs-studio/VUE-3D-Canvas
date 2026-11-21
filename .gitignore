@@ -14,3 +14,4 @@ self-host/storage/
 # Ignore newly added OBJ files by default; keep the bundled application Suzanne tracked.
 *.obj
 !src/assets/Suzanne.obj
+!src/assets/Suzanne.head-eyes.obj

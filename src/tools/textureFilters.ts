@@ -23,6 +23,12 @@ export interface TextureFilterConfig {
   levels: number;
   directionSpace: 'uv' | 'object' | 'world';
   axis: 'X' | 'Y' | 'Z';
+  /** Hatching / hashing feature scale, percent. 100 keeps the historical spacing. */
+  featureScale: number;
+  /** Independent positional jitter, 0–100. Does not replace displacement randomisation. */
+  positionJitter: number;
+  /** Independent per-cell rotation jitter in degrees. */
+  angleJitter: number;
   /** Hashing: cell size in pixels (2–64). */
   hashSize: number;
   /** Hashing: activation density 0–100. */
@@ -51,6 +57,7 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   kind: 'wood', source: 'color', color: '#8a5a35', edge: 65, noise: 25, bleed: 18, blur: 1,
   angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z',
   hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
+  featureScale: 100, positionJitter: 0, angleJitter: 0,
   woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17,
   ditherPattern: 'hash', filterSeed: 71,
   woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}]
@@ -65,15 +72,92 @@ async function imageSource(dataUrl?:string,width=256,height=256):Promise<ImageDa
 }
 function sample(src:ImageData,x:number,y:number){x=clamp(Math.round(x),0,src.width-1);y=clamp(Math.round(y),0,src.height-1);const i=(y*src.width+x)*4;return [src.data[i],src.data[i+1],src.data[i+2],src.data[i+3]];}
 
-export function buildObjectSpacePositionMap(geometry: THREE.BufferGeometry, width: number, height: number, uvArray?: Float32Array): Float32Array {
-  const position = geometry.getAttribute('position');
-  const uv = uvArray || geometry.getAttribute('uv')?.array as Float32Array | undefined;
-  if (!position || !uv || uv.length < position.count * 2) throw new Error('The selected mesh needs position and active UV data.');
-  const bounds = new THREE.Box3().setFromBufferAttribute(position as THREE.BufferAttribute);
+/** Pad opaque island texels into transparent gutters so blur and shifts do not pull empty black. */
+export function dilateImageData(image: ImageData, radius: number): void {
+  if (radius <= 0) return;
+  const w = image.width;
+  const h = image.height;
+  const src = image.data;
+  const output = new Uint8ClampedArray(src);
+  const offsets: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+  for (let pass = 0; pass < radius; pass++) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        if (src[idx + 3] >= 10) continue;
+        let rSum = 0, gSum = 0, bSum = 0, aMax = 0, count = 0;
+        for (const [dx, dy] of offsets) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const nIdx = (ny * w + nx) * 4;
+          if (src[nIdx + 3] <= 20) continue;
+          rSum += src[nIdx]; gSum += src[nIdx + 1]; bSum += src[nIdx + 2];
+          if (src[nIdx + 3] > aMax) aMax = src[nIdx + 3];
+          count++;
+        }
+        if (count > 0) {
+          output[idx] = Math.round(rSum / count);
+          output[idx + 1] = Math.round(gSum / count);
+          output[idx + 2] = Math.round(bSum / count);
+          output[idx + 3] = aMax;
+        }
+      }
+    }
+    src.set(output);
+  }
+}
+
+export interface MeshSurfaceMap {
+  width: number;
+  height: number;
+  /** Object-space position. */
+  position: Float32Array;
+  /** Position normalised to mesh bounds. NaN where the texel is not on the mesh or its gutter. */
+  position01: Float32Array;
+  /** Unit object-space normal. */
+  normal: Float32Array;
+  covered: Uint8Array;
+}
+
+function distPointSeg(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const abx = bx - ax, aby = by - ay;
+  const ab2 = abx * abx + aby * aby || 1e-8;
+  let t = ((px - ax) * abx + (py - ay) * aby) / ab2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const dx = ax + abx * t - px, dy = ay + aby * t - py;
+  return Math.hypot(dx, dy);
+}
+
+/**
+ * Rasterise the active UV chart into per-texel object position and normal.
+ * Coverage is conservative (sub-texel cracks count) and then dilated into the
+ * gutter so filters and fills do not sample the atlas background at island edges.
+ */
+export function rasterizeMeshSurface(
+  geometry: THREE.BufferGeometry,
+  width: number,
+  height: number,
+  uvArray?: Float32Array,
+  gutter = 4,
+): MeshSurfaceMap {
+  const positionAttr = geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+  const normalAttr = geometry.getAttribute('normal') as THREE.BufferAttribute | undefined;
+  const uv = uvArray || (geometry.getAttribute('uv')?.array as Float32Array | undefined);
+  if (!positionAttr || !uv || uv.length < positionAttr.count * 2) {
+    throw new Error('The selected mesh needs position and active UV data.');
+  }
+  const bounds = new THREE.Box3().setFromBufferAttribute(positionAttr);
   const size = bounds.getSize(new THREE.Vector3());
-  const map = new Float32Array(width * height * 3);
+  const position = new Float32Array(width * height * 3);
+  const position01 = new Float32Array(width * height * 3);
+  position01.fill(NaN);
+  const normal = new Float32Array(width * height * 3);
+  const covered = new Uint8Array(width * height);
+  const score = new Float32Array(width * height);
+  score.fill(-1);
   const index = geometry.getIndex();
-  const count = index ? index.count : position.count;
+  const count = index ? index.count : positionAttr.count;
+  const pad = 0.85;
   for (let tri = 0; tri + 2 < count; tri += 3) {
     const a = index ? index.getX(tri) : tri;
     const b = index ? index.getX(tri + 1) : tri + 1;
@@ -83,26 +167,98 @@ export function buildObjectSpacePositionMap(geometry: THREE.BufferGeometry, widt
     const cx = uv[c * 2] * width, cy = (1 - uv[c * 2 + 1]) * height;
     const denom = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
     if (Math.abs(denom) < 1e-8) continue;
-    const minX = Math.max(0, Math.floor(Math.min(ax, bx, cx))), maxX = Math.min(width - 1, Math.ceil(Math.max(ax, bx, cx)));
-    const minY = Math.max(0, Math.floor(Math.min(ay, by, cy))), maxY = Math.min(height - 1, Math.ceil(Math.max(ay, by, cy)));
-    const pa = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, a);
-    const pb = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, b);
-    const pc = new THREE.Vector3().fromBufferAttribute(position as THREE.BufferAttribute, c);
-    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
-      const wa = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / denom;
-      const wb = ((cy - ay) * (x - cx) + (ax - cx) * (y - cy)) / denom;
-      const wc = 1 - wa - wb;
-      if (wa < -0.002 || wb < -0.002 || wc < -0.002) continue;
-      const px = wa * pa.x + wb * pb.x + wc * pc.x;
-      const py = wa * pa.y + wb * pb.y + wc * pc.y;
-      const pz = wa * pa.z + wb * pb.z + wc * pc.z;
-      const at = (y * width + x) * 3;
-      map[at] = clamp((px - bounds.min.x) / Math.max(size.x, 1e-8), 0, 1);
-      map[at + 1] = clamp((py - bounds.min.y) / Math.max(size.y, 1e-8), 0, 1);
-      map[at + 2] = clamp((pz - bounds.min.z) / Math.max(size.z, 1e-8), 0, 1);
+    const minX = Math.max(0, Math.floor(Math.min(ax, bx, cx) - pad));
+    const maxX = Math.min(width - 1, Math.ceil(Math.max(ax, bx, cx) + pad));
+    const minY = Math.max(0, Math.floor(Math.min(ay, by, cy) - pad));
+    const maxY = Math.min(height - 1, Math.ceil(Math.max(ay, by, cy) + pad));
+    const pax = positionAttr.getX(a), pay = positionAttr.getY(a), paz = positionAttr.getZ(a);
+    const pbx = positionAttr.getX(b), pby = positionAttr.getY(b), pbz = positionAttr.getZ(b);
+    const pcx = positionAttr.getX(c), pcy = positionAttr.getY(c), pcz = positionAttr.getZ(c);
+    let nax: number, nay: number, naz: number, nbx: number, nby: number, nbz: number, ncx: number, ncy: number, ncz: number;
+    if (normalAttr) {
+      nax = normalAttr.getX(a); nay = normalAttr.getY(a); naz = normalAttr.getZ(a);
+      nbx = normalAttr.getX(b); nby = normalAttr.getY(b); nbz = normalAttr.getZ(b);
+      ncx = normalAttr.getX(c); ncy = normalAttr.getY(c); ncz = normalAttr.getZ(c);
+    } else {
+      const e1x = pbx - pax, e1y = pby - pay, e1z = pbz - paz;
+      const e2x = pcx - pax, e2y = pcy - pay, e2z = pcz - paz;
+      let fnx = e1y * e2z - e1z * e2y, fny = e1z * e2x - e1x * e2z, fnz = e1x * e2y - e1y * e2x;
+      const fl = Math.hypot(fnx, fny, fnz) || 1;
+      fnx /= fl; fny /= fl; fnz /= fl;
+      nax = nbx = ncx = fnx; nay = nby = ncy = fny; naz = nbz = ncz = fnz;
+    }
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const px = x + 0.5, py = y + 0.5;
+        let wa = ((by - cy) * (px - cx) + (cx - bx) * (py - cy)) / denom;
+        let wb = ((cy - ay) * (px - cx) + (ax - cx) * (py - cy)) / denom;
+        let wc = 1 - wa - wb;
+        const inside = wa >= -1e-4 && wb >= -1e-4 && wc >= -1e-4;
+        if (!inside) {
+          const dist = Math.min(
+            distPointSeg(px, py, ax, ay, bx, by),
+            distPointSeg(px, py, bx, by, cx, cy),
+            distPointSeg(px, py, cx, cy, ax, ay),
+          );
+          if (dist > pad) continue;
+        }
+        wa = Math.max(0, wa); wb = Math.max(0, wb); wc = Math.max(0, wc);
+        const ws = wa + wb + wc || 1;
+        wa /= ws; wb /= ws; wc /= ws;
+        const interior = Math.min(wa, wb, wc);
+        const at = y * width + x;
+        if (interior < score[at]) continue;
+        score[at] = interior;
+        covered[at] = 1;
+        const ox = wa * pax + wb * pbx + wc * pcx;
+        const oy = wa * pay + wb * pby + wc * pcy;
+        const oz = wa * paz + wb * pbz + wc * pcz;
+        const o = at * 3;
+        position[o] = ox; position[o + 1] = oy; position[o + 2] = oz;
+        position01[o] = clamp((ox - bounds.min.x) / Math.max(size.x, 1e-8), 0, 1);
+        position01[o + 1] = clamp((oy - bounds.min.y) / Math.max(size.y, 1e-8), 0, 1);
+        position01[o + 2] = clamp((oz - bounds.min.z) / Math.max(size.z, 1e-8), 0, 1);
+        let nx = wa * nax + wb * nbx + wc * ncx;
+        let ny = wa * nay + wb * nby + wc * ncy;
+        let nz = wa * naz + wb * nbz + wc * ncz;
+        const nl = Math.hypot(nx, ny, nz) || 1;
+        normal[o] = nx / nl; normal[o + 1] = ny / nl; normal[o + 2] = nz / nl;
+      }
     }
   }
-  return map;
+  const offsets: [number, number][] = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+  for (let pass = 0; pass < gutter; pass++) {
+    const nextCovered = covered.slice();
+    const nextPos = position.slice();
+    const next01 = position01.slice();
+    const nextN = normal.slice();
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const at = y * width + x;
+        if (covered[at]) continue;
+        for (const [dx, dy] of offsets) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const from = ny * width + nx;
+          if (!covered[from]) continue;
+          nextCovered[at] = 1;
+          nextPos.set(position.subarray(from * 3, from * 3 + 3), at * 3);
+          next01.set(position01.subarray(from * 3, from * 3 + 3), at * 3);
+          nextN.set(normal.subarray(from * 3, from * 3 + 3), at * 3);
+          break;
+        }
+      }
+    }
+    covered.set(nextCovered);
+    position.set(nextPos);
+    position01.set(next01);
+    normal.set(nextN);
+  }
+  return { width, height, position, position01, normal, covered };
+}
+
+export function buildObjectSpacePositionMap(geometry: THREE.BufferGeometry, width: number, height: number, uvArray?: Float32Array): Float32Array {
+  return rasterizeMeshSurface(geometry, width, height, uvArray, 4).position01;
 }
 
 export async function transformTexturePixels(source:ImageData,cfg:TextureFilterConfig):Promise<ImageData>{
@@ -118,10 +274,17 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    const stack=woodStack.length?woodStack:[{item:{density:50},image:null,color}];
    const totalWeight=stack.reduce((sum,row)=>sum+Math.max(1,row.item.density),0);
    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-     const i=(y*w+x)*4;let rr=0,gg=0,bb=0,aa=0;
+     const i=(y*w+x)*4;
+     const mapped=!!(cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h);
+     const mi=(y*w+x)*3;
+     if(mapped && !Number.isFinite(cfg.objectPositionMap![mi])){
+       dst[i]=data[i];dst[i+1]=data[i+1];dst[i+2]=data[i+2];dst[i+3]=data[i+3];
+       continue;
+     }
+     let rr=0,gg=0,bb=0,aa=0;
      for(const row of stack){
        const density=clamp(Number(row.item.density)||1,1,100);
-       const mapped=cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h; const mi=(y*w+x)*3; const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0;
+       const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0;
        const grainCoord=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28;
        const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz;
        const grainType=cfg.woodGrainType||'band+ring';
@@ -160,6 +323,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      dst[i+2]=clamp(bb*(1-bleedMix)+color[2]*bleedMix,0,255);dst[i+3]=255; // Wood Grain is a generated surface layer and does not require pre-existing layer pixels.
    }
    if(cfg.blur>0){
+     dilateImageData(out, Math.ceil(clamp(cfg.blur,0,20))+3);
      const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d')!.putImageData(out,0,0);
      const blurred=document.createElement('canvas');blurred.width=w;blurred.height=h;const ctx=blurred.getContext('2d')!;
      ctx.filter=`blur(${clamp(cfg.blur,0,20)}px)`;ctx.drawImage(tmp,0,0);return ctx.getImageData(0,0,w,h);
@@ -198,34 +362,46 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    return out;
  }
  // Directional displacement: line-mask controlled shifts, not line painting/overlay.
- const maskAt=(x:number,y:number,angleOffset:number,spacing:number)=>{
-   const a=angle+angleOffset, nx=-Math.sin(a),ny=Math.cos(a);
-   const phase=(x*nx+y*ny)/Math.max(2,spacing);
-   const halfWidth=0.12+0.2*(cfg.bleed/100);
-   return Math.abs(phase-Math.round(phase))<halfWidth;
- };
- const hashSize=Math.max(2,Math.round(cfg.hashSize||10));
+ const featureScale=clamp(cfg.featureScale??100,25,400)/100;
+ const lineSpacing=Math.max(2,(cfg.lineSpacing||12)*featureScale);
+ const hashSize=Math.max(2,Math.round((cfg.hashSize||10)*featureScale));
  const hashDensity=clamp((cfg.hashDensity??28)/100,0,1);
  const hashSeed=Math.floor(cfg.hashSeed||23);
  const hashAlgo=cfg.hashAlgorithm||'cell';
+ const posJ=clamp(cfg.positionJitter??0,0,100)/100;
+ const angJ=clamp(cfg.angleJitter??0,0,180)*Math.PI/180;
+ const maskAt=(x:number,y:number,angleOffset:number,spacing:number)=>{
+   const cx=Math.floor(x/spacing), cy=Math.floor(y/spacing);
+   const jx=(hash(cx,cy,hashSeed+3)-0.5)*spacing*posJ;
+   const jy=(hash(cx,cy,hashSeed+7)-0.5)*spacing*posJ;
+   const a=angle+angleOffset+(hash(cx,cy,hashSeed+11)-0.5)*2*angJ;
+   const nx=-Math.sin(a),ny=Math.cos(a);
+   const phase=((x+jx)*nx+(y+jy)*ny)/Math.max(2,spacing);
+   const halfWidth=0.12+0.2*(cfg.bleed/100);
+   return Math.abs(phase-Math.round(phase))<halfWidth;
+ };
  const hashActive=(x:number,y:number)=>{
-   if(hashAlgo==='sparse'){
-     return hash(x,y,hashSeed)<hashDensity;
-   }
+   const cx0=Math.floor(x/hashSize), cy0=Math.floor(y/hashSize);
+   const a=(hash(cx0,cy0,hashSeed+11)-0.5)*2*angJ;
+   const cos=Math.cos(a), sin=Math.sin(a);
+   const xr=x*cos-y*sin, yr=x*sin+y*cos;
+   const jx=(hash(cx0,cy0,hashSeed+3)-0.5)*hashSize*posJ;
+   const jy=(hash(cx0,cy0,hashSeed+7)-0.5)*hashSize*posJ;
+   const sx=xr+jx, sy=yr+jy;
+   if(hashAlgo==='sparse') return hash(Math.round(sx),Math.round(sy),hashSeed)<hashDensity;
    if(hashAlgo==='grid-jitter'){
-     const jx=(hash(Math.floor(x/hashSize),Math.floor(y/hashSize),hashSeed+3)-0.5)*hashSize*0.45;
-     const jy=(hash(Math.floor(x/hashSize),Math.floor(y/hashSize),hashSeed+7)-0.5)*hashSize*0.45;
-     const cx=Math.floor((x+jx)/hashSize), cy=Math.floor((y+jy)/hashSize);
+     const jx2=(hash(Math.floor(sx/hashSize),Math.floor(sy/hashSize),hashSeed+3)-0.5)*hashSize*0.45;
+     const jy2=(hash(Math.floor(sx/hashSize),Math.floor(sy/hashSize),hashSeed+7)-0.5)*hashSize*0.45;
+     const cx=Math.floor((sx+jx2)/hashSize), cy=Math.floor((sy+jy2)/hashSize);
      return hash(cx,cy,hashSeed)<hashDensity;
    }
-   // cell: one decision per cell
-   const cx=Math.floor(x/hashSize), cy=Math.floor(y/hashSize);
+   const cx=Math.floor(sx/hashSize), cy=Math.floor(sy/hashSize);
    return hash(cx,cy,hashSeed)<hashDensity;
  };
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-   let active=cfg.kind==='hashing'?hashActive(x,y):maskAt(x,y,0,cfg.lineSpacing);
-   if(cfg.kind==='cross-hatching')active=maskAt(x,y,0,cfg.lineSpacing)||maskAt(x,y,Math.PI/2,cfg.lineSpacing);
-   if(cfg.kind==='hatching')active=maskAt(x,y,0,cfg.lineSpacing);
+   let active=cfg.kind==='hashing'?hashActive(x,y):maskAt(x,y,0,lineSpacing);
+   if(cfg.kind==='cross-hatching')active=maskAt(x,y,0,lineSpacing)||maskAt(x,y,Math.PI/2,lineSpacing);
+   if(cfg.kind==='hatching')active=maskAt(x,y,0,lineSpacing);
    const jitter=(hash(x,y,hashSeed+20)-0.5)*cfg.randomization/100*cfg.shift;
    const shift=active?cfg.shift+jitter:0;
    const sx=x-dx*shift,sy=y-dy*shift;
@@ -236,7 +412,12 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
 }
 export async function applyTextureFilterToCanvas(canvas:HTMLCanvasElement,cfg:TextureFilterConfig):Promise<void>{
  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Selected layer canvas is unavailable');
- const source=ctx.getImageData(0,0,canvas.width,canvas.height);
- const result=await transformTexturePixels(source,cfg);
+ const probe=ctx.getImageData(0,0,canvas.width,canvas.height);
+ let transparent=0, opaque=0;
+ for(let i=3;i<probe.data.length;i+=4){ if(probe.data[i]<10) transparent++; else opaque++; }
+ // Neighbourhood filters sample across UV gutters. Pad first when the layer is an island atlas.
+ if(opaque>0 && transparent>0) dilateImageData(probe, 8);
+ const result=await transformTexturePixels(probe,cfg);
  ctx.putImageData(result,0,0);
+ if(opaque>0 && transparent>0) dilateImageData(result, 8), ctx.putImageData(result,0,0);
 }

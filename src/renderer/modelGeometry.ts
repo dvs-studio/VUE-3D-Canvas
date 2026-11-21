@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import suzanneOBJ from '../assets/Suzanne.obj?raw';
+import suzanneHeadEyesOBJ from '../assets/Suzanne.head-eyes.obj?raw';
 import { SurfaceShadingEngine } from './surfaceShading';
 
 export interface ModelPreset {
@@ -263,6 +264,20 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
     return {
       id: 'suzanne',
       name: 'Suzanne (Bundled OBJ)',
+      category: 'Organic Character',
+      triangleCount: (geom.index?.count ?? geom.attributes.position.count) / 3,
+      vertexCount: geom.attributes.position.count,
+      geometry: geom,
+    };
+  },
+  suzanneHeadEyes: () => {
+    // Separate candidate from Suzanne.zip ("Suzanne x.obj").
+    // Head and Eyes stay distinct objects. Their boundaries are not coincident
+    // (eye shell sits in front of the sockets), so they are not welded.
+    const geom = parseOBJ(suzanneHeadEyesOBJ);
+    return {
+      id: 'suzanneHeadEyes',
+      name: 'Suzanne Head + Eyes',
       category: 'Organic Character',
       triangleCount: (geom.index?.count ?? geom.attributes.position.count) / 3,
       vertexCount: geom.attributes.position.count,

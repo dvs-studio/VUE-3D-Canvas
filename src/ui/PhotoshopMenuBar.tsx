@@ -713,6 +713,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
               </div>
               {[
                 { id: 'suzanne', label: 'Squail (Built-in OBJ)' },
+                { id: 'suzanneHeadEyes', label: 'Suzanne Head + Eyes' },
                 { id: 'helmet', label: 'Cyber Armor Helmet' },
                 { id: 'pavilion', label: 'Classical Architectural Colonnade' },
                 { id: 'sphere', label: 'Showcase Sphere' },

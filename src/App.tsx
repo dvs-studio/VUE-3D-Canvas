@@ -858,7 +858,14 @@ export default function App() {
   const handleConfirmTriplanar = async (config: TriplanarConfig) => {
     const targetLayer = layers.find(l => l.id === activeLayerId);
     if (targetLayer) {
-      await FillSuite.applyTriplanarBoxFill(targetLayer.ctx, config, activeBrush.opacity);
+      await FillSuite.applyTriplanarBoxFill(
+        targetLayer.ctx,
+        config,
+        activeBrush.opacity,
+        null,
+        activeGeometry,
+        activeGeometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined,
+      );
       undoBuffer.pushState('Triplanar Box Mapping Fill', layers);
       notifyTextureUpdated();
     }
@@ -1504,7 +1511,7 @@ export default function App() {
     };
 
     if (result.isTextureFill && result.fillConfig) {
-      await FillSuite.applyMaterialTextureFill(ctx, result.fillConfig, 100);
+      await FillSuite.applyMaterialTextureFill(ctx, result.fillConfig, 100, activeGeometry, activeGeometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined);
     } else {
       // The modal closes immediately; decode and rasterize the full image afterward.
       const img = new Image();
@@ -1527,7 +1534,7 @@ export default function App() {
     const layer = layers.find(l => l.id === layerId);
     if (!layer || !layer.isTextureFill || !layer.textureFillConfig) return;
 
-    await FillSuite.applyMaterialTextureFill(layer.ctx, layer.textureFillConfig, layer.opacity);
+    await FillSuite.applyMaterialTextureFill(layer.ctx, layer.textureFillConfig, layer.opacity, activeGeometry, activeGeometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined);
     layer.isTextureFill = false;
     layer.textureFillConfig = undefined;
 
