@@ -1,199 +1,169 @@
-# Layer fabric, cloth filter, and mask plan — 2026-11-21
+# Layer fabric, cloth, mask, logo fabric plan — 2026-11-21 (expanded)
 
 **Status:** Design / to-do only. **Not implemented.**  
 **Scope:** self-host (`src/` → `npm run host:sync`). No `crates/vue3d_core`.  
 **Testing:** Victory tests unless he explicitly asks the agent to hunt errors.  
-**Announce:** Listed in `AGENTS.md` PIN as F1–F6.
+**Cloth family F2–F5:** **ON HOLD** until Victory gives go-ahead.
 
 ---
 
-## Summary of layer / filter features in plan so far
+## Layer summary — old vs new
 
-### Already on product (earlier sets — verify, do not re-spec)
-- Ordinary paint layers, groups, multi-select merge/group/move/delete
-- Toggle PBR contributions (colour, reflection, emission, bump+ramp, normal lock)
-- Material texture fill layer; import texture / auto-role
-- Layer filters: wood (band/ring), hatching, cross-hatch, hashing, powder, noise, dither, mosaic
-- Export Classic / RGB+ORM / AO×albedo
-- Per-layer UV channel; seamless gutter action
-- Bump/Displacement via shared Levels
+### Shipped (verify; do not re-spec)
+| Layer / capability | Notes |
+|--------------------|-------|
+| Ordinary paint | Default add |
+| Groups | Multi-select merge / move-to-group / delete |
+| PBR toggles | Colour, reflection, emission, bump+ramp, normal |
+| Material texture fill | Import / auto-role |
+| Per-layer UV channel | + seamless gutter action |
+| Export packages | Classic / RGB+ORM / AO×albedo |
 
-### Designed, not built (PIN)
-- **Matcap layer** — matcap image as material; paint writes alpha only; convert-to-colour recipe; JPG storage; MixRGB export path
-- **Narrow Add menu** — special types under one Add when panel is narrow
+### Planned earlier (not built)
+| Layer | Notes |
+|-------|-------|
+| Matcap | Image = material; paint = alpha only; convert-to-colour recipe; JPG |
+| Narrow Add menu | Special types under one Add when panel is narrow |
 
-### New this document (F1–F6)
-1. **Torn fabric layer** — green-keyed or B/W alpha tears; true tear vs hanging threads; target-layer checklist
-2. **Cloth filter** — world-space cloth displacement → B/W mask or colour affect; scale, uniformity, rotation jitter
-3. **Cloth sub-modes** — wool/fur, cotton, bamboo-raft
-4. **Cylindrical wrap rebuild** — project painted patches; cross-plaster fallback; dirtiness + ramp
-5. **Strip stack** — separate strips with per-strip colour ramps from painted data only
-6. **Mask layer** — Photoshop-style; beside (clip one layer) or independent (checkbox targets above/below)
-
----
-
-## F1 — Torn fabric / tear layer (dedicated layer type)
-
-### Intent
-Paint or stamp **tear regions** on fabric-looking surfaces. Green (or B/W alpha) drives **clip masking** so underlying layers show through as rips.
-
-### Input modes (dialog)
-| Mode | How the tear is defined |
-|------|-------------------------|
-| **Green key** | Any brush on this layer is forced to a fixed key green (e.g. `#00FF00`). Green coverage = tear open. |
-| **B/W alpha** | Black background + white (or greyscale) = tear amount; white = fully open. |
-| **Tear stamp** | Optional stamp library: jagged edge stamps; still written as green or white into the layer buffer. |
-
-### Dialog controls (layer property for this type)
-- **Tear style:** `true_tear` | `hanging_threads`
-  - **true_tear:** hard clip; optional edge roughness (0–100) erodes boundary with seeded noise.
-  - **hanging_threads:** after clip mask, draw thin filament polylines from tear edge inward/outward; controls: thread density, length, thickness, colour (sample fabric or fixed).
-- **Edge algorithm:** `noise_erode` | `stamp_edge` | `distance_field` (simplified: pick one primary + strength slider).
-- **Strength / openness** (0–100).
-- **Affect targets:** checkbox list of **layers below** this tear layer (auto-enumerated at dialog open). Only checked layers are clipped by this tear. Default: immediate layer below only.
-
-### Execution algorithm (implementation order)
-1. Extend `Layer` / types with `layerKind: 'paint' | 'tear' | 'mask' | 'matcap' | ...` and `tearSettings`.
-2. On tool stroke while active tear layer: if green-key mode, force brush colour to key green; ignore user primary colour.
-3. Composite pass (after normal stack order):
-   - Build tear mask `M` from layer pixels (green distance-to-key or luminance).
-   - For each checked target layer below: `out = target * (1-M)` (+ optional thread overlay drawn into a temp buffer after clip).
-4. Undo: store tear layer buffer + settings snapshot like other layers.
-5. `.xblend`: serialize `layerKind` + settings; old files default `paint`.
-
-### Performance
-Mask is resolution of layer canvas; do not full-scene rebuild every dab — update on stroke end or throttled composite like existing paint.
+### New planned layers
+| ID | Layer | Notes |
+|----|-------|-------|
+| F1 | **Torn fabric** | Dedicated type + convert-from-paint; green/white/black roles; export bake |
+| F1b | **Mesh influence switch** | Optional: paint/tear only selected mesh UV |
+| F6 | **Mask** | Beside (clip one) or independent (checkbox targets) |
 
 ---
 
-## F2 — Cloth displacement filter (layer filter)
+## Filter summary — old vs new
 
-### Intent
-Bake a **cloth-like displacement** from **object/world space** (reuse `buildObjectSpacePositionMap` / mesh normals where possible) into:
-- **Mask mode:** write B/W into an empty layer (for use as mask or tear input), or
-- **Colour mode:** modulate existing layer colour (darken folds / lift highlights).
+### Shipped filters (verify)
+Wood (band/ring), hatching, cross-hatch, hashing, powder, noise, dither, mosaic; hatch scale/position/angle jitter.
 
-### Controls
-| Control | Role |
-|---------|------|
-| Scale | Spatial frequency of folds (world units → UV) |
-| Uniformity | 0 = chaotic; 100 = regular grid-like waves |
-| Rotation jitter | Degrees of random local fold direction |
-| Seed | Stable re-apply |
-| Output | `mask_bw` \| `modulate_colour` |
-| Strength | Blend amount |
+### Planned filters / tools
+| ID | Filter / tool | Notes |
+|----|---------------|-------|
+| F7 | **Logo fabric** | Isolate colours → weave + per-colour bump/thread dispersal; **requires visible pixels** |
+| F8 | **Merged bump/displacement** | One Levels greyscale tool → 100% bump surface (same job) |
+| F2–F5 | Cloth / wool / cotton / bamboo / wrap / strips | **ON HOLD** — no build without go-ahead |
 
-### Algorithm (simplified, WebGL-friendly)
-1. For each texel with valid object position `P` and normal `N`:
-   - Build two tangent directions from `N` (or UV derivatives).
-   - Fold field: `f = sin(dot(P, dirA) * scale + phase) * sin(dot(P, dirB) * scale * k)` with `dir` rotated by jitter per cell.
-   - Uniformity lerps between multi-octave noise and the regular product above.
-2. Map `f` to 0–1; write grey or multiply RGB.
-3. Optional light blur for soft cloth.
-
-Hook into existing `TextureFilterDialog` as kind `cloth`.
+Optional later: wear edge, fray, stitch-line preset.
 
 ---
 
-## F3 — Cloth sub-modes (dropdown inside cloth filter)
+## F1 — Torn fabric (expanded)
 
-| Sub-mode | Behaviour sketch |
-|----------|------------------|
-| **Cloth (default)** | F2 fold field |
-| **Wool / fur** | Anisotropic short strokes along tangent; density + length; mostly B/W strand mask or colour darkening |
-| **Cotton** | Softer, higher-frequency noise; low contrast loft |
-| **Bamboo raft** | Parallel cylindrical ribs: `sin(dot(P, axis) * ribScale)` with optional alternate rib width |
+### Colour roles (authoritative)
+| Pixel | Meaning |
+|-------|---------|
+| **Black or transparent** | Hole: composite shows **true colour of layers below** (open tear through) |
+| **White** | **Torn edge** (fray rim). Can be **auto-generated procedurally** from the special layer control panel (edge thickness, noise, threadiness) so the user need not paint white by hand |
+| **Green** (key, e.g. `#00FF00`) | **True tear influence zone** — how deeply / which **layers below** are affected (clip depth). Green drives the affect checklist / strength |
 
-Each sub-mode shares Scale / Uniformity / Jitter / Seed where meaningful; hide irrelevant sliders.
+Users may **paint freely first** on a normal layer for visuals, then **Convert to torn fabric layer**.
 
----
+### Convert paint → torn fabric
+1. Context action on a paint layer: **Convert to Torn Fabric**.
+2. Existing RGB retained where useful; dialog maps:
+   - optional auto-detect near-green → key green;
+   - generate **white edge** band from opaque boundaries (procedural);
+   - fill interior holes / user-marked regions as black/transparent open tear.
+3. Layer kind becomes `tear`; tear settings panel unlocks (style, edge algo, targets, procedural edge).
 
-## F4 — Cylindrical wrap rebuild (cloth filter operator)
+### Procedural turn edges (white)
+In the tear layer control panel:
+- Enable **Auto edge**
+- Width (px), roughness, optional hanging-thread density along the white band
+- Regenerates white rim from current open (black) regions + green influence boundary without wiping user green
 
-### Intent
-From **what is already painted** on the layer, rebuild as **wrap strips** using a **cylindrical projection** from the model (choose axis: Y default).
+### Convert torn → normal colours (apply down)
+When converting **back to a normal paint layer** (or “Apply torn”):
+1. For each affected target below: **erase** the open-tear region in that target (stack erase where black/transparent tear wins).
+2. **Paint the torn patch into the layer directly below**: bake white edges + any thread overlay + visible fabric rim into that lower layer’s pixels.
+3. Tear layer becomes ordinary paint (or is removed per UX choice) holding residual edge art if needed.
+4. Full undo stack entry for the multi-layer edit.
 
-### Algorithm
-1. Read opaque/coloured texels; cluster connected components (flood fill on alpha).
-2. For each cluster, estimate cylindrical angle from object positions (`atan2` in plane perpendicular to axis).
-3. Sort clusters by angle; allocate strip bands in UV or redraw into layer as vertical/horizontal wrap bands aligned to angle.
-4. **Sparse paint rule:** if total painted coverage < threshold (e.g. 8% of island) **or** cluster count is low → replace with **cross plaster / bandaid** stamps (X-shaped or strip patches) at cluster centroids instead of full wraps.
-5. User-facing inputs for this operator (limited, as requested):
-   - **Dirtiness** (0–100): stains/noise on wrap strips
-   - **Colour graduation / ramp** per strip: derived from average colour of source cluster, then optional ramp endpoints
-6. Erase original painted patches as part of redraw (destructive filter — push undo first).
+### Export behaviour (new technology)
+- **Before export:** automatically **apply** torn composite into the stack (same as convert-down bake) so exported maps / packages do not depend on live tear compositing.
+- **After export (or cancel path):** **reverse** — restore pre-apply tear stack state so the session stays editable as torn layers.
+- Implementation: snapshot layer buffers → apply → export → restore snapshot. Never leave the document permanently flattened unless the user explicitly “Apply permanently”.
 
----
+### Dialog (tear layer)
+- Tear style: true tear vs hanging threads
+- Edge algorithm + strength; Auto edge controls
+- Affect targets: checkboxes for layers **below** (green controls influence)
+- Strength / openness
 
-## F5 — Strip stack operation
-
-- After wrap rebuild (or on demand): **separate each strip into stack entries** (child layers or a structured `stripStack` on the layer).
-- Each strip keeps its **own colour ramp** (2–5 stops) initialised from that strip’s painted colours only — no global palette inventing.
-- Limited controls: ramp stops + dirtiness; geometry of strips stays from projection.
-
----
-
-## F6 — Mask layer (Photoshop-style)
-
-### Two attachment modes
-
-| Mode | Behaviour |
-|------|-----------|
-| **Beside (clip)** | Mask is parented to exactly one layer; affects only that layer’s alpha (or clip group). Created via “Add mask” on a layer row. |
-| **Independent** | Own stack row. Does **not** auto-affect neighbours. Layer property operator lists **checkboxes for layers above and below**; only checked layers are multiplied by this mask. |
-
-### Painting
-- Greyscale (or B/W) brush; white = reveal, black = hide (standard convention — document in UI).
-- Optional link/unlink like PS (linked mask moves with layer offset if layer transforms exist later).
-
-### Composite
-For each affected content layer: `alpha_out = alpha_in * mask_luminance` (per pixel). Independent masks can stack multiply if multiple masks target the same layer (define order: bottom mask first).
-
-### Execution order
-1. Types: `maskOfLayerId?: string` (beside) vs `maskTargetIds: string[]` (independent).
-2. UI: thumbnail + mask icon on row; property panel target checklist for independent.
-3. Composite integration next to tear-layer clip (share “modulate alpha of targets” helper).
-4. Serialize in `.xblend`.
+### Execution notes
+Share alpha-modulate helper with F6 masks. Throttle composite to stroke-end. Serialize `layerKind` + settings in `.xblend`.
 
 ---
 
-## Suggested extra filters (optional, same family)
+## F1b — Mesh / UV influence switch (layer control)
 
-- **Wear edge** — cavity/ridge aware edge lighten (can reuse edge-wear ideas).
-- **Fray** — 1D noise along UV island boundary only.
-- **Stitch line** — user stroke → periodic stitch dashes (may already exist in Stitch Studio; wire as filter preset if useful).
+**Default:** painting and tear/mask influence behave as today (all active mesh / current UV context).
+
+**Optional switch** in the layer property / control panel:
+- **Limit to selected mesh** (off by default)
+- When on: list meshes / parts (e.g. Head, Eyes, body islands); only checked meshes receive paint dabs and tear/mask influence in their UV coverage
+- Goes a long way for multi-part models without a full material system rewrite
+
+Wire into stroke raster and tear composite using existing mesh-part / UV-channel data (`userData`, active UV set).
 
 ---
 
-## Implementation procedure (when Victory orders build)
+## F7 — Logo fabric filter (layer filter)
 
-1. Read this file + AGENTS PIN. Do not start specialised UV desk.
-2. Implement **F6 mask** first if clip infrastructure helps **F1 tear** (shared target checklist + alpha modulate).
-3. Then **F1 tear** (green key + dialog + threads).
-4. Then **F2/F3 cloth filter** in `textureFilters.ts` + dialog.
-5. Then **F4/F5** wrap + strip stack (most complex; needs object-space + undo).
-6. After each slice: `npm run host:sync`; short commit; **Victory tests** unless he asks for agent error checks.
-7. Append `CONVERSATION_LOG.md`; update AGENTS PIN items to “done” only after Victory accepts.
+**Not** under the cloth filter (cloth stays on hold). Own entry in Layer Filter dialog.
+
+### Requirements
+- Apply only if the layer has **visible non-empty pixels**; refuse or no-op on blank layers with a clear message.
+- **Intelligently isolate colours** (k-means or histogram peaks → dominant swatches).
+- **Weave** each isolated colour on its own: directional thread runs, slight undulation, interlace with neighbours.
+- Each colour band gets **unique bump** (height from weave phase) and **colour threading dispersal** (micro-shift of hue/value along thread direction).
+- Controls (suggested): cluster count or auto, weave scale, depth, dispersal, seed, strength.
+- Output writes into the same layer (destructive → undo first) or optional new layer.
+
+### Algorithm sketch
+1. Sample opaque pixels → cluster colours.
+2. Assign each pixel a cluster id; build per-cluster orientation (e.g. from image gradients or fixed warp/weft).
+3. For each pixel: weave function `sin`/`square` along orientation → modulate RGB toward cluster centre + neighbour mix; write greyscale bump auxiliary if PBR bump slot on, or encode bump in a parallel pass the user can convert via F8.
+
+---
+
+## F8 — Merge Convert-to-Bump and Convert-to-Displacement
+
+**Note for implementers:** Convert to bump and convert to displacement are **meant to do the same job** — produce a greyscale using a **Levels-style slider**, then apply as a **100% bump surface** contribution on the layer.
+
+### UI / behaviour
+- Single entry: e.g. **“Convert to height (bump)”** or **“Greyscale → bump surface”**
+- Shared Levels dialog (already shared in product history)
+- Result: layer (or slot) treated as full-strength bump from that greyscale; do not maintain two divergent code paths or two menus that confuse users
+- Displacement naming in UI may remain as a synonym/tooltip (“same as bump height in this app”) rather than a second pipeline
+
+---
+
+## F6 — Mask layer (unchanged intent)
+
+Beside = clip one layer. Independent = checkbox targets above/below. Greyscale paint; white reveal / black hide.
+
+---
+
+## F2–F5 — Cloth family (ON HOLD)
+
+World-space cloth, wool/fur, cotton, bamboo-raft, cylindrical wrap, strip stack — **specified earlier but do not implement until Victory says go.** Prefer F1, F1b, F7, F8, F6 when ordered.
+
+---
+
+## Implementation order (when ordered)
+
+1. **F8** merge bump/displace UI (smallest, clarifies height tools).
+2. **F6** mask infrastructure (alpha target helper).
+3. **F1** torn layer + convert + procedural white edge + apply-down + export snapshot/restore.
+4. **F1b** mesh influence switch.
+5. **F7** logo fabric filter.
+6. **F2–F5** only after explicit go-ahead.
+
+After each slice: `npm run host:sync`; short commit; Victory tests by default.
 
 ### Non-goals
-- No native D3D cloth sim.
-- No full physical yarn simulation.
-- No breaking old `.xblend` paint layers.
-
----
-
-## Layer feature inventory (plan total)
-
-| Feature | Status |
-|---------|--------|
-| Paint / group / PBR toggles | Shipped (verify) |
-| Material texture fill | Shipped (verify) |
-| Wood / hatch / hash / etc. filters | Shipped (verify) |
-| Matcap dedicated layer | Planned (AGENTS 9) |
-| Narrow Add menu | Planned (AGENTS 10) |
-| Torn fabric layer | **Planned F1** |
-| Cloth filter + sub-modes | **Planned F2–F3** |
-| Cylindrical wrap + plaster fallback | **Planned F4** |
-| Strip stack + ramps | **Planned F5** |
-| Mask layer (clip / independent) | **Planned F6** |
-| Specialised UV desk / NURBS / LTM | Research later |
+No native cloth sim; no breaking old `.xblend` paint layers; no permanent flatten on export without restore.
