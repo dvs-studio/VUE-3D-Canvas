@@ -2,45 +2,43 @@
 
 ## PIN — read only this far (unless absolutely necessary)
 
-### Agent status — 2026-11-21 evening (Grok)
+### Agent status — 2026-11-21 late (Grok)
 
-**Product path:** Vite/React/Three.js under `src/`. **Every feature change must update the running self-host package:** edit `src/`, then `npm run host:sync` so `self-host/public/` stays current.
+**Product path:** Vite/React/Three.js under `src/`. Edit `src/`, then `npm run host:sync` so `self-host/public/` stays current.
 
-**Do not edit** `crates/vue3d_core` unless Victory explicitly orders Windows-shell work. **Do not delete** safety ZIPs under `release/` or `self-host/`.
+**Do not edit** `crates/vue3d_core` unless Victory orders it. **Do not delete** safety ZIPs under `release/` or `self-host/`.
 
-**Conversation log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) — append-only. **Feature design brief (new):** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md).
+**Design brief:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md) (expanded). **Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md).
 
-**Testing:** Victory handles testing unless he explicitly asks the agent to test for errors.
+**Testing:** Victory tests unless he asks the agent to test for errors.
 
-### UPCOMING FEATURE SET — announced 2026-11-21 (NOT BUILT)
+### UPCOMING FEATURE SET — NOT BUILT (do not start until Victory orders)
 
-Victory authorised a **new layer-and-filter design set**. Spec only until an agent is ordered to implement. Full algorithms and execution steps: **`LAYER_FABRIC_MASK_PLAN.md`**.
+| ID | Feature |
+|----|---------|
+| F1 | Torn fabric layer + **convert paint → torn** + procedural white edges + export bake |
+| F1b | Mesh / UV **influence switch** (per layer control) |
+| F2–F5 | Cloth filter family — **ON HOLD** until Victory gives go-ahead |
+| F6 | Photoshop-style mask layer |
+| F7 | **Logo fabric** layer filter (colour isolate + weave + bump/thread dispersal) |
+| F8 | **Merge** Convert-to-Bump and Convert-to-Displacement into one greyscale Levels tool |
+| — | Matcap layer + narrow Add menu (still planned) |
 
-| ID | Feature | Kind |
-|----|---------|------|
-| F1 | **Torn fabric / tear layer** | Dedicated layer type |
-| F2 | **Cloth displacement filter** | Layer filter (world-space bake) |
-| F3 | **Wool / fur, cotton, bamboo-raft cloth modes** | Cloth filter sub-modes |
-| F4 | **Cylindrical wrap rebuild** | Cloth filter operator |
-| F5 | **Strip stack + per-strip colour ramps** | Cloth/wrap follow-on |
-| F6 | **Photoshop-style mask layer** | Dedicated layer type (clip or independent) |
-| — | Existing Matcap layer + narrow Add menu | Still PIN items 9–10; not built |
-
-Do **not** start F1–F6 until Victory asks for implementation. Prefer finishing visual checks of `18a80cb` seam work when touching paint code.
+Full algorithms: **`LAYER_FABRIC_MASK_PLAN.md`**.
 
 ### Combined to-do (self-host first)
 
-1. Pull `main`; confirm self-host sync after `18a80cb`; **Victory tests** seam/fill unless he asks otherwise.
-2. Visual / device QA checklist from earlier PIN (exports, UV channel, seamless, Levels, scroll, scale, Mountain GLB, multi-select).
-3. Matcap dedicated layer + narrow Add menu (items 9–10 — design only until ordered).
-4. **When ordered:** implement F1–F6 per `LAYER_FABRIC_MASK_PLAN.md` on `src/` + `host:sync`.
-5. Specialised UV desk stays research-only until Victory asks.
-6. Windows native redevelopment later (WebView2 shell only).
+1. Seam/QA of `18a80cb` package when touching paint (Victory tests by default).
+2. Matcap layer + narrow Add menu when ordered.
+3. **F8** merge bump/displacement conversion UI (Levels → 100% bump surface).
+4. **F1 / F1b / F7 / F6** when ordered — see plan file.
+5. **F2–F5 cloth** remains on hold until explicit go-ahead.
+6. Specialised UV desk research-only until asked. Windows shell later.
 
 ### Work rules
 
-- Self-host path only for this work. Short commits. Append history under STOP; do not wipe ledgers.
+Self-host only. Short commits. Append under STOP; do not wipe ledgers.
 
 ## STOP
 
-Prior 2026-11-21 stop notes (UV pad, hatch jitter, Suzanne head-eyes, typecheck caveats) and 2026-11-19 history remain in git. Prefer this PIN + `LAYER_FABRIC_MASK_PLAN.md` for new layer work.
+Earlier 2026-11-21 and 2026-11-19 notes live in git history.
