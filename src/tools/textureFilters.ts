@@ -44,6 +44,8 @@ export interface TextureFilterConfig {
   ringNoise: number;
   woodRoughness: number;
   woodSeed: number;
+  /** Seeded spatial variation applied independently to band and ring frequencies. */
+  woodFrequencyRandomization: number;
   /** Optional dither pattern. */
   ditherPattern: 'hash' | 'bayer';
   /** Powder / noise seed. */
@@ -58,7 +60,7 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z',
   hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
   featureScale: 100, positionJitter: 0, angleJitter: 0,
-  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17,
+  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15,
   ditherPattern: 'hash', filterSeed: 71,
   woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}]
 };
@@ -288,8 +290,12 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
        const grainCoord=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28;
        const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz;
        const grainType=cfg.woodGrainType||'band+ring';
-       const bandFreq=0.004+(clamp(cfg.bandFrequency??40,1,100)/100)*0.04;
-       const ringFreq=2+(clamp(cfg.ringFrequency??35,1,100)/100)*48;
+       const frequencyRandomization=clamp(cfg.woodFrequencyRandomization??15,0,100)/100;
+       const frequencyCellX=Math.floor(x/48),frequencyCellY=Math.floor(y/48);
+       const bandFrequencyScale=1+(hash(frequencyCellX,frequencyCellY,woodSeed+73)-0.5)*2*frequencyRandomization;
+       const ringFrequencyScale=1+(hash(frequencyCellX,frequencyCellY,woodSeed+79)-0.5)*2*frequencyRandomization;
+       const bandFreq=(0.004+(clamp(cfg.bandFrequency??40,1,100)/100)*0.04)*bandFrequencyScale;
+       const ringFreq=(2+(clamp(cfg.ringFrequency??35,1,100)/100)*48)*ringFrequencyScale;
        const ringN=clamp(cfg.ringNoise??25,0,100)/100;
        const woodSeed=Math.floor(cfg.woodSeed||17);
        const densScale=0.5+density/100;
@@ -355,9 +361,40 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  if(cfg.kind==='powderiser'){
    const strength=clamp(noise/100,0,1),drift=clamp(cfg.shift||12,1,48);
    const seed=Math.floor(cfg.filterSeed??211);
-   for(let i=0;i<data.length;i+=4){const x=(i/4)%w,y=Math.floor(i/4/w),r=hash(x,y,seed);
-     if(r<strength){const sx=clamp(Math.round(x+dx*drift*(0.25+hash(x,y,seed+19))),0,w-1),sy=clamp(Math.round(y+dy*drift*(0.25+hash(x,y,seed+29))),0,h-1);const j=(sy*w+sx)*4;dst[j]=data[i];dst[j+1]=data[i+1];dst[j+2]=data[i+2];dst[j+3]=Math.max(dst[j+3],Math.round(data[i+3]*(0.25+0.65*(1-strength))));dst[i+3]=Math.round(data[i+3]*(1-strength)*0.22);}
-     else {dst[i]=data[i];dst[i+1]=data[i+1];dst[i+2]=data[i+2];dst[i+3]=Math.round(data[i+3]*(1-strength*0.7));}
+   dst.set(data);
+   if(strength<=0)return out;
+   const selected=new Uint8Array(w*h);
+   // Pass one only changes source coverage. Keep scatter writes out of this pass so
+   // later source pixels cannot overwrite fragments emitted by earlier pixels.
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+     const pixel=y*w+x,i=pixel*4;
+     if(data[i+3]===0)continue;
+     const r=hash(x,y,seed);
+     if(r<strength){
+       selected[pixel]=1;
+       dst[i+3]=Math.round(data[i+3]*(1-strength)*0.22);
+     }else{
+       dst[i+3]=Math.round(data[i+3]*(1-strength*0.7));
+     }
+   }
+   // Pass two composites deterministic, fading dust fragments over the completed
+   // source image. Multiple fragments landing on one texel accumulate correctly.
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+     const pixel=y*w+x;
+     if(!selected[pixel])continue;
+     const i=pixel*4;
+     const sx=clamp(Math.round(x+dx*drift*(0.25+hash(x,y,seed+19))),0,w-1);
+     const sy=clamp(Math.round(y+dy*drift*(0.25+hash(x,y,seed+29))),0,h-1);
+     const j=(sy*w+sx)*4;
+     const sourceAlpha=(data[i+3]/255)*(0.25+0.65*(1-strength));
+     if(sourceAlpha<=0)continue;
+     const destAlpha=dst[j+3]/255;
+     const combinedAlpha=sourceAlpha+destAlpha*(1-sourceAlpha);
+     if(combinedAlpha<=0)continue;
+     for(let channel=0;channel<3;channel++){
+       dst[j+channel]=Math.round((data[i+channel]*sourceAlpha+dst[j+channel]*destAlpha*(1-sourceAlpha))/combinedAlpha);
+     }
+     dst[j+3]=Math.round(combinedAlpha*255);
    }
    return out;
  }
