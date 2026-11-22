@@ -14,26 +14,29 @@ export interface StrokePoint {
   pressure: number;
 }
 
+interface BrushStrokeState {
+  lastDabPos: { x: number; y: number } | null;
+  residualDistance: number;
+  strokeStartPos: { x: number; y: number } | null;
+  dotPlaced: boolean;
+  curvePoints: { x: number; y: number }[];
+  smudgeColor: { r: number; g: number; b: number; a: number } | null;
+}
+
 export class BrushEngine {
   private static instance: BrushEngine;
   private wasmMemory = WasmMemoryEngine.getInstance();
 
-  // Stabilizer (Lazy-Mouse) state
+  // Stabilizer (Lazy-Mouse) remains tied to the physical pointer.
   private stabilizedPos: { x: number; y: number } | null = null;
-  private lastDabPos: { x: number; y: number } | null = null;
-  private residualDistance = 0;
-
-  // Stroke Type state
-  private strokeStartPos: { x: number; y: number } | null = null;
-  private dotPlaced = false;
-  private curvePoints: { x: number; y: number }[] = [];
+  // Each symmetry path owns independent spacing/shape/smudge state. Sharing
+  // lastDabPos between the primary and mirrored paths creates long bridge strokes.
+  private strokeStates = new Map<string, BrushStrokeState>();
 
   // Clone stamp source point
   public cloneSourcePoint: { x: number; y: number } | null = null;
   public cloneOffset: { dx: number; dy: number } | null = null;
 
-  // Smudge pickup buffer
-  private smudgeColor: { r: number; g: number; b: number; a: number } | null = null;
   private imageMaskCache = new Map<string, HTMLImageElement>();
   private patternCanvasCache = new Map<string, HTMLCanvasElement>();
 
@@ -56,22 +59,30 @@ export class BrushEngine {
     return null;
   }
 
-  public beginStroke(x: number, y: number, pressure = 1.0) {
+  private getStrokeState(strokeKey = 'primary'): BrushStrokeState {
+    let state = this.strokeStates.get(strokeKey);
+    if (!state) {
+      state = { lastDabPos: null, residualDistance: 0, strokeStartPos: null, dotPlaced: false, curvePoints: [], smudgeColor: null };
+      this.strokeStates.set(strokeKey, state);
+    }
+    return state;
+  }
+
+  public beginStroke(x: number, y: number, pressure = 1.0, strokeKey = 'primary') {
     this.stabilizedPos = { x, y };
-    this.lastDabPos = { x, y };
-    this.strokeStartPos = { x, y };
-    this.residualDistance = 0;
-    this.smudgeColor = null;
-    this.dotPlaced = false;
-    this.curvePoints = [{ x, y }];
+    this.strokeStates.set(strokeKey, {
+      lastDabPos: { x, y },
+      residualDistance: 0,
+      strokeStartPos: { x, y },
+      dotPlaced: false,
+      curvePoints: [{ x, y }],
+      smudgeColor: null,
+    });
   }
 
   public endStroke() {
     this.stabilizedPos = null;
-    this.lastDabPos = null;
-    this.strokeStartPos = null;
-    this.dotPlaced = false;
-    this.curvePoints = [];
+    this.strokeStates.clear();
   }
 
   /**
@@ -114,37 +125,39 @@ export class BrushEngine {
     toY: number,
     brush: BrushPreset,
     pressure = 1.0,
-    isEraser = false
+    isEraser = false,
+    strokeKey = 'primary'
   ) {
+    const state = this.getStrokeState(strokeKey);
     const strokeType: BrushStrokeType = brush.strokeType || 'space';
 
     // 1. DOT MODE: exactly 1 dab per stroke at start position
     if (strokeType === 'dot') {
-      if (this.dotPlaced) return;
+      if (state.dotPlaced) return;
       this.renderSingleDab(ctx, toX, toY, brush.size * pressure, brush, isEraser);
-      this.dotPlaced = true;
+      state.dotPlaced = true;
       return;
     }
 
     // 2. DRAGGED-DOT MODE: single dab whose scale and rotation follow drag distance
     if (strokeType === 'dragged-dot') {
-      if (!this.strokeStartPos) this.strokeStartPos = { x: toX, y: toY };
-      const dx = toX - this.strokeStartPos.x;
-      const dy = toY - this.strokeStartPos.y;
+      if (!state.strokeStartPos) state.strokeStartPos = { x: toX, y: toY };
+      const dx = toX - state.strokeStartPos.x;
+      const dy = toY - state.strokeStartPos.y;
       const dragDist = Math.hypot(dx, dy);
       const angle = Math.atan2(dy, dx);
       const dynamicSize = Math.max(brush.size * 0.5, dragDist * 1.5);
-      this.renderSingleDab(ctx, this.strokeStartPos.x, this.strokeStartPos.y, dynamicSize, brush, isEraser, angle);
+      this.renderSingleDab(ctx, state.strokeStartPos.x, state.strokeStartPos.y, dynamicSize, brush, isEraser, angle);
       return;
     }
 
     // 3. CURVE MODE: accumulate points and smooth via cardinal/bezier interpolation
     if (strokeType === 'curve') {
-      this.curvePoints.push({ x: toX, y: toY });
-      if (this.curvePoints.length >= 3) {
-        const p0 = this.curvePoints[this.curvePoints.length - 3];
-        const p1 = this.curvePoints[this.curvePoints.length - 2];
-        const p2 = this.curvePoints[this.curvePoints.length - 1];
+      state.curvePoints.push({ x: toX, y: toY });
+      if (state.curvePoints.length >= 3) {
+        const p0 = state.curvePoints[state.curvePoints.length - 3];
+        const p1 = state.curvePoints[state.curvePoints.length - 2];
+        const p2 = state.curvePoints[state.curvePoints.length - 1];
 
         // Midpoint interpolation
         const midX = (p1.x + p2.x) / 2;
@@ -160,10 +173,10 @@ export class BrushEngine {
     if (strokeType === 'airbrush') {
       const effectiveSize = Math.max(1, brush.size * Math.max(0.3, pressure));
       const step = Math.max(1, effectiveSize * 0.08); // very tight step for seamless spray
-      if (!this.lastDabPos) this.lastDabPos = { x: toX, y: toY };
+      if (!state.lastDabPos) state.lastDabPos = { x: toX, y: toY };
 
-      const fromX = this.lastDabPos.x;
-      const fromY = this.lastDabPos.y;
+      const fromX = state.lastDabPos.x;
+      const fromY = state.lastDabPos.y;
       const dx = toX - fromX;
       const dy = toY - fromY;
       const distance = Math.hypot(dx, dy);
@@ -175,17 +188,17 @@ export class BrushEngine {
         const dabY = fromY + dy * t;
         this.renderSingleDab(ctx, dabX, dabY, effectiveSize, brush, isEraser);
       }
-      this.lastDabPos = { x: toX, y: toY };
+      state.lastDabPos = { x: toX, y: toY };
       return;
     }
 
     // 5. SPACE MODE: standard spaced step dabs (default)
-    if (!this.lastDabPos) {
-      this.lastDabPos = { x: toX, y: toY };
+    if (!state.lastDabPos) {
+      state.lastDabPos = { x: toX, y: toY };
     }
 
-    const fromX = this.lastDabPos.x;
-    const fromY = this.lastDabPos.y;
+    const fromX = state.lastDabPos.x;
+    const fromY = state.lastDabPos.y;
     const dx = toX - fromX;
     const dy = toY - fromY;
     const distance = Math.hypot(dx, dy);
@@ -200,13 +213,13 @@ export class BrushEngine {
     // Spacing in pixels
     const step = Math.max(1, (effectiveSize * (brush.spacing / 100)));
 
-    if (distance + this.residualDistance < step) {
-      this.residualDistance += distance;
-      this.lastDabPos = { x: toX, y: toY };
+    if (distance + state.residualDistance < step) {
+      state.residualDistance += distance;
+      state.lastDabPos = { x: toX, y: toY };
       return;
     }
 
-    let progress = (step - this.residualDistance) / distance;
+    let progress = (step - state.residualDistance) / distance;
     while (progress <= 1.0) {
       let dabX = fromX + dx * progress;
       let dabY = fromY + dy * progress;
@@ -230,8 +243,8 @@ export class BrushEngine {
       progress += step / distance;
     }
 
-    this.residualDistance = (1.0 - (progress - step / distance)) * distance;
-    this.lastDabPos = { x: toX, y: toY };
+    state.residualDistance = (1.0 - (progress - step / distance)) * distance;
+    state.lastDabPos = { x: toX, y: toY };
   }
 
   /**
@@ -572,24 +585,26 @@ export class BrushEngine {
     fromY: number,
     toX: number,
     toY: number,
-    brush: BrushPreset
+    brush: BrushPreset,
+    strokeKey = 'primary'
   ) {
+    const state = this.getStrokeState(strokeKey);
     const radius = Math.max(3, Math.floor(brush.size / 2));
     const size = radius * 2;
 
     const sampleX = Math.max(0, Math.min(ctx.canvas.width - 1, Math.floor(fromX)));
     const sampleY = Math.max(0, Math.min(ctx.canvas.height - 1, Math.floor(fromY)));
 
-    if (!this.smudgeColor) {
+    if (!state.smudgeColor) {
       const sample = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-      this.smudgeColor = { r: sample[0], g: sample[1], b: sample[2], a: sample[3] };
+      state.smudgeColor = { r: sample[0], g: sample[1], b: sample[2], a: sample[3] };
     } else {
       const sample = ctx.getImageData(sampleX, sampleY, 1, 1).data;
       if (sample[3] > 0) {
-        this.smudgeColor.r = Math.round(this.smudgeColor.r * 0.75 + sample[0] * 0.25);
-        this.smudgeColor.g = Math.round(this.smudgeColor.g * 0.75 + sample[1] * 0.25);
-        this.smudgeColor.b = Math.round(this.smudgeColor.b * 0.75 + sample[2] * 0.25);
-        this.smudgeColor.a = Math.round(this.smudgeColor.a * 0.75 + sample[3] * 0.25);
+        state.smudgeColor.r = Math.round(state.smudgeColor.r * 0.75 + sample[0] * 0.25);
+        state.smudgeColor.g = Math.round(state.smudgeColor.g * 0.75 + sample[1] * 0.25);
+        state.smudgeColor.b = Math.round(state.smudgeColor.b * 0.75 + sample[2] * 0.25);
+        state.smudgeColor.a = Math.round(state.smudgeColor.a * 0.75 + sample[3] * 0.25);
       }
     }
 
@@ -597,7 +612,7 @@ export class BrushEngine {
     ctx.translate(toX, toY);
     ctx.globalAlpha = (brush.opacity / 100) * 0.45;
 
-    const smudgeRgba = `rgba(${this.smudgeColor.r}, ${this.smudgeColor.g}, ${this.smudgeColor.b}, ${this.smudgeColor.a / 255})`;
+    const smudgeRgba = `rgba(${state.smudgeColor.r}, ${state.smudgeColor.g}, ${state.smudgeColor.b}, ${state.smudgeColor.a / 255})`;
 
     // 1. Custom Image Stencil Mask for Smudge tip
     if (brush.stencilUrl) {
