@@ -15,11 +15,11 @@
 
 **Phase A1 completed:** Squail is removed from the model menu. Suzanne Head + Eyes is the initial model, the menu's fallback selection and the viewport fallback. The original Suzanne OBJ and its preset remain preserved in source; they are simply no longer offered as the Squail menu choice.
 
-**Verification:** A3 source `0ac87f4` passed workflow #184 / `44965787108`, generated output `9185d39`. A1 source commits `d78ccf6`, `792abd6`, `b2d33a2` passed workflow #187 / `44965932994`; generated output commit `ad8ad2e`, bundle `index-DrqHAL6X.js`. Latest artifact ID `14731482930`. These are build/package checks, not Victory's visual device test.
+**Verification:** A3 passed workflow #184 / `44965787108`; A1 passed #187 / `44965932994`; A2 source commits `1969550` and `9525fba` passed workflow #189 / `44966159076`. Latest generated output commit `0d04087`, bundle `index-BusoztmT.js`, CSS `index-Dy3ptTAc.css`, artifact ID `14731292622`. CI proves build/package only, not device interaction.
 
-**Still required:** Victory to confirm Powderiser's visible breakup and Wood's band/wave frequency variation on an actual layer, and to verify the initial Head + Eyes load visually. Do not describe these behaviours as user-tested yet.
+**Still required:** Victory should visually verify Powderiser/Wood output, Head + Eyes at launch, and symmetry-on X/Y/XY/Z strokes (including spacing and the final trail segment). Do not describe the A3/A1/A2 changes as manually tested by the agent.
 
-**Next:** A2 — profile and repair symmetry-on brush lag and spanning gaps without touching the normal brush path or the accepted 3D viewport.
+**Next:** A4 — add filter mesh-part selection so pixels outside selected parts remain unchanged. Keep the accepted viewport and UV seam baseline protected.
 
 **Full brief:** [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md)  
 **Fabric plan:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md)  
@@ -30,8 +30,8 @@
 ### Priority order (bug fixes first)
 
 1. [x] **A3 filter recovery:** audit all eight kinds, repair Powderiser, expose seeded Wood frequency randomisation.
-2. **A1 model menu:** remove Squail; make Suzanne Head + Eyes the default.
-3. **A2 symmetry brush:** fix lag and spanning gaps only when symmetry is ON.
+2. [x] **A1 model menu:** remove Squail; Suzanne Head + Eyes is the default.
+3. [x] **A2 symmetry brush:** independent stroke state per mirror path; include previous mirror point in dirty composite bounds.
 4. **A4 filter part selection:** pixels outside selected mesh parts remain unchanged.
 5. **A5 filter panel title-drag glitch.**
 6. **A6 2D UV tool shelf:** original location, group/spacer; top-left except N-panel.
