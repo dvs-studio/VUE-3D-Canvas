@@ -151,3 +151,28 @@ Proceed to A1: remove Squail from the model menu and set the already Victory-acc
 - Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44965932994/artifacts/14731482930), ID `14731482930`, 2,066,780 bytes, SHA-256 `862057294e0f1539d4121cc341b3cd3672d8b7c091621be7860002b1c4349e51`.
 
 CI confirms the default-selection code compiles and packages; Victory should visually confirm the initial model shown at launch. Next priority is A2 symmetry-on lag, isolated from the accepted viewport/paint baseline.
+
+
+## Phase A2 implementation — 2026-11-22
+
+### Root cause found
+
+The 3D viewport called the singleton `BrushEngine.paintDabs` for the primary stroke and then again for each mirror coordinate. The engine stored `lastDabPos`, residual spacing, dot/curve/drag state and smudge pickup in shared instance fields. A mirror dab therefore replaced the primary path's previous point; the next primary dab interpolated from the mirrored side across the canvas. This generated a large number of unnecessary dabs (lag) and visible bridge/travel marks. The dirty-composite rectangle also included the previous primary point but not the previous mirrored point, which could clip the trailing mirrored segment.
+
+### Source changes
+
+- `BrushEngine` now stores a `BrushStrokeState` per path key. Primary, `mirror-X`, `mirror-Y`, `mirror-Z` and `mirror-XY` each keep independent dab position, residual spacing, dragged-dot start, dot placement, curve points and smudge pickup colour.
+- `paintDabs` and `applySmudgeAt` accept an optional path key; the default `primary` preserves compatibility with existing callers. `endStroke` clears all per-path state.
+- `Viewport3D.executePaintTool` supplies stable keys for each mirror path instead of sharing the primary interpolation state.
+- The incremental colour-composite bounds now include the previous mirrored point as well as the previous primary point and all current dabs. The last mirrored points are reset at pointer-down/up.
+- No camera, orbit, viewport geometry, UV mapping, brush rendering shape, or normal (symmetry-off) stroke algorithm was redesigned.
+
+### Verification
+
+- Source commits: `1969550` (per-path brush state) and `9525fba` (viewport mirror keys + composite trail bounds).
+- Workflow run #189 / ID `44966159076`: **success**. Vite build, self-host sync, blank-page checks, generated-output commit, ZIP and artifact upload all passed.
+- Generated output commit: `0d04087`; JS `index-BusoztmT.js`; CSS `index-Dy3ptTAc.css`.
+- Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44966159076/artifacts/14731292622), ID `14731292622`, 2,068,333 bytes, SHA-256 `200badbcc271625880dced3773628c496c9788fed80ab579c0d648cf6f824af1`.
+- Workflow #188 failed only at the generated-output push because the next source commit had already advanced `main`; its build and blank-page validation passed. Latest run #189 checked out the final source and completed all steps.
+
+CI confirms compilation and packaging, not pen/touch latency or visible stroke continuity. Victory should test symmetry OFF vs X, Y, XY and Z, especially long fast drags, small brush spacing, and the final mirrored segment. Next priority is A4 filter mesh-part selection; do not start Phase B filters yet.
