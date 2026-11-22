@@ -1,6 +1,6 @@
 # GPT-6 agent log
 
-**Current status — 2026-11-22:** Phase A3, A1 and A2 are implemented. The authoritative AGENTS.md now orders Step 0 regression scrutiny before A4. During the scan, a Wood Grain temporal-dead-zone runtime defect was found and fixed by resolving woodSeed before the pixel loop; source commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8. Self-host build/sync and visual confirmation are pending. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
+**Current status — 2026-11-22:** Phase A3, A1 and A2 are implemented. The authoritative AGENTS.md now orders Step 0 regression scrutiny before A4. During the scan, a Wood Grain temporal-dead-zone runtime defect was found and fixed by resolving woodSeed before the pixel loop; source commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8. Self-host sync is committed at 297f230 with bundle index-CqmOQpy4.js; visual confirmation is pending. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
 
 ## 2026-11-17 — self-host viewport checkpoint
 
