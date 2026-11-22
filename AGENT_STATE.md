@@ -14,7 +14,9 @@ The 2026-11-22 `AGENTS.md` PIN and `SELF_HOST_BUGFIX_2026-11-22.md` supersede th
 - Build/package success does not equal browser/device validation. Victory still needs to visually confirm Powderiser and Wood output.
 - A1 completed: Squail removed from the menu; Suzanne Head + Eyes is the initial model and fallback. Original Suzanne OBJ and legacy preset source remain preserved.
 - Latest A1 source `b2d33a20952561aac72a85af28ee56865b5b56b1` passed workflow #187 / `44965932994`; generated output `ad8ad2e`; bundle `index-DrqHAL6X.js`; artifact `14731482930`.
-- Next: A2 fix symmetry-on brush lag and spanning gaps without touching the normal brush path or accepted viewport. Phase B new filters remain deferred.
+- A2 completed in source: each primary/mirrored path has independent dab spacing, shape and smudge state; dirty-composite bounds include the previous mirror point. The normal primary path remains keyed `primary`.
+- Latest A2 source `9525fbaca02336feb8c09470818efda996851f21` passed workflow #189 / `44966159076`; generated output `0d04087`; bundle `index-BusoztmT.js`; artifact `14731292622`.
+- Next: A4 filter mesh-part selection so unselected mesh parts remain unaffected. Victory visual tests for A3/A1/A2 remain pending; Phase B new filters remain deferred.
 
 
 Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
@@ -674,3 +676,11 @@ Suzanne candidate model binaries are still not available in the current conversa
 - Set `suzanneHeadEyes` as the initial `modelKey`, initial geometry, invalid-key fallback, menu default and viewport fallback. Preserved `src/assets/Suzanne.obj` and the legacy preset implementation for compatibility; it is not a selectable Squail menu item.
 - Source commits: `d78ccf6`, `792abd6`, `b2d33a2`. Workflow #187 / ID `44965932994` passed all build/sync/package steps; generated output `ad8ad2e`, JS `index-DrqHAL6X.js`, artifact `14731482930`.
 - Manual visual confirmation at launch remains with Victory. Next task A2 is symmetry-on brush responsiveness; do not alter the normal brush path or accepted viewport/UV seam.
+
+
+### A2 symmetry repair — 2026-11-22
+
+- Root cause: primary and mirrored dabs shared the singleton BrushEngine's previous dab coordinate and spacing residual. Alternating primary/mirror calls made the next dab interpolate across the entire texture, creating lag and spanning marks. The dirty composite also omitted the previous mirrored point, which could clip the trail.
+- Added independent per-path state for primary and each mirror axis/cross path; included spacing residual, dot/curve/drag state and smudge pickup. Added stable stroke keys in Viewport3D and included prior mirror coordinates in the incremental composite bounds.
+- Source commits `1969550`, `9525fba`. Workflow #189 / `44966159076` passed all self-host build/sync/package checks; generated output `0d04087`, JS `index-BusoztmT.js`, artifact `14731292622`.
+- CI is not a pen/touch test. Victory should compare symmetry OFF and X/Y/XY/Z, particularly long fast drags, small spacing, and the final mirrored segment. Next A4: mesh-part filter selection. Do not modify accepted viewport or UV seam behaviour.
