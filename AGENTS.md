@@ -2,51 +2,39 @@
 
 ## PIN — read only this far (unless absolutely necessary)
 
-### Agent status — 2026-11-21 late (Grok)
+### Agent status — 2026-11-22 (Grok) — Victory test feedback
 
-**Product path:** Vite/React/Three.js under `src/`. Edit `src/`, then `npm run host:sync` so `self-host/public/` stays current.
+**Product path:** `src/` → `npm run host:sync` → `self-host/public/`. Self-host only. No `crates/vue3d_core`. No safety ZIP deletes.
 
-**Do not edit** `crates/vue3d_core` unless Victory orders it. **Do not delete** safety ZIPs under `release/` or `self-host/`.
+**3D viewport is SATISFACTORY.** Do not regress Viewport3D / paint path / island padding while fixing other areas. Prefer minimal, isolated changes.
 
-**Design brief:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md). **Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md).
+**Victory tested:**
+- **Suzanne Head + Eyes** — perfect. **Remove Squail** (legacy single Suzanne menu/default). Make **Head + Eyes the default** integrated character preset.
+- **UV seam / island filter line** — **accepted as fixed.** Do not reopen unless a new repro appears.
 
-**Testing:** Victory tests unless he asks the agent to test for errors.
+**Full brief:** [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md)  
+**Fabric/mask design (still not built):** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md)  
+**Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) — every AI must append a dated section.
 
-### Conversation log (required — every AI)
+**Testing:** Victory tests unless he asks the agent to test.
 
-- File: **`CONVERSATION_LOG.md`** — append-only public backlog of decisions.
-- **Every AI engine** that works on this repo **must** add a dated section if it has not already for that calendar day.
-- Sections are **arranged by date** (`## YYYY-MM-DD — EngineName`). Append under the day; never delete or rewrite older days.
-- Personify by engine name (Grok, Claude, …). Summaries only; no secrets.
-- Read the full log only when Victory asks. Clarity for future purists depends on this discipline.
+### Priority order (bug fixes first)
 
-### UPCOMING FEATURE SET — NOT BUILT (do not start until Victory orders)
-
-| ID | Feature |
-|----|---------|
-| F1 | Torn fabric layer + convert paint → torn + procedural white edges + export bake |
-| F1b | Mesh / UV influence switch |
-| F2–F5 | **Cloth filter family** (menu) — active plan |
-| F6 | Photoshop-style mask layer |
-| F7 | **Logo fabric** filter — **ON HOLD** until go-ahead |
-| F8 | Merge Convert-to-Bump / Displacement into one Levels → bump tool |
-| — | Matcap layer + narrow Add menu |
-
-Full algorithms: **`LAYER_FABRIC_MASK_PLAN.md`**.
-
-### Combined to-do (self-host first)
-
-1. Seam/QA of `18a80cb` when relevant (Victory tests by default).
-2. Matcap + narrow Add when ordered.
-3. **F8** merge bump/displacement UI.
-4. **F1 / F1b / F2–F5 / F6** when ordered.
-5. **F7 logo fabric** on hold until go-ahead.
-6. Specialised UV research-only until asked. Windows shell later.
+1. **Model menu:** Drop Squail; default = `suzanneHeadEyes` / “Suzanne Head + Eyes”.
+2. **Symmetry brush lag** when symmetry is ON (span / delayed dabs); OFF is fine — profile and fix paint path only.
+3. **Filter completeness audit** — wood UI missing banding/wave + frequency randomisation exposure; scan other kinds for unfinished dialog ↔ algorithm wiring.
+4. **Filter part selection** — optional mesh-part mask so filters do not affect outside selected parts.
+5. **Filter panel drag** — drag by title without hang/glitch.
+6. **2D UV tool shelf** — restore original location; group/spacer so items do not overlap; top-left grouping except N-panel.
+7. **F8** merge bump/displacement conversion (Levels → 100% bump).
+8. **New filters** (after fixes): warp/wavy transform, pointillism, vector cells (tri/square/circle/hex honeycomb via world + normal), stochastic scatter.
+9. **Texture gallery** (later): bundled libs → device/browser storage; auto downscale by GPU tier (e.g. 1K → 256 on mobile).
+10. Feature set F1–F6 / F7 hold — see fabric plan; not before stabilisation.
 
 ### Work rules
 
-Self-host only. Short commits. Append under STOP; do not wipe ledgers. **Update `CONVERSATION_LOG.md` by date** before ending a substantial session.
+Meticulous. Research before large edits. Short commits. Append conversation log by date. Do not damage the accepted 3D view.
 
 ## STOP
 
-Earlier notes live in git history.
+Prior PIN history in git.
