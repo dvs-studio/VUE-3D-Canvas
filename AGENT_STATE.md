@@ -2,9 +2,22 @@
 
 ## PIN — read only this far
 
+### Current self-host task status — 2026-11-22 (GPT-6)
+
+The 2026-11-22 `AGENTS.md` PIN and `SELF_HOST_BUGFIX_2026-11-22.md` supersede the older 2026-11-21 to-do below.
+
+- Product path remains `src/` → `npm run host:sync` → `self-host/public/`. Do not edit `crates/vue3d_core` or delete protected safety ZIPs.
+- Victory accepted Suzanne Head + Eyes and the UV-island filter edge fix. The 3D viewport / paint experience is satisfactory. Do not revisit Viewport3D, dab compositing or island padding without a new reproduction.
+- Phase A3 filter recovery is implemented: Powderiser now uses two-pass source fading and alpha-composited seeded dust fragments; Wood Grain exposes seeded frequency randomisation beside band/wave frequency.
+- Static audit covers all eight filter kinds and the active-layer apply caller. See `SELF_HOST_BUGFIX_2026-11-22.md` for the per-kind checklist and the distinction between source wiring and visual acceptance.
+- Source `0ac87f4460d78aa30c2c1d582eb9730374b6f9e1`; workflow run #184 / ID `44965787108` succeeded; generated self-host commit `9185d39`; bundle `index-CJrL8aCK.js`; artifact `14731308126`.
+- Build/package success does not equal browser/device validation. Victory still needs to visually confirm Powderiser and Wood output.
+- Next: A1 remove Squail and default the accepted Suzanne Head + Eyes preset; then A2 fix symmetry-on brush lag. Phase B new filters remain deferred.
+
+
 Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
 
-### To do — continue from 2026-11-21 source commit `18a80cb`
+### Historical to-do — 2026-11-21 source commit `18a80cb` (superseded by the current status above)
 
 Do not re-implement that commit. The self-host bundle after it is `03b8ebd`. Visually test UV-island filter lines, model-edge fills, the Suzanne Head + Eyes preset, and hatch scale/jitter. Manual browser/desktop/Android checks are still open.
 
@@ -640,3 +653,14 @@ Suzanne candidate model binaries are still not available in the current conversa
 - These source changes were built into the tracked self-host output. Generated self-host commit: `b6b9a627ab6b4e8e89e647091cd7f14512ddf30e`. Workflow run #178 / ID `44593598091` succeeded. The generated bundle `self-host/public/assets/index-Cc8o6jsJ.js` contains the Suzanne preset markers and the new UV layout classes.
 - OBJ protection was added: `.gitignore` ignores `*.obj` except `src/assets/Suzanne.obj`; `scripts/sync_self_host.mjs` now copies OBJ files out before replacing `self-host/public/` and restores them after the Vite build is copied in. This is necessary because Git ignore alone does not protect files from script deletion.
 - Last stopped: implementation and repository self-host sync are complete for this requested pass. Next work is manual runtime testing (desktop and Android/touch), followed by the known UV-island filter seam/gap and model-edge fill artefacts. Do not claim these are fixed without reproduction and visual verification.
+
+
+## 2026-11-22 — GPT-6 filter recovery
+
+- Reviewed the repository's Markdown instructions and architecture/handover documents before implementation. Current authority is the 2026-11-22 `AGENTS.md` PIN and `SELF_HOST_BUGFIX_2026-11-22.md`; this entry supersedes older active-to-do text in historical sections.
+- Audited `src/tools/textureFilters.ts`, `src/ui/TextureFilterDialog.tsx`, and `src/App.tsx`. The apply caller keeps the selected target canvas, pushes undo, passes the complete filter config and notifies the texture composite after the write.
+- Fixed Powderiser's scatter write-order issue using separate source-fade and fragment-composite passes.
+- Added seeded spatial frequency randomisation to Wood Grain and a corresponding UI slider next to Band / wave frequency.
+- Static audit checklist covers wood, hatching, cross-hatching, hashing, powderiser, noise-shader, dither and mosaic. No Phase B filters started.
+- Source `0ac87f4460d78aa30c2c1d582eb9730374b6f9e1` passed workflow #184 / `44965787108`; generated output commit `9185d39`; artifact `14731308126`.
+- Manual visual confirmation is still Victory's test responsibility. Next: A1 model menu cleanup/default Head + Eyes, then A2 symmetry-on lag. Accepted viewport and UV seam remain protected.
