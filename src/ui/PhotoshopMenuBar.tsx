@@ -95,7 +95,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onTogglePanel,
   activePanels,
   onNumpadKey,
-  selectedModelKey = 'suzanne',
+  selectedModelKey = 'suzanneHeadEyes',
   onSelectModelKey,
   meshComponentVisibility = 'all',
   meshPartOptions = [],
@@ -712,7 +712,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 3D MESH GEOMETRY
               </div>
               {[
-                { id: 'suzanne', label: 'Squail (Built-in OBJ)' },
                 { id: 'suzanneHeadEyes', label: 'Suzanne Head + Eyes' },
                 { id: 'helmet', label: 'Cyber Armor Helmet' },
                 { id: 'pavilion', label: 'Classical Architectural Colonnade' },
