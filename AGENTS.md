@@ -2,46 +2,75 @@
 
 ## PIN — read only this far (unless absolutely necessary)
 
-### Agent status — 2026-11-22 late (Grok) — post-fix scrutiny → layer tech
+### Agent status — 2026-11-22 late (Grok) — post-fix → mixed layer/filter backlog
 
 **Product path:** `src/` → `npm run host:sync` → `self-host/public/`. Self-host only. No `crates/vue3d_core`. Do not delete safety ZIPs.
 
-**3D viewport / UV seam baseline:** still protected. Do not regress Viewport3D, dab composite, or accepted UV island padding without a new repro.
+**Protected:** 3D viewport / paint path / accepted UV-island seam fix. Do not regress without a new repro.
 
-**Prior agent (GPT) claimed Phase A1–A3 done** (Squail removed, Head+Eyes default, powderiser two-pass, wood frequency UI, symmetry stroke state). CI package runs were cited — **not** full device proof.
+**Out of this phase:** dedicated / specialised UV desk (NURBS, LTM, full UV product) — research only if Victory asks; **not** part of the current build queue.
 
-### Immediate priority — scrutinise self-host after last fixes
+**Prior agent (GPT) claimed A1–A3 done** (Squail removed, Head+Eyes default, powderiser, wood freq UI, symmetry). CI only — not device proof.
 
-Victory reports the **last command / error-diagnosis path is no longer launching** (or equivalent tooling/UI failure after recent fixes). Before new feature work:
+### 1. Immediate — scrutinise self-host after last fixes
 
-1. **Scrutinise the main web self-host app** end-to-end for **bugs and errors introduced by the last fix set** (A1–A3 and any follow-ups), and for **deeper** latent issues in the same areas.
-2. Check: app boot, model load (Head+Eyes default), layer filters apply (all kinds, especially powder/dust and wood), symmetry on/off, filter dialog, any “diagnose / last command” or console-driven helper that stopped launching, paint path, export entry points.
-3. **Fix** regressions first. Prefer minimal isolated patches. Re-read `SELF_HOST_BUGFIX_2026-11-22.md` for remaining A4–A7 items while scanning.
-4. Only when the self-host painter is **stable again**, proceed to the **new major to-do** below.
+Victory: **last command / error-diagnosis no longer launching** (or equivalent after recent fixes).
+
+1. End-to-end scrutiny of the **main web self-host app** for regressions from A1–A3 and deeper issues in the same areas.
+2. Check boot, Head+Eyes default, **all filters** (powder/dust, wood, …), symmetry on/off, filter dialog, diagnose/last-command UI, paint, export.
+3. **Fix** regressions first (minimal patches).
+4. Finish remaining stabilisation chrome while here (see §2A). Then §2B–2D.
 
 **Victory tests** unless he asks the agent to test.
 
-### Next major to-do — new layer technology (cloth & related)
+### 2. Current build queue (after app is stable)
 
-After the scrutiny/fix pass, the active feature backlog is the **layer technology** set in [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md):
+Mixed from Victory’s tests + earlier conversation (cloth/torn/mask, filters, chrome). Detail: [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md) · [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md).
 
+#### 2A — Remaining stabilisation (from bugfix brief)
 | ID | Task |
 |----|------|
-| F8 | Merge bump/displacement → one Levels greyscale → 100% bump (can pair with stabilisation) |
-| F6 | Photoshop-style mask layer (beside / independent targets) |
-| F1 / F1b | Torn fabric layer + convert + procedural edges + export apply/restore; mesh influence switch |
-| F2–F5 | **Cloth filter family** (active plan): world-space cloth, wool/fur, cotton, bamboo-raft, cylindrical wrap, strip stack |
-| F7 | Logo fabric — **still ON HOLD** until Victory go-ahead |
-| — | Matcap layer + narrow Add menu when ordered |
+| A4 | Filter **mesh-part selection** — outside parts unchanged |
+| A5 | Filter panel **title-drag** without hang/glitch |
+| A6 | **2D UV tool shelf** — original location; group/spacer; top-left except N-panel (layout only; no unwrap rewrite) |
+| A7 / F8 | **Merge** convert-to-bump and convert-to-displacement → one Levels greyscale → **100% bump surface** |
 
-Remaining chrome from bugfix brief (A4 part selection, A5 panel drag, A6 UV shelf) should be completed as part of stabilisation or immediately before heavy filter/layer work — do not leave the app half-broken.
+#### 2B — Layer technology (cloth & related)
+| ID | Task |
+|----|------|
+| F6 | **Mask layer** — beside (clip one) or independent (checkbox targets above/below) |
+| F1 | **Torn fabric** — convert paint→torn; black/transparent=hole; white=edge (procedural); green=influence; apply-down bake; export apply then **restore** |
+| F1b | **Mesh / UV influence switch** on layer control (default off = normal paint) |
+| F2–F5 | **Cloth filter family** (active): world-space cloth displace; wool/fur; cotton; bamboo-raft; cylindrical wrap + plaster fallback; strip stack + per-strip ramps |
+| F7 | **Logo fabric** filter — **ON HOLD** until Victory go-ahead |
+| M1 | **Matcap layer** (dedicated; paint=alpha only; convert-to-colour recipe; JPG) + **narrow Add menu** when panel is tight |
 
-**Briefs:** [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md) · [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md)  
-**Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) — append dated section every session.
+Keep **import material texture** feature; do not remove it while adding types.
+
+#### 2C — Additional layer filters (after existing suite is healthy)
+| Task | Notes |
+|------|--------|
+| Warp / wavy layer transform | Displace texture |
+| Pointillism | Stipple from layer colour |
+| Honeycomb / vector cells | World + surface normal; forms: triangle, square, circle, hex |
+| Stochastic scatter | Stackable; later ties to gallery assets |
+
+#### 2D — Texture gallery (later slice in same era)
+Bundled library → **browser/device storage** with preview; **auto-scale** by GPU/device tier (e.g. ship 1K, bake 256px on mobile). Point scatter/fills at gallery when ready.
+
+#### 2E — Optional preview (from earlier ask; non-destructive)
+**Subdivision-style preview docker** (Blender-like feel): preview only, **never** writes into the real mesh; bump/displacement-sensitive and crease/sharp-edge-aware if feasible. Low priority vs F1–F6 and filter recovery.
+
+### 3. Explicitly not in this queue
+- Dedicated UV desk / NURBS / LTM / full UDIM product
+- Native D3D paint engine / `crates/vue3d_core` unless Victory orders
+- F7 logo fabric until go-ahead
+
+**Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) — every AI appends by date.
 
 ### Work rules
 
-Meticulous. Research before large edits. Short commits. Do not damage the accepted 3D view. Self-host path only.
+Meticulous. Research before large edits. Short commits. Self-host only. Do not damage the accepted 3D view.
 
 ## STOP
 
