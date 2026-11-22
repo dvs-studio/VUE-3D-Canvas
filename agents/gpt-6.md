@@ -1,5 +1,7 @@
 # GPT-6 agent log
 
+**Current status — 2026-11-22:** Phase A3 filter recovery completed in source commit `0ac87f4`; self-host workflow #184 passed and generated output commit `9185d39`. Manual Victory visual confirmation is still pending. Next authorised slice: A1 model menu cleanup/default Suzanne Head + Eyes, then A2 symmetry-on responsiveness. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
+
 ## 2026-11-17 — self-host viewport checkpoint
 
 - Read the pinned instructions, `AGENT_STATE.md`, `HANDOFF_PROMPT.md`, `SELF_HOST_HANDOFF.md`, and `LAYER_PBR_PLAN.md` before editing.
@@ -131,3 +133,16 @@ Manual testing remains required for UV edits updating the 3D material and textur
 - Updated AGENTS.md, AGENT_STATE.md, SELF_HOST_HANDOFF.md, LAYER_PBR_PLAN.md, SELF_HOST_TASK_2026-11-19.md, API_DOCUMENTATION.md, self-host/README.md, and PATCH_README.md.
 - Source revision `5ec840915c3812eacb68f1577659c1ab6b8509e2` passed workflow run #156 (`44480073408`). Generated self-host output commit `c26301294da0465d5402b6800fbd15dab39cae59`; artifact `14508410797` (1,076,269 bytes).
 - CI proves build/package only. Manual desktop/Android/browser tests, export visual quality and performance, UV seams/rebake, Mountain persistence, Levels undo, and merge/group interactions remain outstanding. Protected safety ZIPs and crates/vue3d_core were not changed.
+
+
+## 2026-11-22 — Phase A3 filter recovery
+
+- Reviewed the current Markdown handovers, plans, implementation records and self-host documentation before editing. Followed the 2026-11-22 brief's recommendation to repair the existing filter suite before starting new filters.
+- Deep-scanned `src/tools/textureFilters.ts`, `src/ui/TextureFilterDialog.tsx` and the `src/App.tsx` apply path. Confirmed the apply caller targets the active unlocked non-group layer, pushes undo, passes the full config, writes back to the same canvas and notifies the composite.
+- Fixed Powderiser's output-ordering bug: source coverage is faded in a first pass; seeded dust fragments are alpha-composited in a second pass so later source pixels cannot overwrite earlier fragments.
+- Added `woodFrequencyRandomization` (0–100, default 15), applied as seeded coarse spatial variation to band and ring frequencies, and exposed it beside the Band / wave frequency slider.
+- Audited all eight kinds. The static branch/UI/apply checklist and object/world directional limitation are recorded in `SELF_HOST_BUGFIX_2026-11-22.md`.
+- Source commits `6b614ed`, `fb3b68b`, `0ac87f4`; latest self-host build run #184 / ID `44965787108` succeeded, generated output commit `9185d39`, artifact ID `14731308126`.
+- Two earlier workflow attempts lost the generated-output push race because later source commits had already advanced `main`; the final run on the latest source commit completed all steps. No build error was found.
+- No browser/device visual test was performed. Victory still needs to confirm visible Powderiser breakup and Wood frequency variation.
+- Next: A1 remove Squail and default Suzanne Head + Eyes; then A2 isolate and repair symmetry-on brush lag. Do not modify the accepted viewport or UV seam fix.
