@@ -20,7 +20,7 @@ Victory: **last command / error-diagnosis no longer launching** (or equivalent a
 2. Check boot, Head+Eyes default, **all filters** (powder/dust, wood, …), symmetry on/off, filter dialog, diagnose/last-command UI, paint, export.
 3. **Fix** regressions first (minimal patches).
 4. Finish remaining stabilisation chrome while here (see §2A). Then §2B–2D.
-5. **2E subdiv preview:** Victory reports it **has been done** — **spot-check only** (open docker, confirm preview-only / no mesh write). Fix only if broken; do not rebuild.
+5. **2E subdiv preview:** Victory reports it **has been done** — **spot-check only**. Fix only if broken; do not rebuild.
 
 **Victory tests** unless he asks the agent to test.
 
@@ -35,8 +35,9 @@ Detail: [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md) · [`SELF_HOST_
 | A5 | Filter panel **title-drag** without hang/glitch |
 | A6 | **2D UV tool shelf** — original location; group/spacer; top-left except N-panel (layout only) |
 | A7 / F8 | **Merge** convert-to-bump / displacement → one Levels → **100% bump surface** |
-| UI1 | **Persist window / panel enable state** — remember last enabled or disabled window items across session (and reload if already using local storage; keep consistent) so the workspace matches what the user last had open or closed |
-| UI2 | **Menu bar dropdowns dismiss on unfocus** — clicking away / losing focus **releases** open menu-bar dropdowns so they do not sit over the UI and disturb interaction |
+| UI1 | **Persist window / panel enable state** — last enabled/disabled window items across session/reload |
+| UI2 | **Menu bar dropdowns dismiss on unfocus** — click away releases open menus so they do not block the UI |
+| UI3 | **Giant Undo / Redo** in the **lower part of the 3D viewport** — same placement idea as the viewport gizmo family, but a large, touch-friendly **Undo** and **Redo** control at the bottom of the 3D view (not the menu bar only). Wire to existing undo/redo stack; disable when empty; do not obscure critical paint targeting (offset/safe margin from bottom edge). Respect gizmo size / UI scale prefs if applicable |
 
 #### 2B — Layer technology (cloth & related)
 | ID | Task |
@@ -57,7 +58,7 @@ Warp/wavy transform · Pointillism · Honeycomb/vector cells (tri/square/circle/
 Bundle → browser/device storage + preview; auto-scale by GPU tier (e.g. 1K → 256 mobile).
 
 #### 2E — Subdivision preview docker — DONE (verify only)
-Victory: already implemented. Agent should **check** it still works (preview only, non-destructive). No redesign unless broken.
+Victory: already implemented. Spot-check only; no redesign unless broken.
 
 ### 3. Explicitly not in this queue
 - Dedicated UV desk / NURBS / LTM / full UDIM product
