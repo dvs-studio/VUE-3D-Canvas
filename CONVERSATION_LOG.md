@@ -87,3 +87,12 @@
 - He asked for the research in the current to-do, not a new plan file. It is `HOLD-SEL-2026-11-22` in `AGENTS.md`. Do not build it until he acknowledges that item.
 - He told the next agent: after his next reply, execute every other open CURRENT TODO item in one pass. Exclude HOLD-SEL. Exclude F7.
 - This entry is the conversation record only. The procedure itself is in the PIN so a later agent does not have to read this log to find it.
+
+## 2026-11-22 evening — Claude — id `LOG-2026-11-22-CLAUDE-S0`
+
+- Victory reported two defects and asked that the next agent finish the whole open to-do in one pass so he can test the new layers, filters, and everything outstanding at once. The item he still has to confirm (HOLD-SEL) and F7 stay excluded.
+- Defect 1: with symmetry now working, a brush crossing a UV island boundary in the 3D viewport jumps and draws a line across the whole texture (visible in the 2D view). Untouched areas, such as the frontal lobe when drawing through the centre of the head, get a flash. Recorded as S0-1 with the A2 interpolation root cause as the lead hypothesis, and a narrow carve-out in the protected-path rule so the agent may fix stroke continuity.
+- Defect 2: Powderiser is still not fixed. Recorded as S0-2: a full scrutiny of the filter path with a run-and-diff test, plus the 2026-11-14 safety build in `release/` as a runtime comparison. The copy of that zip under `self-host/` is a 48-byte pointer, not a zip.
+- No code was changed in this entry.
+
+---
