@@ -56,3 +56,10 @@
 - Remaining Step 0 checks: diagnose/last-command runtime launch, all filters including Powderiser/Wood, symmetry axes and long strokes, startup model, painting, export, and verify-only subdivision preview. A4 remains blocked until this scrutiny is complete.
 
 ---
+
+### Step 0 follow-up — generated self-host sync
+
+- Automatic self-host workflow committed the regenerated page at 297f230 (2026-11-22 00:55:25Z). Generated JavaScript asset: self-host/public/assets/index-CqmOQpy4.js.
+- Retrieved the generated JS blob and verified the compiled Wood Grain branch resolves the seed before the pixel loop and before the band/ring frequency hashes. Retrieved the generated index.html blob and verified it contains the root mount, has no external script src, and includes the inlined app bundle.
+- Updated README.md and self-host/README.md to point to index-CqmOQpy4.js. Updated AGENTS.md, AGENT_STATE.md, SELF_HOST_HANDOFF.md, SELF_HOST_BUGFIX_2026-11-22.md and agents/gpt-6.md so the source and generated-output checkpoint agree.
+- This confirms production build + host:sync + generated output commit. The available connector did not expose the push-triggered workflow run ID/artifact status, so do not claim the ZIP artifact upload step was verified. Browser/device interaction remains untested.
