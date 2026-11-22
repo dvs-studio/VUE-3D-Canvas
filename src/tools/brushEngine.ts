@@ -69,6 +69,9 @@ export class BrushEngine {
   }
 
   public beginStroke(x: number, y: number, pressure = 1.0, strokeKey = 'primary') {
+    // A new pointer-down always starts a fresh set of primary/mirror paths,
+    // including after a stroke was interrupted by a multi-touch gesture.
+    this.strokeStates.clear();
     this.stabilizedPos = { x, y };
     this.strokeStates.set(strokeKey, {
       lastDabPos: { x, y },
