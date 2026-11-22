@@ -45,3 +45,17 @@
 - Full brief: `SELF_HOST_BUGFIX_2026-11-22.md` (code pointers for wood config in `textureFilters.ts`, presets in `modelGeometry.ts`).
 
 ---
+
+## 2026-11-22 — GPT-6
+
+### Phase A3 — layer filter recovery
+- Read the current repository Markdown handovers and plans, with `AGENTS.md` and `SELF_HOST_BUGFIX_2026-11-22.md` governing the current task. Kept the work inside the self-host React/Three.js source; no native Rust, safety archive, accepted viewport or accepted UV seam changes.
+- Deep-scanned `textureFilters.ts`, `TextureFilterDialog.tsx`, and the `App.tsx` apply caller. The caller passes the full config to the active unlocked layer canvas, pushes undo before the operation, then updates/notifies the composite.
+- Repaired Powderiser's single-pass scatter overwrite defect with separate source-fade and dust-composite passes.
+- Added seeded Wood Grain frequency randomisation and exposed it in the dialog alongside the Band / wave frequency control.
+- Audited wood, hatching, cross-hatching, hashing, powderiser, noise-shader, dither and mosaic; detailed static checklist is in `SELF_HOST_BUGFIX_2026-11-22.md`.
+- Source commits: `6b614ed`, `fb3b68b`, `0ac87f4`. Latest source commit `0ac87f4` passed self-host workflow run #184 / `44965787108`; generated output commit `9185d39`; artifact `14731308126`.
+- CI verifies compilation and packaging only. Victory's visual confirmation of Powderiser and Wood remains pending.
+- Next: A1 model menu cleanup/default Head + Eyes, then A2 symmetry-on brush lag. Phase B filters remain blocked until the current suite is accepted.
+
+---
