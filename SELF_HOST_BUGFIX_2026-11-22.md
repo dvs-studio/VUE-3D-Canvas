@@ -102,3 +102,40 @@ See `LAYER_FABRIC_MASK_PLAN.md`. **F7 logo fabric ON HOLD.** Cloth F2–F5 activ
 ## Non-goals
 
 No viewport redesign; no logo fabric until go-ahead; no native D3D rewrite.
+
+
+## Phase A3 implementation — 2026-11-22 (GPT-6)
+
+### Source changes
+
+- `powderiser` was defective because the scatter pass wrote into the same output buffer that the source-pixel loop was still filling. A later source pixel could overwrite an earlier dust fragment, and untouched output RGB began as zero. It is now a two-pass operation: copy and fade source coverage first; then composite seeded, drifting dust fragments over the completed image with alpha-aware source-over blending. Noise = 0 is a no-op; seed and drift remain deterministic.
+- Wood Grain now has `woodFrequencyRandomization` (0–100, default 15). A dedicated slider sits beside **Band / wave frequency**. The seed drives coarse spatial variation of band and ring frequency independently from the existing colour/noise randomisation.
+- `App.tsx` was audited: the handler targets the active, unlocked, non-group layer canvas; pushes undo before applying; passes the complete config to `applyTextureFilterToCanvas`; updates the layer and notifies the texture composite after writeback. The dialog preview calls the same pixel transform.
+
+### Static source audit checklist
+
+| Kind | Pixel branch | Dialog controls | Assessment |
+|------|--------------|-----------------|------------|
+| `wood` | Yes | Grain type, band/wave frequency, frequency randomisation, ring frequency/noise, roughness, seed, sources, edge/noise/bleed/blur | Wired; frequency randomisation added |
+| `hatching` | Yes | Angle/axis, scale, shift, spacing, position/angle jitter, randomisation | Wired; object/world direction remains the documented simplified UV-angle mapping |
+| `cross-hatching` | Yes | Shared directional controls | Wired; combines two directional masks |
+| `hashing` | Yes | Algorithm, cell size, density, seed, plus shared directional controls | Wired |
+| `powderiser` | Yes | Breakup, drift, angle, seed | Defective output-write ordering replaced; visual device confirmation pending |
+| `noise-shader` | Yes | Darkness blend, seed | Wired; deterministic colour darkening |
+| `dither` | Yes | Tonal levels, hash/Bayer pattern, seed | Wired |
+| `mosaic` | Yes | Block size | Wired |
+
+“Wired” here means the current source branch and UI config reach the transform; it is not a claim of Victory's visual acceptance on every source image. No Phase B filters were started.
+
+### Build/package verification
+
+- Source commits: `6b614ed` (Powderiser + Wood algorithm/config) and `fb3b68b` / `0ac87f4` (Wood UI control and label).
+- GitHub Actions run #184 / ID `44965787108`: **success**. Vite production build, `npm run host:sync`, blank-page validation, self-host output commit, ZIP and artifact upload all passed.
+- Generated self-host commit: `9185d39`; generated JS: `self-host/public/assets/index-CJrL8aCK.js`; CSS: `index-Dy3ptTAc.css`.
+- Artifact: [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44965787108/artifacts/14731308126), ID `14731308126`, 2,067,152 bytes, SHA-256 `67899e30db0ebf5a629d50d304d0c2663ce25be648c1d5b6b6fb5d008b0b374e`.
+
+The first two workflow attempts raced with later source pushes and failed only when pushing generated files; the latest run #184 checked out the final source commit and completed every step successfully. No runtime screenshot/device test was performed by the agent.
+
+### Next implementation slice
+
+Proceed to A1: remove Squail from the model menu and set the already Victory-accepted Suzanne Head + Eyes preset as the default. Preserve the existing OBJ source and all other model presets. Then A2 symmetry-on responsiveness. Do not reopen the accepted UV seam or redesign the 3D viewport.
