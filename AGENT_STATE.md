@@ -15,6 +15,7 @@ The current AGENTS.md PIN is authoritative and supersedes older task ordering in
 - Static filter audit remains in SELF_HOST_BUGFIX_2026-11-22.md. The eight filter branches are present; the Wood Grain runtime defect demonstrates why source wiring/CI alone is not enough.
 - Do not claim the diagnose/last-command issue is resolved merely because the GPU diagnostics modal is wired. Its Help-menu callback and modal mount exist; actual launch behaviour still needs runtime confirmation and reproduction if it fails.
 - Next after Step 0 is complete: A4 filter mesh-part selection, leaving unselected parts unchanged. Reuse the existing mesh-component inventory and rasterizeMeshSurface; do not create a second rasteriser.
+- After Victory's next reply, the ordered work is the whole unchecked CURRENT TODO in `AGENTS.md`, one pass. `HOLD-SEL-2026-11-22` (selection cage) is specified and not approved. Do not build it. F7 stays on hold.
 - A5/A6/A7 and UI1/UI2/UI3 follow the order in AGENTS.md. Phase B layer technology remains blocked until Step 0 and 2A are healthy. F7 logo fabric remains on hold.
 - Manual browser/desktop/Android interaction and visual tests remain required; build/package success is not visual acceptance.
 

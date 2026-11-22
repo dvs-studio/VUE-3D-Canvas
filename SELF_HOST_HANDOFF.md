@@ -2,7 +2,9 @@
 
 ## PIN — read only this far
 
-2026-11-22: Authoritative daily task order: AGENTS.md. Append-only work log: CONVERSATION_LOG.md.
+2026-11-22: Authoritative daily task order: AGENTS.md. Append-only work log: CONVERSATION_LOG.md. Read the log only when a bug names an older day.
+
+After Victory's next reply, execute every unchecked CURRENT TODO item in `AGENTS.md` in one pass. Do not start `HOLD-SEL-2026-11-22`. F7 stays on hold.
 
 Work rule: change src/, then run npm run host:sync so self-host/public/ matches. A src/** push to main starts build-self-host.yml, which builds, syncs and commits the bundle. Do not hand-edit generated output during an active build. Self-host only unless Victory explicitly orders shell work.
 

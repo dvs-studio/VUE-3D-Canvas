@@ -63,3 +63,27 @@
 - Retrieved the generated JS blob and verified the compiled Wood Grain branch resolves the seed before the pixel loop and before the band/ring frequency hashes. Retrieved the generated index.html blob and verified it contains the root mount, has no external script src, and includes the inlined app bundle.
 - Updated README.md and self-host/README.md to point to index-CqmOQpy4.js. Updated AGENTS.md, AGENT_STATE.md, SELF_HOST_HANDOFF.md, SELF_HOST_BUGFIX_2026-11-22.md and agents/gpt-6.md so the source and generated-output checkpoint agree.
 - This confirms production build + host:sync + generated output commit. The available connector did not expose the push-triggered workflow run ID/artifact status, so do not claim the ZIP artifact upload step was verified. Browser/device interaction remains untested.
+
+---
+
+## 2026-11-19 — Grok — id `LOG-2026-11-19-GROK-01`
+
+- Victory asked for the self-host page only: read the notes, use `Suzanne.obj` from the supplied zip (not `Suzanne x.obj`), isolate parts from mesh names or vertex groups, remember which dockers were off, fix fill seams and paint squash/drift, improve Smart UV, keep the split-view UV tools at the bottom, add a split-view resize, and offer a round or a pill scroll handle.
+- He also described a selection overlay and a Selection menu, and asked that a boolean/thorn mask layer and world-space cloth, basket, and fractal filters be written as later to-dos, not built first.
+- That pass did not land on `main`. Local scaffolds were stashed and are not the packaged page. Later notes (Head + Eyes, UV seam accepted, fabric plan) supersede the asset choice. Do not revive the stash.
+
+---
+
+## 2026-11-22 — Grok — id `LOG-2026-11-22-GROK-STATUS`
+
+- Victory asked for a status report from the notes, not a code change.
+- Report given from `origin/main` at `936ec38`: Head + Eyes and the UV-island seam are accepted; paint stays protected; Powderiser, Wood (`7475d53`, bundle `index-CqmOQpy4.js`), and symmetry are in source without device sign-off; Step 0 is still open; 2A–2D are open; F7 is on hold.
+
+---
+
+## 2026-11-22 — Grok — id `LOG-2026-11-22-GROK-SEL`
+
+- Victory specified the selection cage: a fake surface highlight, marching ants, and a blink on feathered edges instead of ants, with unselected area dimmed 10%. Selection menu: Select, Deselect, Reselect, Inverse, Grow, Shrink, Feather. The mask brush stays a separate selector with Clear, Invert, Smooth, Rough, and Edge shift.
+- He asked for the research in the current to-do, not a new plan file. It is `HOLD-SEL-2026-11-22` in `AGENTS.md`. Do not build it until he acknowledges that item.
+- He told the next agent: after his next reply, execute every other open CURRENT TODO item in one pass. Exclude HOLD-SEL. Exclude F7.
+- This entry is the conversation record only. The procedure itself is in the PIN so a later agent does not have to read this log to find it.
