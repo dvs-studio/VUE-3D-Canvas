@@ -275,6 +275,8 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    // Each stacked colour/image contributes a grain band; density controls its spatial frequency and blend weight.
    const stack=woodStack.length?woodStack:[{item:{density:50},image:null,color}];
    const totalWeight=stack.reduce((sum,row)=>sum+Math.max(1,row.item.density),0);
+   // Resolve the seed before the pixel loop: frequency jitter uses it below.
+   const woodSeed=Math.floor(cfg.woodSeed||17);
    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
      const i=(y*w+x)*4;
      const mapped=!!(cfg.objectPositionMap&&cfg.objectMapWidth===w&&cfg.objectMapHeight===h);
@@ -297,7 +299,6 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
        const bandFreq=(0.004+(clamp(cfg.bandFrequency??40,1,100)/100)*0.04)*bandFrequencyScale;
        const ringFreq=(2+(clamp(cfg.ringFrequency??35,1,100)/100)*48)*ringFrequencyScale;
        const ringN=clamp(cfg.ringNoise??25,0,100)/100;
-       const woodSeed=Math.floor(cfg.woodSeed||17);
        const densScale=0.5+density/100;
        // Banding: parallel waves along grain direction
        const bandPhase=(grainCoord*128*dx+flow*12*dy)*bandFreq*densScale;
