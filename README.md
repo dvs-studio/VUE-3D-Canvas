@@ -137,7 +137,7 @@ node server.js
 
 Windows: double-click `self-host/start.bat`. Linux or macOS: `./start.sh`. Then use `http://localhost:3000`. You can also open `self-host/public/index.html` with `file://`. The script and CSS are inlined. An older file that still has `<script src="./assets/...">` stays blank.
 
-The current generated bundle is `self-host/public/assets/index-Dh3AT7jY.js`, also inlined into `self-host/public/index.html` for `file://` use. Zoom redraws the main view without a pan. A window or tablet rotation resizes the canvas instead of leaving a dead strip. Triplanar, Scatter, and Edge Wear open as panels. Live undo is 30 steps. The file still stores 3.
+The current generated bundle is `self-host/public/assets/index-CqmOQpy4.js`, also inlined into `self-host/public/index.html` for `file://` use. Zoom redraws the main view without a pan. A window or tablet rotation resizes the canvas instead of leaving a dead strip. Triplanar, Scatter, and Edge Wear open as panels. Live undo is 30 steps. The file still stores 3.
 
 The Windows exe in section 1 is not the current job. This folder is the painter Victory is testing. The exe, when it is built, only shows this same page.
 
