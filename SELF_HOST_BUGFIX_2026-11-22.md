@@ -161,7 +161,7 @@ The 3D viewport called the singleton `BrushEngine.paintDabs` for the primary str
 
 ### Source changes
 
-- `BrushEngine` now stores a `BrushStrokeState` per path key. Primary, `mirror-X`, `mirror-Y`, `mirror-Z` and `mirror-XY` each keep independent dab position, residual spacing, dragged-dot start, dot placement, curve points and smudge pickup colour.
+- `BrushEngine` now stores a `BrushStrokeState` per path key. Primary, `mirror-X`, `mirror-Y`, `mirror-Z` and `mirror-XY` each keep independent dab position, residual spacing, dragged-dot start, dot placement, curve points and smudge pickup colour. A fresh `beginStroke` clears stale path state, including when the previous stroke was interrupted.
 - `paintDabs` and `applySmudgeAt` accept an optional path key; the default `primary` preserves compatibility with existing callers. `endStroke` clears all per-path state.
 - `Viewport3D.executePaintTool` supplies stable keys for each mirror path instead of sharing the primary interpolation state.
 - The incremental colour-composite bounds now include the previous mirrored point as well as the previous primary point and all current dabs. The last mirrored points are reset at pointer-down/up.
@@ -169,7 +169,7 @@ The 3D viewport called the singleton `BrushEngine.paintDabs` for the primary str
 
 ### Verification
 
-- Source commits: `1969550` (per-path brush state) and `9525fba` (viewport mirror keys + composite trail bounds).
+- Source commits: `1969550` (per-path brush state), `9525fba` (viewport mirror keys + composite trail bounds), `3866829` (fresh stroke-state reset) and `18c94c0` (multi-touch interruption reset).
 - Workflow run #189 / ID `44966159076`: **success**. Vite build, self-host sync, blank-page checks, generated-output commit, ZIP and artifact upload all passed.
 - Generated output commit: `0d04087`; JS `index-BusoztmT.js`; CSS `index-Dy3ptTAc.css`.
 - Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44966159076/artifacts/14731292622), ID `14731292622`, 2,068,333 bytes, SHA-256 `200badbcc271625880dced3773628c496c9788fed80ab579c0d648cf6f824af1`.
