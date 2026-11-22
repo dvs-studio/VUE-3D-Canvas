@@ -57,6 +57,7 @@
 - Source commits: `6b614ed`, `fb3b68b`, `0ac87f4`. Latest source commit `0ac87f4` passed self-host workflow run #184 / `44965787108`; generated output commit `9185d39`; artifact `14731308126`.
 - CI verifies compilation and packaging only. Victory's visual confirmation of Powderiser and Wood remains pending.
 - A1 then completed: removed Squail from the menu and made Suzanne Head + Eyes the initial model and fallback, preserving the original Suzanne OBJ. Source commits `d78ccf6`, `792abd6`, `b2d33a2`; run #187 / `44965932994` passed; generated output `ad8ad2e`; artifact `14731482930`.
-- Next: A2 isolate and repair symmetry-on brush lag. Phase B filters remain blocked until the current suite is accepted.
+- A2 then completed: isolated primary and mirror dab/spacing/shape/smudge state by stable path key and expanded dirty-composite bounds to include the previous mirrored point. Source commits `1969550`, `9525fba`; run #189 / `44966159076` passed; generated output `0d04087`; artifact `14731292622`.
+- Next: A4 filter mesh-part selection, keeping pixels outside selected parts unchanged. Victory visual testing remains pending; Phase B filters remain blocked.
 
 ---
