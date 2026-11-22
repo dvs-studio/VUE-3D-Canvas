@@ -16,6 +16,7 @@
 
 #### Step 0 — Immediate scrutiny (do first)
 - [ ] Self-host regressions after last fixes (diagnose/last-command not launching, filters, symmetry, boot, Head+Eyes default, paint, export)
+  - Code scan found and fixed a Wood Grain runtime failure: woodSeed was read for frequency jitter before its const declaration. Build/sync and remaining runtime checks are still pending.
 - [ ] Spot-check **2E** subdiv preview docker (done — verify only; fix only if broken)
 
 #### 2A — Stabilisation chrome — OPEN
