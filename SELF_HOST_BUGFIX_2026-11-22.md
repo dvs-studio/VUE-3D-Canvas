@@ -185,7 +185,7 @@ The current source scan found a temporal-dead-zone failure in the Wood Grain bra
 
 **Fix landed in source:** commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8 moves seed resolution to immediately before the pixel loop and removes the inner declaration. The operation remains seeded and deterministic; no filter math, viewport, brush, UV, or layer-apply semantics were otherwise changed.
 
-**Verification boundary:** the source edit is committed, but the corresponding automatic self-host build/sync and runtime visual test must be confirmed separately. Do not call this packaged until the generated self-host output and workflow are verified. Victory should check Wood preview and Apply on both a populated layer and a blank layer, and confirm the preview does not throw.
+**Verification boundary:** the source edit is committed, but the corresponding automatic self-host build/sync is confirmed by generated-output commit 297f230. The new bundle index-CqmOQpy4.js was inspected and contains the seed initialisation before the pixel loop. Runtime visual testing is still outstanding; do not equate bundle sync with device acceptance. Victory should check Wood preview and Apply on both a populated layer and a blank layer, and confirm the preview does not throw.
 
 ### Step 0 remaining scrutiny
 
