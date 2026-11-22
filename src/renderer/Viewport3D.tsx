@@ -653,7 +653,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     roughnessTextureRef.current = makeMapTexture(roughnessCanvasRef, '#ffffff');
     normalTextureRef.current = makeMapTexture(normalCanvasRef, 'rgb(128,128,255)');
 
-    const modelPreset = BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]() : BUILTIN_MODELS.suzanne();
+    const modelPreset = BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]() : BUILTIN_MODELS.suzanneHeadEyes();
     const material = new THREE.MeshStandardMaterial({
       map: tex,
       emissiveMap: emTex,
@@ -866,7 +866,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     } else if (BUILTIN_MODELS[modelKey]) {
       sourceGeom = BUILTIN_MODELS[modelKey]().geometry;
     } else {
-      sourceGeom = BUILTIN_MODELS.suzanne().geometry;
+      sourceGeom = BUILTIN_MODELS.suzanneHeadEyes().geometry;
     }
 
     const newGeom = sourceGeom.clone();
