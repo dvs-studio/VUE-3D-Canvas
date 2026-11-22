@@ -1436,6 +1436,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     if (activePointers.current.size >= 2) {
       isPaintingRef.current = false;
+      lastCompositePaintPointRef.current = null;
+      lastCompositeMirrorPointsRef.current = [];
+      brushEngine.endStroke();
       const pts = Array.from(activePointers.current.values());
       pinchStartDist.current = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
       pinchStartRadius.current = orbitState.current.radius;
