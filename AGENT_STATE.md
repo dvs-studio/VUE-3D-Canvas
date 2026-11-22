@@ -15,7 +15,7 @@ The 2026-11-22 `AGENTS.md` PIN and `SELF_HOST_BUGFIX_2026-11-22.md` supersede th
 - A1 completed: Squail removed from the menu; Suzanne Head + Eyes is the initial model and fallback. Original Suzanne OBJ and legacy preset source remain preserved.
 - Latest A1 source `b2d33a20952561aac72a85af28ee56865b5b56b1` passed workflow #187 / `44965932994`; generated output `ad8ad2e`; bundle `index-DrqHAL6X.js`; artifact `14731482930`.
 - A2 completed in source: each primary/mirrored path has independent dab spacing, shape and smudge state; dirty-composite bounds include the previous mirror point. The normal primary path remains keyed `primary`.
-- Latest A2 source `9525fbaca02336feb8c09470818efda996851f21` passed workflow #189 / `44966159076`; generated output `0d04087`; bundle `index-BusoztmT.js`; artifact `14731292622`.
+- Latest A2 source `18c94c0381f7282e8ad246dd3913ebecc6d3fde4` passed workflow #191 / `44966292558`; generated output `e740d02`; bundle `index-DFGiqoP7.js`; artifact `14731757820`. Fresh strokes clear stale mirror state; multi-touch interruption ends the active paint stroke.
 - Next: A4 filter mesh-part selection so unselected mesh parts remain unaffected. Victory visual tests for A3/A1/A2 remain pending; Phase B new filters remain deferred.
 
 
@@ -682,5 +682,5 @@ Suzanne candidate model binaries are still not available in the current conversa
 
 - Root cause: primary and mirrored dabs shared the singleton BrushEngine's previous dab coordinate and spacing residual. Alternating primary/mirror calls made the next dab interpolate across the entire texture, creating lag and spanning marks. The dirty composite also omitted the previous mirrored point, which could clip the trail.
 - Added independent per-path state for primary and each mirror axis/cross path; included spacing residual, dot/curve/drag state and smudge pickup. Added stable stroke keys in Viewport3D and included prior mirror coordinates in the incremental composite bounds.
-- Source commits `1969550`, `9525fba`. Workflow #189 / `44966159076` passed all self-host build/sync/package checks; generated output `0d04087`, JS `index-BusoztmT.js`, artifact `14731292622`.
+- Source commits `1969550`, `9525fba`, `3866829`, `18c94c0`. Workflow #191 / `44966292558` passed all self-host build/sync/package checks; generated output `e740d02`, JS `index-DFGiqoP7.js`, artifact `14731757820`. Fresh stroke and multi-touch interruption paths also clear state.
 - CI is not a pen/touch test. Victory should compare symmetry OFF and X/Y/XY/Z, particularly long fast drags, small spacing, and the final mirrored segment. Next A4: mesh-part filter selection. Do not modify accepted viewport or UV seam behaviour.
