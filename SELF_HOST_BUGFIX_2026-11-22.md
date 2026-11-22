@@ -139,3 +139,15 @@ The first two workflow attempts raced with later source pushes and failed only w
 ### Next implementation slice
 
 Proceed to A1: remove Squail from the model menu and set the already Victory-accepted Suzanne Head + Eyes preset as the default. Preserve the existing OBJ source and all other model presets. Then A2 symmetry-on responsiveness. Do not reopen the accepted UV seam or redesign the 3D viewport.
+
+
+## Phase A1 implementation — 2026-11-22
+
+- Removed the legacy `Squail (Built-in OBJ)` row from the model menu.
+- Set `suzanneHeadEyes` as the initial `modelKey`, initial active geometry, invalid-key fallback, menu default selection, and Viewport3D model fallback.
+- Kept `src/assets/Suzanne.obj` and the legacy `suzanne` preset source intact for preservation/compatibility; the legacy preset is no longer exposed as the Squail menu choice.
+- Source commits: `d78ccf6` (App default), `792abd6` (viewport fallback), `b2d33a2` (menu removal/default).
+- Workflow run #187 / ID `44965932994` passed production build, `npm run host:sync`, blank-page checks, generated-output commit, ZIP and artifact upload. Generated output commit `ad8ad2e`; JS `index-DrqHAL6X.js`; CSS `index-Dy3ptTAc.css`.
+- Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44965932994/artifacts/14731482930), ID `14731482930`, 2,066,780 bytes, SHA-256 `862057294e0f1539d4121cc341b3cd3672d8b7c091621be7860002b1c4349e51`.
+
+CI confirms the default-selection code compiles and packages; Victory should visually confirm the initial model shown at launch. Next priority is A2 symmetry-on lag, isolated from the accepted viewport/paint baseline.
