@@ -2,22 +2,22 @@
 
 ## PIN — read only this far
 
-**2026-11-22:** Authoritative daily PIN: [`AGENTS.md`](AGENTS.md). Append-only work log: [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md).
+2026-11-22: Authoritative daily task order: AGENTS.md. Append-only work log: CONVERSATION_LOG.md.
 
-**Work rule:** change `src/`, then run `npm run host:sync` so `self-host/public/` matches. A `src/**` push to `main` starts `build-self-host.yml`, which builds, syncs and commits the bundle. Do not hand-edit generated output during an active build. Self-host only unless Victory explicitly orders shell work.
+Work rule: change src/, then run npm run host:sync so self-host/public/ matches. A src/** push to main starts build-self-host.yml, which builds, syncs and commits the bundle. Do not hand-edit generated output during an active build. Self-host only unless Victory explicitly orders shell work.
 
-**Latest source:** `18c94c0381f7282e8ad246dd3913ebecc6d3fde4`. Phase A3 filter recovery, A1 model menu/default, and A2 symmetry path repair are implemented. Powderiser uses two-pass alpha-composited dust scatter; Wood Grain exposes seeded frequency randomisation; Squail is removed from the menu and Suzanne Head + Eyes is the default; each mirrored brush path now owns independent interpolation state, fresh strokes clear stale paths, multi-touch interruption ends the active stroke, and the previous mirror point is included in dirty-composite bounds. Full notes: [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md).
+Protected baseline: Victory accepted Suzanne Head + Eyes and the UV-island filter edge fix. The 3D viewport/paint experience is satisfactory. Do not alter Viewport3D, brush dab compositing, UV unwrap/rebake or island padding without a new reproducible issue.
 
-**Latest verified self-host output:** generated commit `e740d02`; JS bundle `index-DFGiqoP7.js`; CSS `index-Dy3ptTAc.css`. Workflow run #191 / ID `44966292558` passed build, sync, blank-page checks, package and upload. Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44966292558/artifacts/14731757820), ID `14731757820`.
+Landed phases: A3 filter recovery (Powderiser two-pass scatter and Wood frequency-randomisation control), A1 model menu/default (Squail removed from menu; Suzanne Head + Eyes default), and A2 symmetry stroke-state isolation are in source. Prior CI run #191 / ID 44966292558 passed with generated output commit e740d02, bundle index-DFGiqoP7.js, artifact 14731757820. That run predates the current Step 0 repair.
 
-**Testing boundary:** CI confirms build/package only. Victory should visually verify Powderiser/Wood, Head + Eyes at launch, and symmetry OFF vs X/Y/XY/Z (including long drags and the mirrored trail end). Do not claim these visual behaviours were tested by the agent. The accepted 3D viewport and UV island-edge fix remain protected.
+Current Step 0 finding: a source scan found a Wood Grain runtime defect: the frequency-randomisation code read woodSeed before its const declaration. The seed is now resolved before entering the pixel loop in source commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8. The automatic self-host build/sync for this commit must complete before the new generated output is treated as current. This repair is not yet device-tested.
 
-**Next task:** A4 — filter mesh-part selection so filters affect only the selected mesh part(s), leaving other parts unchanged. Reuse the existing mesh component inventory and surface rasterisation where appropriate; do not fork a second rasteriser. Keep work self-host only.
+Current task order: Step 0 regression scrutiny first: diagnose/last-command launch path, all existing filters, symmetry, startup, Head + Eyes initial state, paint, export, and verify-only subdivision preview. The GPU diagnostics callback and modal are present in source, but do not mark the reported launch issue fixed without an actual runtime test/reproduction. Fix proven regressions minimally. Only after Step 0, proceed to A4 mesh-part filter selection; then remaining 2A stabilisation items in AGENTS.md.
 
-**Assets:** `Suzanne.zip` at repo root. Tracked meshes: `src/assets/Suzanne.obj` and `src/assets/Suzanne.head-eyes.obj`.
+Verification boundary: CI confirms build/package only. Victory should visually verify Wood Grain and Powderiser output, model at launch, symmetry OFF vs X/Y/XY/Z, and the diagnose/last-command workflow. No device or browser interaction test is claimed here.
 
-**Safety:** do not delete ZIPs under `release/` or `self-host/`. Do not edit `crates/vue3d_core` without explicit order.
+Assets and safety: src/assets/Suzanne.obj and src/assets/Suzanne.head-eyes.obj remain tracked. Do not delete ZIPs under release/ or self-host/. Do not edit crates/vue3d_core without explicit order.
 
 ## STOP
 
-Historical 2026-11-19 checkpoints (pre-execution, Suzanne notes, UI scroll, UV HUD, Windows shell handover) remain in git history on this path and in prior commits. Prefer AGENTS PIN for current work.
+Historical checkpoints remain below in git history. Prefer the current PIN in AGENTS.md for task order.
