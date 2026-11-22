@@ -94,7 +94,7 @@ If you make modifications to the source code in `src/`:
    ```
    `host:sync` runs `vite build`, then `scripts/sync_self_host.mjs`.
 
-This folder is the programme to finish. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat` for `http://localhost:3000`, or open `public/index.html` with `file://`. Both use the same inlined page. The current generated bundle is `assets/index-Dh3AT7jY.js`, also inlined into `public/index.html` for `file://` use. Do not open an older `index.html` that still points at `<script src="./assets/...">`.
+This folder is the programme to finish. It is not `vue_3d_canvas.exe`. On Windows, double-click `start.bat` for `http://localhost:3000`, or open `public/index.html` with `file://`. Both use the same inlined page. The current generated bundle is `assets/index-CqmOQpy4.js`, also inlined into `public/index.html` for `file://` use. Do not open an older `index.html` that still points at `<script src="./assets/...">`.
 
 `npm run host:sync` from the repository root is the only rebuild. It runs the Vite build and then inlines the script and CSS. Copying `dist/` by hand leaves a page that needs a server.
 
