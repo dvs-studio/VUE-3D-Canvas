@@ -12,7 +12,9 @@ The 2026-11-22 `AGENTS.md` PIN and `SELF_HOST_BUGFIX_2026-11-22.md` supersede th
 - Static audit covers all eight filter kinds and the active-layer apply caller. See `SELF_HOST_BUGFIX_2026-11-22.md` for the per-kind checklist and the distinction between source wiring and visual acceptance.
 - Source `0ac87f4460d78aa30c2c1d582eb9730374b6f9e1`; workflow run #184 / ID `44965787108` succeeded; generated self-host commit `9185d39`; bundle `index-CJrL8aCK.js`; artifact `14731308126`.
 - Build/package success does not equal browser/device validation. Victory still needs to visually confirm Powderiser and Wood output.
-- Next: A1 remove Squail and default the accepted Suzanne Head + Eyes preset; then A2 fix symmetry-on brush lag. Phase B new filters remain deferred.
+- A1 completed: Squail removed from the menu; Suzanne Head + Eyes is the initial model and fallback. Original Suzanne OBJ and legacy preset source remain preserved.
+- Latest A1 source `b2d33a20952561aac72a85af28ee56865b5b56b1` passed workflow #187 / `44965932994`; generated output `ad8ad2e`; bundle `index-DrqHAL6X.js`; artifact `14731482930`.
+- Next: A2 fix symmetry-on brush lag and spanning gaps without touching the normal brush path or accepted viewport. Phase B new filters remain deferred.
 
 
 Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
@@ -664,3 +666,11 @@ Suzanne candidate model binaries are still not available in the current conversa
 - Static audit checklist covers wood, hatching, cross-hatching, hashing, powderiser, noise-shader, dither and mosaic. No Phase B filters started.
 - Source `0ac87f4460d78aa30c2c1d582eb9730374b6f9e1` passed workflow #184 / `44965787108`; generated output commit `9185d39`; artifact `14731308126`.
 - Manual visual confirmation is still Victory's test responsibility. Next: A1 model menu cleanup/default Head + Eyes, then A2 symmetry-on lag. Accepted viewport and UV seam remain protected.
+
+
+### A1 model menu completion — 2026-11-22
+
+- Removed `Squail (Built-in OBJ)` from `PhotoshopMenuBar.tsx`.
+- Set `suzanneHeadEyes` as the initial `modelKey`, initial geometry, invalid-key fallback, menu default and viewport fallback. Preserved `src/assets/Suzanne.obj` and the legacy preset implementation for compatibility; it is not a selectable Squail menu item.
+- Source commits: `d78ccf6`, `792abd6`, `b2d33a2`. Workflow #187 / ID `44965932994` passed all build/sync/package steps; generated output `ad8ad2e`, JS `index-DrqHAL6X.js`, artifact `14731482930`.
+- Manual visual confirmation at launch remains with Victory. Next task A2 is symmetry-on brush responsiveness; do not alter the normal brush path or accepted viewport/UV seam.
