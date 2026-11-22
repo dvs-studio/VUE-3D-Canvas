@@ -176,3 +176,24 @@ The 3D viewport called the singleton `BrushEngine.paintDabs` for the primary str
 - Workflow #188 failed only at the generated-output push because the next source commit had already advanced `main`; its build and blank-page validation passed. Latest run #189 checked out the final source and completed all steps.
 
 CI confirms compilation and packaging, not pen/touch latency or visible stroke continuity. Victory should test symmetry OFF vs X, Y, XY and Z, especially long fast drags, small brush spacing, and the final mirrored segment. Next priority is A4 filter mesh-part selection; do not start Phase B filters yet.
+
+## Step 0 scrutiny — follow-up finding (2026-11-22, GPT-6)
+
+### Wood Grain runtime defect
+
+The current source scan found a temporal-dead-zone failure in the Wood Grain branch. The per-cell frequency-randomisation code referenced woodSeed in the band/ring frequency hash calls before the const woodSeed declaration later in the same loop body. This can throw at runtime as soon as Wood Grain is previewed or applied, even though the source branch and dialog controls are wired and a production bundle can compile.
+
+**Fix landed in source:** commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8 moves seed resolution to immediately before the pixel loop and removes the inner declaration. The operation remains seeded and deterministic; no filter math, viewport, brush, UV, or layer-apply semantics were otherwise changed.
+
+**Verification boundary:** the source edit is committed, but the corresponding automatic self-host build/sync and runtime visual test must be confirmed separately. Do not call this packaged until the generated self-host output and workflow are verified. Victory should check Wood preview and Apply on both a populated layer and a blank layer, and confirm the preview does not throw.
+
+### Step 0 remaining scrutiny
+
+- Diagnose / last-command launch path: source wiring for Help → WebGL Diagnostics exists (callback, state and modal mount), but the reported runtime launch issue is not proven resolved. Reproduce on the app before changing it.
+- Existing filters: retain the eight-kind audit above; verify visible changes and preview/apply consistency for each kind. Powderiser and Wood need Victory visual confirmation after the current source repair.
+- Symmetry: compare OFF, X, Y, XY and Z; inspect long strokes, small spacing, interrupted strokes and final mirror trail.
+- Boot/model: confirm Suzanne Head + Eyes is visible on initial launch and remains the fallback.
+- Paint/export: verify an ordinary stroke, undo/redo, project save/load and model/texture export.
+- Subdivision preview: verify-only per Victory; do not rebuild or redesign unless a concrete regression is found.
+
+Do not begin A4 or Phase B until this Step 0 scrutiny is complete. The current order in AGENTS.md is authoritative.
