@@ -4,20 +4,19 @@
 
 ### Current self-host task status — 2026-11-22 (GPT-6)
 
-The 2026-11-22 `AGENTS.md` PIN and `SELF_HOST_BUGFIX_2026-11-22.md` supersede the older 2026-11-21 to-do below.
+The current AGENTS.md PIN is authoritative and supersedes older task ordering in this file and older handovers.
 
-- Product path remains `src/` → `npm run host:sync` → `self-host/public/`. Do not edit `crates/vue3d_core` or delete protected safety ZIPs.
-- Victory accepted Suzanne Head + Eyes and the UV-island filter edge fix. The 3D viewport / paint experience is satisfactory. Do not revisit Viewport3D, dab compositing or island padding without a new reproduction.
-- Phase A3 filter recovery is implemented: Powderiser now uses two-pass source fading and alpha-composited seeded dust fragments; Wood Grain exposes seeded frequency randomisation beside band/wave frequency.
-- Static audit covers all eight filter kinds and the active-layer apply caller. See `SELF_HOST_BUGFIX_2026-11-22.md` for the per-kind checklist and the distinction between source wiring and visual acceptance.
-- Source `0ac87f4460d78aa30c2c1d582eb9730374b6f9e1`; workflow run #184 / ID `44965787108` succeeded; generated self-host commit `9185d39`; bundle `index-CJrL8aCK.js`; artifact `14731308126`.
-- Build/package success does not equal browser/device validation. Victory still needs to visually confirm Powderiser and Wood output.
-- A1 completed: Squail removed from the menu; Suzanne Head + Eyes is the initial model and fallback. Original Suzanne OBJ and legacy preset source remain preserved.
-- Latest A1 source `b2d33a20952561aac72a85af28ee56865b5b56b1` passed workflow #187 / `44965932994`; generated output `ad8ad2e`; bundle `index-DrqHAL6X.js`; artifact `14731482930`.
-- A2 completed in source: each primary/mirrored path has independent dab spacing, shape and smudge state; dirty-composite bounds include the previous mirror point. The normal primary path remains keyed `primary`.
-- Latest A2 source `18c94c0381f7282e8ad246dd3913ebecc6d3fde4` passed workflow #191 / `44966292558`; generated output `e740d02`; bundle `index-DFGiqoP7.js`; artifact `14731757820`. Fresh strokes clear stale mirror state; multi-touch interruption ends the active paint stroke.
-- Next: A4 filter mesh-part selection so unselected mesh parts remain unaffected. Victory visual tests for A3/A1/A2 remain pending; Phase B new filters remain deferred.
-
+- Scope: self-host React/Three/Vite source only: src/ → npm run host:sync → self-host/public/. Do not edit crates/vue3d_core or delete protected safety ZIPs.
+- Protected baseline: Victory accepted Suzanne Head + Eyes and the UV-island filter edge fix; the 3D viewport/paint experience is satisfactory. Do not alter Viewport3D, dab compositing or island padding without a new reproducible defect.
+- Prior phases A3, A1 and A2 are landed: Powderiser two-pass scatter; Wood frequency randomisation UI; Suzanne Head + Eyes default with Squail removed from the menu; independent symmetry stroke state and mirror dirty bounds. Their CI results do not establish device acceptance.
+- Current order is Step 0 scrutiny first, not A4: diagnose/last-command launch path, filter suite, symmetry, boot, Head + Eyes initial state, paint, export, and verify-only subdivision preview. Fix regressions before A4 or any layer technology.
+- New code-scan finding: Wood Grain referenced woodSeed in the frequency-jitter calculation before its const declaration, causing a runtime temporal-dead-zone failure when the Wood filter runs. Fixed in source commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8 by resolving the seed before the pixel loop. Self-host build/sync and visual verification are pending.
+- The filter dialog and apply caller were inspected: the dialog preview uses the shared pixel transform; Apply targets the active unlocked non-group layer, pushes undo, passes the complete config, writes back to the same canvas and notifies the composite.
+- Static filter audit remains in SELF_HOST_BUGFIX_2026-11-22.md. The eight filter branches are present; the Wood Grain runtime defect demonstrates why source wiring/CI alone is not enough.
+- Do not claim the diagnose/last-command issue is resolved merely because the GPU diagnostics modal is wired. Its Help-menu callback and modal mount exist; actual launch behaviour still needs runtime confirmation and reproduction if it fails.
+- Next after Step 0 is complete: A4 filter mesh-part selection, leaving unselected parts unchanged. Reuse the existing mesh-component inventory and rasterizeMeshSurface; do not create a second rasteriser.
+- A5/A6/A7 and UI1/UI2/UI3 follow the order in AGENTS.md. Phase B layer technology remains blocked until Step 0 and 2A are healthy. F7 logo fabric remains on hold.
+- Manual browser/desktop/Android interaction and visual tests remain required; build/package success is not visual acceptance.
 
 Same sets as `AGENTS.md`. A numbered line is not a history task. `STOP` comes after History.
 
