@@ -16,48 +16,32 @@
 
 ## 2026-11-21 — Grok
 
-- Seam package `18a80cb`; Head+Eyes candidate; fabric/mask design F1–F8; cloth active plan; logo fabric on hold; log discipline required.
+- Seam package; Head+Eyes; fabric/mask design F1–F8; cloth active plan; logo fabric on hold.
 
 ---
 
 ## 2026-11-22 — Grok
 
-### Victory test results
-- **Suzanne Head + Eyes:** perfect → default; **remove Squail** from product menu/default.
-- **UV seam issue:** accepted **fixed** — do not reopen without new repro.
-- **3D viewport:** satisfactory — **do not damage** while fixing other areas.
+### Morning — test feedback → bugfix brief
+- Head+Eyes default; remove Squail; UV seam accepted fixed; 3D view protected.
+- Broken filters (dust/powder no-op); wood UI gaps; symmetry lag; part selection; UV shelf; F8.
+- Docs: `SELF_HOST_BUGFIX_2026-11-22.md`.
 
-### Bugs / gaps to fix first
-- Symmetry ON → lag / spanning gaps; OFF normal.
-- Wood (and other) filters: UI incomplete (banding/wave + frequency randomisation exposure); audit unfinished kinds.
-- Filter **part selection** so outside parts get no influence.
-- Filter panel title-drag glitch.
-- 2D UV tool shelf: original location + group/spacer; top-left except N-panel.
-- F8 merge bump/displacement conversion.
-
-### Later features
-- New filters: warp/wavy, pointillism, honeycomb (tri/square/circle/hex, world+normal), stochastic scatter.
-- Texture gallery + browser storage + GPU-tier downscale (e.g. 1K→256 mobile).
-- Fabric/mask plan still design-only; F7 logo fabric remains on hold.
-
-### Docs
-- Announcement in `AGENTS.md` PIN.
-- Full brief: `SELF_HOST_BUGFIX_2026-11-22.md` (code pointers for wood config in `textureFilters.ts`, presets in `modelGeometry.ts`).
+### Late — after GPT Phase A1–A3 claims
+- Victory: last command / error-diagnosis **no longer launching** after recent fixes.
+- **Immediate:** scrutinise main self-host web app for regressions from last fixes (and deeper); fix first.
+- **Then major to-do:** layer technology from `LAYER_FABRIC_MASK_PLAN.md` — cloth F2–F5, torn F1/F1b, mask F6, F8 bump merge; F7 logo fabric still on hold.
+- PIN updated in `AGENTS.md` accordingly.
 
 ---
 
-## 2026-11-22 — GPT-6
+## 2026-11-22 — GPT-5
 
-### Phase A3 — layer filter recovery
-- Read the current repository Markdown handovers and plans, with `AGENTS.md` and `SELF_HOST_BUGFIX_2026-11-22.md` governing the current task. Kept the work inside the self-host React/Three.js source; no native Rust, safety archive, accepted viewport or accepted UV seam changes.
-- Deep-scanned `textureFilters.ts`, `TextureFilterDialog.tsx`, and the `App.tsx` apply caller. The caller passes the full config to the active unlocked layer canvas, pushes undo before the operation, then updates/notifies the composite.
-- Repaired Powderiser's single-pass scatter overwrite defect with separate source-fade and dust-composite passes.
-- Added seeded Wood Grain frequency randomisation and exposed it in the dialog alongside the Band / wave frequency control.
-- Audited wood, hatching, cross-hatching, hashing, powderiser, noise-shader, dither and mosaic; detailed static checklist is in `SELF_HOST_BUGFIX_2026-11-22.md`.
-- Source commits: `6b614ed`, `fb3b68b`, `0ac87f4`. Latest source commit `0ac87f4` passed self-host workflow run #184 / `44965787108`; generated output commit `9185d39`; artifact `14731308126`.
-- CI verifies compilation and packaging only. Victory's visual confirmation of Powderiser and Wood remains pending.
-- A1 then completed: removed Squail from the menu and made Suzanne Head + Eyes the initial model and fallback, preserving the original Suzanne OBJ. Source commits `d78ccf6`, `792abd6`, `b2d33a2`; run #187 / `44965932994` passed; generated output `ad8ad2e`; artifact `14731482930`.
-- A2 then completed: isolated primary and mirror dab/spacing/shape/smudge state by stable path key and expanded dirty-composite bounds to include the previous mirrored point. Source commits `1969550`, `9525fba`, `3866829`, `18c94c0`; final run #191 / `44966292558` passed; generated output `e740d02`; artifact `14731757820`.
-- Next: A4 filter mesh-part selection, keeping pixels outside selected parts unchanged. Victory visual testing remains pending; Phase B filters remain blocked.
+### Phase A1–A3 (claimed complete — CI only)
+- Powderiser two-pass; wood frequency randomisation UI; filter audit checklist in bugfix MD.
+- Squail removed; Head+Eyes default.
+- Symmetry: independent stroke state per mirror path; dirty bounds include previous mirror point.
+- Workflows #184 / #187 / #191 cited. Victory visual verification still pending at that note.
+- Was next: A4 part selection. Superseded for ordering by Grok late PIN (scrutinise regressions first).
 
 ---
