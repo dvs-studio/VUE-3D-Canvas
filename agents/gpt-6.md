@@ -1,6 +1,6 @@
 # GPT-6 agent log
 
-**Current status — 2026-11-22:** Phase A3 filter recovery completed in source commit `0ac87f4`; self-host workflow #184 passed and generated output commit `9185d39`. Manual Victory visual confirmation is still pending. Next authorised slice: A1 model menu cleanup/default Suzanne Head + Eyes, then A2 symmetry-on responsiveness. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
+**Current status — 2026-11-22:** Phase A3 filter recovery completed in source commit `0ac87f4`; self-host workflow #184 passed and generated output commit `9185d39`. Manual Victory visual confirmation is still pending. Next authorised slice: A1 model menu cleanup/default Suzanne Head + Eyes is now complete (run #187); next authorised slice: A2 symmetry-on responsiveness. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
 
 ## 2026-11-17 — self-host viewport checkpoint
 
@@ -146,3 +146,12 @@ Manual testing remains required for UV edits updating the 3D material and textur
 - Two earlier workflow attempts lost the generated-output push race because later source commits had already advanced `main`; the final run on the latest source commit completed all steps. No build error was found.
 - No browser/device visual test was performed. Victory still needs to confirm visible Powderiser breakup and Wood frequency variation.
 - Next: A1 remove Squail and default Suzanne Head + Eyes; then A2 isolate and repair symmetry-on brush lag. Do not modify the accepted viewport or UV seam fix.
+
+
+## 2026-11-22 — Phase A1 model menu
+
+- Removed the `Squail (Built-in OBJ)` menu row and set `suzanneHeadEyes` as the initial `modelKey`, initial geometry, menu fallback selection and Viewport3D fallback.
+- Kept the original `src/assets/Suzanne.obj` and legacy preset source intact; the old preset is simply no longer exposed as the Squail menu option.
+- Source commits: `d78ccf6`, `792abd6`, `b2d33a2`. Workflow #187 / ID `44965932994` passed. Generated output commit `ad8ad2e`; bundle `index-DrqHAL6X.js`; artifact `14731482930`.
+- CI confirms compilation/package only. Victory should verify that Head + Eyes is the model visibly shown at launch.
+- Next: A2 symmetry-on brush lag and spanning gaps. Keep the normal brush path and accepted viewport/UV seam unchanged.
