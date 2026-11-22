@@ -194,10 +194,10 @@ export default function App() {
   }, []);
 
   // 3D Viewport State
-  const [modelKey, setModelKey] = useState<string>('suzanne');
+  const [modelKey, setModelKey] = useState<string>('suzanneHeadEyes');
   const [customOBJText, setCustomOBJText] = useState<string | undefined>(undefined);
   const [activeGeometry, setActiveGeometry] = useState<THREE.BufferGeometry>(() => {
-    const geom = BUILTIN_MODELS.suzanne().geometry;
+    const geom = BUILTIN_MODELS.suzanneHeadEyes().geometry;
     UVChannelManager.ensureBaseChannels(geom);
     return geom;
   });
@@ -214,7 +214,7 @@ export default function App() {
     } else if (BUILTIN_MODELS[modelKey]) {
       geom = BUILTIN_MODELS[modelKey]().geometry;
     } else {
-      geom = BUILTIN_MODELS.suzanne().geometry;
+      geom = BUILTIN_MODELS.suzanneHeadEyes().geometry;
     }
     if (customOBJText && preferences.architecturalRepair === true) {
       repairArchitecturalMesh(geom);
