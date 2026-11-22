@@ -1,6 +1,6 @@
 # GPT-6 agent log
 
-**Current status — 2026-11-22:** Phase A3, A1 and A2 are implemented; latest source `9525fba` passed self-host workflow #189 and generated output commit `0d04087`. Manual Victory visual confirmation remains pending. Next authorised slice: A4 filter mesh-part selection. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
+**Current status — 2026-11-22:** Phase A3, A1 and A2 are implemented; latest source `18c94c0` passed self-host workflow #191 and generated output commit `e740d02`. Manual Victory visual confirmation remains pending. Next authorised slice: A4 filter mesh-part selection. Self-host only; preserve accepted viewport/UV behaviour and safety ZIPs.
 
 ## 2026-11-17 — self-host viewport checkpoint
 
@@ -162,6 +162,7 @@ Manual testing remains required for UV edits updating the 3D material and textur
 - Root cause: `BrushEngine` is a singleton and stored primary/mirrored path spacing in one `lastDabPos`/residual state. Painting the mirrored coordinate overwrote the primary previous point; the next primary dab interpolated across the texture, causing lag and bridge marks. The incremental composite bounds also omitted the previous mirrored point and could clip the mirrored trail.
 - Added per-path `BrushStrokeState` keyed as `primary`, `mirror-X`, `mirror-Y`, `mirror-Z` and `mirror-XY`. Dab spacing, residual distance, shape mode state and smudge pickup are now independent. Optional keys preserve existing callers; endStroke clears all states.
 - Viewport3D now supplies stable mirror path keys and includes previous mirrored positions in the dirty composite rectangle. The normal primary path remains `primary`; no camera/viewport/UV geometry changes.
-- Source commits `1969550` and `9525fba`; workflow #189 / ID `44966159076` passed all steps; generated output commit `0d04087`; JS `index-BusoztmT.js`; artifact `14731292622`.
+- Source commits `1969550`, `9525fba`, `3866829` and `18c94c0`; workflow #191 / ID `44966292558` passed all steps; generated output commit `e740d02`; JS `index-DFGiqoP7.js`; artifact `14731757820`.
+- Fresh `beginStroke` clears stale mirror state, and a multi-touch transition ends/clears an active paint stroke before navigation.
 - No pen/touch runtime latency or visual stroke test was performed. Victory should compare symmetry OFF with X/Y/XY/Z, including long fast strokes, small brush spacing, and the last mirrored segment.
 - Next: A4 filter mesh-part selection. Keep accepted viewport and UV seam behaviour unchanged.
