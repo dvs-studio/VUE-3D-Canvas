@@ -236,6 +236,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   const isPaintingRef = useRef(false);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
+  const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
 
@@ -1491,6 +1492,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         return;
       }
 
+      lastCompositeMirrorPointsRef.current = [];
       brushEngine.beginStroke(pixelX, pixelY, e.pressure || 1.0);
       executePaintTool(targetLayer, pixelX, pixelY, e.pressure || 1.0);
     }
@@ -1614,6 +1616,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (isPaintingRef.current) {
       isPaintingRef.current = false;
       lastCompositePaintPointRef.current = null;
+      lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
       clearStabilizerTether();
       // onTextureUpdated schedules the canonical composite; the textureVersion
@@ -1696,19 +1699,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     const ctx = layer.ctx;
 
-    const applyDabAt = (dx: number, dy: number) => {
+    const applyDabAt = (dx: number, dy: number, strokeKey = 'primary') => {
       if (activeTool === 'brush') {
-        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false);
+        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false, strokeKey);
       } else if (activeTool === 'eraser') {
-        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, true);
+        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, true, strokeKey);
       } else if (activeTool === 'pen') {
-        brushEngine.paintDabs(ctx, dx, dy, { ...brush, hardness: 100, size: Math.max(2, brush.size * 0.4) }, pressure, false);
+        brushEngine.paintDabs(ctx, dx, dy, { ...brush, hardness: 100, size: Math.max(2, brush.size * 0.4) }, pressure, false, strokeKey);
       } else if (activeTool === 'blur') {
         brushEngine.applyBlurAt(ctx, dx, dy, brush);
       } else if (activeTool === 'clone') {
         brushEngine.applyCloneStampAt(ctx, dx, dy, brush);
       } else if (activeTool === 'smudge') {
-        brushEngine.applySmudgeAt(ctx, dx, dy, dx, dy, brush);
+        brushEngine.applySmudgeAt(ctx, dx, dy, dx, dy, brush, strokeKey);
       } else if (activeTool === 'bucket') {
         FillSuite.applyBucketFill(ctx, brush.color, brush.opacity);
       } else if (activeTool === 'gradient_linear') {
@@ -1729,6 +1732,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // Primary stroke dab. Retain the previous input point so the dirty
     // composite covers the complete interpolated dab trail, not just its end.
     const previousPaintPoint = lastCompositePaintPointRef.current || { x, y };
+    const previousMirrorPaintPoints = lastCompositeMirrorPointsRef.current;
     lastCompositePaintPointRef.current = { x, y };
     applyDabAt(x, y);
     const changedPoints: { x: number; y: number }[] = [{ x, y }];
@@ -1744,7 +1748,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       if (axes.Y) activeAxes.push('Y');
       if (axes.Z) activeAxes.push('Z');
 
-      const mirroredCoords: { x: number; y: number }[] = [];
+      const mirroredCoords: { x: number; y: number; strokeKey: string }[] = [];
 
       activeAxes.forEach(ax => {
         const subCfg: SymmetryConfig = {
@@ -1757,7 +1761,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           axes: axes,
         };
         const pt = SymmetryEngine.getMirroredCoord(x, y, subCfg, layer.canvas.width, layer.canvas.height);
-        mirroredCoords.push(pt);
+        mirroredCoords.push({ ...pt, strokeKey: `mirror-${ax}` });
       });
 
       // Diagonal cross-mirror if both X and Y are checked
@@ -1766,15 +1770,18 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const yCfg = { ...symmetryConfig, axis: 'Y' as const } as SymmetryConfig;
         const ptX = SymmetryEngine.getMirroredCoord(x, y, xCfg, layer.canvas.width, layer.canvas.height);
         const ptXY = SymmetryEngine.getMirroredCoord(ptX.x, ptX.y, yCfg, layer.canvas.width, layer.canvas.height);
-        mirroredCoords.push(ptXY);
+        mirroredCoords.push({ ...ptXY, strokeKey: 'mirror-XY' });
       }
 
       mirroredCoords.forEach(m => {
         if (!selectionMask || !selectionMask.active || SelectionTool.isPointInSelection(m.x, m.y, selectionMask)) {
-          applyDabAt(m.x, m.y);
-          changedPoints.push(m);
+          applyDabAt(m.x, m.y, m.strokeKey);
+          changedPoints.push({ x: m.x, y: m.y });
         }
       });
+      lastCompositeMirrorPointsRef.current = mirroredCoords.map(({ x: mx, y: my }) => ({ x: mx, y: my }));
+    } else {
+      lastCompositeMirrorPointsRef.current = [];
     }
 
     // Update only the painted area in the canonical colour composite. The old
@@ -1788,7 +1795,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const radius = Math.max(4, brush.size * 3 + 4);
         const width = compositeCanvas.width;
         const height = compositeCanvas.height;
-        const trailPoints = [previousPaintPoint, ...changedPoints];
+        const trailPoints = [previousPaintPoint, ...previousMirrorPaintPoints, ...changedPoints];
         const left = Math.max(0, Math.floor(Math.min(...trailPoints.map(point => point.x)) - radius));
         const top = Math.max(0, Math.floor(Math.min(...trailPoints.map(point => point.y)) - radius));
         const right = Math.min(width, Math.ceil(Math.max(...trailPoints.map(point => point.x)) + radius));
