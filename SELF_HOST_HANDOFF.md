@@ -6,13 +6,13 @@
 
 **Work rule:** change `src/`, then run `npm run host:sync` so `self-host/public/` matches. A `src/**` push to `main` starts `build-self-host.yml`, which builds, syncs and commits the bundle. Do not hand-edit generated output during an active build. Self-host only unless Victory explicitly orders shell work.
 
-**Latest source:** `b2d33a20952561aac72a85af28ee56865b5b56b1`. Phase A3 filter recovery and A1 model menu/default are implemented. Powderiser uses two-pass alpha-composited dust scatter; Wood Grain exposes seeded frequency randomisation; Squail is removed from the menu and Suzanne Head + Eyes is the default and fallback. Full audit: [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md).
+**Latest source:** `9525fbaca02336feb8c09470818efda996851f21`. Phase A3 filter recovery, A1 model menu/default, and A2 symmetry path repair are implemented. Powderiser uses two-pass alpha-composited dust scatter; Wood Grain exposes seeded frequency randomisation; Squail is removed from the menu and Suzanne Head + Eyes is the default; each mirrored brush path now owns independent interpolation state and its previous point is included in dirty-composite bounds. Full notes: [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md).
 
-**Latest verified self-host output:** generated commit `ad8ad2e`; JS bundle `index-DrqHAL6X.js`; CSS `index-Dy3ptTAc.css`. Workflow run #187 / ID `44965932994` passed all build, sync, blank-page, package and upload steps. Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44965932994/artifacts/14731482930), ID `14731482930`.
+**Latest verified self-host output:** generated commit `0d04087`; JS bundle `index-BusoztmT.js`; CSS `index-Dy3ptTAc.css`. Workflow run #189 / ID `44966159076` passed build, sync, blank-page checks, package and upload. Artifact [VUE_3D_Canvas_SelfHost](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/44966159076/artifacts/14731292622), ID `14731292622`.
 
-**Testing boundary:** CI confirms build/package only. Victory still needs to visually test Powderiser on an image layer, Wood band/wave/frequency randomisation, and the initial Head + Eyes selection. The accepted 3D viewport and UV island-edge fix are not to be reopened without a new repro.
+**Testing boundary:** CI confirms build/package only. Victory should visually verify Powderiser/Wood, Head + Eyes at launch, and symmetry OFF vs X/Y/XY/Z (including long drags and the mirrored trail end). Do not claim these visual behaviours were tested by the agent. The accepted 3D viewport and UV island-edge fix remain protected.
 
-**Next task:** A2 — fix symmetry-on brush lag and spanning gaps. Keep the normal brush path and accepted viewport/paint baseline unchanged. Do not start Phase B filters until the current suite is accepted.
+**Next task:** A4 — filter mesh-part selection so filters affect only the selected mesh part(s), leaving other parts unchanged. Reuse the existing mesh component inventory and surface rasterisation where appropriate; do not fork a second rasteriser. Keep work self-host only.
 
 **Assets:** `Suzanne.zip` at repo root. Tracked meshes: `src/assets/Suzanne.obj` and `src/assets/Suzanne.head-eyes.obj`.
 
