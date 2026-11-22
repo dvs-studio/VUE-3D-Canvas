@@ -13,11 +13,13 @@
 - Added Wood Grain's seeded spatial frequency randomisation, with a dedicated dialog control alongside the band/wave and ring frequency controls.
 - Audited all eight `TextureFilterKind` branches and traced the selected-layer apply path. Static checklist and limitations are in `SELF_HOST_BUGFIX_2026-11-22.md`.
 
-**Verification:** source `0ac87f4`; self-host workflow run #184 / `44965787108` passed build, `host:sync`, blank-page checks, package and artifact upload. Generated output commit `9185d39`, bundle `index-CJrL8aCK.js`. This is build/package verification, not Victory's visual device test.
+**Phase A1 completed:** Squail is removed from the model menu. Suzanne Head + Eyes is the initial model, the menu's fallback selection and the viewport fallback. The original Suzanne OBJ and its preset remain preserved in source; they are simply no longer offered as the Squail menu choice.
 
-**Still required:** Victory to confirm Powderiser's visible breakup and Wood's band/wave frequency variation on an actual layer. Do not describe these visual behaviours as user-tested yet.
+**Verification:** A3 source `0ac87f4` passed workflow #184 / `44965787108`, generated output `9185d39`. A1 source commits `d78ccf6`, `792abd6`, `b2d33a2` passed workflow #187 / `44965932994`; generated output commit `ad8ad2e`, bundle `index-DrqHAL6X.js`. Latest artifact ID `14731482930`. These are build/package checks, not Victory's visual device test.
 
-**Next:** A1 — remove legacy Squail and make the already-accepted Suzanne Head + Eyes preset the default. Then A2 — profile and repair symmetry-on brush lag without touching the normal brush path.
+**Still required:** Victory to confirm Powderiser's visible breakup and Wood's band/wave frequency variation on an actual layer, and to verify the initial Head + Eyes load visually. Do not describe these behaviours as user-tested yet.
+
+**Next:** A2 — profile and repair symmetry-on brush lag and spanning gaps without touching the normal brush path or the accepted 3D viewport.
 
 **Full brief:** [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md)  
 **Fabric plan:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md)  
