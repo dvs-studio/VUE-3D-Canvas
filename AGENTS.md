@@ -2,46 +2,46 @@
 
 ## PIN — read only this far (unless absolutely necessary)
 
-### Agent status — 2026-11-22 (GPT-6) — Phase A3 filter recovery
+### Agent status — 2026-11-22 late (Grok) — post-fix scrutiny → layer tech
 
 **Product path:** `src/` → `npm run host:sync` → `self-host/public/`. Self-host only. No `crates/vue3d_core`. Do not delete safety ZIPs.
 
-**Accepted by Victory:** the 3D viewport/paint experience is satisfactory; the UV-island filter line is accepted as fixed. Do not change Viewport3D, dab compositing, UV island padding, or the accepted UV seam fix without a new reproduction.
+**3D viewport / UV seam baseline:** still protected. Do not regress Viewport3D, dab composite, or accepted UV island padding without a new repro.
 
-**Phase A3 source work completed:**
-- Replaced Powderiser's single-pass scatter writes with a deterministic two-pass process: first preserve/fade source pixels, then alpha-composite dust fragments so later source pixels cannot overwrite them.
-- Added Wood Grain's seeded spatial frequency randomisation, with a dedicated dialog control alongside the band/wave and ring frequency controls.
-- Audited all eight `TextureFilterKind` branches and traced the selected-layer apply path. Static checklist and limitations are in `SELF_HOST_BUGFIX_2026-11-22.md`.
+**Prior agent (GPT) claimed Phase A1–A3 done** (Squail removed, Head+Eyes default, powderiser two-pass, wood frequency UI, symmetry stroke state). CI package runs were cited — **not** full device proof.
 
-**Phase A1 completed:** Squail is removed from the model menu. Suzanne Head + Eyes is the initial model, the menu's fallback selection and the viewport fallback. The original Suzanne OBJ and its preset remain preserved in source; they are simply no longer offered as the Squail menu choice.
+### Immediate priority — scrutinise self-host after last fixes
 
-**Verification:** A3 passed workflow #184 / `44965787108`; A1 passed #187 / `44965932994`; A2 source commits `1969550`, `9525fba`, `3866829` and `18c94c0` passed workflow #191 / `44966292558`. Latest generated output commit `e740d02`, bundle `index-DFGiqoP7.js`, CSS `index-Dy3ptTAc.css`, artifact ID `14731757820`. CI proves build/package only, not device interaction.
+Victory reports the **last command / error-diagnosis path is no longer launching** (or equivalent tooling/UI failure after recent fixes). Before new feature work:
 
-**Still required:** Victory should visually verify Powderiser/Wood output, Head + Eyes at launch, and symmetry-on X/Y/XY/Z strokes (including spacing and the final trail segment). Do not describe the A3/A1/A2 changes as manually tested by the agent.
+1. **Scrutinise the main web self-host app** end-to-end for **bugs and errors introduced by the last fix set** (A1–A3 and any follow-ups), and for **deeper** latent issues in the same areas.
+2. Check: app boot, model load (Head+Eyes default), layer filters apply (all kinds, especially powder/dust and wood), symmetry on/off, filter dialog, any “diagnose / last command” or console-driven helper that stopped launching, paint path, export entry points.
+3. **Fix** regressions first. Prefer minimal isolated patches. Re-read `SELF_HOST_BUGFIX_2026-11-22.md` for remaining A4–A7 items while scanning.
+4. Only when the self-host painter is **stable again**, proceed to the **new major to-do** below.
 
-**Next:** A4 — add filter mesh-part selection so pixels outside selected parts remain unchanged. Keep the accepted viewport and UV seam baseline protected.
+**Victory tests** unless he asks the agent to test.
 
-**Full brief:** [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md)  
-**Fabric plan:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md)  
-**Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md)
+### Next major to-do — new layer technology (cloth & related)
 
-**Testing:** Victory tests unless he asks the agent to test.
+After the scrutiny/fix pass, the active feature backlog is the **layer technology** set in [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md):
 
-### Priority order (bug fixes first)
+| ID | Task |
+|----|------|
+| F8 | Merge bump/displacement → one Levels greyscale → 100% bump (can pair with stabilisation) |
+| F6 | Photoshop-style mask layer (beside / independent targets) |
+| F1 / F1b | Torn fabric layer + convert + procedural edges + export apply/restore; mesh influence switch |
+| F2–F5 | **Cloth filter family** (active plan): world-space cloth, wool/fur, cotton, bamboo-raft, cylindrical wrap, strip stack |
+| F7 | Logo fabric — **still ON HOLD** until Victory go-ahead |
+| — | Matcap layer + narrow Add menu when ordered |
 
-1. [x] **A3 filter recovery:** audit all eight kinds, repair Powderiser, expose seeded Wood frequency randomisation.
-2. [x] **A1 model menu:** remove Squail; Suzanne Head + Eyes is the default.
-3. [x] **A2 symmetry brush:** independent stroke state per mirror path; include previous mirror point in dirty composite bounds; clear interrupted/new stroke state.
-4. **A4 filter part selection:** pixels outside selected mesh parts remain unchanged.
-5. **A5 filter panel title-drag glitch.**
-6. **A6 2D UV tool shelf:** original location, group/spacer; top-left except N-panel.
-7. **A7 F8 merge bump/displacement conversion.**
-8. **Only after the existing suite is healthy:** new filters (warp, pointillism, honeycomb, scatter) and later texture gallery.
-9. F1–F6 / F7 follow the fabric plan; F7 logo fabric remains on hold.
- 
+Remaining chrome from bugfix brief (A4 part selection, A5 panel drag, A6 UV shelf) should be completed as part of stabilisation or immediately before heavy filter/layer work — do not leave the app half-broken.
+
+**Briefs:** [`SELF_HOST_BUGFIX_2026-11-22.md`](SELF_HOST_BUGFIX_2026-11-22.md) · [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md)  
+**Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) — append dated section every session.
+
 ### Work rules
 
-Meticulous. Research before large edits. Short commits. Append conversation log by date. Do not damage the accepted 3D view.
+Meticulous. Research before large edits. Short commits. Do not damage the accepted 3D view. Self-host path only.
 
 ## STOP
 
