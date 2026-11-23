@@ -28,6 +28,7 @@ import { HDRIManager, HDRIPreset } from './hdriManager';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
+import { buildUVIslandClipPath } from '../tools/uvIslandClip';
 
 function drawingRatio(w: number, h: number): number {
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -214,7 +215,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     lastMouseY: 0,
   });
 
-  const [boxRotation, setBoxRotation] = useState({ x: 0, y: 0 });
+  const [boxRotation, setBoxRotation] = useState<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
   const [isDroneNavActive, setIsDroneNavActive] = useState<boolean>(false);
   const [invertNav, setInvertNav] = useState<boolean>(() => {
     try {
@@ -237,8 +238,30 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const isPaintingRef = useRef(false);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const lastSurfaceHitRef = useRef<{ uv: THREE.Vector2; point: THREE.Vector3 } | null>(null);
+  const uvIslandPathRef = useRef<Path2D | null>(null);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
+
+  // Exact (non-dilated) UV coverage for clipping every 3D dab. This is a
+  // visual/paint-space mask only; it is never baked into or exported with a layer.
+  useEffect(() => {
+    const sourceGeometry = geometry || meshRef.current?.geometry;
+    const layer = layers.find(item => item.id === activeLayerId) || layers[0];
+    if (!sourceGeometry || !layer) {
+      uvIslandPathRef.current = null;
+      return;
+    }
+    const uvArray = activeUVChannel
+      ? sourceGeometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
+      : undefined;
+    uvIslandPathRef.current = buildUVIslandClipPath(
+      sourceGeometry,
+      layer.canvas.width,
+      layer.canvas.height,
+      uvArray,
+    );
+  }, [geometry, activeLayerId, layers, activeUVChannel, uvGeometryVersion]);
 
   // HDRI Reflections & Viewport Lighting Settings
   const [internalHdri, setInternalHdri] = useState<HDRISettings>({
@@ -1438,6 +1461,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       isPaintingRef.current = false;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
+      lastSurfaceHitRef.current = null;
       brushEngine.endStroke();
       const pts = Array.from(activePointers.current.values());
       pinchStartDist.current = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
@@ -1447,7 +1471,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     // Touch Navigation & Tool Execution Mode
-    const uv = raycastUV(e);
+    const surfaceHit = raycastSurface(e);
+    const uv = surfaceHit?.uv || null;
+    lastSurfaceHitRef.current = surfaceHit ? { uv: surfaceHit.uv.clone(), point: surfaceHit.point.clone() } : null;
     const isNavigationTool = activeTool === 'hand' || activeTool === 'zoom';
     const isExplicitOrbit = e.altKey || e.button === 1 || e.button === 2;
 
@@ -1568,10 +1594,45 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const targetLayer = layers.find(l => l.id === activeLayerId);
       if (!targetLayer) return;
 
-      const uv = raycastUV(e);
-      if (uv) {
-        const targetX = uv.x * targetLayer.canvas.width;
-        const targetY = (1 - uv.y) * targetLayer.canvas.height;
+      const surfaceHit = raycastSurface(e);
+      if (!surfaceHit) {
+        // Leaving the visible mesh breaks the surface path. Do not let the
+        // next valid hit interpolate from the last UV point across the atlas.
+        lastSurfaceHitRef.current = null;
+        lastCompositePaintPointRef.current = null;
+        lastCompositeMirrorPointsRef.current = [];
+        brushEngine.endStroke();
+        clearStabilizerTether();
+        return;
+      }
+
+      const uv = surfaceHit.uv;
+      const targetX = uv.x * targetLayer.canvas.width;
+      const targetY = (1 - uv.y) * targetLayer.canvas.height;
+      const previousHit = lastSurfaceHitRef.current;
+      const uvDelta = previousHit
+        ? Math.hypot(
+            (uv.x - previousHit.uv.x) * targetLayer.canvas.width,
+            (uv.y - previousHit.uv.y) * targetLayer.canvas.height
+          )
+        : Number.POSITIVE_INFINITY;
+      let meshSpan = 1;
+      if (meshRef.current) {
+        const bounds = new THREE.Box3().setFromObject(meshRef.current);
+        meshSpan = Math.max(1e-4, bounds.getSize(new THREE.Vector3()).length());
+      }
+      // A large atlas jump over a short distance on the actual surface is a UV
+      // seam transition. Start a fresh dab path at the new hit's exact texel.
+      const seamDiscontinuity = !!previousHit
+        && uvDelta > Math.max(brush.size * 4, Math.max(targetLayer.canvas.width, targetLayer.canvas.height) * 0.06)
+        && surfaceHit.point.distanceTo(previousHit.point) < meshSpan * 0.22;
+
+      if (!previousHit || seamDiscontinuity) {
+        brushEngine.beginStroke(targetX, targetY, e.pressure || 1.0);
+        lastCompositePaintPointRef.current = null;
+        lastCompositeMirrorPointsRef.current = [];
+      }
+      lastSurfaceHitRef.current = { uv: uv.clone(), point: surfaceHit.point.clone() };
 
         if (activeTool === 'mask_brush') {
           const baseMask = selectionMask || {
@@ -1596,10 +1657,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           return;
         }
 
-        const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
+        const stabilized = seamDiscontinuity || !previousHit
+          ? { x: targetX, y: targetY }
+          : brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
         executePaintTool(targetLayer, stabilized.x, stabilized.y, e.pressure || 1.0);
         drawStabilizerTether(e, stabilized, targetLayer);
-      }
     }
   };
 
@@ -1620,6 +1682,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       isPaintingRef.current = false;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
+      lastSurfaceHitRef.current = null;
       brushEngine.endStroke();
       clearStabilizerTether();
       // onTextureUpdated schedules the canonical composite; the textureVersion
@@ -1644,7 +1707,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     updateCameraPosition();
   };
 
-  const raycastUV = (e: React.PointerEvent<HTMLCanvasElement>): THREE.Vector2 | null => {
+  const raycastSurface = (e: React.PointerEvent<HTMLCanvasElement>): { uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null } | null => {
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current || !cameraPerspRef.current) return null;
 
@@ -1688,8 +1751,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     raycaster.current.setFromCamera(new THREE.Vector2(ndcX, ndcY), cam);
 
     const intersects = raycaster.current.intersectObject(meshRef.current);
-    if (intersects.length > 0 && intersects[0].uv) {
-      return intersects[0].uv;
+    const hit = intersects.find(item => !!item.uv);
+    if (hit?.uv) {
+      return {
+        uv: hit.uv.clone(),
+        point: hit.point.clone(),
+        faceIndex: hit.faceIndex ?? null,
+      };
     }
     return null;
   };
@@ -1703,6 +1771,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const ctx = layer.ctx;
 
     const applyDabAt = (dx: number, dy: number, strokeKey = 'primary') => {
+      ctx.save();
+      if (uvIslandPathRef.current) ctx.clip(uvIslandPathRef.current);
       if (activeTool === 'brush') {
         brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false, strokeKey);
       } else if (activeTool === 'eraser') {
@@ -1730,6 +1800,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
         onColorSampled(hex);
       }
+      ctx.restore();
     };
 
     // Primary stroke dab. Retain the previous input point so the dirty
