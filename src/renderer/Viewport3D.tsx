@@ -28,7 +28,7 @@ import { HDRIManager, HDRIPreset } from './hdriManager';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
-import { buildUVIslandClipPath } from '../tools/uvIslandClip';
+import { buildUVIslandClipPath, isUVSeamTransition } from '../tools/uvIslandClip';
 import { createLayerCompositeSource } from '../tools/layerStackCompositor';
 
 function drawingRatio(w: number, h: number): number {
@@ -239,7 +239,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const isPaintingRef = useRef(false);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
-  const lastSurfaceHitRef = useRef<{ uv: THREE.Vector2; point: THREE.Vector3 } | null>(null);
+  const lastSurfaceHitRef = useRef<{ uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null } | null>(null);
   const uvIslandPathRef = useRef<Path2D | null>(null);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
@@ -1478,7 +1478,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // Touch Navigation & Tool Execution Mode
     const surfaceHit = raycastSurface(e);
     const uv = surfaceHit?.uv || null;
-    lastSurfaceHitRef.current = surfaceHit ? { uv: surfaceHit.uv.clone(), point: surfaceHit.point.clone() } : null;
+    lastSurfaceHitRef.current = surfaceHit ? { uv: surfaceHit.uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex } : null;
     const isNavigationTool = activeTool === 'hand' || activeTool === 'zoom';
     const isExplicitOrbit = e.altKey || e.button === 1 || e.button === 2;
 
@@ -1519,7 +1519,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           brush.hardness || 50,
           false,
           targetLayer.canvas.width,
-          targetLayer.canvas.height
+          targetLayer.canvas.height,
+          uvIslandPathRef.current
         );
         if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
         needsRenderRef.current = true;
@@ -1621,23 +1622,42 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             (uv.y - previousHit.uv.y) * targetLayer.canvas.height
           )
         : Number.POSITIVE_INFINITY;
+      const geometryForSeam = meshRef.current?.geometry || geometry || null;
+      const seamUVArray = activeUVChannel
+        ? geometryForSeam?.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
+        : undefined;
+      const topologicalSeam = !!previousHit && isUVSeamTransition(
+        geometryForSeam,
+        previousHit.faceIndex,
+        surfaceHit.faceIndex,
+        targetLayer.canvas.width,
+        targetLayer.canvas.height,
+        seamUVArray,
+      );
       let meshSpan = 1;
       if (meshRef.current) {
         const bounds = new THREE.Box3().setFromObject(meshRef.current);
         meshSpan = Math.max(1e-4, bounds.getSize(new THREE.Vector3()).length());
       }
-      // A large atlas jump over a short distance on the actual surface is a UV
-      // seam transition. Start a fresh dab path at the new hit's exact texel.
-      const seamDiscontinuity = !!previousHit
-        && uvDelta > Math.max(brush.size * 4, Math.max(targetLayer.canvas.width, targetLayer.canvas.height) * 0.06)
-        && surfaceHit.point.distanceTo(previousHit.point) < meshSpan * 0.22;
+      const worldDelta = previousHit ? surfaceHit.point.distanceTo(previousHit.point) : Number.POSITIVE_INFINITY;
+      // Fallback for meshes with unstable / unavailable face adjacency metadata:
+      // compare the observed atlas motion to the motion on the actual surface.
+      // Normal UV movement scales with world movement; a huge texel jump from a
+      // tiny surface step is an atlas discontinuity, not a paintable segment.
+      const expectedUVTravel = Number.isFinite(worldDelta)
+        ? (worldDelta / meshSpan) * Math.max(targetLayer.canvas.width, targetLayer.canvas.height) * 9
+        : 0;
+      const heuristicSeam = !!previousHit
+        && uvDelta > Math.max(brush.size * 3, expectedUVTravel + brush.size * 3)
+        && worldDelta < meshSpan * 0.16;
+      const seamDiscontinuity = topologicalSeam || heuristicSeam;
 
       if (!previousHit || seamDiscontinuity) {
         brushEngine.beginStroke(targetX, targetY, e.pressure || 1.0);
         lastCompositePaintPointRef.current = null;
         lastCompositeMirrorPointsRef.current = [];
       }
-      lastSurfaceHitRef.current = { uv: uv.clone(), point: surfaceHit.point.clone() };
+      lastSurfaceHitRef.current = { uv: uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex };
 
         if (activeTool === 'mask_brush') {
           const baseMask = selectionMask || {
@@ -1655,7 +1675,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             brush.hardness || 50,
             false,
             targetLayer.canvas.width,
-            targetLayer.canvas.height
+            targetLayer.canvas.height,
+            uvIslandPathRef.current
           );
           if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
           needsRenderRef.current = true;
@@ -1968,6 +1989,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       dynamicTextureRef.current.needsUpdate = true;
     }
     needsRenderRef.current = true;
+    // The App coalesces these notifications to one requestAnimationFrame.
+    // This keeps the 2D UV painter live while the 3D pointer is still down.
+    onTextureUpdated();
   };
 
   const drawStabilizerTether = (
