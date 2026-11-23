@@ -50,9 +50,13 @@ export function yawAroundWorldUp(orbit: FreeOrbit, angle: number): void {
   orbit.quat.normalize();
 }
 
-export function gizmoAngles(quat: THREE.Quaternion): { x: number; y: number } {
-  const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(quat).normalize();
-  const phi = Math.acos(THREE.MathUtils.clamp(dir.y, -1, 1));
-  const theta = Math.atan2(dir.x, dir.z);
-  return { x: phi - Math.PI / 2, y: -theta };
+/**
+ * The orientation object must show the inverse of the camera's world
+ * orientation. Keep all three Euler axes: extracting only the forward vector
+ * loses roll and makes the gizmo appear to rotate in the wrong direction.
+ */
+export function gizmoAngles(cameraQuat: THREE.Quaternion): { x: number; y: number; z: number } {
+  const objectQuat = cameraQuat.clone().invert().normalize();
+  const euler = new THREE.Euler().setFromQuaternion(objectQuat, 'YXZ');
+  return { x: euler.x, y: euler.y, z: euler.z };
 }

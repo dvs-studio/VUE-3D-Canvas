@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import type { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
+import type { Layer, LayerPBRSettings, BumpRampStop, BlendMode } from '../core/types';
 import { Sliders, X, Check, Sun, Flame, Shield, Layers, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 
 interface LayerSettingsModalProps {
@@ -14,7 +14,12 @@ interface LayerSettingsModalProps {
   onClose: () => void;
   layer: Layer | null;
   onSavePBR: (layerId: string, pbrSettings: LayerPBRSettings) => void;
-  onOpenNodeEditor?: () => void;
+  layers?: Layer[];
+  checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
+  onUpdateCheckerboard?: (patch: Partial<{ color1: string; color2: string; alpha1: number; alpha2: number }>) => void;
+  onUpdateLayerTarget?: (layerId: string, targetLayerId: string) => void;
+  onUpdateOpacity?: (layerId: string, opacity: number) => void;
+  onUpdateBlendMode?: (layerId: string, blendMode: BlendMode) => void;
   uvChannels?: { id: string; name: string }[];
   onSetUVChannel?: (layerId: string, channelId: string) => void;
 }
@@ -64,6 +69,12 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
   onClose,
   layer,
   onSavePBR,
+  layers = [],
+  checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
+  onUpdateCheckerboard,
+  onUpdateLayerTarget,
+  onUpdateOpacity,
+  onUpdateBlendMode,
   uvChannels = [],
   onSetUVChannel,
 }) => {
@@ -135,19 +146,84 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
         <div className="cs5-panel-header px-3 py-2 flex items-center justify-between shrink-0 bg-[#242424] border-b border-[#404040]">
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-[#3d7fb8]" />
-            <span className="text-xs font-bold text-[#eee] tracking-wider uppercase">Layer Properties · {layer.name}</span>
+            <span className="text-xs font-bold text-[#eee] tracking-wider uppercase">Layer Preferences · {layer.name}</span>
           </div>
           <button onClick={onClose} className="text-[#aaa] hover:text-white p-0.5 rounded cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="px-3 py-2 bg-[#262626] border-b border-[#3e3e3e] flex items-center gap-2 text-[11px]">
-          <span className="text-[#aaa] shrink-0">UV channel</span>
-          <select value={layer.uvChannel || 'uv_original'} onChange={e => onSetUVChannel?.(layer.id, e.target.value)} className="flex-1 bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1">
-            {(uvChannels.length ? uvChannels : [{ id: 'uv_original', name: 'Original Mesh UVs' }]).map(ch => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
-          </select>
-        </div>
+        {(layer.layerType === 'paint' || !layer.layerType || layer.layerType === 'matcap') && (
+          <div className="px-3 py-2 bg-[#262626] border-b border-[#3e3e3e] flex items-center gap-2 text-[11px]">
+            <span className="text-[#aaa] shrink-0">UV channel</span>
+            <select value={layer.uvChannel || 'uv_original'} onChange={e => onSetUVChannel?.(layer.id, e.target.value)} className="flex-1 bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1">
+              {(uvChannels.length ? uvChannels : [{ id: 'uv_original', name: 'Original Mesh UVs' }]).map(ch => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
+            </select>
+          </div>
+        )}
 
         <div className="p-4 flex-1 overflow-y-auto space-y-3 text-xs text-[#ccc]">
+          <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
+            <strong className="text-[#eee]">Layer compositing</strong>
+            <label className="block text-[#aaa]">Blend mode
+              <select aria-label="Layer blend mode" value={layer.blendMode} onChange={e => onUpdateBlendMode?.(layer.id, e.target.value as BlendMode)} className="mt-1 w-full bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1.5">
+                {(['normal','multiply','screen','overlay','darken','lighten','hard_light','soft_light','difference','add','subtract','color-dodge','color-burn'] as BlendMode[]).map(mode => <option key={mode} value={mode}>{mode.replace('_',' ').replace(/\\b\\w/g, letter => letter.toUpperCase())}</option>)}
+              </select>
+            </label>
+            <label className="block text-[#aaa]">{layer.layerType === 'background' ? 'Background transparency' : layer.layerType === 'mask' ? 'Mask influence' : layer.layerType === 'tear' ? 'Tear influence' : 'Layer opacity'} · {layer.opacity}%
+              <input aria-label="Layer opacity or influence" type="range" min="0" max="100" value={layer.opacity} onChange={e => onUpdateOpacity?.(layer.id, Number(e.target.value))} className="w-full accent-[#3d7fb8]"/>
+            </label>
+          </section>
+
+          {layer.layerType === 'background' && (
+            <>
+              <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-2">
+                <strong className="text-[#eee]">Editable Background</strong>
+                <p className="text-[10px] text-[#888]">This is the bottom-most paintable layer. Its transparency is controlled above; the checkerboard below remains a separate visual aid.</p>
+              </section>
+              <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
+                <div className="flex items-center justify-between">
+                  <strong className="text-[#eee]">UV transparency checkerboard</strong>
+                  <span className="text-[10px] text-[#888]">Preview only</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-[#aaa]">Colour 1
+                    <input aria-label="Checkerboard colour 1" type="color" value={checkerboard.color1} onChange={e => onUpdateCheckerboard?.({ color1: e.target.value })} className="mt-1 h-8 w-full bg-transparent border-0"/>
+                  </label>
+                  <label className="text-[#aaa]">Colour 2
+                    <input aria-label="Checkerboard colour 2" type="color" value={checkerboard.color2} onChange={e => onUpdateCheckerboard?.({ color2: e.target.value })} className="mt-1 h-8 w-full bg-transparent border-0"/>
+                  </label>
+                </div>
+                <label className="block text-[#aaa]">Colour 1 transparency · {checkerboard.alpha1}%
+                  <input aria-label="Checkerboard colour 1 transparency" type="range" min="0" max="100" value={checkerboard.alpha1} onChange={e => onUpdateCheckerboard?.({ alpha1: Number(e.target.value) })} className="w-full accent-[#3d7fb8]"/>
+                </label>
+                <label className="block text-[#aaa]">Colour 2 transparency · {checkerboard.alpha2}%
+                  <input aria-label="Checkerboard colour 2 transparency" type="range" min="0" max="100" value={checkerboard.alpha2} onChange={e => onUpdateCheckerboard?.({ alpha2: Number(e.target.value) })} className="w-full accent-[#3d7fb8]"/>
+                </label>
+                <p className="text-[10px] text-[#888]">These colours and transparency values are a viewing aid behind transparent UV pixels. They are never written into the Background layer, 3D material or exported texture.</p>
+              </section>
+            </>
+          )}
+
+          {(layer.layerType === 'mask' || layer.layerType === 'tear') && (
+            <>
+              <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
+                <strong className="text-[#eee]">{layer.layerType === 'mask' ? 'Mask layer settings' : 'Tear layer settings'}</strong>
+                <label className="block text-[#aaa]">Affects layer
+                  <select aria-label="Effect target layer" value={layer.targetLayerId || ''} onChange={e => onUpdateLayerTarget?.(layer.id, e.target.value)} className="mt-1 w-full bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1.5">
+                    <option value="">Choose target layer…</option>
+                    {layers.filter(target => !target.isGroup && target.id !== layer.id && target.layerType !== 'mask' && target.layerType !== 'tear' && target.layerType !== 'matcap').map(target => <option key={target.id} value={target.id}>{target.name}</option>)}
+                  </select>
+                </label>
+              </section>
+              {layer.layerType === 'mask' ? (
+                <p className="text-[10px] text-[#999] p-2">Paint in grayscale: black hides the target, white reveals it, and grey gives partial influence. The source mask remains editable and non-destructive.</p>
+              ) : (
+                <p className="text-[10px] text-[#999] p-2">Black or transparent regions cut through the target, white regions define torn edges, and green-dominant regions provide the stack-mask role. The Tear layer remains editable and non-destructive.</p>
+              )}
+            </>
+          )}
+
+          {(layer.layerType === 'paint' || !layer.layerType || layer.layerType === 'matcap') && (
+            <>
           {toggleRow('Colour / Albedo', 'Contributes this layer to the base-colour map.', !!pbr.colorOn, value => update({ colorOn: value }), 'text-[#89b4fa]', pbr.colorInfluence ?? 1, value => update({ colorInfluence: value }))}
           {toggleRow('Reflection', 'Contributes grayscale reflection strength; export converts it to roughness.', !!pbr.reflectionOn, value => update({ reflectionOn: value }), 'text-[#fab387]', pbr.reflectionInfluence ?? 0, value => update({ reflectionInfluence: value }))}
           {toggleRow('Emission', 'Adds this layer to the combined emissive map.', !!pbr.emissionOn, value => update({ emissionOn: value }), 'text-[#ff9900]', pbr.emissionInfluence ?? 0, value => update({ emissionInfluence: value }))}
@@ -182,11 +258,17 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
           </section>
 
           {pbr.normalLock && <div className="p-2 bg-[#1a2e22] border border-[#2d5a3d] rounded text-[#a6e3a1] flex items-center gap-2"><Layers className="w-4 h-4" /> This layer is the locked normal source. Other normal maps will not be mixed with it.</div>}
+            </>
+          )}
         </div>
 
         <div className="p-3 bg-[#222] border-t border-[#3e3e3e] flex items-center justify-end gap-2 shrink-0">
           <button type="button" onClick={onClose} className="px-3 py-1.5 bg-[#333] hover:bg-[#404040] text-[#ccc] rounded text-xs">Cancel</button>
-          <button type="button" onClick={() => { onSavePBR(layer.id, { ...pbr, bumpRamp: (pbr.bumpRamp || DEFAULT_RAMP).slice().sort((a, b) => a.position - b.position) }); onClose(); }} className="px-4 py-1.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded text-xs font-bold flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Apply Layer Properties</button>
+          {(layer.layerType === 'paint' || !layer.layerType || layer.layerType === 'matcap') ? (
+            <button type="button" onClick={() => { onSavePBR(layer.id, { ...pbr, bumpRamp: (pbr.bumpRamp || DEFAULT_RAMP).slice().sort((a, b) => a.position - b.position) }); onClose(); }} className="px-4 py-1.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded text-xs font-bold flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Apply Layer Preferences</button>
+          ) : (
+            <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#3d7fb8] hover:bg-[#4a8ec9] text-white rounded text-xs font-bold">Done</button>
+          )}
         </div>
       </div>
     </div>

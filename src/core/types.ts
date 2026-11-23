@@ -36,7 +36,13 @@ export type BlendMode =
   | 'lighten'
   | 'hard_light'
   | 'soft_light'
-  | 'difference';
+  | 'difference'
+  | 'add'
+  | 'subtract'
+  | 'color-dodge'
+  | 'color-burn';
+
+export type LayerType = 'paint' | 'background' | 'mask' | 'tear' | 'matcap';
 
 export type ViewportShadingMode =
   | 'material'
@@ -87,6 +93,10 @@ export interface LayerPBRSettings {
 export interface Layer {
   id: string;
   name: string;
+  /** Optional semantic layer role; omitted legacy layers behave as paint layers. */
+  layerType?: LayerType;
+  /** Non-destructive mask/tear target; normally the layer immediately below. */
+  targetLayerId?: string;
   visible: boolean;
   opacity: number; // 0 - 100
   blendMode: BlendMode;
@@ -329,6 +339,8 @@ export interface XBlendProject {
   layers: {
     id: string;
     name: string;
+    layerType?: LayerType;
+    targetLayerId?: string | null;
     visible: boolean;
     opacity: number;
     blendMode: BlendMode;

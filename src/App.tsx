@@ -82,6 +82,7 @@ import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
 import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
 import { GpuDiagnosticsModal } from './ui/GpuDiagnosticsModal';
 import { LagoonMenu } from './ui/LagoonMenu';
+import { createLayerCompositeSource, drawLayerWithBlend } from './tools/layerStackCompositor';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -133,15 +134,29 @@ export default function App() {
       };
     };
 
-    const baseLayer = createLayer('layer_base', 'Base Color Layer');
-    // Pre-fill base coat with neutral studio primer
+    const baseLayer = createLayer('layer_base', 'Background');
+    // An editable neutral base coat. The checkerboard sits behind this layer;
+    // lowering its ordinary layer opacity reveals the checker as transparency.
+    baseLayer.layerType = 'background';
     baseLayer.ctx.fillStyle = '#9c9c9c';
     baseLayer.ctx.fillRect(0, 0, 1024, 1024);
 
     const decalLayer = createLayer('layer_details', 'Paint & Details Layer');
+    decalLayer.layerType = 'paint';
 
     return [baseLayer, decalLayer];
   });
+
+  const [checkerboard, setCheckerboard] = useState<{ color1: string; color2: string; alpha1: number; alpha2: number }>(() => {
+    const fallback = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 };
+    try {
+      const saved = localStorage.getItem('vue3d_uv_checkerboard');
+      return saved ? { ...fallback, ...JSON.parse(saved) } : fallback;
+    } catch { return fallback; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('vue3d_uv_checkerboard', JSON.stringify(checkerboard)); } catch {}
+  }, [checkerboard]);
 
   const [activeLayerId, setActiveLayerId] = useState<string>('layer_details');
   const [activeTool, setActiveTool] = useState<ToolType>('brush');
@@ -479,23 +494,13 @@ export default function App() {
       const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(layer.channel);
       const colorInfluence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
       if (!colorOn || colorInfluence <= 0) return;
-      ctx.save();
-      ctx.globalAlpha = (layer.opacity / 100) * colorInfluence;
-      let gco: GlobalCompositeOperation = 'source-over';
-      switch (layer.blendMode) {
-        case 'multiply': gco = 'multiply'; break;
-        case 'screen': gco = 'screen'; break;
-        case 'overlay': gco = 'overlay'; break;
-        case 'darken': gco = 'darken'; break;
-        case 'lighten': gco = 'lighten'; break;
-        case 'hard_light': gco = 'hard-light'; break;
-        case 'soft_light': gco = 'soft-light'; break;
-        case 'difference': gco = 'difference'; break;
-        default: gco = 'source-over'; break;
-      }
-      ctx.globalCompositeOperation = gco;
-      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
-      ctx.restore();
+      if (layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') return;
+      drawLayerWithBlend(
+        ctx,
+        createLayerCompositeSource(layer, layers),
+        layer.blendMode,
+        (layer.opacity / 100) * colorInfluence,
+      );
     });
   }, [layers, compositeCanvas]);
 
@@ -715,6 +720,7 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: 'color',
+      layerType: 'paint',
     };
 
     const updated = [...layers, newLayer];
@@ -724,8 +730,50 @@ export default function App() {
     notifyTextureUpdated();
   };
 
+  const handleAddSpecialLayer = (layerType: 'mask' | 'tear') => {
+    const isPaintTarget = (layer: Layer) =>
+      !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear' && layer.layerType !== 'matcap';
+    const target = layers.find(layer => layer.id === activeLayerId && isPaintTarget(layer))
+      || [...layers].reverse().find(isPaintTarget);
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024;
+    cvs.height = 1024;
+    const ctx = cvs.getContext('2d')!;
+    if (layerType === 'mask' || layerType === 'tear') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1024, 1024);
+    }
+    const labels = { mask: 'Mask Layer', tear: 'Tear Layer' };
+    const newLayer: Layer = {
+      id: `layer_${layerType}_${Date.now()}`,
+      name: labels[layerType],
+      layerType,
+      targetLayerId: target?.id,
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas: cvs,
+      ctx,
+      channel: 'color',
+
+    };
+    const updated = [...layers, newLayer];
+    setLayers(updated);
+    setActiveLayerId(newLayer.id);
+    undoBuffer.pushState(`Add ${labels[layerType]}`, updated);
+    notifyTextureUpdated();
+  };
+  const handleAddMaskLayer = () => handleAddSpecialLayer('mask');
+  const handleAddTearLayer = () => handleAddSpecialLayer('tear');
+  const handleUpdateLayerTarget = (layerId: string, targetLayerId: string) => {
+    if (!layers.some(layer => layer.id === targetLayerId && !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear' && layer.layerType !== 'matcap')) return;
+    setLayers(previous => previous.map(layer => layer.id === layerId ? { ...layer, targetLayerId } : layer));
+    notifyTextureUpdated();
+  };
+
   const handleDeleteLayer = (id: string) => {
-    if (layers.length <= 1) return;
+    if (layers.length <= 1 || layers.some(layer => layer.id === id && layer.layerType === 'background')) return;
     const updated = layers.filter(l => l.id !== id);
     setLayers(updated);
     if (activeLayerId === id) {
@@ -757,6 +805,8 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: src.channel,
+      layerType: src.layerType === 'background' ? 'paint' : (src.layerType || 'paint'),
+      targetLayerId: src.targetLayerId,
     };
 
     const updated = [...layers, dup];
@@ -787,9 +837,10 @@ export default function App() {
 
   const handleMoveLayer = (id: string, dir: 'up' | 'down') => {
     const idx = layers.findIndex(l => l.id === id);
-    if (idx === -1) return;
+    const backgroundIndex = layers.findIndex(layer => layer.layerType === 'background');
+    if (idx === -1 || idx === backgroundIndex) return;
     const targetIdx = dir === 'up' ? idx + 1 : idx - 1;
-    if (targetIdx < 0 || targetIdx >= layers.length) return;
+    if (targetIdx < 0 || targetIdx >= layers.length || targetIdx <= backgroundIndex) return;
 
     const copy = [...layers];
     const temp = copy[idx];
@@ -975,7 +1026,7 @@ export default function App() {
   const handleGroupSelectedLayers = (layerIds: string[]) => {
     const ids = layerIds.filter(id => {
       const layer = layers.find(l => l.id === id);
-      return layer && !layer.isGroup;
+      return layer && !layer.isGroup && layer.layerType !== 'background';
     });
     if (ids.length < 1) return;
     const groupId = `group_${Date.now()}`;
@@ -1007,7 +1058,7 @@ export default function App() {
     if (!group) return;
     const ids = new Set(layerIds.filter(id => {
       const layer = layers.find(item => item.id === id);
-      return !!layer && !layer.isGroup && !layer.locked;
+      return !!layer && !layer.isGroup && layer.layerType !== 'background' && !layer.locked;
     }));
     if (!ids.size) return;
     const updated = layers.map(layer => ids.has(layer.id) ? { ...layer, groupId } : layer);
@@ -1016,37 +1067,30 @@ export default function App() {
   };
 
   const handleMergeSelectedLayers = (layerIds: string[]) => {
-    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && !layer.locked && layer.visible);
+    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && layer.layerType !== 'background' && !layer.locked && layer.visible);
     if (selected.length < 2) return;
-    const channel = selected[0].channel;
-    if (selected.some(layer => layer.channel !== channel)) {
-      window.alert('Merge selected visible layers with the same texture channel only.');
-      return;
-    }
-    const pbrSignature = JSON.stringify(selected[0].pbrSettings ?? null);
-    if (selected.some(layer => JSON.stringify(layer.pbrSettings ?? null) !== pbrSignature)) {
-      window.alert('Merge layers with matching PBR settings only. This preserves their material response.');
-      return;
-    }
+    // Merge is a flattening operation: heterogeneous blend modes are resolved
+    // in stack order, even when layer PBR/channel settings differ. Incompatible
+    // channels are baked into colour; only identical PBR settings are retained.
+    const sameChannel = selected.every(layer => layer.channel === selected[0].channel);
+    const channel = sameChannel ? selected[0].channel : 'color';
+    const samePBR = selected.every(layer => JSON.stringify(layer.pbrSettings ?? null) === JSON.stringify(selected[0].pbrSettings ?? null));
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const operation: Record<string, GlobalCompositeOperation> = {
-      normal: 'source-over', multiply: 'multiply', screen: 'screen', overlay: 'overlay',
-      darken: 'darken', lighten: 'lighten', hard_light: 'hard-light',
-      soft_light: 'soft-light', difference: 'difference',
-    };
     selected.forEach(layer => {
-      if (!layer.visible) return;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
-      ctx.globalCompositeOperation = operation[layer.blendMode] || 'source-over';
-      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
-      ctx.restore();
+      if (!layer.visible || layer.isGroup || layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') return;
+      drawLayerWithBlend(
+        ctx,
+        createLayerCompositeSource(layer, selected),
+        layer.blendMode,
+        Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100)),
+      );
     });
     const selectedIds = new Set(selected.map(layer => layer.id));
+    const selectedTargetIds = new Set(selected.filter(layer => layer.layerType !== 'mask' && layer.layerType !== 'tear' && layer.layerType !== 'matcap').map(layer => layer.id));
     const firstIndex = layers.findIndex(layer => selectedIds.has(layer.id));
     const sameGroup = selected.every(layer => layer.groupId === selected[0].groupId);
     const merged: Layer = {
@@ -1060,20 +1104,29 @@ export default function App() {
       ctx,
       channel,
       ...(sameGroup && selected[0].groupId ? { groupId: selected[0].groupId } : {}),
-      ...(selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
+      ...(samePBR && selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
+      layerType: 'paint',
     };
     const remaining = layers.filter(layer => !selectedIds.has(layer.id));
-    remaining.splice(Math.max(0, firstIndex), 0, merged);
-    setLayers(remaining);
+    // Keep any linked masks/tears editable and point them at the merged result.
+    // Masks explicitly included in the selection are flattened by the merge
+    // source above; unselected ones remain live and non-destructive.
+    const updated = remaining.map(layer =>
+      (layer.layerType === 'mask' || layer.layerType === 'tear') && selectedTargetIds.has(layer.targetLayerId || '')
+        ? { ...layer, targetLayerId: merged.id }
+        : layer
+    );
+    updated.splice(Math.max(0, firstIndex), 0, merged);
+    setLayers(updated);
     setActiveLayerId(merged.id);
-    undoBuffer.pushState('Merge Selected Layers', remaining);
+    undoBuffer.pushState('Merge Selected Layers', updated);
     notifyTextureUpdated();
   };
 
   const handleDeleteSelectedLayers = (layerIds: string[]) => {
     const ids = new Set(layerIds);
     if (ids.size === 0) return;
-    const updated = layers.filter(l => !ids.has(l.id));
+    const updated = layers.filter(l => !ids.has(l.id) && l.layerType !== 'background');
     if (updated.length === 0) return;
     setLayers(updated);
     if (ids.has(activeLayerId)) setActiveLayerId(updated.find(l => !l.isGroup)?.id || updated[0].id);
@@ -1156,14 +1209,17 @@ export default function App() {
     }
   };
 
+  const handleUpdateLayerOpacityFromPreferences = (layerId: string, opacity: number) => {
+    handleUpdateOpacity(layerId, opacity);
+  };
+
   // Layer PBR Settings Save
   const handleSaveLayerPBR = (layerId: string, pbr: LayerPBRSettings) => {
     setLayers(prev => prev.map(l => {
       if (l.id === layerId) {
         return {
           ...l,
-          pbrSettings: pbr,
-          opacity: Math.round(pbr.opacity * 100),
+          pbrSettings: { ...pbr, opacity: (l.opacity ?? 100) / 100 },
         };
       }
       return l;
@@ -1225,7 +1281,7 @@ export default function App() {
       setEmbed3DAssets(project.embed3DAssets);
 
       // Reconstruct layers
-      const loadedLayers: Layer[] = project.layers.map(l => {
+      const loadedLayers: Layer[] = project.layers.map((l, layerIndex) => {
         const cvs = document.createElement('canvas');
         cvs.width = 1024;
         cvs.height = 1024;
@@ -1240,6 +1296,8 @@ export default function App() {
         return {
           id: l.id,
           name: l.name,
+          layerType: l.layerType || (layerIndex === 0 ? 'background' : 'paint'),
+          targetLayerId: l.targetLayerId || undefined,
           visible: l.visible,
           opacity: l.opacity,
           blendMode: l.blendMode,
@@ -1918,12 +1976,15 @@ export default function App() {
                 patternStampConfig={patternStampConfig}
                 geometry={activeGeometry}
                 onGeometryUpdated={notifyUVGeometryUpdated}
+                uvGeometryVersion={uvGeometryVersion}
                 activeUVChannel={activeUVChannel}
                 onSelectUVChannel={(channelId) => { setActiveUVChannel(channelId); setLayers(prev => prev.map(layer => layer.id === activeLayerId ? { ...layer, uvChannel: channelId } : layer)); setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }}
                 selectedVertices={xrayVertexSelection}
                 onRebakeTexture={handleRebakeTexture}
                 onSeamlessUV={handleSeamlessUV}
               isSplitView={viewMode === 'split'}
+                 textureVersion={textureVersion}
+                 checkerboard={checkerboard}
                 />
             </div>
           )}
@@ -2038,6 +2099,8 @@ export default function App() {
                             activeLayerId={activeLayerId}
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
+                 onAddMaskLayer={handleAddMaskLayer}
+                 onAddTearLayer={handleAddTearLayer}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
@@ -2213,6 +2276,8 @@ export default function App() {
                       activeLayerId={activeLayerId}
                       onSelectLayer={handleSelectLayer}
                       onAddLayer={handleAddLayer}
+                       onAddMaskLayer={handleAddMaskLayer}
+                       onAddTearLayer={handleAddTearLayer}
                       onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             onDeleteSelectedLayers={handleDeleteSelectedLayers}
@@ -2238,6 +2303,10 @@ export default function App() {
                       onConvertToEmissive={handleConvertToEmissive}
                       onImportTexture={() => textureFileInputRef.current?.click()}
                       onBakeTextureFill={handleBakeTextureFill}
+                      onOpenLayerSettings={(id) => {
+                        setLayerSettingsTargetId(id);
+                        setIsLayerSettingsOpen(true);
+                      }}
                     />
                   </DockablePanelFrame>
                 </div>
@@ -2610,7 +2679,10 @@ export default function App() {
         isOpen={isLayerSettingsOpen}
         onClose={() => setIsLayerSettingsOpen(false)}
         layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
+        layers={layers}
         onSavePBR={handleSaveLayerPBR}
+        onUpdateOpacity={handleUpdateLayerOpacityFromPreferences}
+        onUpdateBlendMode={handleUpdateBlendMode}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
       />

@@ -36,6 +36,8 @@ interface LayersPanelProps {
   activeLayerId: string;
   onSelectLayer: (id: string) => void;
   onAddLayer: () => void;
+  onAddMaskLayer?: () => void;
+  onAddTearLayer?: () => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -78,6 +80,10 @@ const BLEND_MODES: BlendMode[] = [
   'hard_light',
   'soft_light',
   'difference',
+  'add',
+  'subtract',
+  'color-dodge',
+  'color-burn',
 ];
 
 export const LayersPanel: React.FC<LayersPanelProps> = ({
@@ -85,6 +91,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   activeLayerId,
   onSelectLayer,
   onAddLayer,
+  onAddMaskLayer,
+  onAddTearLayer,
   onAddGroup,
   onToggleGroupCollapse,
   onGroupSelectedLayers,
@@ -143,39 +151,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       className="flex flex-col h-full text-xs text-[#c8c8c8] select-none bg-[#383838]"
       onClick={() => setContextMenu(null)}
     >
-      {/* Top Toolbar: Blend Mode & Opacity */}
-      <div className="p-2 border-b border-[#494949] bg-[#333] space-y-1.5">
-        <div className="flex items-center justify-between gap-1">
-          <label className="text-[10px] text-[#999] uppercase font-mono">Blend</label>
-          <select
-            value={activeLayer?.blendMode || 'normal'}
-            onChange={(e) => activeLayer && onUpdateBlendMode(activeLayer.id, e.target.value as BlendMode)}
-            className="bg-[#242424] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[11px] outline-none flex-1 cs5-inset"
-          >
-            {BLEND_MODES.map(mode => (
-              <option key={mode} value={mode}>
-                {mode.charAt(0).toUpperCase() + mode.slice(1).replace('_', ' ')}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-[#999] uppercase font-mono">Opacity</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={activeLayer?.opacity ?? 100}
-            onChange={(e) => activeLayer && onUpdateOpacity(activeLayer.id, Number(e.target.value))}
-            className="flex-1 accent-[#3d7fb8] h-1.5"
-          />
-          <span className="text-[10px] font-mono text-[#eee] w-7 text-right">
-            {activeLayer?.opacity ?? 100}%
-          </span>
-        </div>
-      </div>
-
       {/* Layer List Stack */}
       <div className="flex-1 overflow-y-auto p-1 space-y-1">
         {layers.slice().reverse().map((layer) => {
@@ -296,7 +271,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[9px] text-[#888] font-mono">
-                    {layer.channel.toUpperCase()} · {layer.opacity}%
+                    {(layer.layerType || layer.channel).toUpperCase()} · {layer.opacity}%
                   </span>
                   {layer.isTextureFill && (
                     <span className="px-1 py-0.2 bg-amber-500/25 border border-amber-500 text-amber-300 text-[8px] font-bold rounded">
@@ -340,7 +315,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                     onOpenLayerSettings(layer.id);
                   }}
                   className="text-[#888] hover:text-[#3d7fb8] p-0.5 transition-colors"
-                  title="Layer Material & PBR Settings"
+                  title="Layer Preferences"
                 >
                   <Sliders className="w-3 h-3" />
                 </button>
@@ -365,10 +340,12 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           <button
             onClick={onAddLayer}
             className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
-            title="Create New Texture Layer"
+            title="Create New Paint Layer"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          {onAddMaskLayer && <button onClick={onAddMaskLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#a6e3a1] rounded border border-[#505050] text-[9px] font-bold" title="Add greyscale Mask Layer">M</button>}
+          {onAddTearLayer && <button onClick={onAddTearLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#f5a942] rounded border border-[#505050] text-[9px] font-bold" title="Add Tear Layer: black cuts, white torn edge, green stack mask">T</button>}
           {onImportTexture && (
             <button
               onClick={onImportTexture}
@@ -452,13 +429,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
           <button
             onClick={() => onDeleteLayer(activeLayerId)}
-            disabled={layers.length <= 1}
+            disabled={layers.length <= 1 || activeLayer?.layerType === 'background'}
             className={`p-1 rounded border transition-colors ${
-              layers.length > 1
+              layers.length > 1 && activeLayer?.layerType !== 'background'
                 ? 'bg-[#3a3a3a] hover:bg-[#8b2626] text-[#eee] border-[#505050]'
                 : 'bg-[#292929] text-[#666] border-[#3a3a3a] cursor-not-allowed'
             }`}
-            title="Delete Active Layer"
+            title={activeLayer?.layerType === 'background' ? "Background layer is permanent" : "Delete Active Layer"}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -654,7 +631,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#fab387] flex items-center gap-2"
             >
               <Sliders className="w-3.5 h-3.5 text-[#fab387]" />
-              <span>Layer Material &amp; PBR Settings...</span>
+              <span>Layer Preferences...</span>
             </button>
           )}
 

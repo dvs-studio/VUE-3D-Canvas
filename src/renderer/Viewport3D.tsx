@@ -23,11 +23,13 @@ import { BrushEngine } from '../tools/brushEngine';
 import { PatternStampEngine } from '../tools/patternStampTool';
 import { SelectionTool } from '../tools/selectionTool';
 import { SymmetryConfig, SymmetryEngine, SymmetryAxis } from '../tools/symmetryEngine';
-import { MaskEngine } from '../tools/maskEngine';
+import { MaskEngine, grayscaleHex } from '../tools/maskEngine';
 import { HDRIManager, HDRIPreset } from './hdriManager';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
+import { buildUVIslandClipPath, isUVSeamTransition } from '../tools/uvIslandClip';
+import { createLayerCompositeSource, drawLayerWithBlend } from '../tools/layerStackCompositor';
 
 function drawingRatio(w: number, h: number): number {
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -214,7 +216,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     lastMouseY: 0,
   });
 
-  const [boxRotation, setBoxRotation] = useState({ x: 0, y: 0 });
+  const [boxRotation, setBoxRotation] = useState<{ x: number; y: number; z: number }>({ x: 0, y: 0, z: 0 });
   const [isDroneNavActive, setIsDroneNavActive] = useState<boolean>(false);
   const [invertNav, setInvertNav] = useState<boolean>(() => {
     try {
@@ -237,8 +239,30 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const isPaintingRef = useRef(false);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const lastSurfaceHitRef = useRef<{ uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null; screenX: number; screenY: number } | null>(null);
+  const uvIslandPathRef = useRef<Path2D | null>(null);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
+
+  // Exact (non-dilated) UV coverage for clipping every 3D dab. This is a
+  // visual/paint-space mask only; it is never baked into or exported with a layer.
+  useEffect(() => {
+    const sourceGeometry = geometry || meshRef.current?.geometry;
+    const layer = layers.find(item => item.id === activeLayerId) || layers[0];
+    if (!sourceGeometry || !layer) {
+      uvIslandPathRef.current = null;
+      return;
+    }
+    const uvArray = activeUVChannel
+      ? sourceGeometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
+      : undefined;
+    uvIslandPathRef.current = buildUVIslandClipPath(
+      sourceGeometry,
+      layer.canvas.width,
+      layer.canvas.height,
+      uvArray,
+    );
+  }, [geometry, activeLayerId, layers, activeUVChannel, uvGeometryVersion]);
 
   // HDRI Reflections & Viewport Lighting Settings
   const [internalHdri, setInternalHdri] = useState<HDRISettings>({
@@ -344,7 +368,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     let hasEmissive = false;
     for (const layer of layers) {
-      if (!layer.visible || layer.isGroup) continue;
+      if (!layer.visible || layer.isGroup || layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') continue;
       if (layer.groupId) {
         const parentGroup = layers.find(candidate => candidate.id === layer.groupId);
         if (parentGroup && !parentGroup.visible) continue;
@@ -363,16 +387,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const normalLock = saved.normalLock ?? channel === 'normal';
 
       if (colorOn && colorInfluence > 0) {
-        ctx.save();
-        ctx.globalAlpha = opacity * colorInfluence;
-        ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
-          : layer.blendMode === 'screen' ? 'screen'
-          : layer.blendMode === 'overlay' ? 'overlay'
-          : layer.blendMode === 'darken' ? 'darken'
-          : layer.blendMode === 'lighten' ? 'lighten'
-          : 'source-over';
-        ctx.drawImage(layer.canvas, 0, 0, width, height);
-        ctx.restore();
+        drawLayerWithBlend(
+          ctx,
+          createLayerCompositeSource(layer, layers),
+          layer.blendMode,
+          opacity * colorInfluence,
+          { sx: 0, sy: 0, sw: layer.canvas.width, sh: layer.canvas.height, dx: 0, dy: 0, dw: width, dh: height },
+        );
       }
 
       const emissionStrength = Math.max(0, Math.min(10, saved.emissionStrength ?? 1));
@@ -383,7 +404,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         emissionSource.height = layer.canvas.height;
         const emissionSourceContext = emissionSource.getContext('2d');
         if (emissionSourceContext) {
-          emissionSourceContext.drawImage(layer.canvas, 0, 0);
+          emissionSourceContext.drawImage(createLayerCompositeSource(layer, layers), 0, 0);
           try {
             const emissionPixels = emissionSourceContext.getImageData(0, 0, emissionSource.width, emissionSource.height);
             const emissionData = emissionPixels.data;
@@ -1438,6 +1459,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       isPaintingRef.current = false;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
+      lastSurfaceHitRef.current = null;
       brushEngine.endStroke();
       const pts = Array.from(activePointers.current.values());
       pinchStartDist.current = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
@@ -1447,7 +1469,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     // Touch Navigation & Tool Execution Mode
-    const uv = raycastUV(e);
+    const surfaceHit = raycastSurfaceAt(e.clientX, e.clientY);
+    const uv = surfaceHit?.uv || null;
+    lastSurfaceHitRef.current = surfaceHit ? { uv: surfaceHit.uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex, screenX: e.clientX, screenY: e.clientY } : null;
     const isNavigationTool = activeTool === 'hand' || activeTool === 'zoom';
     const isExplicitOrbit = e.altKey || e.button === 1 || e.button === 2;
 
@@ -1488,7 +1512,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           brush.hardness || 50,
           false,
           targetLayer.canvas.width,
-          targetLayer.canvas.height
+          targetLayer.canvas.height,
+          uvIslandPathRef.current
         );
         if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
         needsRenderRef.current = true;
@@ -1513,6 +1538,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (isXRayBrushActive && (e.buttons === 1 || e.buttons === 2)) {
       performXRayVertexSelection(e);
       return;
+    }
+
+    // On-canvas brush/mask cursor. Navigation tools deliberately hide it.
+    if (!isPaintingRef.current && !orbitState.current.isOrbiting && !orbitState.current.isPanning
+      && activePointers.current.size < 2 && activeTool !== 'hand' && activeTool !== 'zoom') {
+      const cursorLayer = layers.find(layer => layer.id === activeLayerId) || layers[0];
+      if (cursorLayer) drawStabilizerTether(e, { x: 0, y: 0 }, cursorLayer);
     }
 
     // Multi-touch gestures (Pinch-to-zoom & two-finger pan)
@@ -1568,10 +1600,101 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const targetLayer = layers.find(l => l.id === activeLayerId);
       if (!targetLayer) return;
 
-      const uv = raycastUV(e);
-      if (uv) {
-        const targetX = uv.x * targetLayer.canvas.width;
-        const targetY = (1 - uv.y) * targetLayer.canvas.height;
+      const surfaceHit = raycastSurfaceAt(e.clientX, e.clientY);
+      if (!surfaceHit) {
+        // Leaving the visible mesh breaks the surface path. Do not let the
+        // next valid hit interpolate from the last UV point across the atlas.
+        lastSurfaceHitRef.current = null;
+        lastCompositePaintPointRef.current = null;
+        lastCompositeMirrorPointsRef.current = [];
+        brushEngine.endStroke();
+        clearStabilizerTether();
+        return;
+      }
+
+      const uv = surfaceHit.uv;
+      const targetX = uv.x * targetLayer.canvas.width;
+      const targetY = (1 - uv.y) * targetLayer.canvas.height;
+      const previousHit = lastSurfaceHitRef.current;
+      const uvDelta = previousHit
+        ? Math.hypot(
+            (uv.x - previousHit.uv.x) * targetLayer.canvas.width,
+            (uv.y - previousHit.uv.y) * targetLayer.canvas.height
+          )
+        : Number.POSITIVE_INFINITY;
+      const geometryForSeam = meshRef.current?.geometry || geometry || null;
+      const seamUVArray = activeUVChannel
+        ? geometryForSeam?.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
+        : undefined;
+
+      // Trace the pointer segment in screen space instead of trusting only its
+      // endpoints. Fast drags can skip several small UV triangles in one event;
+      // sampling every ~4 screen pixels catches the shared edge where the UV
+      // chart changes and also detects a brief leave/re-enter of the mesh.
+      let topologicalSeam = !!previousHit && isUVSeamTransition(
+        geometryForSeam,
+        previousHit.faceIndex,
+        surfaceHit.faceIndex,
+        targetLayer.canvas.width,
+        targetLayer.canvas.height,
+        seamUVArray,
+      );
+      let sampledSurfaceGap = false;
+      if (previousHit) {
+        const screenDX = e.clientX - previousHit.screenX;
+        const screenDY = e.clientY - previousHit.screenY;
+        const screenDistance = Math.hypot(screenDX, screenDY);
+        const sampleCount = Math.min(96, Math.max(1, Math.ceil(screenDistance / 4)));
+        let previousSample: typeof surfaceHit | null = previousHit;
+        for (let sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++) {
+          const t = sampleIndex / sampleCount;
+          const sampleHit = sampleIndex === sampleCount
+            ? surfaceHit
+            : raycastSurfaceAt(
+                previousHit.screenX + screenDX * t,
+                previousHit.screenY + screenDY * t,
+              );
+          if (!sampleHit) {
+            sampledSurfaceGap = true;
+            previousSample = null;
+            continue;
+          }
+          if (previousSample && isUVSeamTransition(
+            geometryForSeam,
+            previousSample.faceIndex,
+            sampleHit.faceIndex,
+            targetLayer.canvas.width,
+            targetLayer.canvas.height,
+            seamUVArray,
+          )) {
+            topologicalSeam = true;
+          }
+          previousSample = sampleHit;
+        }
+      }
+
+      let meshSpan = 1;
+      if (meshRef.current) {
+        const bounds = new THREE.Box3().setFromObject(meshRef.current);
+        meshSpan = Math.max(1e-4, bounds.getSize(new THREE.Vector3()).length());
+      }
+      const worldDelta = previousHit ? surfaceHit.point.distanceTo(previousHit.point) : Number.POSITIVE_INFINITY;
+      // Fallback for meshes with unstable / unavailable face adjacency metadata:
+      // a large atlas jump over a short world-space movement is a chart cut.
+      const expectedUVTravel = Number.isFinite(worldDelta)
+        ? (worldDelta / meshSpan) * Math.max(targetLayer.canvas.width, targetLayer.canvas.height) * 9
+        : 0;
+      const heuristicSeam = !!previousHit
+        && uvDelta > Math.max(brush.size * 3, expectedUVTravel + brush.size * 3)
+        && worldDelta < meshSpan * 0.16;
+      const seamDiscontinuity = topologicalSeam || heuristicSeam || sampledSurfaceGap;
+
+      if (!previousHit || seamDiscontinuity) {
+        brushEngine.beginStroke(targetX, targetY, e.pressure || 1.0);
+        lastCompositePaintPointRef.current = null;
+        lastCompositeMirrorPointsRef.current = [];
+      }
+      lastSurfaceHitRef.current = { uv: uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex, screenX: e.clientX, screenY: e.clientY };
 
         if (activeTool === 'mask_brush') {
           const baseMask = selectionMask || {
@@ -1589,17 +1712,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             brush.hardness || 50,
             false,
             targetLayer.canvas.width,
-            targetLayer.canvas.height
+            targetLayer.canvas.height,
+            uvIslandPathRef.current
           );
           if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
           needsRenderRef.current = true;
           return;
         }
 
-        const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
+        const stabilized = seamDiscontinuity || !previousHit
+          ? { x: targetX, y: targetY }
+          : brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
         executePaintTool(targetLayer, stabilized.x, stabilized.y, e.pressure || 1.0);
         drawStabilizerTether(e, stabilized, targetLayer);
-      }
     }
   };
 
@@ -1620,6 +1745,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       isPaintingRef.current = false;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
+      lastSurfaceHitRef.current = null;
       brushEngine.endStroke();
       clearStabilizerTether();
       // onTextureUpdated schedules the canonical composite; the textureVersion
@@ -1644,13 +1770,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     updateCameraPosition();
   };
 
-  const raycastUV = (e: React.PointerEvent<HTMLCanvasElement>): THREE.Vector2 | null => {
+  const raycastSurfaceAt = (clientX: number, clientY: number): { uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null } | null => {
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current || !cameraPerspRef.current) return null;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
     const w = rect.width;
     const h = rect.height;
 
@@ -1688,8 +1814,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     raycaster.current.setFromCamera(new THREE.Vector2(ndcX, ndcY), cam);
 
     const intersects = raycaster.current.intersectObject(meshRef.current);
-    if (intersects.length > 0 && intersects[0].uv) {
-      return intersects[0].uv;
+    const hit = intersects.find(item => !!item.uv);
+    if (hit?.uv) {
+      return {
+        uv: hit.uv.clone(),
+        point: hit.point.clone(),
+        faceIndex: hit.faceIndex ?? null,
+      };
     }
     return null;
   };
@@ -1701,18 +1832,23 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     const ctx = layer.ctx;
+    const paintBrush = layer.layerType === 'mask'
+      ? { ...brush, color: grayscaleHex(brush.color) }
+      : brush;
 
     const applyDabAt = (dx: number, dy: number, strokeKey = 'primary') => {
+      ctx.save();
+      if (uvIslandPathRef.current) ctx.clip(uvIslandPathRef.current);
       if (activeTool === 'brush') {
-        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false, strokeKey);
+        brushEngine.paintDabs(ctx, dx, dy, paintBrush, pressure, false, strokeKey);
       } else if (activeTool === 'eraser') {
-        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, true, strokeKey);
+        brushEngine.paintDabs(ctx, dx, dy, paintBrush, pressure, true, strokeKey);
       } else if (activeTool === 'pen') {
         brushEngine.paintDabs(ctx, dx, dy, { ...brush, hardness: 100, size: Math.max(2, brush.size * 0.4) }, pressure, false, strokeKey);
       } else if (activeTool === 'blur') {
-        brushEngine.applyBlurAt(ctx, dx, dy, brush);
+        brushEngine.applyBlurAt(ctx, dx, dy, paintBrush);
       } else if (activeTool === 'clone') {
-        brushEngine.applyCloneStampAt(ctx, dx, dy, brush);
+        brushEngine.applyCloneStampAt(ctx, dx, dy, paintBrush);
       } else if (activeTool === 'smudge') {
         brushEngine.applySmudgeAt(ctx, dx, dy, dx, dy, brush, strokeKey);
       } else if (activeTool === 'bucket') {
@@ -1730,6 +1866,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
         onColorSampled(hex);
       }
+      ctx.restore();
     };
 
     // Primary stroke dab. Retain the previous input point so the dirty
@@ -1815,7 +1952,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           cctx.fillRect(left, top, dirtyWidth, dirtyHeight);
 
           for (const candidate of layers) {
-            if (!candidate.visible || candidate.isGroup) continue;
+            if (!candidate.visible || candidate.isGroup || candidate.layerType === 'mask' || candidate.layerType === 'tear' || candidate.layerType === 'matcap') continue;
             if (candidate.groupId) {
               const parent = layers.find(item => item.id === candidate.groupId);
               if (parent && !parent.visible) continue;
@@ -1825,25 +1962,17 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             const influence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
             if (!colorOn || influence <= 0) continue;
 
-            cctx.save();
-            cctx.globalAlpha = (candidate.opacity / 100) * influence;
-            switch (candidate.blendMode) {
-              case 'multiply': cctx.globalCompositeOperation = 'multiply'; break;
-              case 'screen': cctx.globalCompositeOperation = 'screen'; break;
-              case 'overlay': cctx.globalCompositeOperation = 'overlay'; break;
-              case 'darken': cctx.globalCompositeOperation = 'darken'; break;
-              case 'lighten': cctx.globalCompositeOperation = 'lighten'; break;
-              case 'hard_light': cctx.globalCompositeOperation = 'hard-light'; break;
-              case 'soft_light': cctx.globalCompositeOperation = 'soft-light'; break;
-              case 'difference': cctx.globalCompositeOperation = 'difference'; break;
-              default: cctx.globalCompositeOperation = 'source-over'; break;
-            }
             const sourceLeft = (left / width) * candidate.canvas.width;
             const sourceTop = (top / height) * candidate.canvas.height;
             const sourceWidth = (dirtyWidth / width) * candidate.canvas.width;
             const sourceHeight = (dirtyHeight / height) * candidate.canvas.height;
-            cctx.drawImage(candidate.canvas, sourceLeft, sourceTop, sourceWidth, sourceHeight, left, top, dirtyWidth, dirtyHeight);
-            cctx.restore();
+            drawLayerWithBlend(
+              cctx,
+              createLayerCompositeSource(candidate, layers),
+              candidate.blendMode,
+              (candidate.opacity / 100) * influence,
+              { sx: sourceLeft, sy: sourceTop, sw: sourceWidth, sh: sourceHeight, dx: left, dy: top, dw: dirtyWidth, dh: dirtyHeight },
+            );
           }
           cctx.restore();
         }
@@ -1857,7 +1986,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         cctx.fillStyle = '#2b2b2b';
         cctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         for (const candidate of layers) {
-          if (!candidate.visible || candidate.isGroup) continue;
+          if (!candidate.visible || candidate.isGroup || candidate.layerType === 'mask' || candidate.layerType === 'tear' || candidate.layerType === 'matcap') continue;
           if (candidate.groupId) {
             const parent = layers.find(item => item.id === candidate.groupId);
             if (parent && !parent.visible) continue;
@@ -1866,19 +1995,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(candidate.channel);
           const influence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
           if (!colorOn || influence <= 0) continue;
-          cctx.save();
-          cctx.globalAlpha = (candidate.opacity / 100) * influence;
-          cctx.globalCompositeOperation = candidate.blendMode === 'multiply' ? 'multiply'
-            : candidate.blendMode === 'screen' ? 'screen'
-            : candidate.blendMode === 'overlay' ? 'overlay'
-            : candidate.blendMode === 'darken' ? 'darken'
-            : candidate.blendMode === 'lighten' ? 'lighten'
-            : candidate.blendMode === 'hard_light' ? 'hard-light'
-            : candidate.blendMode === 'soft_light' ? 'soft-light'
-            : candidate.blendMode === 'difference' ? 'difference'
-            : 'source-over';
-          cctx.drawImage(candidate.canvas, 0, 0);
-          cctx.restore();
+          drawLayerWithBlend(
+            cctx,
+            createLayerCompositeSource(candidate, layers),
+            candidate.blendMode,
+            (candidate.opacity / 100) * influence,
+          );
         }
         cctx.restore();
       }
@@ -1889,6 +2011,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       dynamicTextureRef.current.needsUpdate = true;
     }
     needsRenderRef.current = true;
+    // The App coalesces these notifications to one requestAnimationFrame.
+    // This keeps the 2D UV painter live while the 3D pointer is still down.
+    onTextureUpdated();
   };
 
   const drawStabilizerTether = (
@@ -1902,16 +2027,32 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, tether.width, tether.height);
-    if (brush.stabilizer <= 10) return;
 
     const rect = tether.getBoundingClientRect();
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
+    const scale = rect.width / Math.max(1, layer.canvas.width);
+    const radius = Math.max(4, Math.min(44, brush.size * scale * 0.5));
+    const cursorColor = activeTool === 'mask_brush' ? '#22d3ee' : '#f8fafc';
 
+    // Brush footprint and center marker remain visible even with stabilizer off.
+    ctx.save();
+    ctx.strokeStyle = cursorColor;
+    ctx.fillStyle = activeTool === 'mask_brush' ? 'rgba(34,211,238,0.06)' : 'rgba(248,250,252,0.035)';
+    ctx.lineWidth = 1.25;
+    ctx.setLineDash(activeTool === 'mask_brush' ? [4, 3] : [3, 3]);
     ctx.beginPath();
-    ctx.arc(cursorX, cursorY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#3d7fb8';
+    ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(cursorX, cursorY, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = cursorColor;
+    ctx.fill();
+    ctx.restore();
+
+    if (brush.stabilizer <= 10) return;
 
     ctx.strokeStyle = 'rgba(61, 127, 184, 0.7)';
     ctx.lineWidth = 1.5;
@@ -1942,6 +2083,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onPointerLeave={() => { if (!isPaintingRef.current) clearStabilizerTether(); }}
         onWheel={handleWheel}
         onContextMenu={(e) => e.preventDefault()}
         className="w-full h-full cursor-crosshair block touch-none"

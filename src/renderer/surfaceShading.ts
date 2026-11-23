@@ -77,7 +77,7 @@ export class SurfaceShadingEngine {
     geom: THREE.BufferGeometry,
     material: THREE.Material | THREE.Material[] | null
   ): void {
-    const defaultNorm = geom.getAttribute('origFileNormal') || geom.getAttribute('defaultNormal');
+    const defaultNorm = (geom.getAttribute('origFileNormal') || geom.getAttribute('defaultNormal')) as THREE.BufferAttribute | undefined;
     if (defaultNorm) {
       geom.setAttribute('normal', defaultNorm);
       defaultNorm.needsUpdate = true;

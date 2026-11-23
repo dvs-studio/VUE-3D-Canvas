@@ -19,7 +19,7 @@ import { BrushEngine } from '../tools/brushEngine';
 import { PatternStampEngine } from '../tools/patternStampTool';
 import { PenVectorTool } from '../tools/penVectorTool';
 import { SelectionTool } from '../tools/selectionTool';
-import { MaskEngine } from '../tools/maskEngine';
+import { MaskEngine, grayscaleHex } from '../tools/maskEngine';
 import { FillSuite } from '../tools/fillSuite';
 import { UndoRingBuffer } from '../core/history';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
@@ -30,6 +30,8 @@ import { HorizontalScrollRail } from '../ui/HorizontalScrollRail';
 import { UVSculptEngine } from '../tools/uvSculptEngine';
 import { UVSculptMode } from '../core/types';
 import { UVChannelManager } from '../tools/uvChannelManager';
+import { buildUVIslandClipPath } from '../tools/uvIslandClip';
+import { createLayerCompositeSource, drawLayerWithBlend } from '../tools/layerStackCompositor';
 import { 
   Layers, 
   ZoomIn, 
@@ -75,6 +77,10 @@ interface Viewport2DProps {
   onRebakeTexture?: (from: string, to: string, res: number) => void;
   onSeamlessUV?: (radius: number) => void;
   isSplitView?: boolean;
+  /** Incremented by the shared App composite whenever either viewport paints. */
+  textureVersion?: number;
+  uvGeometryVersion?: number;
+  checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
 }
 
 export const Viewport2D: React.FC<Viewport2DProps> = ({
@@ -102,6 +108,9 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   onRebakeTexture,
   onSeamlessUV,
   isSplitView = false,
+  textureVersion = 0,
+  uvGeometryVersion = 0,
+  checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -126,12 +135,20 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const [sculptStrength, setSculptStrength] = useState<number>(0.35);
   const uvSelectionRef = useRef<Set<number>>(new Set());
   const uvDragLast = useRef<{ u: number; v: number } | null>(null);
+  const hoverPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const effectiveGeom = React.useMemo(() => {
     if (geometry) return geometry;
     if (customOBJText) return parseOBJ(customOBJText);
     return BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]().geometry : BUILTIN_MODELS.suzanne().geometry;
   }, [geometry, modelKey, customOBJText]);
+
+  // Every direct UV paint operation is clipped to the actual mesh UV triangles.
+  // This keeps brush edges, blur, smudge and stamps out of the atlas gutters.
+  const uvIslandPath = React.useMemo(() => {
+    const activeUV = effectiveGeom.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined;
+    return buildUVIslandClipPath(effectiveGeom, 1024, 1024, activeUV);
+  }, [effectiveGeom, activeUVChannel, uvGeometryVersion]);
 
   // Toggle N-Panel with 'n' key
   useEffect(() => {
@@ -178,28 +195,33 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (!ctx) return;
 
     // CS5 / ArmorPaint Dark Neutral Checkerboard Background
-    ctx.fillStyle = '#222222';
-    ctx.fillRect(0, 0, 1024, 1024);
     for (let y = 0; y < 1024; y += 32) {
       for (let x = 0; x < 1024; x += 32) {
-        if ((x / 32 + y / 32) % 2 === 0) {
-          ctx.fillStyle = '#2b2b2b';
-          ctx.fillRect(x, y, 32, 32);
-        }
+        const second = ((x / 32 + y / 32) % 2) === 0;
+        ctx.globalAlpha = Math.max(0, Math.min(100, second ? checkerboard.alpha2 : checkerboard.alpha1)) / 100;
+        ctx.fillStyle = second ? checkerboard.color2 : checkerboard.color1;
+        ctx.fillRect(x, y, 32, 32);
       }
     }
+    ctx.globalAlpha = 1;
 
     // Draw visible layers in order
     layers.forEach(layer => {
-      if (!layer.visible) return;
-      ctx.save();
-      ctx.globalAlpha = layer.opacity / 100;
-      ctx.drawImage(layer.canvas, 0, 0);
-      ctx.restore();
+      if (!layer.visible || layer.isGroup || layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') return;
+      if (layer.groupId) {
+        const parent = layers.find(candidate => candidate.id === layer.groupId);
+        if (parent && !parent.visible) return;
+      }
+      drawLayerWithBlend(
+        ctx,
+        createLayerCompositeSource(layer, layers),
+        layer.blendMode,
+        layer.opacity / 100,
+      );
     });
 
     drawOverlay();
-  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText]);
+  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText, textureVersion, checkerboard]);
 
   // Draw overlay (UV wireframe mesh unwrap, selection marching ants, pen vector paths)
   const drawOverlay = useCallback(() => {
@@ -215,7 +237,10 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (showUVOverlay) {
       try {
         const geom = effectiveGeom;
-        const uvAttr = geom.attributes.uv;
+        const activeUVArray = geom.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined;
+        const uvAttr = activeUVArray
+          ? new THREE.BufferAttribute(activeUVArray, 2)
+          : geom.attributes.uv;
         if (uvAttr && uvAttr.count > 0) {
           ctx.save();
           ctx.strokeStyle = uvWireColor;
@@ -426,7 +451,47 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       });
       ctx.restore();
     }
-  }, [showUVOverlay, uvWireColor, uvOverlayOpacity, modelKey, customOBJText, selectionMask]);
+
+    // Brush/mask cursor and selection status are non-destructive visual aids.
+    const hover = hoverPointRef.current;
+    if (hover && !isPanning) {
+      const outsideSelection = !!(selectionMask?.active && !SelectionTool.isPointInSelection(hover.x, hover.y, selectionMask));
+      const radius = Math.max(2.5, brush.size / 2);
+      ctx.save();
+      ctx.strokeStyle = outsideSelection ? '#fb7185' : activeTool === 'mask_brush' ? '#22d3ee' : '#f8fafc';
+      ctx.fillStyle = outsideSelection ? 'rgba(251,113,133,0.08)' : activeTool === 'mask_brush' ? 'rgba(34,211,238,0.07)' : 'rgba(248,250,252,0.04)';
+      ctx.lineWidth = 1.35;
+      ctx.setLineDash(activeTool === 'mask_brush' ? [4, 3] : [3, 3]);
+      ctx.beginPath();
+      ctx.arc(hover.x, hover.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(hover.x - 5, hover.y);
+      ctx.lineTo(hover.x + 5, hover.y);
+      ctx.moveTo(hover.x, hover.y - 5);
+      ctx.lineTo(hover.x, hover.y + 5);
+      ctx.stroke();
+      if (activeTool === 'mask_brush') {
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillText('MASK', Math.min(hover.x + radius + 5, 965), Math.max(12, hover.y - radius - 4));
+      }
+      ctx.restore();
+    }
+
+    if (selectionMask?.active) {
+      ctx.save();
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.strokeStyle = 'rgba(15,23,42,0.8)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(selectionMask.inverted ? 'PROTECTED AREA' : 'EDITABLE AREA', 10, 18);
+      ctx.fillText(selectionMask.inverted ? 'PROTECTED AREA' : 'EDITABLE AREA', 10, 18);
+      ctx.restore();
+    }
+  }, [showUVOverlay, uvWireColor, uvOverlayOpacity, modelKey, customOBJText, selectionMask, isPanning, activeTool, brush, activeUVChannel]);
 
   // Convert screen pointer coordinates to 1024x1024 UV canvas coordinates
   const getCanvasCoords = (clientX: number, clientY: number) => {
@@ -633,7 +698,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         brush.hardness || 50,
         false,
         1024,
-        1024
+        1024,
+        uvIslandPath
       );
       onUpdateSelectionMask(updated);
       drawOverlay();
@@ -690,9 +756,17 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       return;
     }
 
+    // Update the on-canvas brush/mask cursor without starting a stroke.
+    if (!isPaintingRef.current && !isPanning) {
+      hoverPointRef.current = getCanvasCoords(e.clientX, e.clientY);
+      drawOverlay();
+      return;
+    }
+
     // Direct 2D Painting / Tool Interaction
     if (!isPaintingRef.current) return;
-    const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+    hoverPointRef.current = getCanvasCoords(e.clientX, e.clientY);
+    const { x, y } = hoverPointRef.current;
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
 
     // 2D UV Sculpt Brush Dragging
@@ -753,7 +827,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           brush.hardness || 50,
           false,
           1024,
-          1024
+          1024,
+          uvIslandPath
         );
       }
       lastPointRef.current = { x, y };
@@ -861,17 +936,23 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     }
 
     const ctx = activeLayer.ctx;
+    const paintBrush = activeLayer.layerType === 'mask'
+      ? { ...brush, color: grayscaleHex(brush.color) }
+      : brush;
+
+    ctx.save();
+    if (uvIslandPath) ctx.clip(uvIslandPath);
 
     if (activeTool === 'brush') {
-      brushEngine.paintDabs(ctx, x, y, brush, pressure, false);
+      brushEngine.paintDabs(ctx, x, y, paintBrush, pressure, false);
     } else if (activeTool === 'eraser') {
-      brushEngine.paintDabs(ctx, x, y, brush, pressure, true);
+      brushEngine.paintDabs(ctx, x, y, paintBrush, pressure, true);
     } else if (activeTool === 'blur') {
-      brushEngine.applyBlurAt(ctx, x, y, brush);
+      brushEngine.applyBlurAt(ctx, x, y, paintBrush);
     } else if (activeTool === 'clone') {
-      brushEngine.applyCloneStampAt(ctx, x, y, brush);
+      brushEngine.applyCloneStampAt(ctx, x, y, paintBrush);
     } else if (activeTool === 'smudge') {
-      brushEngine.applySmudgeAt(ctx, x, y, x, y, brush);
+      brushEngine.applySmudgeAt(ctx, x, y, x, y, paintBrush);
     } else if (activeTool === 'gradient_linear') {
       FillSuite.applyLinearGradient(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, primaryColor, secondaryColor, brush.opacity, selectionMask);
     } else if (activeTool === 'gradient_radial') {
@@ -885,6 +966,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
       onColorSampled(hex);
     }
+
+    ctx.restore();
 
     // Instant real-time live feedback without delay: Blit dab directly to display canvas
     const displayCanvas = canvasRef.current;
@@ -1205,6 +1288,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* Layer 1: Paint Texture Canvas */}
         <canvas
           ref={canvasRef}
+          onPointerLeave={() => { hoverPointRef.current = null; drawOverlay(); }}
           className="block cursor-crosshair touch-none"
           style={{ width: '640px', height: '640px' }}
         />

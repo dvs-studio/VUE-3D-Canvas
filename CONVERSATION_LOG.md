@@ -154,3 +154,64 @@ Victory described those three tasks to this chat and asked for an announcement u
 Victory said he will test. This session does not run error tests unless he asks.
 
 ---
+
+## [BEGIN GPT6-UVATLAS-LIVE-SYNC-2026-11-23]
+
+### User request and interpretation
+Victory reported continued 3D UV overdraw, reversed gizmo direction and one-way viewport refresh. He clarified the UV behaviour: it is not repeat-wrapping or symmetry; painting must stop at the UV chart cut and resume at the exact corresponding pixel on the next side of the atlas without drawing a bridge across unrelated texture space. He also requested real-time 2D/3D paint updates, flexible layer merge operations, an editable Background with preview-only checkerboard, selector/mask visual aids, Pattern Craft, and two new layer types: Mask and Tear.
+
+### Implementation on branch
+- Added UV triangle clipping in `src/tools/uvIslandClip.ts` and applied it to 2D and 3D painting and mask-brush dabs.
+- Raycast now retains UV, world-space hit, face index and pointer screen coordinates. UV seam detection compares adjacent triangle shared geometric edges against the UV positions at their endpoints. Pointer movement is sampled at ~4px intervals (bounded at 96 samples) to catch chart cuts and mesh gaps skipped by fast pointer events. On seam/gap or leaving the mesh, the dab interpolation anchor is reset and painting resumes from the current exact UV pixel.
+- Shared texture updates are requested during 3D strokes; 2D UV canvas redraws on shared textureVersion, preserving live 2D->3D and adding live 3D->2D.
+- Gizmo receives full inverse camera quaternion, with x/y/z Euler output.
+- Background is editable, initialized with neutral gray, permanently bottom, protected from delete/group/merge/reorder. Its opacity is the main transparency control.
+- Checkerboard colours + independent alpha controls are stored as UI preference and drawn behind the 2D UV stack only. They are not baked or exported.
+- F6 Mask uses grayscale luminance (black hide/white reveal/gray partial) and its own opacity/target selector. F1 Tear supports black/transparent holes, white torn-edge region and green-dominant stack mask, also with opacity/target selector. Both remain editable non-destructive layer types and persist in .xblend.
+- Layer merge no longer rejects mixed blend modes or channel/PBR settings. Added additive, subtractive (per-channel), color-dodge and color-burn operations and shared them across main composite, UV display, 3D composite and merged output. Remaining linked masks/tears are retargeted to the merged layer.
+- Pattern Craft filter added with weave/cotton/wool/bamboo/wrap/strip, auto empty-layer displacement vs populated-layer multiply detail, scale/strength/seed controls. Powderiser double-normalization corrected.
+- 2D selection shading/marching ants and cursor state were made more informative; 2D and 3D brush/mask cursor footprints are visible.
+- Save/load metadata now retains layerType/targetLayerId; Mask/Tear are excluded from ordinary material-map exports. Legacy files treat the first layer as Background.
+- Matcap placeholder add control was deliberately removed; that is not one of the two new requested layer types and remains a separate later idea.
+
+### GitHub and build evidence
+- Working branch: `ai/uv-seam-live-sync-background-layers-2026-11-23`.
+- Successful GitHub Actions run #210 / ID `45208471180` built source commit `4c85c63f23140b2d630af9cbca5d2246fe3b66da`, ran `npm run host:sync`, passed blank/incomplete package validation, committed generated self-host output `eefa22e69d2fe22722ef6c2649f72783108823a2`, and uploaded artifact `14835217254` (`VUE_3D_Canvas_SelfHost`).
+- Workflow was then updated with per-branch concurrency cancellation to prevent fast source pushes from racing the generated self-host output commit. The final workflow+docs branch tip needs its own final build check.
+- Some earlier jobs reported failure only at generated output push because several workflow runs checked out older commits and tried to push over newer branch commits; their build, sync and blank-package validations had passed. This was traced in their job logs. The workflow now serializes/cancels per-ref runs.
+
+### Verification boundary and remaining user testing
+No real browser pen, mouse, stylus, Android or touch visual testing was performed by this agent. Build/package success does not prove the seam continuation or gizmo is visually accepted. Victory should manually test:
+1. Fast/slow stroke across atlas seam where the opposite island side maps to a distant atlas edge; ensure no bridge or off-island paint.
+2. Several brush spacings, stabilizer states, pointer leave/re-enter and symmetry OFF/X/Y/XY/Z.
+3. Paint each direction while both 2D and 3D viewports are visible and confirm updates without switching views.
+4. Orbit including roll/top/bottom and compare gizmo alignment.
+5. Mask/Tear white/black/gray/green roles, layer opacity and target selection.
+6. Background opacity/checkerboard; confirm checkerboard absent from exports.
+7. Mixed blend/channel/PBR merge and .xblend save/load/undo.
+8. Pattern Craft empty vs painted layer; compare preview/apply; Powderiser 0/25/100%.
+9. Verify selector/mask visual cues on desktop and touch devices.
+
+Detailed implementation and checklist: `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`.
+
+## [END GPT6-UVATLAS-LIVE-SYNC-2026-11-23]
+
+## [BEGIN GPT6-LAYER-PREFERENCES-FIX-2026-11-23]
+
+Victory tested the branch and reported `drawLayerWithBlend is not defined` and requested type-specific settings be moved out of the always-visible Layers panel into right-click Layer Preferences.
+
+Changes:
+- Imported `drawLayerWithBlend` and `createLayerCompositeSource` in App.tsx.
+- Moved blend mode and opacity into Layer Preferences for all layers.
+- Background preferences include transparency plus checkerboard colours and independent alpha sliders; the checkerboard is wired to Viewport2D and remains preview-only.
+- Mask/Tear preferences include target selection and role-specific explanation. Removed their inline target dropdown from layer rows.
+- Removed the checkerboard editor and blend/opacity toolbar from the always-visible Layers panel to increase visible layer rows.
+- Ensured Layer Preferences opens from both standard and grouped/docked panel layouts.
+- Fixed saving PBR settings so it does not overwrite the common layer opacity value.
+- Added TypeScript diagnostics to the workflow and fixed the issues found, including compositor imports, UV geometry version prop, raycast coordinates, XBlend duplicate keys and unrelated typing errors in HDRI, surface shading, texture filter wood stack and MeshPartsPanel.
+- Workflow #230 / ID `45211937996` passed TypeScript diagnostics, self-host build/sync, blank-package checks and artifact upload. Workflow #231 checks the latest opacity preservation commit and must be verified before claiming the final tip passed.
+- Detailed record: `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`.
+
+No real device or visual acceptance is claimed.
+
+## [END GPT6-LAYER-PREFERENCES-FIX-2026-11-23]

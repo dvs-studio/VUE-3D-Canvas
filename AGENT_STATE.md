@@ -684,3 +684,39 @@ Suzanne candidate model binaries are still not available in the current conversa
 - Added independent per-path state for primary and each mirror axis/cross path; included spacing residual, dot/curve/drag state and smudge pickup. Added stable stroke keys in Viewport3D and included prior mirror coordinates in the incremental composite bounds.
 - Source commits `1969550`, `9525fba`, `3866829`, `18c94c0`. Workflow #191 / `44966292558` passed all self-host build/sync/package checks; generated output `e740d02`, JS `index-DFGiqoP7.js`, artifact `14731757820`. Fresh stroke and multi-touch interruption paths also clear state.
 - CI is not a pen/touch test. Victory should compare symmetry OFF and X/Y/XY/Z, particularly long fast drags, small spacing, and the final mirrored segment. Next A4: mesh-part filter selection. Do not modify accepted viewport or UV seam behaviour.
+
+## 2026-11-23 — GPT-6 UV seam, live synchronisation and layer-stack repair
+
+**Agent/session:** `GPT6-UVATLAS-LIVE-SYNC-2026-11-23`  
+**Working branch:** `ai/uv-seam-live-sync-background-layers-2026-11-23`  
+**Source scope:** self-hosted React/Three.js app only. No changes to `crates/vue3d_core` or protected safety archives.
+
+- Read the root `AGENTS.md` PIN and the relevant self-host handover, filter and layer plans before editing. The branch adds a detailed implementation/verification handoff at `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`.
+- UV painting: added a mesh-triangle UV clipping path to both 2D and 3D painting. Raycasts preserve world hit, face and UV data. True chart seams are detected by comparing shared geometric edge endpoints with their UV texel coordinates. Screen-space intermediate raycasts at ~4px spacing are used to catch seams and mesh gaps skipped by fast pointer events; interpolation restarts at the current hit's exact UV pixel. Null hits clear stroke anchors.
+- Live sync: 3D painting now notifies the shared App composite during the stroke using the existing requestAnimationFrame-coalesced update. Viewport2D redraws on shared textureVersion, so 3D->2D is no longer dependent on changing view modes; existing 2D->3D update remains.
+- Gizmo: full inverse camera quaternion is converted to YXZ Euler including roll and passed to the 3D gizmo and CSS fallback.
+- Background: editable neutral base layer at bottom named Background; opacity slider is its transparency control. It cannot be deleted, grouped, merged or moved above the rest. The visual checkerboard uses two editable colours and independent alpha sliders; it is preview-only and is not exported.
+- Added F6 Mask layer (greyscale clip/influence, target selector, opacity control) and F1 Tear layer (black/transparent cut, white torn-edge rim, green mask role, target selector, opacity control). Both are non-destructive and are saved in .xblend. The separate Matcap-layer idea remains unimplemented; no placeholder button is presented.
+- Merge now flattens mixed blend/PBR/channel settings instead of refusing; added additive and subtractive modes plus color dodge/burn. Subtract uses channel arithmetic rather than aliasing Difference.
+- Added Pattern Craft to Layer Filter with weave, cotton, wool/fibre, bamboo, wrap and strip patterns. Auto mode chooses grayscale height/displacement for empty layers and multiply micro-detail for populated colour layers. Powderiser normalized strength was also corrected.
+- Selector and mask visual aids: 2D editable/protected overlay, marching ants, labelled status and brush/mask cursor; 3D brush footprint and mask-brush cursor.
+- .xblend layer records now preserve layerType and targetLayerId; legacy files migrate the first layer to Background. Special mask/tear layers are omitted from PBR material maps.
+- GitHub Actions run #210 / ID `45208471180` passed install, Vite build, `npm run host:sync`, blank package validation, generated self-host commit and artifact upload. Generated output commit `eefa22e69d2fe22722ef6c2649f72783108823a2`; artifact ID `14835217254`.
+- Subsequent workflow configuration adds per-ref concurrency cancellation to prevent simultaneous self-host output commits from racing on rapid source updates. A new verification run is required for that final workflow/docs tip.
+- Build success is not visual acceptance. Victory must manually test seam continuation, fast/slow drags, pointer leave/re-entry, symmetry settings, live bidirectional painting, gizmo alignment, Background/checkerboard export exclusion, Mask/Tear behaviour, mixed layer merges, Pattern Craft preview/apply and Powderiser strengths. See the manual checklist in the new notes file.
+- Root `AGENTS.md` remains authoritative. This pass does not claim the entire unchecked Step 0 → 2A → 2A-W → 2A-T → 2B → 2C → 2D backlog is complete.
+
+## 2026-11-23 follow-up — undefined compositor and compact layer preferences
+
+Victory tested the branch and reported `drawLayerWithBlend is not defined`, plus the type-specific controls taking too much room in the Layers panel.
+
+- Fixed App imports for `drawLayerWithBlend` and `createLayerCompositeSource`.
+- Fixed the missing `uvGeometryVersion` declaration/prop for Viewport2D and restored the checkerboard prop to the UV viewport.
+- Fixed incorrect raycast coordinate references in Viewport3D and X-ray vertex selection.
+- Layer Preferences now owns common blend/opacity controls and type-specific Background, Mask and Tear settings. The Layers panel no longer permanently displays checkerboard controls or Mask/Tear target dropdowns.
+- Both standard and grouped/docked Layers panel layouts expose the Preferences entry.
+- Background preferences contain its main transparency slider and checkerboard colour/alpha controls. Mask/Tear preferences contain target-layer selection and descriptions; their effect strength uses the common opacity slider.
+- Paint-layer PBR settings remain in the same Preferences modal. Saving PBR settings no longer overwrites the separate layer opacity control.
+- Added `npm run lint` to the self-host workflow and corrected the TypeScript errors it exposed (including pre-existing type mismatches in HDRI fallback, normal attribute cache, wood-source fallback and Mesh Parts frame action, plus duplicate XBlend manifest fields).
+- Workflow #230 passed TypeScript diagnostics, build, self-host sync and package validation. Workflow #231 is the final check for the latest opacity-preservation commit and is still pending at the time of this note.
+- No real device/UI acceptance is claimed. See `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md` for test checklist and detailed change record.
