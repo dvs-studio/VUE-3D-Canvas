@@ -426,7 +426,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    return out;
  }
  if(cfg.kind==='powderiser'){
-   const strength=clamp(noise/100,0,1),drift=clamp(cfg.shift||12,1,48);
+   const strength=clamp(noise,0,1),drift=clamp(cfg.shift||12,1,48);
    const seed=Math.floor(cfg.filterSeed??211);
    dst.set(data);
    if(strength<=0)return out;
