@@ -79,3 +79,26 @@ This is not texture-tile repeat and not symmetry mirroring. When a 3D surface st
 8. Test Pattern Craft in auto mode on an empty layer and a populated colour layer, then compare Preview and Apply; test Powderiser at 0%, 25% and 100%.
 
 **No visual/device acceptance is claimed by this entry.**
+
+## Follow-up repair — undefined compositor and layer-preference layout
+
+Victory reported a runtime error: `drawLayerWithBlend is not defined`, and requested that type-specific layer controls live inside the right-click Preferences window instead of occupying the Layers panel.
+
+Changes pushed after the original implementation:
+- Added the missing `drawLayerWithBlend` import in `src/App.tsx`, together with the companion `createLayerCompositeSource` helper import.
+- Fixed the active 2D UV clip dependency by declaring and passing `uvGeometryVersion` to `Viewport2D`.
+- Corrected the 3D raycast coordinate function to use its `clientX/clientY` arguments; restored event-coordinate reads in X-ray vertex selection.
+- Restored the checkerboard prop specifically to `Viewport2D` after moving the settings UI.
+- Removed the checkerboard editor and Mask/Tear target selector from the always-visible Layers panel. Both are now inside the type-specific Layer Preferences modal.
+- Added a Background preferences page containing Background transparency and the two checkerboard colours/alpha sliders. The checkerboard remains preview-only.
+- Added Mask and Tear preferences pages with target-layer selection and effect-specific descriptions. Their opacity/influence and blend mode are controlled in the common preferences section.
+- Moved blend mode and opacity controls for ordinary paint layers into the same Layer Preferences modal, reclaiming vertical room for the layer list.
+- Added the Layer Preferences opener to both the grouped/docked and standard Layers panel layouts.
+- Prevented saving PBR preferences from overwriting a paint layer's separately controlled opacity.
+- Enabled `npm run lint` (TypeScript `tsc --noEmit`) in the self-host workflow. This surfaced unrelated existing type issues; the pass corrected those in HDRI canvas fallback typing, cached normal attribute typing, wood-source fallback typing, and the Mesh Parts frame button handler. The XBlend duplicate manifest properties were also consolidated.
+- The 2D checkerboard was explicitly reconnected to the UV viewport after removing its former Layers panel controls.
+
+### Follow-up verification
+- Workflow run #230 / ID `45211937996` passed TypeScript diagnostics, Vite build, self-host sync, blank-package checks, output commit, archive and artifact upload. This run includes the checkerboard reconnection and the type-specific preferences layout.
+- A final run for the subsequent paint-layer opacity preservation commit is in progress; do not treat it as passed until its result is completed.
+- No real mouse/stylus/touch visual acceptance is claimed. Victory should verify that right-click → Layer Preferences opens for Background, Mask, Tear and ordinary paint layers, and that edits persist and update the preview/stack as expected.
