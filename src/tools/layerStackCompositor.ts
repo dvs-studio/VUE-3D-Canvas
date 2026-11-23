@@ -32,16 +32,55 @@ export function createLayerCompositeSource(target: Layer, stack: Layer[]): HTMLC
       if (!maskContext) continue;
       maskContext.drawImage(maskLayer.canvas, 0, 0, canvas.width, canvas.height);
       const mask = maskContext.getImageData(0, 0, canvas.width, canvas.height).data;
-      for (let i = 0; i < data.length; i += 4) {
-        const alpha = mask[i + 3] / 255;
-        const r = mask[i] / 255, g = mask[i + 1] / 255, b = mask[i + 2] / 255;
-        let influence = (0.299 * r + 0.587 * g + 0.114 * b) * alpha;
-        if (maskLayer.layerType === 'tear') {
-          // Green-coded pixels are the Tear stack-mask role; white retains
-          // the torn edge, while black or transparent pixels cut a hole.
-          influence = g > r * 1.2 && g > b * 1.2 ? g * alpha : Math.max(r, g, b) * alpha;
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const i = (y * canvas.width + x) * 4;
+          const alpha = mask[i + 3] / 255;
+          const r = mask[i] / 255, g = mask[i + 1] / 255, b = mask[i + 2] / 255;
+          const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+
+          if (maskLayer.layerType !== 'tear') {
+            // F6 Mask: black hides, white reveals, greyscale softens the edge.
+            const influence = luminance * alpha;
+            data[i + 3] = Math.round(data[i + 3] * Math.max(0, Math.min(1, influence)));
+            continue;
+          }
+
+          // F1 Tear roles:
+          // - transparent or black pixels cut a hole and reveal the layer below
+          // - green-dominant pixels act as the stack mask
+          // - white pixels form the torn rim next to a cut
+          const isGreenMask = g > r * 1.2 && g > b * 1.2;
+          const keep = isGreenMask ? g * alpha : luminance * alpha;
+
+          if (!isGreenMask && alpha > 0.65 && luminance > 0.78) {
+            let edgeSignal = 0;
+            for (let oy = -1; oy <= 1; oy++) {
+              for (let ox = -1; ox <= 1; ox++) {
+                if (ox === 0 && oy === 0) continue;
+                const nx = x + ox, ny = y + oy;
+                if (nx < 0 || ny < 0 || nx >= canvas.width || ny >= canvas.height) continue;
+                const ni = (ny * canvas.width + nx) * 4;
+                const neighbourAlpha = mask[ni + 3] / 255;
+                const nr = mask[ni] / 255, ng = mask[ni + 1] / 255, nb = mask[ni + 2] / 255;
+                const neighbourGreen = ng > nr * 1.2 && ng > nb * 1.2;
+                if (!neighbourGreen) {
+                  const neighbourLum = 0.299 * nr + 0.587 * ng + 0.114 * nb;
+                  edgeSignal = Math.max(edgeSignal, (1 - neighbourAlpha) * 0.9, (1 - neighbourLum) * 0.65);
+                }
+              }
+            }
+            // Warm, slightly pale torn fibre rim. It is confined to the white
+            // pixels directly bordering the hole, not the entire white canvas.
+            const edgeMix = Math.max(0, Math.min(0.42, edgeSignal * 0.42));
+            if (edgeMix > 0) {
+              data[i] = Math.round(data[i] * (1 - edgeMix) + 232 * edgeMix);
+              data[i + 1] = Math.round(data[i + 1] * (1 - edgeMix) + 220 * edgeMix);
+              data[i + 2] = Math.round(data[i + 2] * (1 - edgeMix) + 196 * edgeMix);
+            }
+          }
+          data[i + 3] = Math.round(data[i + 3] * Math.max(0, Math.min(1, keep)));
         }
-        data[i + 3] = Math.round(data[i + 3] * Math.max(0, Math.min(1, influence)));
       }
     }
     ctx.putImageData(image, 0, 0);
