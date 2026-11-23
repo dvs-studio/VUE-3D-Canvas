@@ -339,6 +339,8 @@ export interface XBlendProject {
   layers: {
     id: string;
     name: string;
+    layerType?: LayerType;
+    targetLayerId?: string | null;
     visible: boolean;
     opacity: number;
     blendMode: BlendMode;
