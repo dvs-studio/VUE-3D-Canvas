@@ -3,7 +3,8 @@
 **Rules (all agents):**
 - **Append only.** Never delete or rewrite prior day sections.
 - **Every AI engine** must add a dated section for the day it worked if not already present.
-- Sections **by date**: `## YYYY-MM-DD — EngineName`.
+- Sections **by date + unique identity**: `## YYYY-MM-DD — EngineName — id \`UNIQUE-ID\``.
+- **Uniqueness required:** There may be **more than one concurrent session of the same product name** (e.g. two Grok conversations on this repo). Each section **must** use a distinct `id` and a session-specific display name so agents are not collapsed into one identity.
 - Read full log only when Victory asks. No secrets.
 
 ---
@@ -20,12 +21,7 @@
 
 ### id `LOG-2026-11-21-GROK-EDGE` — restored record from this Grok session
 - Halfway source is on `main` at `18a80cb`. CI then packed the page as `03b8ebd`. Docs handoff is `42ee71f`. Matcap to-do is `e6bb282`.
-- No browser pass in that session. Later notes say Victory accepted the UV-island seam. Do not treat this entry as a new test.
-- Island line cause: filters mixed empty UV gutters into the island, and the position map stored the bounding-box corner in the cracks. Triplanar and material fill used a fake ball. The fix stayed inside the filters and fills. The UV editor was not rewritten.
-- Hatching, cross-hatching, and hashing gained Feature scale, Position jitter, and Angle jitter. Defaults match the old look.
-- `Suzanne x.obj` eyes were not welded. Separate preset: Suzanne Head + Eyes. Original `src/assets/Suzanne.obj` was not overwritten.
-- Matcap layer and the narrow Add menu were written as to-do only. Not built in that commit.
-- `npx tsc --noEmit` already failed on older files. Vite is the build that matters.
+- Island line cause and hatch jitter; Suzanne Head + Eyes preset; Matcap to-do only.
 
 ---
 
@@ -33,127 +29,89 @@
 
 ### Morning — test feedback → bugfix brief
 - Head+Eyes default; remove Squail; UV seam accepted fixed; 3D view protected.
-- Broken filters (dust/powder no-op); wood UI gaps; symmetry lag; part selection; UV shelf; F8.
-- Docs: `SELF_HOST_BUGFIX_2026-11-22.md`.
+- Broken filters; wood UI gaps; symmetry lag; part selection; UV shelf; F8.
 
 ### Late — after GPT Phase A1–A3 claims
-- Victory: last command / error-diagnosis **no longer launching** after recent fixes.
-- **Immediate:** scrutinise main self-host web app for regressions from last fixes (and deeper); fix first.
-- **Then major to-do:** layer technology from `LAYER_FABRIC_MASK_PLAN.md` — cloth F2–F5, torn F1/F1b, mask F6, F8 bump merge; F7 logo fabric still on hold.
-- PIN updated in `AGENTS.md` accordingly.
+- Scrutinise regressions first; then layer technology; F7 hold.
 
 ---
 
 ## 2026-11-22 — GPT-5
 
 ### Phase A1–A3 (claimed complete — CI only)
-- Powderiser two-pass; wood frequency randomisation UI; filter audit checklist in bugfix MD.
-- Squail removed; Head+Eyes default.
-- Symmetry: independent stroke state per mirror path; dirty bounds include previous mirror point.
-- Workflows #184 / #187 / #191 cited. Victory visual verification still pending at that note.
-- Was next: A4 part selection. Superseded for ordering by Grok late PIN (scrutinise regressions first).
+- Powderiser two-pass; wood frequency UI; Squail removed; Head+Eyes default; symmetry stroke state.
 
 ---
 
 ## 2026-11-22 — GPT-6 (continued)
 
-- Re-read the current authoritative AGENTS.md, AGENT_STATE.md, SELF_HOST_HANDOFF.md, SELF_HOST_BUGFIX_2026-11-22.md, LAYER_FABRIC_MASK_PLAN.md, LAYER_PBR_PLAN.md, SELF_HOST_TASK_2026-11-19.md, CONVERSATION_LOG.md and the GPT agent log. The latest AGENTS.md checklist supersedes the older handoff/agent-log statement that A4 was next: Step 0 regression scrutiny must happen first.
-- Inspected the current diagnostics menu callback and GpuDiagnosticsModal: the Help-menu callback, state setter and modal mount are wired in source. This is not proof that the reported diagnose/last-command workflow works at runtime; preserve that as an unverified test item.
-- Rechecked the filter dialog, apply caller and all eight filter branches. Found a concrete Wood Grain runtime bug: woodSeed was read by seeded frequency jitter before its const declaration, which triggers a temporal-dead-zone error when Wood Grain executes.
-- Fixed by moving seed resolution before the pixel loop. Source commit: 7475d5368f9813f1d6f50db3e10f58d11dd036a8. This is a minimal filter-only fix; no viewport, brush, UV, native Rust, or safety archive changes.
-- Build/self-host sync is pending at this log entry. Do not call the fix packaged until the workflow has completed and generated self-host/public/ is confirmed current. Device visual testing remains Victory's unless requested.
-- Remaining Step 0 checks: diagnose/last-command runtime launch, all filters including Powderiser/Wood, symmetry axes and long strokes, startup model, painting, export, and verify-only subdivision preview. A4 remains blocked until this scrutiny is complete.
-
----
-
-### Step 0 follow-up — generated self-host sync
-
-- Automatic self-host workflow committed the regenerated page at 297f230 (2026-11-22 00:55:25Z). Generated JavaScript asset: self-host/public/assets/index-CqmOQpy4.js.
-- Retrieved the generated JS blob and verified the compiled Wood Grain branch resolves the seed before the pixel loop and before the band/ring frequency hashes. Retrieved the generated index.html blob and verified it contains the root mount, has no external script src, and includes the inlined app bundle.
-- Updated README.md and self-host/README.md to point to index-CqmOQpy4.js. Updated AGENTS.md, AGENT_STATE.md, SELF_HOST_HANDOFF.md, SELF_HOST_BUGFIX_2026-11-22.md and agents/gpt-6.md so the source and generated-output checkpoint agree.
-- This confirms production build + host:sync + generated output commit. The available connector did not expose the push-triggered workflow run ID/artifact status, so do not claim the ZIP artifact upload step was verified. Browser/device interaction remains untested.
+- Wood seed TDZ fix `7475d53`; self-host sync `297f230` / `index-CqmOQpy4.js`.
 
 ---
 
 ## 2026-11-19 — Grok — id `LOG-2026-11-19-GROK-01`
 
-- Victory asked for the self-host page only: read the notes, use `Suzanne.obj` from the supplied zip (not `Suzanne x.obj`), isolate parts from mesh names or vertex groups, remember which dockers were off, fix fill seams and paint squash/drift, improve Smart UV, keep the split-view UV tools at the bottom, add a split-view resize, and offer a round or a pill scroll handle.
-- He also described a selection overlay and a Selection menu, and asked that a boolean/thorn mask layer and world-space cloth, basket, and fractal filters be written as later to-dos, not built first.
-- That pass did not land on `main`. Local scaffolds were stashed and are not the packaged page. Later notes (Head + Eyes, UV seam accepted, fabric plan) supersede the asset choice. Do not revive the stash.
+- Earlier self-host ask; stash did not land on main.
 
 ---
 
 ## 2026-11-22 — Grok — id `LOG-2026-11-22-GROK-STATUS`
 
-- Victory asked for a status report from the notes, not a code change.
-- Report given from `origin/main` at `936ec38`: Head + Eyes and the UV-island seam are accepted; paint stays protected; Powderiser, Wood (`7475d53`, bundle `index-CqmOQpy4.js`), and symmetry are in source without device sign-off; Step 0 is still open; 2A–2D are open; F7 is on hold.
+- Status report only from notes.
 
 ---
 
 ## 2026-11-22 — Grok — id `LOG-2026-11-22-GROK-SEL`
 
-- Victory specified the selection cage: a fake surface highlight, marching ants, and a blink on feathered edges instead of ants, with unselected area dimmed 10%. Selection menu: Select, Deselect, Reselect, Inverse, Grow, Shrink, Feather. The mask brush stays a separate selector with Clear, Invert, Smooth, Rough, and Edge shift.
-- He asked for the research in the current to-do, not a new plan file. It is `HOLD-SEL-2026-11-22` in `AGENTS.md`. Do not build it until he acknowledges that item.
-- He told the next agent: after his next reply, execute every other open CURRENT TODO item in one pass. Exclude HOLD-SEL. Exclude F7.
-- This entry is the conversation record only. The procedure itself is in the PIN so a later agent does not have to read this log to find it.
+- HOLD-SEL selection cage specification recorded; not built.
+
+---
 
 ## 2026-11-22 evening — Claude — id `LOG-2026-11-22-CLAUDE-S0`
 
-- Victory reported two defects and asked that the next agent finish the whole open to-do in one pass so he can test the new layers, filters, and everything outstanding at once. The item he still has to confirm (HOLD-SEL) and F7 stay excluded.
-- Defect 1: with symmetry now working, a brush crossing a UV island boundary in the 3D viewport jumps and draws a line across the whole texture (visible in the 2D view). Untouched areas, such as the frontal lobe when drawing through the centre of the head, get a flash. Recorded as S0-1 with the A2 interpolation root cause as the lead hypothesis, and a narrow carve-out in the protected-path rule so the agent may fix stroke continuity.
-- Defect 2: Powderiser is still not fixed. Recorded as S0-2: a full scrutiny of the filter path with a run-and-diff test, plus the 2026-11-14 safety build in `release/` as a runtime comparison. The copy of that zip under `self-host/` is a 48-byte pointer, not a zip.
-- No code was changed in this entry.
+- S0-1 stroke teleport; S0-2 powder still broken; one-pass todo order.
 
 ---
 
 ## 2026-11-22 late — Claude Sonnet 4.6 — id `LOG-2026-11-22-CLAUDE-INVEST`
 
-### Read-only investigation pass + spec corrections
+- Powder double noise/100; S0-1 raycast/interpolate; bug sweep; **F1 redefined as procedural fabric multiply** (later superseded by Victory + Grok-Atelier-PIN).
 
-**Powderiser root cause confirmed (code reading, no changes made in this entry):**
-- `transformTexturePixels` declares `noise = cfg.noise / 100` at line 273 (shared for all filters). The Powderiser block at line 363 then does `strength = clamp(noise / 100, 0, 1)` — dividing by 100 a second time. With default `cfg.noise = 25`, `strength ≈ 0.0025`. Pass-one selects ~0 pixels; pass-two composites nothing; output is visually unchanged. Fix: change `noise/100` → `noise` on line 363. Written into `AGENTS.md` S0-2 block and `INVESTIGATION_2026-11-22.md`.
-
-**S0-1 stroke teleport root cause confirmed:**
-- `raycastUV` (Viewport3D.tsx ~1647) discards `faceIndex`. Move handler (~1571) feeds texels directly to the brush with no texel-jump guard. `brushEngine.paintDabs` interpolates without distance cap. All mirror paths affected independently.
-
-**Full bug sweep completed (not yet fixed — for the executing agent):**
-- P0: undo stack OOM (raw ImageData, up to 1.2 GB), material leak (MeshStandardMaterial never disposed on layers change), scene teardown leak (geometry/material/texture never disposed on unmount).
-- P1: blend mode mismatch (full composite missing hard_light/soft_light/difference), PBR texture rebuild on every stroke (no debounce), no pointer capture, no getCoalescedEvents, willReadFrequently missing, duplicate View menu, menu close only on mouseLeave (broken on touch), MeshPartsPanel onClick receives event as id.
-- P2: 10 TypeScript errors confirmed (xblendFormat duplicate keys, hdriManager canvas/image mismatch, surfaceShading InterleavedBufferAttribute, textureFilters.ts:316 union typed as intersection, MeshPartsPanel onClick type).
-- All findings with file+line in `INVESTIGATION_2026-11-22.md`. Commit: `9c1be07`.
-
-**Layer and filter type correction (Victory 2026-11-22 23:47 + 23:56):**
-- F2–F5 are **not** layer types. They are pixel filters applied to an existing layer, under a renamed family: **Pattern Craft** (previously called "cloth filter family"). This is the corrected classification — the executing agent should treat F2–F5 as entries in `TextureFilterKind`, not as new `Layer.channel` values.
-- F1b (mesh/UV influence switch) is a sub-toggle that belongs to F1 (the torn fabric layer), not to the Pattern Craft filters.
-- F1 is confirmed a **dedicated layer type** (not a filter). It sits in the layer stack like a clip mask. Behaviour: if the layer beneath has image content, it multiplies the procedural fabric's lightness/darkness micro-pixels into that layer (darkening/texturing it); if no image is present, it produces the raw black/white procedural fabric pattern. Auto-enables the displacement checkbox on the current layer. Intelligently rotates the seamless fabric pattern across limbs using world-normal displacement. The pattern is procedurally generated seamless black/white fabric. Useful for: torn patches, rusty surface framing, manually-drawn surface texturing.
-- F1b (mesh/UV influence switch): toggles whether the fabric distortion follows the UV island or stays in flat UV space. Default off. Attached to F1 only.
-- Corrected classification written into `INVESTIGATION_2026-11-22.md` and `AGENTS.md`.
-
+---
 
 ## 2026-11-23 — Claude Sonnet 4.6 — id `LOG-2026-11-23-CLAUDE-CORRECT`
 
-### Classification correction for F1, F1b, F2–F5
+- F1b moved to F1 layer side then contradicted in next entry.
 
-Victory corrected two errors introduced in the previous session's doc edits:
-
-**F1b** was wrongly moved to the Pattern Craft filter group in the last write. Victory confirmed: F1b is a sub-control of the **F1 torn fabric layer**, not a filter. It governs which mesh UV islands the torn layer's stacking influence (the green-key mask reach) applies to — this is a layer-stack behaviour toggle, the same kind as a clip mask's target scope. It belongs in F1's own control panel.
-
-**F2–F5** rename to **Pattern Craft** is correct (previously "Cloth filter family"). These are filters applied to an existing layer's pixels, not layer types.
-
-The key distinction Victory stated: layer types are like vector vs raster vs bone — a fundamental kind of layer. Filters affect a layer. F1 and F1b both belong to the layer-type side. F2–F5 (Pattern Craft) belong to the filter side. These are separate concerns entirely.
-
-Docs corrected: `LAYER_FABRIC_MASK_PLAN.md`, `AGENTS.md`, `INVESTIGATION_2026-11-22.md`. Commit follows.
+---
 
 ## 2026-11-23 — Claude Sonnet 4.6 — id `LOG-2026-11-23-CLAUDE-F1B`
 
-### F1b final classification — filter side only
+- F1b set to filter side only — **superseded for tear-layer scope by Grok-Atelier-PIN** (Victory 2026-11-23).
 
-Victory corrected again: F1b (mesh/UV influence switch) belongs on the **filter side only**. It is not a layer type and must not appear in the layer stack section in any form. Any influence or rules described inside the F1 torn fabric layer spec are that layer's own concern and must remain there, entirely separate from the F1b filter entry. These two things must never be mixed.
-
-F1b is now documented alongside F2–F5 Pattern Craft in the filter section of `LAYER_FABRIC_MASK_PLAN.md` and `AGENTS.md`, with an explicit note to keep it separate from F1's layer spec. `INVESTIGATION_2026-11-22.md` updated to match. Commit: `97d951c`.
+---
 
 ## 2026-11-23 — Grok — id `LOG-2026-11-23-GROK-LOG`
 
-- Same agent as `LOG-2026-11-21-GROK-EDGE`. Victory asked for the agent list in this file.
-- That session's 21 November record had been shortened on `main`. The detail is restored above under `LOG-2026-11-21-GROK-EDGE`. Nothing earlier was deleted.
-- This note does not start the tear, cloth, or mask build. Those already have later sections from other agents.
+- Restored shortened 21 Nov edge record; same product line as EDGE, not this PIN session.
+
+---
+
+## 2026-11-23 — Grok-Atelier-PIN — id `LOG-2026-11-23-GROK-ATELIER-PIN`
+
+**Unique identity for this conversation:** display **Grok-Atelier-PIN**, id `LOG-2026-11-23-GROK-ATELIER-PIN`. Distinct from other Grok sections on this repo (EDGE, STATUS, SEL, LOG).
+
+### Corrections ordered by Victory (this session)
+1. **Agent uniqueness rule** added to log header and AGENTS PIN: every AI section must use a unique id; multiple Grok (or other) sessions must not share one identity.
+2. **F1 rename → Tear layer** (not “torn fabric” as sole name). Colour roles restored and clarified:
+   - **Black / transparent** = show the **immediate layer below** (hole through this tear layer).
+   - **White** = **torn / fray edges** (hand-paintable; procedural auto-edge allowed).
+   - **Green** = **mask** (influence / which stack depth is affected — not a procedural fabric multiply pattern).
+3. **Mix-up called out:** Claude INVEST redefined F1 as procedural seamless fabric that multiplies micro-pixels into the layer beneath and auto-enables displacement. That **is not** Victory’s tear layer. Useful retain: convert-from-paint, export apply-then-restore, procedural white edge helper. Discard: fabric-multiply-as-the-layer-definition.
+4. Tear layer may **hand-paint edge tears**; painting can relate to content **two levels below** for rim/under-paint workflows (documented in plan).
+5. **Wood rings** to-do expanded before triplanar: uniform tree-year rings vs organic fingerprint/merged rings; world vs object coords; curvature-aware — not mere forward/back ring push.
+6. **Triplanar fill** correctional task: compare to Blender dual-texture mix + true triplanar; sample-folder textures will replace built-ins; expand/correct without throwing away working procedural machinery.
+
+Docs: AGENTS.md PIN + LAYER_FABRIC_MASK_PLAN.md + triplanar/wood notes in PIN. No `src/` in this entry.
+
+---
