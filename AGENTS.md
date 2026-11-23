@@ -43,8 +43,8 @@
 ### CURRENT TODO — all active for this pass
 
 #### Step 0
-- [ ] **S0-1** Stroke teleport across UV islands (investigate, then minimal fix)
-- [ ] **S0-2** Powderiser / filter suite (fix double `noise/100`; audit all kinds)
+- [x] **S0-1** Stroke teleport across UV islands — implemented UV triangle clipping, topological seam detection and sampled pointer-path restarts; host-synced. **Victory visual acceptance pending.**
+- [x] **S0-2** Powderiser / filter suite — corrected normalized Powderiser strength; completed the eight-kind source/UI audit and added Pattern Craft. **Victory visual acceptance pending.**
 - [ ] Other regressions (diagnose UI, symmetry, boot, Head+Eyes default, paint, export)
 - [ ] **2E** Subdiv preview — verify only
 
@@ -67,11 +67,11 @@
 - [ ] Keep mesh-position / island-safe sampling
 
 #### 2B Layer + Pattern Craft
-- [ ] **F6** Mask layer
-- [ ] **F1** Tear layer (roles in three boxes only)
-- [ ] Tear panel mesh/target scope
+- [x] **F6** Mask layer — grayscale clip layer, target selector, opacity control and non-destructive stack composition; saved in .xblend. **Victory visual acceptance pending.**
+- [x] **F1** Tear layer — black/transparent cut, white torn-edge region, green stack mask; target selector, opacity and .xblend persistence. **Victory visual acceptance pending.**
+- [x] Tear panel mesh/target scope — explicit target-layer selector; separate from filter-side mesh/UV limit. **Victory visual acceptance pending.**
 - [ ] Filter-side mesh/UV limit (separate)
-- [ ] **Pattern Craft** filters + if–else multiply vs displacement
+- [x] **Pattern Craft** filters — auto empty-layer grayscale displacement vs populated-layer multiply micro-detail, with material variants and controls. **Victory visual acceptance pending.**
 - [ ] **M1** Matcap layer + narrow Add menu
 - [x] Keep material import
 
@@ -104,3 +104,7 @@ Meticulous. Unique agent ids. Short commits. Do not damage accepted 3D view. Mar
 ## STOP
 
 Prior history in git. F7 / HOLD-SEL / dedicated UV desk remain excluded.
+
+### GPT-6 implementation status — 2026-11-23 branch pass
+
+The checked S0-1, S0-2 and 2B entries above mean the source implementation is committed and the self-host build/package pipeline succeeded. They do **not** mean user visual acceptance is complete. Victory's manual test checklist is in `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`. Remaining unmarked 2A, 2A-W, 2A-T, filter-scope, M1, 2C and 2D items remain open and must not be treated as delivered by this branch.
