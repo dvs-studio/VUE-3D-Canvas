@@ -1,4 +1,4 @@
-import { Layer } from '../core/types';
+import type { Layer } from '../core/types';
 
 /**
  * Produce the target layer's visible pixels after applying linked greyscale
@@ -9,6 +9,7 @@ export function createLayerCompositeSource(target: Layer, stack: Layer[]): HTMLC
   const linked = stack.filter(layer =>
     layer.visible &&
     !layer.isGroup &&
+    (!layer.groupId || stack.find(parent => parent.id === layer.groupId)?.visible !== false) &&
     (layer.layerType === 'mask' || layer.layerType === 'tear') &&
     layer.targetLayerId === target.id
   );
