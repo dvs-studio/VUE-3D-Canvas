@@ -19,7 +19,7 @@ import { BrushEngine } from '../tools/brushEngine';
 import { PatternStampEngine } from '../tools/patternStampTool';
 import { PenVectorTool } from '../tools/penVectorTool';
 import { SelectionTool } from '../tools/selectionTool';
-import { MaskEngine } from '../tools/maskEngine';
+import { MaskEngine, grayscaleHex } from '../tools/maskEngine';
 import { FillSuite } from '../tools/fillSuite';
 import { UndoRingBuffer } from '../core/history';
 import { BUILTIN_MODELS, parseOBJ } from './modelGeometry';
@@ -934,20 +934,23 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     }
 
     const ctx = activeLayer.ctx;
+    const paintBrush = activeLayer.layerType === 'mask'
+      ? { ...brush, color: grayscaleHex(brush.color) }
+      : brush;
 
     ctx.save();
     if (uvIslandPath) ctx.clip(uvIslandPath);
 
     if (activeTool === 'brush') {
-      brushEngine.paintDabs(ctx, x, y, brush, pressure, false);
+      brushEngine.paintDabs(ctx, x, y, paintBrush, pressure, false);
     } else if (activeTool === 'eraser') {
-      brushEngine.paintDabs(ctx, x, y, brush, pressure, true);
+      brushEngine.paintDabs(ctx, x, y, paintBrush, pressure, true);
     } else if (activeTool === 'blur') {
-      brushEngine.applyBlurAt(ctx, x, y, brush);
+      brushEngine.applyBlurAt(ctx, x, y, paintBrush);
     } else if (activeTool === 'clone') {
-      brushEngine.applyCloneStampAt(ctx, x, y, brush);
+      brushEngine.applyCloneStampAt(ctx, x, y, paintBrush);
     } else if (activeTool === 'smudge') {
-      brushEngine.applySmudgeAt(ctx, x, y, x, y, brush);
+      brushEngine.applySmudgeAt(ctx, x, y, x, y, paintBrush);
     } else if (activeTool === 'gradient_linear') {
       FillSuite.applyLinearGradient(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, primaryColor, secondaryColor, brush.opacity, selectionMask);
     } else if (activeTool === 'gradient_radial') {
