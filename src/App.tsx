@@ -82,7 +82,7 @@ import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
 import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
 import { GpuDiagnosticsModal } from './ui/GpuDiagnosticsModal';
 import { LagoonMenu } from './ui/LagoonMenu';
-import { drawLayerWithBlend } from './tools/layerStackCompositor';
+import { createLayerCompositeSource, drawLayerWithBlend } from './tools/layerStackCompositor';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -1977,6 +1977,7 @@ export default function App() {
                 patternStampConfig={patternStampConfig}
                 geometry={activeGeometry}
                 onGeometryUpdated={notifyUVGeometryUpdated}
+                uvGeometryVersion={uvGeometryVersion}
                 activeUVChannel={activeUVChannel}
                 onSelectUVChannel={(channelId) => { setActiveUVChannel(channelId); setLayers(prev => prev.map(layer => layer.id === activeLayerId ? { ...layer, uvChannel: channelId } : layer)); setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }}
                 selectedVertices={xrayVertexSelection}
