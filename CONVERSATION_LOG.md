@@ -134,3 +134,11 @@ Victory corrected two errors introduced in the previous session's doc edits:
 The key distinction Victory stated: layer types are like vector vs raster vs bone — a fundamental kind of layer. Filters affect a layer. F1 and F1b both belong to the layer-type side. F2–F5 (Pattern Craft) belong to the filter side. These are separate concerns entirely.
 
 Docs corrected: `LAYER_FABRIC_MASK_PLAN.md`, `AGENTS.md`, `INVESTIGATION_2026-11-22.md`. Commit follows.
+
+## 2026-11-23 — Claude Sonnet 4.6 — id `LOG-2026-11-23-CLAUDE-F1B`
+
+### F1b final classification — filter side only
+
+Victory corrected again: F1b (mesh/UV influence switch) belongs on the **filter side only**. It is not a layer type and must not appear in the layer stack section in any form. Any influence or rules described inside the F1 torn fabric layer spec are that layer's own concern and must remain there, entirely separate from the F1b filter entry. These two things must never be mixed.
+
+F1b is now documented alongside F2–F5 Pattern Craft in the filter section of `LAYER_FABRIC_MASK_PLAN.md` and `AGENTS.md`, with an explicit note to keep it separate from F1's layer spec. `INVESTIGATION_2026-11-22.md` updated to match. Commit: `97d951c`.
