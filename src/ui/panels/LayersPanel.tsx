@@ -78,6 +78,10 @@ const BLEND_MODES: BlendMode[] = [
   'hard_light',
   'soft_light',
   'difference',
+  'add',
+  'subtract',
+  'color-dodge',
+  'color-burn',
 ];
 
 export const LayersPanel: React.FC<LayersPanelProps> = ({
