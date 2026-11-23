@@ -1986,6 +1986,8 @@ export default function App() {
                 onRebakeTexture={handleRebakeTexture}
                 onSeamlessUV={handleSeamlessUV}
               isSplitView={viewMode === 'split'}
+                 textureVersion={textureVersion}
+                 checkerboard={checkerboard}
                 />
             </div>
           )}
@@ -2280,6 +2282,11 @@ export default function App() {
                       activeLayerId={activeLayerId}
                       onSelectLayer={handleSelectLayer}
                       onAddLayer={handleAddLayer}
+                       onAddMaskLayer={handleAddMaskLayer}
+                       onAddTearLayer={handleAddTearLayer}
+                       onAddMatcapLayer={handleAddMatcapLayer}
+                       checkerboard={checkerboard}
+                       onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
                       onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             onDeleteSelectedLayers={handleDeleteSelectedLayers}
