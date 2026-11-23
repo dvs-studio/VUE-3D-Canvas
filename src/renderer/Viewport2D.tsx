@@ -79,6 +79,7 @@ interface Viewport2DProps {
   isSplitView?: boolean;
   /** Incremented by the shared App composite whenever either viewport paints. */
   textureVersion?: number;
+  uvGeometryVersion?: number;
   checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
 }
 
@@ -108,6 +109,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   onSeamlessUV,
   isSplitView = false,
   textureVersion = 0,
+  uvGeometryVersion = 0,
   checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
