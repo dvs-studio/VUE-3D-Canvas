@@ -38,7 +38,6 @@ interface LayersPanelProps {
   onAddLayer: () => void;
   onAddMaskLayer?: () => void;
   onAddTearLayer?: () => void;
-  onUpdateLayerTarget?: (layerId: string, targetLayerId: string) => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -136,7 +135,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   } | null>(null);
 
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
-  const backgroundLayer = layers.find(layer => layer.layerType === 'background');
 
   const handleContextMenu = (e: React.MouseEvent, layerId: string) => {
     e.preventDefault();
