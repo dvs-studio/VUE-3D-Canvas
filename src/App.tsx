@@ -729,7 +729,7 @@ export default function App() {
     notifyTextureUpdated();
   };
 
-  const handleAddSpecialLayer = (layerType: 'mask' | 'tear' | 'matcap') => {
+  const handleAddSpecialLayer = (layerType: 'mask' | 'tear') => {
     const target = layers.find(layer => layer.id === activeLayerId && !layer.isGroup)
       || [...layers].reverse().find(layer => !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear');
     const cvs = document.createElement('canvas');
@@ -740,7 +740,7 @@ export default function App() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 1024, 1024);
     }
-    const labels = { mask: 'Mask Layer', tear: 'Tear Layer', matcap: 'Matcap Layer' };
+    const labels = { mask: 'Mask Layer', tear: 'Tear Layer' };
     const newLayer: Layer = {
       id: `layer_${layerType}_${Date.now()}`,
       name: labels[layerType],
@@ -753,11 +753,7 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: 'color',
-      ...(layerType === 'matcap' ? { pbrSettings: {
-        roughness: 0.5, metallic: 0, bumpHeight: 1, normalStrength: 1,
-        emissionStrength: 0, opacity: 1, enableColor: false, enableBump: false,
-        reflectionSource: 'matcap' as const, reflectionIntensity: 0.8,
-      } } : {}),
+
     };
     const updated = [...layers, newLayer];
     setLayers(updated);
@@ -767,7 +763,6 @@ export default function App() {
   };
   const handleAddMaskLayer = () => handleAddSpecialLayer('mask');
   const handleAddTearLayer = () => handleAddSpecialLayer('tear');
-  const handleAddMatcapLayer = () => handleAddSpecialLayer('matcap');
   const handleUpdateLayerTarget = (layerId: string, targetLayerId: string) => {
     if (!layers.some(layer => layer.id === targetLayerId && !layer.isGroup)) return;
     setLayers(previous => previous.map(layer => layer.id === layerId ? { ...layer, targetLayerId } : layer));
@@ -2100,7 +2095,6 @@ export default function App() {
                  onAddMaskLayer={handleAddMaskLayer}
                  onAddTearLayer={handleAddTearLayer}
                        onUpdateLayerTarget={handleUpdateLayerTarget}
-                 onAddMatcapLayer={handleAddMatcapLayer}
                  checkerboard={checkerboard}
                  onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
                             onAddGroup={handleAddGroup}
@@ -2281,7 +2275,6 @@ export default function App() {
                        onAddMaskLayer={handleAddMaskLayer}
                        onAddTearLayer={handleAddTearLayer}
                        onUpdateLayerTarget={handleUpdateLayerTarget}
-                       onAddMatcapLayer={handleAddMatcapLayer}
                        checkerboard={checkerboard}
                        onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
                       onAddGroup={handleAddGroup}
