@@ -705,3 +705,18 @@ Suzanne candidate model binaries are still not available in the current conversa
 - Subsequent workflow configuration adds per-ref concurrency cancellation to prevent simultaneous self-host output commits from racing on rapid source updates. A new verification run is required for that final workflow/docs tip.
 - Build success is not visual acceptance. Victory must manually test seam continuation, fast/slow drags, pointer leave/re-entry, symmetry settings, live bidirectional painting, gizmo alignment, Background/checkerboard export exclusion, Mask/Tear behaviour, mixed layer merges, Pattern Craft preview/apply and Powderiser strengths. See the manual checklist in the new notes file.
 - Root `AGENTS.md` remains authoritative. This pass does not claim the entire unchecked Step 0 → 2A → 2A-W → 2A-T → 2B → 2C → 2D backlog is complete.
+
+## 2026-11-23 follow-up — undefined compositor and compact layer preferences
+
+Victory tested the branch and reported `drawLayerWithBlend is not defined`, plus the type-specific controls taking too much room in the Layers panel.
+
+- Fixed App imports for `drawLayerWithBlend` and `createLayerCompositeSource`.
+- Fixed the missing `uvGeometryVersion` declaration/prop for Viewport2D and restored the checkerboard prop to the UV viewport.
+- Fixed incorrect raycast coordinate references in Viewport3D and X-ray vertex selection.
+- Layer Preferences now owns common blend/opacity controls and type-specific Background, Mask and Tear settings. The Layers panel no longer permanently displays checkerboard controls or Mask/Tear target dropdowns.
+- Both standard and grouped/docked Layers panel layouts expose the Preferences entry.
+- Background preferences contain its main transparency slider and checkerboard colour/alpha controls. Mask/Tear preferences contain target-layer selection and descriptions; their effect strength uses the common opacity slider.
+- Paint-layer PBR settings remain in the same Preferences modal. Saving PBR settings no longer overwrites the separate layer opacity control.
+- Added `npm run lint` to the self-host workflow and corrected the TypeScript errors it exposed (including pre-existing type mismatches in HDRI fallback, normal attribute cache, wood-source fallback and Mesh Parts frame action, plus duplicate XBlend manifest fields).
+- Workflow #230 passed TypeScript diagnostics, build, self-host sync and package validation. Workflow #231 is the final check for the latest opacity-preservation commit and is still pending at the time of this note.
+- No real device/UI acceptance is claimed. See `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md` for test checklist and detailed change record.
