@@ -7,6 +7,19 @@
 
 import { SelectionMask } from '../core/types';
 
+
+/** Convert any paint swatch to luminance for greyscale Mask layers. */
+export function grayscaleHex(color: string): string {
+  const match = String(color || '#ffffff').match(/^#?([0-9a-f]{6})$/i);
+  if (!match) return '#ffffff';
+  const value = match[1];
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+  return '#' + [gray, gray, gray].map(channel => channel.toString(16).padStart(2, '0')).join('');
+}
+
 export class MaskEngine {
   /**
    * Renders the current SelectionMask into a binary/grayscale 1024x1024 mask canvas
