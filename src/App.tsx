@@ -134,10 +134,11 @@ export default function App() {
     };
 
     const baseLayer = createLayer('layer_base', 'Background');
-    // The Background starts transparent so the UV editor's checkerboard can
-    // reveal empty pixels. It remains a normal editable layer and its opacity
-    // is the main background-transparency control.
+    // An editable neutral base coat. The checkerboard sits behind this layer;
+    // lowering its ordinary layer opacity reveals the checker as transparency.
     baseLayer.layerType = 'background';
+    baseLayer.ctx.fillStyle = '#9c9c9c';
+    baseLayer.ctx.fillRect(0, 0, 1024, 1024);
 
     const decalLayer = createLayer('layer_details', 'Paint & Details Layer');
     decalLayer.layerType = 'paint';
@@ -774,7 +775,7 @@ export default function App() {
   };
 
   const handleDeleteLayer = (id: string) => {
-    if (layers.length <= 1) return;
+    if (layers.length <= 1 || layers.some(layer => layer.id === id && layer.layerType === 'background')) return;
     const updated = layers.filter(l => l.id !== id);
     setLayers(updated);
     if (activeLayerId === id) {
@@ -838,9 +839,10 @@ export default function App() {
 
   const handleMoveLayer = (id: string, dir: 'up' | 'down') => {
     const idx = layers.findIndex(l => l.id === id);
-    if (idx === -1) return;
+    const backgroundIndex = layers.findIndex(layer => layer.layerType === 'background');
+    if (idx === -1 || idx === backgroundIndex) return;
     const targetIdx = dir === 'up' ? idx + 1 : idx - 1;
-    if (targetIdx < 0 || targetIdx >= layers.length) return;
+    if (targetIdx < 0 || targetIdx >= layers.length || targetIdx <= backgroundIndex) return;
 
     const copy = [...layers];
     const temp = copy[idx];
@@ -1067,7 +1069,7 @@ export default function App() {
   };
 
   const handleMergeSelectedLayers = (layerIds: string[]) => {
-    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && !layer.locked && layer.visible);
+    const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && layer.layerType !== 'background' && !layer.locked && layer.visible);
     if (selected.length < 2) return;
     // Merge is a flattening operation: heterogeneous blend modes are resolved
     // in stack order, even when layer PBR/channel settings differ. Incompatible
@@ -1126,7 +1128,7 @@ export default function App() {
   const handleDeleteSelectedLayers = (layerIds: string[]) => {
     const ids = new Set(layerIds);
     if (ids.size === 0) return;
-    const updated = layers.filter(l => !ids.has(l.id));
+    const updated = layers.filter(l => !ids.has(l.id) && l.layerType !== 'background');
     if (updated.length === 0) return;
     setLayers(updated);
     if (ids.has(activeLayerId)) setActiveLayerId(updated.find(l => !l.isGroup)?.id || updated[0].id);
