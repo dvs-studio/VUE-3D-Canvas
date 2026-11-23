@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: TypeScript diagnostics
+        run: npm run lint
+
       - name: Build and sync self-host
         run: npm run host:sync
 
