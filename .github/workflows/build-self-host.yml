@@ -16,6 +16,12 @@ on:
 permissions:
   contents: write
 
+# Rapid source edits otherwise launch concurrent self-host syncs that race
+# when each run commits the generated public bundle to this same branch.
+concurrency:
+  group: self-host-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-self-host:
     name: Pack the painter for file and http
