@@ -30,6 +30,7 @@ import { HorizontalScrollRail } from '../ui/HorizontalScrollRail';
 import { UVSculptEngine } from '../tools/uvSculptEngine';
 import { UVSculptMode } from '../core/types';
 import { UVChannelManager } from '../tools/uvChannelManager';
+import { buildUVIslandClipPath } from '../tools/uvIslandClip';
 import { 
   Layers, 
   ZoomIn, 
@@ -75,6 +76,9 @@ interface Viewport2DProps {
   onRebakeTexture?: (from: string, to: string, res: number) => void;
   onSeamlessUV?: (radius: number) => void;
   isSplitView?: boolean;
+  /** Incremented by the shared App composite whenever either viewport paints. */
+  textureVersion?: number;
+  checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
 }
 
 export const Viewport2D: React.FC<Viewport2DProps> = ({
@@ -102,6 +106,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   onRebakeTexture,
   onSeamlessUV,
   isSplitView = false,
+  textureVersion = 0,
+  checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -132,6 +138,13 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (customOBJText) return parseOBJ(customOBJText);
     return BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]().geometry : BUILTIN_MODELS.suzanne().geometry;
   }, [geometry, modelKey, customOBJText]);
+
+  // Every direct UV paint operation is clipped to the actual mesh UV triangles.
+  // This keeps brush edges, blur, smudge and stamps out of the atlas gutters.
+  const uvIslandPath = React.useMemo(() => {
+    const activeUV = effectiveGeom.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined;
+    return buildUVIslandClipPath(effectiveGeom, 1024, 1024, activeUV);
+  }, [effectiveGeom, activeUVChannel, uvGeometryVersion]);
 
   // Toggle N-Panel with 'n' key
   useEffect(() => {
@@ -178,16 +191,23 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (!ctx) return;
 
     // CS5 / ArmorPaint Dark Neutral Checkerboard Background
-    ctx.fillStyle = '#222222';
+    ctx.fillStyle = checkerboard.color1;
+    ctx.globalAlpha = Math.max(0, Math.min(100, checkerboard.alpha1)) / 100;
     ctx.fillRect(0, 0, 1024, 1024);
     for (let y = 0; y < 1024; y += 32) {
       for (let x = 0; x < 1024; x += 32) {
         if ((x / 32 + y / 32) % 2 === 0) {
-          ctx.fillStyle = '#2b2b2b';
+          ctx.globalAlpha = Math.max(0, Math.min(100, checkerboard.alpha2)) / 100;
+          ctx.fillStyle = checkerboard.color2;
+          ctx.fillRect(x, y, 32, 32);
+        } else {
+          ctx.globalAlpha = Math.max(0, Math.min(100, checkerboard.alpha1)) / 100;
+          ctx.fillStyle = checkerboard.color1;
           ctx.fillRect(x, y, 32, 32);
         }
       }
     }
+    ctx.globalAlpha = 1;
 
     // Draw visible layers in order
     layers.forEach(layer => {
@@ -199,7 +219,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     });
 
     drawOverlay();
-  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText]);
+  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText, textureVersion, checkerboard]);
 
   // Draw overlay (UV wireframe mesh unwrap, selection marching ants, pen vector paths)
   const drawOverlay = useCallback(() => {
@@ -862,6 +882,9 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
     const ctx = activeLayer.ctx;
 
+    ctx.save();
+    if (uvIslandPath) ctx.clip(uvIslandPath);
+
     if (activeTool === 'brush') {
       brushEngine.paintDabs(ctx, x, y, brush, pressure, false);
     } else if (activeTool === 'eraser') {
@@ -885,6 +908,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
       onColorSampled(hex);
     }
+
+    ctx.restore();
 
     // Instant real-time live feedback without delay: Blit dab directly to display canvas
     const displayCanvas = canvasRef.current;
