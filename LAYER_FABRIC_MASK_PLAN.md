@@ -30,7 +30,6 @@
 | ID | Layer | Notes |
 |----|-------|-------|
 | F1 | **Torn fabric** | Dedicated layer type; black/white/green colour roles; stacking influence controls; convert-from-paint; export bake |
-| F1b | **Mesh/UV influence switch** | Sub-control of F1 torn fabric layer — governs which mesh UV islands the torn layer's stacking influence reaches. Default off. |
 | F6 | **Mask** | Beside (clip one) or independent (checkbox targets) |
 
 ---
@@ -43,6 +42,7 @@ Wood (band/ring), hatching, cross-hatch, hashing, powder, noise, dither, mosaic;
 ### Planned filters / tools
 | ID | Filter / tool | Notes |
 |----|---------------|-------|
+| F1b | **Mesh/UV influence switch** | Filter-side control; governs which mesh UV islands Pattern Craft and related filters apply to. Default off. |
 | F2–F5 | **Pattern Craft** (renamed from "Cloth filter family") | **Active plan** — layer filter menu when ordered; world cloth, wool/fur, cotton, bamboo-raft, wrap, strip stack |
 | F8 | **Merged bump/displacement** | One Levels greyscale tool → 100% bump surface (same job) |
 | F7 | **Logo fabric** | Isolate colours → weave + bump/thread; needs visible pixels — **ON HOLD** |
@@ -64,11 +64,11 @@ Paint first for visuals → **Convert to Torn Fabric**. Procedural **Auto edge**
 
 ---
 
-## F1b — Mesh / UV influence switch (sub-control of F1 torn fabric layer)
+## F1b — Mesh / UV influence switch (filter side)
 
-> **Classification (Victory 2026-11-22 23:56, confirmed 2026-11-23):** F1b is a stacking/influence control belonging to the F1 torn fabric layer, not a filter. It governs which mesh UV islands the torn fabric layer's stacking influence (the green-key mask reach) applies to. Part of the F1 layer's own control panel.
+> **Classification (Victory 2026-11-23):** F1b is a filter-side control. It is not a layer type and does not belong in the layer stack. Any influence or rules described in the F1 torn fabric layer spec remain in that layer's own section and are not to be mixed with this entry.
 
-Default off — torn fabric layer influences all UVs beneath it. When on: influence is restricted to only the checked mesh UV islands. This is a layer-stack behaviour toggle, the same kind as a clip mask's target scope.
+Default off. When on: filters (Pattern Craft and related) apply only to the UV islands of the checked meshes rather than the full texture.
 
 ---
 

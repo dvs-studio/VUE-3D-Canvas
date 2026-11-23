@@ -43,7 +43,7 @@
 #### 2B — Layer technology — OPEN (after Step 0 + 2A healthy)
 - [ ] **F6** Mask layer (beside / independent targets)
 - [ ] **F1** Torn fabric (convert; black/white/green; procedural edges; export apply/restore)
-- [ ] **F1b** Mesh/UV influence switch (sub-control of F1 torn fabric layer — governs which mesh UV islands its stacking influence reaches; default off)
+- [ ] **F1b** Mesh/UV influence switch (filter-side control; restricts Pattern Craft and related filters to checked mesh UV islands only; default off)
 - [ ] **F2–F5** Pattern Craft filter family — world cloth, wool/fur, cotton, bamboo-raft, wrap, strip stack (renamed from "Cloth filter family" per Victory 2026-11-23)
 - [ ] **M1** Matcap layer + narrow Add menu
 - [x] Keep import material texture (do not remove)
