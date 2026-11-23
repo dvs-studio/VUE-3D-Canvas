@@ -2681,6 +2681,7 @@ export default function App() {
         isOpen={isLayerSettingsOpen}
         onClose={() => setIsLayerSettingsOpen(false)}
         layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
+        layers={layers}
         onSavePBR={handleSaveLayerPBR}
         checkerboard={checkerboard}
         onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
