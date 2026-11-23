@@ -29,7 +29,7 @@ import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
 import { buildUVIslandClipPath, isUVSeamTransition } from '../tools/uvIslandClip';
-import { createLayerCompositeSource } from '../tools/layerStackCompositor';
+import { createLayerCompositeSource, drawLayerWithBlend } from '../tools/layerStackCompositor';
 
 function drawingRatio(w: number, h: number): number {
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -387,20 +387,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const normalLock = saved.normalLock ?? channel === 'normal';
 
       if (colorOn && colorInfluence > 0) {
-        ctx.save();
-        ctx.globalAlpha = opacity * colorInfluence;
-        ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
-          : layer.blendMode === 'screen' ? 'screen'
-          : layer.blendMode === 'overlay' ? 'overlay'
-          : layer.blendMode === 'darken' ? 'darken'
-          : layer.blendMode === 'lighten' ? 'lighten'
-          : layer.blendMode === 'difference' || layer.blendMode === 'subtract' ? 'difference'
-          : layer.blendMode === 'add' ? 'lighter'
-          : layer.blendMode === 'color-dodge' ? 'color-dodge'
-          : layer.blendMode === 'color-burn' ? 'color-burn'
-          : 'source-over';
-        ctx.drawImage(createLayerCompositeSource(layer, layers), 0, 0, width, height);
-        ctx.restore();
+        drawLayerWithBlend(
+          ctx,
+          createLayerCompositeSource(layer, layers),
+          layer.blendMode,
+          opacity * colorInfluence,
+          { sx: 0, sy: 0, sw: layer.canvas.width, sh: layer.canvas.height, dx: 0, dy: 0, dw: width, dh: height },
+        );
       }
 
       const emissionStrength = Math.max(0, Math.min(10, saved.emissionStrength ?? 1));
@@ -1929,25 +1922,17 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             const influence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
             if (!colorOn || influence <= 0) continue;
 
-            cctx.save();
-            cctx.globalAlpha = (candidate.opacity / 100) * influence;
-            switch (candidate.blendMode) {
-              case 'multiply': cctx.globalCompositeOperation = 'multiply'; break;
-              case 'screen': cctx.globalCompositeOperation = 'screen'; break;
-              case 'overlay': cctx.globalCompositeOperation = 'overlay'; break;
-              case 'darken': cctx.globalCompositeOperation = 'darken'; break;
-              case 'lighten': cctx.globalCompositeOperation = 'lighten'; break;
-              case 'hard_light': cctx.globalCompositeOperation = 'hard-light'; break;
-              case 'soft_light': cctx.globalCompositeOperation = 'soft-light'; break;
-              case 'difference': cctx.globalCompositeOperation = 'difference'; break;
-              default: cctx.globalCompositeOperation = 'source-over'; break;
-            }
             const sourceLeft = (left / width) * candidate.canvas.width;
             const sourceTop = (top / height) * candidate.canvas.height;
             const sourceWidth = (dirtyWidth / width) * candidate.canvas.width;
             const sourceHeight = (dirtyHeight / height) * candidate.canvas.height;
-            cctx.drawImage(createLayerCompositeSource(candidate, layers), sourceLeft, sourceTop, sourceWidth, sourceHeight, left, top, dirtyWidth, dirtyHeight);
-            cctx.restore();
+            drawLayerWithBlend(
+              cctx,
+              createLayerCompositeSource(candidate, layers),
+              candidate.blendMode,
+              (candidate.opacity / 100) * influence,
+              { sx: sourceLeft, sy: sourceTop, sw: sourceWidth, sh: sourceHeight, dx: left, dy: top, dw: dirtyWidth, dh: dirtyHeight },
+            );
           }
           cctx.restore();
         }
@@ -1961,7 +1946,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         cctx.fillStyle = '#2b2b2b';
         cctx.fillRect(0, 0, compositeCanvas.width, compositeCanvas.height);
         for (const candidate of layers) {
-          if (!candidate.visible || candidate.isGroup) continue;
+          if (!candidate.visible || candidate.isGroup || candidate.layerType === 'mask' || candidate.layerType === 'tear' || candidate.layerType === 'matcap') continue;
           if (candidate.groupId) {
             const parent = layers.find(item => item.id === candidate.groupId);
             if (parent && !parent.visible) continue;
@@ -1970,22 +1955,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(candidate.channel);
           const influence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
           if (!colorOn || influence <= 0) continue;
-          cctx.save();
-          cctx.globalAlpha = (candidate.opacity / 100) * influence;
-          cctx.globalCompositeOperation = candidate.blendMode === 'multiply' ? 'multiply'
-            : candidate.blendMode === 'screen' ? 'screen'
-            : candidate.blendMode === 'overlay' ? 'overlay'
-            : candidate.blendMode === 'darken' ? 'darken'
-            : candidate.blendMode === 'lighten' ? 'lighten'
-            : candidate.blendMode === 'hard_light' ? 'hard-light'
-            : candidate.blendMode === 'soft_light' ? 'soft-light'
-            : candidate.blendMode === 'difference' || candidate.blendMode === 'subtract' ? 'difference'
-            : candidate.blendMode === 'add' ? 'lighter'
-            : candidate.blendMode === 'color-dodge' ? 'color-dodge'
-            : candidate.blendMode === 'color-burn' ? 'color-burn'
-            : 'source-over';
-          cctx.drawImage(createLayerCompositeSource(candidate, layers), 0, 0);
-          cctx.restore();
+          drawLayerWithBlend(
+            cctx,
+            createLayerCompositeSource(candidate, layers),
+            candidate.blendMode,
+            (candidate.opacity / 100) * influence,
+          );
         }
         cctx.restore();
       }
