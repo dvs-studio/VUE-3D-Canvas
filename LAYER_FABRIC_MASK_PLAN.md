@@ -3,85 +3,82 @@
 **Status:** Design / to-do. **Not fully implemented.**  
 **Scope:** self-host (`src/` → `npm run host:sync`).  
 **F7 Logo fabric:** ON HOLD.  
-**Authority on F1:** Victory 2026-11-23 via **Grok-Atelier-PIN** — supersedes Claude INVEST “procedural fabric multiply” definition.
+**Authority:** Victory via **Grok-Atelier-PIN**. Claude’s old “F1 = procedural fabric multiply” is **void for F1**; that behaviour belongs under **Pattern Craft filters** (below).
 
 ---
 
-## F1 — Tear layer (renamed from Torn fabric)
+## Three different things (do not mix)
 
-### Colour roles (authoritative)
+| Name | Kind | What it is |
+|------|------|------------|
+| **F1 Tear layer** | **Layer type** | Holes, torn edges, green mask in the **layer stack** |
+| **Pattern Craft (F2–F5 + pattern modes)** | **Filters** | Run on an **existing paint layer’s pixels** to make fabric/pattern look real |
+| **Filter mesh/UV limit** | **Filter control** | Which UV islands a **filter** may touch — not the Tear layer panel |
+
+If you are unsure: **Tear = stack hole/edge/mask. Pattern = filter on painted pixels.**
+
+---
+
+## F1 — Tear layer only
 
 | Pixel | Meaning |
 |-------|---------|
-| **Black or transparent** | Hole — shows the **immediate layer below** |
-| **White** | **Torn / fray edges** (hand-paint or procedural auto-edge) |
-| **Green** | **Mask** — influence / stack participation (which depth is affected) |
+| **Black / transparent** | Hole → show **immediate layer below** |
+| **White** | **Torn edges** (hand-paint or procedural auto-edge) |
+| **Green** | **Mask** (influence in the stack) |
 
-### What was mixed up (do not implement as F1)
-
-Prior notes described F1 as a **procedural seamless fabric pattern** that multiplies micro-contrast into the layer beneath, auto-enables displacement, and rotates by world normal. That is **not** the Tear layer. Discard that as F1’s identity.
-
-### Intended behaviour
-
-1. Dedicated **layer type** in the stack (clip-like participation, not a pixel filter kind).
-2. User may **paint first** on a normal layer, then **Convert to Tear layer**.
-3. **Hand-paint** white edges and green mask regions; black opens to the layer immediately under this tear layer.
-4. Optional **procedural white edge** from the tear control panel (width, roughness, threads).
-5. On **apply / convert to normal**: erase open holes on affected targets; bake white rim (and agreed under-paint) so that **two levels below** can receive painted edge contribution where the design calls for under-rim colour.
-6. **Export:** snapshot → apply tear composite → export → **restore** editable tear stack.
-
-### Controls (panel on this layer)
-
-- Auto edge on/off + width / roughness
-- Mask strength / which below targets (green-driven)
-- Convert to / from paint; Apply permanently vs session
+Convert from paint, apply-down, export apply/restore, optional paint contribution two levels below on rim apply. **No** fabric multiply. **No** auto-displacement as the definition of this layer.
 
 ---
 
-## Mesh / UV limits (two separate ideas)
+## Pattern Craft filters — multiply / displacement (if–else)
+
+**This is where Claude’s multiply + auto-displacement idea belongs** — as **filter behaviour on a painted layer**, not as a layer type.
+
+When the user runs a **pattern / fabrication filter** on a layer (after or during texture painting), the filter should make the result look real using one of these paths:
+
+```
+IF the target layer has little or no colour content (empty / near-empty):
+    generate a black-and-white pattern suitable as a **displacement / height** map
+    (optional: offer to enable the layer’s displacement/bump contribution)
+ELSE (layer already has painted colour / albedo):
+    **multiply / micro-detail** the pattern into that paint
+    (weave, thread, fabric grain — transform + micro contrast, not replace the paint)
+```
+
+Optional shared controls: strength, scale, world-normal-aware rotation of the pattern across limbs, seed. Still a **filter** written into the layer buffer (with undo), not a new layer kind.
+
+**F2–F5 family** (world cloth, wool/fur, cotton, bamboo-raft, wrap, strip stack) lives under this same **filter** menu. Pattern multiply/displace is the general rule those modes should obey when “make it look like real fabric on my paint” is the goal.
+
+---
+
+## Mesh / UV limits (still two ideas)
 
 | Control | Where | Role |
 |---------|--------|------|
-| Tear target / mesh scope | **Tear layer panel** | Which meshes or how deep green mask reaches for **this tear layer** |
-| Filter mesh/UV influence | **Filter side** (Pattern Craft / related) | Restrict **filter apply** to checked UV islands — not the same widget as tear scope |
+| Tear target / mesh scope | **Tear layer panel** | Stack influence for **this tear** |
+| Filter mesh/UV influence | **Filter UI** | Which islands **filters** may change |
 
-Do not collapse these into one confused “F1b” that means both.
-
----
-
-## F2–F5 — Pattern Craft (filters, not layers)
-
-World cloth, wool/fur, cotton, bamboo-raft, cylindrical wrap, strip stack — **filter menu**. Active plan when ordered.
+Never one toggle for both.
 
 ---
 
-## F6 — Mask layer
+## F6 Mask layer | F7 Logo fabric HOLD | F8 Bump merge
 
-Beside (clip one) or independent (checkbox targets). Greyscale; white reveal / black hide. **Not** the same as Tear green mask (Tear is a specialised tear/hole/edge layer).
-
----
-
-## F7 — Logo fabric — ON HOLD
+Unchanged. F6 greyscale clip ≠ Tear green mask.
 
 ---
 
-## F8 — Merge bump / displacement
+## Wood rings + Triplanar
 
-One Levels greyscale → 100% bump surface.
-
----
-
-## Related filter work (see AGENTS PIN)
-
-- **Wood rings:** uniform tree-year rings vs organic fingerprint/merged rings; world vs object coords; curvature-aware.
-- **Triplanar / dual-texture fill:** normal-weighted triplanar; Mix A/B with noise/height mask; sample folder replaces built-ins.
+See **AGENTS.md PIN** sections **2A-W** and **2A-T** (authoritative for those filters).
 
 ---
 
-## Implementation order (when building)
+## Implementation order
 
-1. Stabilisation / Step 0 as in AGENTS  
-2. Wood rings behaviour  
+1. Step 0 / stabilisation  
+2. Wood rings  
 3. Triplanar correction  
-4. F8, F6, F1 Tear layer, Pattern Craft  
+4. F8, F6, F1 Tear, Pattern Craft (with if–else above)  
 5. F7 only after go-ahead  
