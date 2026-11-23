@@ -39,6 +39,7 @@ interface LayersPanelProps {
   onAddMaskLayer?: () => void;
   onAddTearLayer?: () => void;
   onAddMatcapLayer?: () => void;
+  onUpdateLayerTarget?: (layerId: string, targetLayerId: string) => void;
   checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
   onUpdateCheckerboard?: (patch: Partial<{ color1: string; color2: string; alpha1: number; alpha2: number }>) => void;
   onAddGroup?: () => void;
@@ -343,6 +344,22 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                     </span>
                   )}
                 </div>
+                {(layer.layerType === 'mask' || layer.layerType === 'tear') && onUpdateLayerTarget && (
+                  <div className="mt-1 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <span className="text-[9px] text-[#777] shrink-0">Affects</span>
+                    <select
+                      aria-label={layer.layerType === 'mask' ? 'Mask target layer' : 'Tear target layer'}
+                      value={layer.targetLayerId || ''}
+                      onChange={e => onUpdateLayerTarget(layer.id, e.target.value)}
+                      className="min-w-0 w-full bg-[#1d1d1d] border border-[#555] text-[#bbb] rounded px-1 py-0.5 text-[9px]"
+                    >
+                      <option value="">Choose target layer…</option>
+                      {layers.filter(target => !target.isGroup && target.id !== layer.id && target.layerType !== 'mask' && target.layerType !== 'tear' && target.layerType !== 'matcap').map(target => (
+                        <option key={target.id} value={target.id}>{target.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Bake Texture Fill button */}
