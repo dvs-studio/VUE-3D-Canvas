@@ -36,6 +36,11 @@ interface LayersPanelProps {
   activeLayerId: string;
   onSelectLayer: (id: string) => void;
   onAddLayer: () => void;
+  onAddMaskLayer?: () => void;
+  onAddTearLayer?: () => void;
+  onAddMatcapLayer?: () => void;
+  checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
+  onUpdateCheckerboard?: (patch: Partial<{ color1: string; color2: string; alpha1: number; alpha2: number }>) => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -89,6 +94,11 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   activeLayerId,
   onSelectLayer,
   onAddLayer,
+  onAddMaskLayer,
+  onAddTearLayer,
+  onAddMatcapLayer,
+  checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
+  onUpdateCheckerboard,
   onAddGroup,
   onToggleGroupCollapse,
   onGroupSelectedLayers,
@@ -131,6 +141,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   } | null>(null);
 
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
+  const backgroundLayer = layers.find(layer => layer.layerType === 'background');
 
   const handleContextMenu = (e: React.MouseEvent, layerId: string) => {
     e.preventDefault();
@@ -165,7 +176,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         </div>
 
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-[#999] uppercase font-mono">Opacity</span>
+          <span className="text-[10px] text-[#999] uppercase font-mono">{activeLayer?.layerType === 'background' ? 'Background transparency' : 'Opacity'}</span>
           <input
             type="range"
             min="0"
@@ -179,6 +190,30 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           </span>
         </div>
       </div>
+
+      {backgroundLayer && onUpdateCheckerboard && (
+        <div className="px-2 py-2 border-b border-[#494949] bg-[#2d2d2d] space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-[#aaa] uppercase font-mono">UV transparency preview</span>
+            <span className="text-[9px] text-[#777]">Visual aid only</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center gap-1 text-[10px] text-[#aaa]">Colour 1
+              <input aria-label="Checkerboard colour 1" type="color" value={checkerboard.color1} onChange={e => onUpdateCheckerboard({ color1: e.target.value })} className="h-6 flex-1 bg-transparent border-0"/>
+            </label>
+            <label className="flex items-center gap-1 text-[10px] text-[#aaa]">Colour 2
+              <input aria-label="Checkerboard colour 2" type="color" value={checkerboard.color2} onChange={e => onUpdateCheckerboard({ color2: e.target.value })} className="h-6 flex-1 bg-transparent border-0"/>
+            </label>
+          </div>
+          <label className="block text-[10px] text-[#aaa]">Colour 1 transparency · {checkerboard.alpha1}%
+            <input aria-label="Checkerboard colour 1 transparency" type="range" min="0" max="100" value={checkerboard.alpha1} onChange={e => onUpdateCheckerboard({ alpha1: Number(e.target.value) })} className="w-full accent-[#3d7fb8]"/>
+          </label>
+          <label className="block text-[10px] text-[#aaa]">Colour 2 transparency · {checkerboard.alpha2}%
+            <input aria-label="Checkerboard colour 2 transparency" type="range" min="0" max="100" value={checkerboard.alpha2} onChange={e => onUpdateCheckerboard({ alpha2: Number(e.target.value) })} className="w-full accent-[#3d7fb8]"/>
+          </label>
+          <p className="text-[9px] text-[#777]">The Background layer's opacity slider controls the main background transparency. Checkerboard colours never enter the texture or export.</p>
+        </div>
+      )}
 
       {/* Layer List Stack */}
       <div className="flex-1 overflow-y-auto p-1 space-y-1">
@@ -300,7 +335,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[9px] text-[#888] font-mono">
-                    {layer.channel.toUpperCase()} · {layer.opacity}%
+                    {(layer.layerType || layer.channel).toUpperCase()} · {layer.opacity}%
                   </span>
                   {layer.isTextureFill && (
                     <span className="px-1 py-0.2 bg-amber-500/25 border border-amber-500 text-amber-300 text-[8px] font-bold rounded">
@@ -369,10 +404,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           <button
             onClick={onAddLayer}
             className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
-            title="Create New Texture Layer"
+            title="Create New Paint Layer"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          {onAddMaskLayer && <button onClick={onAddMaskLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#a6e3a1] rounded border border-[#505050] text-[9px] font-bold" title="Add greyscale Mask Layer">M</button>}
+          {onAddTearLayer && <button onClick={onAddTearLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#f5a942] rounded border border-[#505050] text-[9px] font-bold" title="Add Tear Layer: black cuts, white torn edge, green stack mask">T</button>}
+          {onAddMatcapLayer && <button onClick={onAddMatcapLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#89b4fa] rounded border border-[#505050] text-[9px] font-bold" title="Add dedicated Matcap Layer">MC</button>}
           {onImportTexture && (
             <button
               onClick={onImportTexture}
