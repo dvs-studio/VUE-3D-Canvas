@@ -82,6 +82,7 @@ import { UndoSettingsDialog } from './ui/UndoSettingsDialog';
 import { SymmetryConfig, SymmetryEngine } from './tools/symmetryEngine';
 import { GpuDiagnosticsModal } from './ui/GpuDiagnosticsModal';
 import { LagoonMenu } from './ui/LagoonMenu';
+import { drawLayerWithBlend } from './tools/layerStackCompositor';
 
 import { Viewport3D } from './renderer/Viewport3D';
 import { Viewport2D } from './renderer/Viewport2D';
@@ -1206,6 +1207,10 @@ export default function App() {
       undoBuffer.pushState('Invert Layer Color', layers);
       notifyTextureUpdated();
     }
+  };
+
+  const handleUpdateLayerOpacityFromPreferences = (layerId: string, opacity: number) => {
+    handleUpdateOpacity(layerId, opacity);
   };
 
   // Layer PBR Settings Save
@@ -2677,6 +2682,10 @@ export default function App() {
         onClose={() => setIsLayerSettingsOpen(false)}
         layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
         onSavePBR={handleSaveLayerPBR}
+        checkerboard={checkerboard}
+        onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
+        onUpdateLayerTarget={handleUpdateLayerTarget}
+        onUpdateOpacity={handleUpdateLayerOpacityFromPreferences}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
       />
