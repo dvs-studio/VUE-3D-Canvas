@@ -767,6 +767,11 @@ export default function App() {
   const handleAddMaskLayer = () => handleAddSpecialLayer('mask');
   const handleAddTearLayer = () => handleAddSpecialLayer('tear');
   const handleAddMatcapLayer = () => handleAddSpecialLayer('matcap');
+  const handleUpdateLayerTarget = (layerId: string, targetLayerId: string) => {
+    if (!layers.some(layer => layer.id === targetLayerId && !layer.isGroup)) return;
+    setLayers(previous => previous.map(layer => layer.id === layerId ? { ...layer, targetLayerId } : layer));
+    notifyTextureUpdated();
+  };
 
   const handleDeleteLayer = (id: string) => {
     if (layers.length <= 1) return;
@@ -2081,6 +2086,7 @@ export default function App() {
                             onAddLayer={handleAddLayer}
                  onAddMaskLayer={handleAddMaskLayer}
                  onAddTearLayer={handleAddTearLayer}
+                       onUpdateLayerTarget={handleUpdateLayerTarget}
                  onAddMatcapLayer={handleAddMatcapLayer}
                  checkerboard={checkerboard}
                  onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
@@ -2261,6 +2267,7 @@ export default function App() {
                       onAddLayer={handleAddLayer}
                        onAddMaskLayer={handleAddMaskLayer}
                        onAddTearLayer={handleAddTearLayer}
+                       onUpdateLayerTarget={handleUpdateLayerTarget}
                        onAddMatcapLayer={handleAddMatcapLayer}
                        checkerboard={checkerboard}
                        onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
