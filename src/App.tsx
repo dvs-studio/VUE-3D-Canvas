@@ -2681,6 +2681,7 @@ export default function App() {
         layers={layers}
         onSavePBR={handleSaveLayerPBR}
         onUpdateOpacity={handleUpdateLayerOpacityFromPreferences}
+        onUpdateBlendMode={handleUpdateBlendMode}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
       />
