@@ -1023,7 +1023,7 @@ export default function App() {
   const handleGroupSelectedLayers = (layerIds: string[]) => {
     const ids = layerIds.filter(id => {
       const layer = layers.find(l => l.id === id);
-      return layer && !layer.isGroup;
+      return layer && !layer.isGroup && layer.layerType !== 'background';
     });
     if (ids.length < 1) return;
     const groupId = `group_${Date.now()}`;
