@@ -154,3 +154,119 @@ Victory described those three tasks to this chat and asked for an announcement u
 Victory said he will test. This session does not run error tests unless he asks.
 
 ---
+
+---
+
+## LOG-2026-11-23-CLAUDE-PERF — Brush Performance & UV Teleport Investigation
+
+**Agent:** Claude Sonnet 4.6 · Session https://claude.ai/code/session_01PXAv4gEsYqbHYwagQpLEtY  
+**Task:** Read-only investigation of brush sluggishness regression and UV island stroke teleport. No fixes applied. Findings added per Victory's instruction.
+
+---
+
+### A. Brush Performance — What Was Found
+
+#### A1. No pointer-event batching (highest impact)
+
+`handlePointerMove` in `Viewport3D.tsx` (line 1504) is a synchronous React `onPointerMove` handler. **No `getCoalescedEvents()` is called anywhere in the codebase.** On a 120 Hz display or a Wacom tablet, the browser can fire 120+ pointer events per second. Each one runs the full pipeline below before the next event is processed — there is no throttling, no RAF gate, and no coalescing. This is the most likely root cause of the visible latency regression.
+
+**What runs on every pointer-move while painting:**
+1. `raycastUV(e)` — Three.js raycaster full intersection test against the mesh (line 1571)
+2. `brushEngine.updateStabilizer(...)` — lerp in texture space (line 1601)
+3. `executePaintTool(...)` — full dab loop including per-axis symmetry mirrors (line 1602)
+4. Inside `executePaintTool`: dirty-rect composite iterates every visible layer (lines 1795–1858)
+5. `dynamicTextureRef.current.needsUpdate = true` — marks the Three.js texture for GPU re-upload (line 1630 / end of `executePaintTool`)
+6. `drawStabilizerTether(...)` — tether canvas redraw (line 1603)
+
+The GPU texture re-upload (step 5) is the second-heaviest item. Three.js uploads the full texture (1 K × 1 K = 4 MB uncompressed) to the GPU every frame the texture is marked dirty. With `generateMipmaps` left `true` during stroke (it is only set `false` once at line 1836 inside the region-composite branch), mipmaps are regenerated per-pointer-event too.
+
+#### A2. Per-dab synchronous pixel reads
+
+Inside `brushEngine.ts`, three tool modes do synchronous `getImageData` calls on every dab stamp:
+
+| Tool | Line | What it reads |
+|------|------|---------------|
+| Blur | 538 | Full blur kernel region |
+| Clone | 564 | Source region to copy |
+| Smudge | 602, 605 | 1-pixel sample per dab, twice |
+
+Smudge additionally allocates a **new `<canvas>` element every dab** at line 572 (`createElement('canvas')`). Canvas allocation triggers a GPU context, so this is expensive at high pointer-event rates.
+
+#### A3. Dirty-rect composite iterates all layers per dab
+
+The dirty-rect composite path (lines 1795–1858) correctly limits the area copied, but it still loops all visible layers on every pointer-move. With a large layer count the `for...of layers` walk grows linearly. The old "copy full composite" path (the `else` branch below line 1860) was unbounded and far worse, but the new path is still synchronous and per-event.
+
+#### A4. Symmetry mirror overhead (A2 fix, commit 1969550)
+
+The A2 fix added independent per-path stroke state via `Map<strokeKey, BrushStrokeState>`. This is architecturally correct and the right fix for the teleport-on-mirror bug. However, with X+Y+diagonal enabled, `executePaintTool` calls `applyDabAt` up to **4 times** per pointer-event (primary + mirror-X + mirror-Y + mirror-XY). Each call runs the full dab loop and dirty-rect composite. For simple strokes the overhead is linear in the number of axes, which is expected and acceptable. The slowdown reported by Victory is more likely A1 than A2.
+
+#### A5. `updateCompositeTexture` effect fires on every textureVersion bump
+
+The React effect at line ~1085 runs `updateCompositeTexture()` + `dynamicTextureRef.current.needsUpdate = true` on every `[layers, textureVersion]` change. `onTextureUpdated()` bumps `textureVersion`. This effect is for end-of-stroke or layer-panel changes and does not appear to fire during stroke. No issue found here during active painting; it is a potential cost if `textureVersion` is ever bumped mid-stroke.
+
+#### A6. No `setPointerCapture` on the 3D canvas
+
+`setPointerCapture` is not called on pointer-down (line ~1455). Without it, moving outside the canvas boundary during a fast stroke causes pointer events to be lost to the browser and the stroke silently gaps. This is a correctness issue, not a performance issue.
+
+---
+
+### B. UV Island Stroke Teleport — What Was Found
+
+#### B1. `raycastUV` discards `faceIndex` (confirmed root cause)
+
+`raycastUV` (line 1647) returns only `intersects[0].uv` and throws away `intersects[0].faceIndex`. The UV coordinates stored on face vertices are from the UV map, which can be non-contiguous — a mesh with separate UV islands stores texels that are hundreds of pixels apart in texture space even though the faces are adjacent in 3D space. When the pointer crosses a UV seam, consecutive `raycastUV` calls return UVs from different islands, jumping from e.g. `(0.1, 0.2)` to `(0.9, 0.8)` in UV space — a 1200-pixel jump on a 1 K texture.
+
+#### B2. `paintDabs` interpolates the full jump distance
+
+`paintDabs` in `brushEngine.ts` (line 199 onwards) computes `distance = hypot(dx, dy)` from `lastDabPos` to the new position and then stamps dabs at regular intervals along that line. When a UV-island jump produces a 1200-pixel gap, `paintDabs` fills it with a solid bridge of stamps across unrelated texture regions. This is the visible "teleport line" across the UV seam.
+
+#### B3. `updateStabilizer` glides through the jump
+
+The stabilizer (line 92) lerps toward the new UV-space target over multiple frames. After a UV-island jump the lerp path crosses through the intermediate texture region, so the stabilizer itself "paints" through the unrelated area even if `paintDabs` did not.
+
+#### B4. No distance cap or island-change guard exists
+
+There is no maximum-distance guard before `paintDabs` is called. A 1200-pixel UV jump produces the same behaviour as a 2-pixel move — it is bridged, not skipped.
+
+---
+
+### C. Victory's Suggested Algorithm — Assessment
+
+**Victory's proposal:** "Let UV Island block brush path from traversing" — when the cursor crosses a UV seam, the stroke stops at the seam boundary rather than teleporting to the other island.
+
+**Assessment:**
+
+This is architecturally correct and feasible with a small addition to `raycastUV` / the pointer-move handler:
+
+1. Return `faceIndex` alongside `uv` from `raycastUV`.
+2. On each pointer-move, compare the new `faceIndex` to the previous one (store in a ref).
+3. If the face is on a **different UV island** (islands can be pre-mapped as a `faceIndex → islandId` lookup built once at mesh load time, using Three.js `BufferGeometry` face data), treat the event as an **implicit pointer-up + pointer-down**: call `brushEngine.endStroke()` on the current island and `brushEngine.beginStroke()` on the new island. The dab loop in `paintDabs` will then start fresh from the new UV position, with no bridge.
+
+The "symmetry only copies 3D space where texturing occurs" part of Victory's idea is also sound: the mirror stroke should be computed in 3D → re-raycasted on the symmetric face, not mirrored in raw UV space. The current code mirrors UV coordinates directly, which is geometrically wrong for asymmetric UV layouts. However, that is a separate sub-problem from the bridge line.
+
+**Limitation of the approach:** Blocking traversal at UV seams means strokes naturally terminate when the brush hits a seam, requiring the user to lift and re-stroke over seam-crossing areas. This is correct behaviour for UV-based texturing and matches how other 3D paint tools handle seams (Substance Painter, Mari).
+
+---
+
+### D. Suggested Fixes (not applied — Victory to review)
+
+| ID | File | Change | Expected gain |
+|----|------|--------|---------------|
+| PERF-1 | `Viewport3D.tsx` | Gate `handlePointerMove` painting behind RAF: accumulate last UV per frame, run `executePaintTool` once per `requestAnimationFrame` tick | Caps paint throughput at display Hz; eliminates backpressure at high pointer-event rates |
+| PERF-2 | `Viewport3D.tsx` | Call `getCoalescedEvents()` and process all coalesced events per RAF tick | Preserves stroke fidelity at high Hz while batching GPU work |
+| PERF-3 | `Viewport3D.tsx` | Set `generateMipmaps = false` at stroke-start (pointer-down), restore at stroke-end (already done in `handlePointerUp`) | Removes mipmap rebuild on every dab during stroke |
+| PERF-4 | `brushEngine.ts` | Cache smudge temp canvas (allocate once, reuse) instead of `createElement` per dab | Removes GPU context allocation per dab for smudge |
+| UV-1 | `Viewport3D.tsx` | Return `{uv, faceIndex}` from `raycastUV`; store previous `faceIndex` in ref | Prerequisite for seam guard |
+| UV-2 | `Viewport3D.tsx` | Build `faceIndex → islandId` map at mesh load; on island change call `endStroke` + `beginStroke` | Prevents bridge line across UV seam |
+| UV-3 | `brushEngine.ts` | Add `maxJumpPx` guard: if `distance > brush.size * 4`, skip the dab loop for that event | Safety net for any remaining jump cases |
+
+---
+
+### E. What Changed Since Last Known-Good
+
+The A2 symmetry fix (commit 1969550) added per-path stroke state and runs `applyDabAt` up to 4× per event with multi-axis symmetry. This is the only code change to the paint hot path in recent commits. The mirror overhead alone is unlikely to explain the magnitude of the slowdown; the absence of pointer-event batching (A1) was always present and becomes more noticeable as the codebase adds more per-event work (A2 multiplier effect).
+
+---
+
+*Read-only investigation. No code was modified. All findings are suggestions for Victory and other agents to act on.*
+
