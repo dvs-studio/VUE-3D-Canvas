@@ -3,7 +3,7 @@ import * as THREE from 'three';
  * Image-layer filter algorithms. These are destructive image operations, not brush tools.
  * The selected layer's pixel buffer is transformed and written back by the caller.
  */
-export type TextureFilterKind = 'wood' | 'hatching' | 'cross-hatching' | 'hashing' | 'powderiser' | 'noise-shader' | 'dither' | 'mosaic';
+export type TextureFilterKind = 'wood' | 'hatching' | 'cross-hatching' | 'hashing' | 'powderiser' | 'noise-shader' | 'dither' | 'mosaic' | 'pattern-craft';
 export type TextureFilterSource = 'image' | 'color';
 export interface WoodSource { id:string; source:'color'|'image'; color:string; imageDataUrl?:string; density:number; }
 export interface TextureFilterConfig {
@@ -48,6 +48,13 @@ export interface TextureFilterConfig {
   woodFrequencyRandomization: number;
   /** Optional dither pattern. */
   ditherPattern: 'hash' | 'bayer';
+  /** Pattern Craft procedural textile family. */
+  patternCraftType: 'weave' | 'cotton' | 'wool' | 'bamboo' | 'wrap' | 'strip';
+  /** Auto uses grayscale displacement for empty layers and multiply for painted layers. */
+  patternCraftMode: 'auto' | 'displacement' | 'multiply';
+  patternCraftScale: number;
+  patternCraftStrength: number;
+  patternCraftSeed: number;
   /** Powder / noise seed. */
   filterSeed: number;
   woodSources: WoodSource[];
@@ -61,7 +68,7 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
   featureScale: 100, positionJitter: 0, angleJitter: 0,
   woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15,
-  ditherPattern: 'hash', filterSeed: 71,
+  ditherPattern: 'hash', patternCraftType: 'weave', patternCraftMode: 'auto', patternCraftScale: 12, patternCraftStrength: 65, patternCraftSeed: 37, filterSeed: 71,
   woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}]
 };
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
@@ -337,7 +344,66 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    }
    return out;
  }
- if(cfg.kind==='mosaic'){
+ if(cfg.kind==='pattern-craft'){
+    // Empty/near-empty layers become grayscale displacement. Painted layers
+    // retain their original alpha and receive woven micro-detail by multiply.
+    let covered=0;
+    for(let i=3;i<data.length;i+=4) if(data[i]>12) covered++;
+    const coverage=covered/Math.max(1,w*h);
+    const mode=cfg.patternCraftMode==='auto'?(coverage<0.015?'displacement':'multiply'):cfg.patternCraftMode;
+    const scale=clamp(cfg.patternCraftScale||12,2,128);
+    const strength=clamp(cfg.patternCraftStrength??65,0,100)/100;
+    const seed=Math.floor(cfg.patternCraftSeed??37);
+    const fract=(v:number)=>v-Math.floor(v);
+    const smooth=(a:number,b:number,x:number)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+      const i=(y*w+x)*4,nx=x/scale,ny=y/scale;
+      const cellX=Math.floor(nx),cellY=Math.floor(ny);
+      const jitter=(hash(cellX,cellY,seed)-0.5)*0.32;
+      let pattern=0.5;
+      if(cfg.patternCraftType==='weave'){
+        const warp=Math.pow(Math.abs(Math.sin((nx+jitter)*Math.PI)),8);
+        const weft=Math.pow(Math.abs(Math.sin((ny-jitter)*Math.PI)),8);
+        pattern=clamp(0.34+0.42*(warp+weft)+0.18*((cellX+cellY)&1?weft:warp),0,1);
+      }else if(cfg.patternCraftType==='cotton'){
+        const warp=Math.sin((nx+Math.sin(ny*0.45+seed)*0.08)*Math.PI);
+        const weft=Math.sin((ny+Math.sin(nx*0.4+seed)*0.08)*Math.PI);
+        pattern=clamp(0.5+0.22*warp+0.18*weft+(hash(cellX,cellY,seed+3)-0.5)*0.12,0,1);
+      }else if(cfg.patternCraftType==='wool'){
+        const rx=fract(Math.sin((cellX+seed)*127.1+(cellY+1)*311.7)*43758.5453);
+        const ry=fract(Math.sin((cellX+2)*269.5+(cellY+seed)*183.3)*24634.6345);
+        const dx=fract(nx)-rx,dy=fract(ny)-ry;
+        const fibre=1-smooth(0.06,0.48,Math.sqrt(dx*dx+dy*dy));
+        pattern=clamp(0.42+fibre*0.48+(hash(x,y,seed+7)-0.5)*0.1,0,1);
+      }else if(cfg.patternCraftType==='bamboo'){
+        const band=Math.abs(Math.sin((ny+Math.sin(nx*0.25)*0.035)*Math.PI));
+        const seam=Math.pow(Math.abs(Math.sin(nx*Math.PI*0.5)),12);
+        pattern=clamp(0.36+0.38*band+0.22*seam,0,1);
+      }else if(cfg.patternCraftType==='wrap'){
+        const diagonal=Math.sin((nx+ny)*Math.PI*0.72+Math.sin(ny*0.18)*0.3);
+        const crossing=Math.sin((nx-ny)*Math.PI*0.12);
+        pattern=clamp(0.5+0.28*diagonal+0.1*crossing,0,1);
+      }else{
+        const strip=0.5+0.5*Math.sin(ny*Math.PI*0.5);
+        const seam=Math.pow(Math.abs(Math.sin(nx*Math.PI)),10);
+        pattern=clamp(0.34+0.48*strip+0.15*seam,0,1);
+      }
+      pattern=clamp(pattern+(hash(x,y,seed+19)-0.5)*0.055,0,1);
+      if(mode==='displacement'){
+        const value=Math.round(pattern*255);
+        dst[i]=dst[i+1]=dst[i+2]=value;dst[i+3]=255;
+      }else{
+        const multiplier=0.58+pattern*0.42;
+        const factor=1-strength+strength*multiplier;
+        dst[i]=clamp(data[i]*factor,0,255);
+        dst[i+1]=clamp(data[i+1]*factor,0,255);
+        dst[i+2]=clamp(data[i+2]*factor,0,255);
+        dst[i+3]=data[i+3];
+      }
+    }
+    return out;
+  }
+  if(cfg.kind==='mosaic'){
    const size=Math.max(2,Math.round(cfg.mosaicSize));for(let y=0;y<h;y+=size)for(let x=0;x<w;x+=size){
      let r=0,g=0,b=0,a=0,count=0;for(let yy=y;yy<Math.min(h,y+size);yy++)for(let xx=x;xx<Math.min(w,x+size);xx++){let i=(yy*w+xx)*4;r+=data[i];g+=data[i+1];b+=data[i+2];a+=data[i+3];count++;}
      r/=count;g/=count;b/=count;a/=count;for(let yy=y;yy<Math.min(h,y+size);yy++)for(let xx=x;xx<Math.min(w,x+size);xx++){let i=(yy*w+xx)*4;dst[i]=r;dst[i+1]=g;dst[i+2]=b;dst[i+3]=a;}
