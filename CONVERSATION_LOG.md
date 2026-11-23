@@ -18,6 +18,15 @@
 
 - Seam package; Head+Eyes; fabric/mask design F1–F8; cloth active plan; logo fabric on hold.
 
+### id `LOG-2026-11-21-GROK-EDGE` — restored record from this Grok session
+- Halfway source is on `main` at `18a80cb`. CI then packed the page as `03b8ebd`. Docs handoff is `42ee71f`. Matcap to-do is `e6bb282`.
+- No browser pass in that session. Later notes say Victory accepted the UV-island seam. Do not treat this entry as a new test.
+- Island line cause: filters mixed empty UV gutters into the island, and the position map stored the bounding-box corner in the cracks. Triplanar and material fill used a fake ball. The fix stayed inside the filters and fills. The UV editor was not rewritten.
+- Hatching, cross-hatching, and hashing gained Feature scale, Position jitter, and Angle jitter. Defaults match the old look.
+- `Suzanne x.obj` eyes were not welded. Separate preset: Suzanne Head + Eyes. Original `src/assets/Suzanne.obj` was not overwritten.
+- Matcap layer and the narrow Add menu were written as to-do only. Not built in that commit.
+- `npx tsc --noEmit` already failed on older files. Vite is the build that matters.
+
 ---
 
 ## 2026-11-22 — Grok
@@ -142,3 +151,9 @@ Docs corrected: `LAYER_FABRIC_MASK_PLAN.md`, `AGENTS.md`, `INVESTIGATION_2026-11
 Victory corrected again: F1b (mesh/UV influence switch) belongs on the **filter side only**. It is not a layer type and must not appear in the layer stack section in any form. Any influence or rules described inside the F1 torn fabric layer spec are that layer's own concern and must remain there, entirely separate from the F1b filter entry. These two things must never be mixed.
 
 F1b is now documented alongside F2–F5 Pattern Craft in the filter section of `LAYER_FABRIC_MASK_PLAN.md` and `AGENTS.md`, with an explicit note to keep it separate from F1's layer spec. `INVESTIGATION_2026-11-22.md` updated to match. Commit: `97d951c`.
+
+## 2026-11-23 — Grok — id `LOG-2026-11-23-GROK-LOG`
+
+- Same agent as `LOG-2026-11-21-GROK-EDGE`. Victory asked for the agent list in this file.
+- That session's 21 November record had been shortened on `main`. The detail is restored above under `LOG-2026-11-21-GROK-EDGE`. Nothing earlier was deleted.
+- This note does not start the tear, cloth, or mask build. Those already have later sections from other agents.
