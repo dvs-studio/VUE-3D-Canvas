@@ -29,8 +29,8 @@
 ### New planned layers
 | ID | Layer | Notes |
 |----|-------|-------|
-| F1 | **Torn fabric** | Dedicated type + convert-from-paint; green/white/black roles; export bake |
-| F1b | **Mesh influence switch** | Optional: paint/tear only selected mesh UV |
+| F1 | **Torn fabric** | Dedicated layer type; black/white/green colour roles; stacking influence controls; convert-from-paint; export bake |
+| F1b | **Mesh/UV influence switch** | Sub-control of F1 torn fabric layer — governs which mesh UV islands the torn layer's stacking influence reaches. Default off. |
 | F6 | **Mask** | Beside (clip one) or independent (checkbox targets) |
 
 ---
@@ -43,7 +43,7 @@ Wood (band/ring), hatching, cross-hatch, hashing, powder, noise, dither, mosaic;
 ### Planned filters / tools
 | ID | Filter / tool | Notes |
 |----|---------------|-------|
-| F2–F5 | **Cloth** / wool / cotton / bamboo / wrap / strips | **Active plan** — layer filter menu when ordered |
+| F2–F5 | **Pattern Craft** (renamed from "Cloth filter family") | **Active plan** — layer filter menu when ordered; world cloth, wool/fur, cotton, bamboo-raft, wrap, strip stack |
 | F8 | **Merged bump/displacement** | One Levels greyscale tool → 100% bump surface (same job) |
 | F7 | **Logo fabric** | Isolate colours → weave + bump/thread; needs visible pixels — **ON HOLD** |
 
@@ -64,13 +64,17 @@ Paint first for visuals → **Convert to Torn Fabric**. Procedural **Auto edge**
 
 ---
 
-## F1b — Mesh / UV influence switch
+## F1b — Mesh / UV influence switch (sub-control of F1 torn fabric layer)
 
-Default off (normal painting). When on: only checked meshes receive paint/tear/mask influence on their UVs.
+> **Classification (Victory 2026-11-22 23:56, confirmed 2026-11-23):** F1b is a stacking/influence control belonging to the F1 torn fabric layer, not a filter. It governs which mesh UV islands the torn fabric layer's stacking influence (the green-key mask reach) applies to. Part of the F1 layer's own control panel.
+
+Default off — torn fabric layer influences all UVs beneath it. When on: influence is restricted to only the checked mesh UV islands. This is a layer-stack behaviour toggle, the same kind as a clip mask's target scope.
 
 ---
 
-## F2–F5 — Cloth filter family (ACTIVE PLAN)
+## F2–F5 — Pattern Craft filter family (ACTIVE PLAN)
+
+> **Renamed (Victory 2026-11-22):** Previously called "Cloth filter family". Correct name is **Pattern Craft**.
 
 Layer **filter menu** item — not on hold.
 

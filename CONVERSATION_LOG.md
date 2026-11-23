@@ -96,3 +96,41 @@
 - No code was changed in this entry.
 
 ---
+
+## 2026-11-22 late — Claude Sonnet 4.6 — id `LOG-2026-11-22-CLAUDE-INVEST`
+
+### Read-only investigation pass + spec corrections
+
+**Powderiser root cause confirmed (code reading, no changes made in this entry):**
+- `transformTexturePixels` declares `noise = cfg.noise / 100` at line 273 (shared for all filters). The Powderiser block at line 363 then does `strength = clamp(noise / 100, 0, 1)` — dividing by 100 a second time. With default `cfg.noise = 25`, `strength ≈ 0.0025`. Pass-one selects ~0 pixels; pass-two composites nothing; output is visually unchanged. Fix: change `noise/100` → `noise` on line 363. Written into `AGENTS.md` S0-2 block and `INVESTIGATION_2026-11-22.md`.
+
+**S0-1 stroke teleport root cause confirmed:**
+- `raycastUV` (Viewport3D.tsx ~1647) discards `faceIndex`. Move handler (~1571) feeds texels directly to the brush with no texel-jump guard. `brushEngine.paintDabs` interpolates without distance cap. All mirror paths affected independently.
+
+**Full bug sweep completed (not yet fixed — for the executing agent):**
+- P0: undo stack OOM (raw ImageData, up to 1.2 GB), material leak (MeshStandardMaterial never disposed on layers change), scene teardown leak (geometry/material/texture never disposed on unmount).
+- P1: blend mode mismatch (full composite missing hard_light/soft_light/difference), PBR texture rebuild on every stroke (no debounce), no pointer capture, no getCoalescedEvents, willReadFrequently missing, duplicate View menu, menu close only on mouseLeave (broken on touch), MeshPartsPanel onClick receives event as id.
+- P2: 10 TypeScript errors confirmed (xblendFormat duplicate keys, hdriManager canvas/image mismatch, surfaceShading InterleavedBufferAttribute, textureFilters.ts:316 union typed as intersection, MeshPartsPanel onClick type).
+- All findings with file+line in `INVESTIGATION_2026-11-22.md`. Commit: `9c1be07`.
+
+**Layer and filter type correction (Victory 2026-11-22 23:47 + 23:56):**
+- F2–F5 are **not** layer types. They are pixel filters applied to an existing layer, under a renamed family: **Pattern Craft** (previously called "cloth filter family"). This is the corrected classification — the executing agent should treat F2–F5 as entries in `TextureFilterKind`, not as new `Layer.channel` values.
+- F1b (mesh/UV influence switch) is a sub-toggle that belongs to F1 (the torn fabric layer), not to the Pattern Craft filters.
+- F1 is confirmed a **dedicated layer type** (not a filter). It sits in the layer stack like a clip mask. Behaviour: if the layer beneath has image content, it multiplies the procedural fabric's lightness/darkness micro-pixels into that layer (darkening/texturing it); if no image is present, it produces the raw black/white procedural fabric pattern. Auto-enables the displacement checkbox on the current layer. Intelligently rotates the seamless fabric pattern across limbs using world-normal displacement. The pattern is procedurally generated seamless black/white fabric. Useful for: torn patches, rusty surface framing, manually-drawn surface texturing.
+- F1b (mesh/UV influence switch): toggles whether the fabric distortion follows the UV island or stays in flat UV space. Default off. Attached to F1 only.
+- Corrected classification written into `INVESTIGATION_2026-11-22.md` and `AGENTS.md`.
+
+
+## 2026-11-23 — Claude Sonnet 4.6 — id `LOG-2026-11-23-CLAUDE-CORRECT`
+
+### Classification correction for F1, F1b, F2–F5
+
+Victory corrected two errors introduced in the previous session's doc edits:
+
+**F1b** was wrongly moved to the Pattern Craft filter group in the last write. Victory confirmed: F1b is a sub-control of the **F1 torn fabric layer**, not a filter. It governs which mesh UV islands the torn layer's stacking influence (the green-key mask reach) applies to — this is a layer-stack behaviour toggle, the same kind as a clip mask's target scope. It belongs in F1's own control panel.
+
+**F2–F5** rename to **Pattern Craft** is correct (previously "Cloth filter family"). These are filters applied to an existing layer's pixels, not layer types.
+
+The key distinction Victory stated: layer types are like vector vs raster vs bone — a fundamental kind of layer. Filters affect a layer. F1 and F1b both belong to the layer-type side. F2–F5 (Pattern Craft) belong to the filter side. These are separate concerns entirely.
+
+Docs corrected: `LAYER_FABRIC_MASK_PLAN.md`, `AGENTS.md`, `INVESTIGATION_2026-11-22.md`. Commit follows.

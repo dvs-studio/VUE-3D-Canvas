@@ -35,12 +35,9 @@
 | ID | Name | Status | Description |
 |---|---|---|---|
 | F6 | Mask layer | OPEN | Independent alpha mask alongside a target layer; erases other layers non-destructively. NOT the same as HOLD-SEL. |
-| F1 | Torn fabric | OPEN | Converts existing layer; procedurally generates torn/chipped edges (black/white/green modes); export apply/restore |
-| F1b | Mesh/UV influence switch | OPEN | Toggles whether fabric distortion follows UV island or stays in UV space. Default OFF. |
-| F2 | World cloth | OPEN | Cloth filter: gravity-draped simulation in world space |
-| F3 | Wool/fur | OPEN | Cloth filter family: fibre-direction noise |
-| F4 | Cotton | OPEN | Cloth filter: woven cotton weave pattern |
-| F5 | Bamboo-raft / wrap / strip stack | OPEN | Cloth filter: rigid strip geometry |
+| F1 | Torn fabric | OPEN | **Layer type** (like raster vs vector — a distinct kind of layer, not a filter). Sits in the layer stack. Black pixels/transparent = hole (shows layers below). White = torn edge/fray rim (can be auto-generated procedurally). Green = tear influence zone (which layers below are affected). If a layer beneath has image content: multiplies fabric lightness/darkness into it. If no image: produces raw black/white procedural fabric pattern. Auto-enables displacement checkbox. Rotates seamless fabric across limbs using world-normal displacement. Convert-from-paint workflow; export bake → restore. |
+| F1b | Mesh/UV influence switch | OPEN | **Sub-control of F1 torn fabric layer** (not a filter, not standalone). Controls which mesh UV islands the torn layer's stacking influence (green-key reach) applies to. Default off = influence applies to all UVs beneath. When on = restricted to checked mesh UV islands only. Part of F1's own layer control panel. |
+| F2–F5 | **Pattern Craft** filter family | OPEN | **Filter type** applied to an existing layer's pixel buffer via the filter menu. Family: world cloth (F2), wool/fur (F3), cotton (F4), bamboo-raft/wrap/strip stack (F5). Renamed from "Cloth filter family" (Victory 2026-11-23). |
 | M1 | Matcap layer | OPEN | Dedicated matcap-driven layer with narrow Add menu; presets: chrome/ceramic/clay/pearl/gold/custom |
 | F7 | Logo fabric | ON HOLD | Do not build until Victory approves. |
 
