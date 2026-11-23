@@ -29,6 +29,7 @@ import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
 import { FillSuite } from '../tools/fillSuite';
 import { buildUVIslandClipPath } from '../tools/uvIslandClip';
+import { createLayerCompositeSource } from '../tools/layerStackCompositor';
 
 function drawingRatio(w: number, h: number): number {
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -367,7 +368,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     let hasEmissive = false;
     for (const layer of layers) {
-      if (!layer.visible || layer.isGroup) continue;
+      if (!layer.visible || layer.isGroup || layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') continue;
       if (layer.groupId) {
         const parentGroup = layers.find(candidate => candidate.id === layer.groupId);
         if (parentGroup && !parentGroup.visible) continue;
@@ -394,7 +395,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           : layer.blendMode === 'darken' ? 'darken'
           : layer.blendMode === 'lighten' ? 'lighten'
           : 'source-over';
-        ctx.drawImage(layer.canvas, 0, 0, width, height);
+        ctx.drawImage(createLayerCompositeSource(layer, layers), 0, 0, width, height);
         ctx.restore();
       }
 
@@ -406,7 +407,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         emissionSource.height = layer.canvas.height;
         const emissionSourceContext = emissionSource.getContext('2d');
         if (emissionSourceContext) {
-          emissionSourceContext.drawImage(layer.canvas, 0, 0);
+          emissionSourceContext.drawImage(createLayerCompositeSource(layer, layers), 0, 0);
           try {
             const emissionPixels = emissionSourceContext.getImageData(0, 0, emissionSource.width, emissionSource.height);
             const emissionData = emissionPixels.data;
@@ -1886,7 +1887,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           cctx.fillRect(left, top, dirtyWidth, dirtyHeight);
 
           for (const candidate of layers) {
-            if (!candidate.visible || candidate.isGroup) continue;
+            if (!candidate.visible || candidate.isGroup || candidate.layerType === 'mask' || candidate.layerType === 'tear' || candidate.layerType === 'matcap') continue;
             if (candidate.groupId) {
               const parent = layers.find(item => item.id === candidate.groupId);
               if (parent && !parent.visible) continue;
@@ -1913,7 +1914,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             const sourceTop = (top / height) * candidate.canvas.height;
             const sourceWidth = (dirtyWidth / width) * candidate.canvas.width;
             const sourceHeight = (dirtyHeight / height) * candidate.canvas.height;
-            cctx.drawImage(candidate.canvas, sourceLeft, sourceTop, sourceWidth, sourceHeight, left, top, dirtyWidth, dirtyHeight);
+            cctx.drawImage(createLayerCompositeSource(candidate, layers), sourceLeft, sourceTop, sourceWidth, sourceHeight, left, top, dirtyWidth, dirtyHeight);
             cctx.restore();
           }
           cctx.restore();
@@ -1946,9 +1947,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             : candidate.blendMode === 'lighten' ? 'lighten'
             : candidate.blendMode === 'hard_light' ? 'hard-light'
             : candidate.blendMode === 'soft_light' ? 'soft-light'
-            : candidate.blendMode === 'difference' ? 'difference'
+            : candidate.blendMode === 'difference' || candidate.blendMode === 'subtract' ? 'difference'
+            : candidate.blendMode === 'add' ? 'lighter'
+            : candidate.blendMode === 'color-dodge' ? 'color-dodge'
+            : candidate.blendMode === 'color-burn' ? 'color-burn'
             : 'source-over';
-          cctx.drawImage(candidate.canvas, 0, 0);
+          cctx.drawImage(createLayerCompositeSource(candidate, layers), 0, 0);
           cctx.restore();
         }
         cctx.restore();
