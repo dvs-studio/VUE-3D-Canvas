@@ -6,7 +6,7 @@ import { buildObjectSpacePositionMap } from '../tools/textureFilters';
 import { DEFAULT_TEXTURE_FILTER, TextureFilterConfig, TextureFilterKind, WoodSource, transformTexturePixels } from '../tools/textureFilters';
 
 interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; autoHideOnBlur?:boolean; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
-const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic'};
+const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic','pattern-craft':'Pattern Craft (Fabric / Weave)'};
 export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,autoHideOnBlur=false,onClose,onApply})=>{
  const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor});
  const [windowOffset,setWindowOffset]=useState({x:0,y:0});
@@ -70,6 +70,23 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,a
       <Slider label="Hash density %" value={cfg.hashDensity??28} min={1} max={100} onChange={v=>update({hashDensity:v})}/>
       <Slider label="Hash seed" value={cfg.hashSeed??23} min={1} max={999} onChange={v=>update({hashSeed:v})}/>
       <p className="text-[10px] text-[#aaa]">Cell size controls feature scale. Density is how many cells/pixels activate the directional shift. Seed keeps results stable when re-applying.</p>
+     </div>}
+     {cfg.kind==='pattern-craft'&&<div className="space-y-2 p-2 border border-[#555] rounded">
+      <div className="text-xs font-semibold">Pattern Craft · Fabric Surface</div>
+      <label className="block text-xs">Material pattern
+       <select value={cfg.patternCraftType} onChange={e=>update({patternCraftType:e.target.value as TextureFilterConfig['patternCraftType']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2">
+        <option value="weave">Woven cloth</option><option value="cotton">Cotton grain</option><option value="wool">Wool / fibre</option><option value="bamboo">Bamboo raft</option><option value="wrap">Wrapped diagonal</option><option value="strip">Strip stack</option>
+       </select>
+      </label>
+      <label className="block text-xs">Application mode
+       <select value={cfg.patternCraftMode} onChange={e=>update({patternCraftMode:e.target.value as TextureFilterConfig['patternCraftMode']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2">
+        <option value="auto">Automatic (empty = height, painted = multiply)</option><option value="displacement">Grayscale displacement / height</option><option value="multiply">Multiply micro-detail into paint</option>
+       </select>
+      </label>
+      <Slider label="Thread / fibre scale" value={cfg.patternCraftScale} min={2} max={128} onChange={v=>update({patternCraftScale:v})}/>
+      <Slider label="Pattern strength" value={cfg.patternCraftStrength} min={0} max={100} onChange={v=>update({patternCraftStrength:v})}/>
+      <Slider label="Pattern seed" value={cfg.patternCraftSeed} min={1} max={999} onChange={v=>update({patternCraftSeed:v})}/>
+      <p className="text-[10px] text-[#aaa]">Automatic mode creates a full-canvas black-and-white height pattern on an empty layer. On a painted layer it multiplies fine textile detail into the existing colour and preserves transparency.</p>
      </div>}
      {cfg.kind==='mosaic'&&<Slider label="Block Size" value={cfg.mosaicSize} min={2} max={64} onChange={v=>update({mosaicSize:v})}/>}
      {cfg.kind==='dither'&&<><Slider label="Tonal Levels" value={cfg.levels} min={2} max={16} onChange={v=>update({levels:v})}/><label className="block text-xs">Pattern<select value={cfg.ditherPattern||'hash'} onChange={e=>update({ditherPattern:e.target.value as TextureFilterConfig['ditherPattern']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2"><option value="hash">Hash</option><option value="bayer">Bayer 4x4</option></select></label><Slider label="Pattern seed" value={cfg.filterSeed??71} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
