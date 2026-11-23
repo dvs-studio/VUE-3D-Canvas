@@ -38,7 +38,6 @@ interface LayersPanelProps {
   onAddLayer: () => void;
   onAddMaskLayer?: () => void;
   onAddTearLayer?: () => void;
-  onAddMatcapLayer?: () => void;
   onUpdateLayerTarget?: (layerId: string, targetLayerId: string) => void;
   checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
   onUpdateCheckerboard?: (patch: Partial<{ color1: string; color2: string; alpha1: number; alpha2: number }>) => void;
@@ -97,7 +96,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onAddLayer,
   onAddMaskLayer,
   onAddTearLayer,
-  onAddMatcapLayer,
   checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
   onUpdateCheckerboard,
   onAddGroup,
@@ -427,7 +425,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           </button>
           {onAddMaskLayer && <button onClick={onAddMaskLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#a6e3a1] rounded border border-[#505050] text-[9px] font-bold" title="Add greyscale Mask Layer">M</button>}
           {onAddTearLayer && <button onClick={onAddTearLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#f5a942] rounded border border-[#505050] text-[9px] font-bold" title="Add Tear Layer: black cuts, white torn edge, green stack mask">T</button>}
-          {onAddMatcapLayer && <button onClick={onAddMatcapLayer} className="px-1.5 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#89b4fa] rounded border border-[#505050] text-[9px] font-bold" title="Add dedicated Matcap Layer">MC</button>}
           {onImportTexture && (
             <button
               onClick={onImportTexture}
