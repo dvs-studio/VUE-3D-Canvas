@@ -704,7 +704,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         brush.hardness || 50,
         false,
         1024,
-        1024
+        1024,
+        uvIslandPath
       );
       onUpdateSelectionMask(updated);
       drawOverlay();
