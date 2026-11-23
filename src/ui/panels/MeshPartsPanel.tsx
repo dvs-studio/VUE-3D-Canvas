@@ -77,7 +77,7 @@ export const MeshPartsPanel: React.FC<MeshPartsPanelProps> = ({
           Isolate selected part only
         </label>
         <div className="flex gap-2">
-          <button type="button" onClick={onFrameSelected} disabled={selectedPart === 'all'} className="flex-1 px-2 py-1.5 rounded border border-[#555] bg-[#333] hover:bg-[#444] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+          <button type="button" onClick={() => onFrameSelected()} disabled={selectedPart === 'all'} className="flex-1 px-2 py-1.5 rounded border border-[#555] bg-[#333] hover:bg-[#444] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
             <Focus className="w-3 h-3" /> Frame Selected
           </button>
           <span className="px-2 py-1.5 text-[9px] text-[#777] self-center">{parts.length - hiddenParts.length} visible</span>
