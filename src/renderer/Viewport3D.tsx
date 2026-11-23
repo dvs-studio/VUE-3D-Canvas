@@ -1407,8 +1407,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current) return;
     const rect = canvas.getBoundingClientRect();
-    const mouseX = clientX - rect.left;
-    const mouseY = clientY - rect.top;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
     const geom = meshRef.current.geometry;
     const pos = geom.getAttribute('position');
     if (!pos) return;
@@ -1775,8 +1775,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (!canvas || !meshRef.current || !cameraPerspRef.current) return null;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
     const w = rect.width;
     const h = rect.height;
 
