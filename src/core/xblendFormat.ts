@@ -97,6 +97,8 @@ function layerMapManifest(layer: Layer, index: number, projectName: string, effe
   return {
     id: layer.id,
     name: layer.name,
+    layerType: layer.layerType || 'paint',
+    targetLayerId: layer.targetLayerId || null,
     order: index,
     visible: effectiveVisible,
     opacity: layer.opacity,
@@ -141,6 +143,8 @@ export class XBlendManager {
       return {
         id: layer.id,
         name: layer.name,
+        layerType: layer.layerType || 'paint',
+        targetLayerId: layer.targetLayerId || null,
         visible: layer.visible,
         opacity: layer.opacity,
         blendMode: layer.blendMode,
