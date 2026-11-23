@@ -1985,6 +1985,7 @@ export default function App() {
                 onSeamlessUV={handleSeamlessUV}
               isSplitView={viewMode === 'split'}
                  textureVersion={textureVersion}
+                 checkerboard={checkerboard}
                 />
             </div>
           )}
