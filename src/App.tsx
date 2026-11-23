@@ -807,7 +807,7 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: src.channel,
-      layerType: src.layerType || 'paint',
+      layerType: src.layerType === 'background' ? 'paint' : (src.layerType || 'paint'),
       targetLayerId: src.targetLayerId,
     };
 
@@ -1060,7 +1060,7 @@ export default function App() {
     if (!group) return;
     const ids = new Set(layerIds.filter(id => {
       const layer = layers.find(item => item.id === id);
-      return !!layer && !layer.isGroup && !layer.locked;
+      return !!layer && !layer.isGroup && layer.layerType !== 'background' && !layer.locked;
     }));
     if (!ids.size) return;
     const updated = layers.map(layer => ids.has(layer.id) ? { ...layer, groupId } : layer);
@@ -1280,7 +1280,7 @@ export default function App() {
       setEmbed3DAssets(project.embed3DAssets);
 
       // Reconstruct layers
-      const loadedLayers: Layer[] = project.layers.map(l => {
+      const loadedLayers: Layer[] = project.layers.map((l, layerIndex) => {
         const cvs = document.createElement('canvas');
         cvs.width = 1024;
         cvs.height = 1024;
@@ -1295,6 +1295,8 @@ export default function App() {
         return {
           id: l.id,
           name: l.name,
+          layerType: l.layerType || (layerIndex === 0 ? 'background' : 'paint'),
+          targetLayerId: l.targetLayerId || undefined,
           visible: l.visible,
           opacity: l.opacity,
           blendMode: l.blendMode,
