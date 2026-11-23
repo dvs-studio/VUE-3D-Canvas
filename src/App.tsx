@@ -1090,6 +1090,7 @@ export default function App() {
       );
     });
     const selectedIds = new Set(selected.map(layer => layer.id));
+    const selectedTargetIds = new Set(selected.filter(layer => layer.layerType !== 'mask' && layer.layerType !== 'tear' && layer.layerType !== 'matcap').map(layer => layer.id));
     const firstIndex = layers.findIndex(layer => selectedIds.has(layer.id));
     const sameGroup = selected.every(layer => layer.groupId === selected[0].groupId);
     const merged: Layer = {
@@ -1107,10 +1108,18 @@ export default function App() {
       layerType: 'paint',
     };
     const remaining = layers.filter(layer => !selectedIds.has(layer.id));
-    remaining.splice(Math.max(0, firstIndex), 0, merged);
-    setLayers(remaining);
+    // Keep any linked masks/tears editable and point them at the merged result.
+    // Masks explicitly included in the selection are flattened by the merge
+    // source above; unselected ones remain live and non-destructive.
+    const updated = remaining.map(layer =>
+      (layer.layerType === 'mask' || layer.layerType === 'tear') && selectedTargetIds.has(layer.targetLayerId || '')
+        ? { ...layer, targetLayerId: merged.id }
+        : layer
+    );
+    updated.splice(Math.max(0, firstIndex), 0, merged);
+    setLayers(updated);
     setActiveLayerId(merged.id);
-    undoBuffer.pushState('Merge Selected Layers', remaining);
+    undoBuffer.pushState('Merge Selected Layers', updated);
     notifyTextureUpdated();
   };
 
