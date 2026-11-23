@@ -89,11 +89,12 @@ function makeLayerMapDataUrl(layer: Layer, kind: LayerMapKind, pbr: LayerPBRSett
 function layerMapManifest(layer: Layer, index: number, projectName: string, effectiveVisible = layer.visible && !layer.isGroup) {
   const pbr = getLayerPbr(layer);
   const maps: Partial<Record<LayerMapKind, string>> = {};
-  if (!layer.isGroup && pbr.colorOn && (pbr.colorInfluence ?? 0) > 0) maps.color = mapPath(projectName, layer.id, 'color');
-  if (!layer.isGroup && pbr.emissionOn && (pbr.emissionInfluence ?? 0) > 0) maps.emission = mapPath(projectName, layer.id, 'emission');
-  if (!layer.isGroup && pbr.bumpOn && (pbr.bumpInfluence ?? 0) > 0) maps.height = mapPath(projectName, layer.id, 'height');
-  if (!layer.isGroup && pbr.reflectionOn && (pbr.reflectionInfluence ?? 0) > 0) maps.reflection = mapPath(projectName, layer.id, 'reflection');
-  if (!layer.isGroup && pbr.normalLock) maps.normal = mapPath(projectName, layer.id, 'normal');
+  const isStackEffectLayer = layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap';
+  if (!layer.isGroup && !isStackEffectLayer && pbr.colorOn && (pbr.colorInfluence ?? 0) > 0) maps.color = mapPath(projectName, layer.id, 'color');
+  if (!layer.isGroup && !isStackEffectLayer && pbr.emissionOn && (pbr.emissionInfluence ?? 0) > 0) maps.emission = mapPath(projectName, layer.id, 'emission');
+  if (!layer.isGroup && !isStackEffectLayer && pbr.bumpOn && (pbr.bumpInfluence ?? 0) > 0) maps.height = mapPath(projectName, layer.id, 'height');
+  if (!layer.isGroup && !isStackEffectLayer && pbr.reflectionOn && (pbr.reflectionInfluence ?? 0) > 0) maps.reflection = mapPath(projectName, layer.id, 'reflection');
+  if (!layer.isGroup && !isStackEffectLayer && pbr.normalLock) maps.normal = mapPath(projectName, layer.id, 'normal');
   return {
     id: layer.id,
     name: layer.name,
