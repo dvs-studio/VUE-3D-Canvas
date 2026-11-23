@@ -151,39 +151,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       className="flex flex-col h-full text-xs text-[#c8c8c8] select-none bg-[#383838]"
       onClick={() => setContextMenu(null)}
     >
-      {/* Top Toolbar: Blend Mode & Opacity */}
-      <div className="p-2 border-b border-[#494949] bg-[#333] space-y-1.5">
-        <div className="flex items-center justify-between gap-1">
-          <label className="text-[10px] text-[#999] uppercase font-mono">Blend</label>
-          <select
-            value={activeLayer?.blendMode || 'normal'}
-            onChange={(e) => activeLayer && onUpdateBlendMode(activeLayer.id, e.target.value as BlendMode)}
-            className="bg-[#242424] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[11px] outline-none flex-1 cs5-inset"
-          >
-            {BLEND_MODES.map(mode => (
-              <option key={mode} value={mode}>
-                {mode.charAt(0).toUpperCase() + mode.slice(1).replace('_', ' ')}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-[#999] uppercase font-mono">{activeLayer?.layerType === 'background' ? 'Background transparency' : 'Opacity'}</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={activeLayer?.opacity ?? 100}
-            onChange={(e) => activeLayer && onUpdateOpacity(activeLayer.id, Number(e.target.value))}
-            className="flex-1 accent-[#3d7fb8] h-1.5"
-          />
-          <span className="text-[10px] font-mono text-[#eee] w-7 text-right">
-            {activeLayer?.opacity ?? 100}%
-          </span>
-        </div>
-      </div>
-
       {/* Layer List Stack */}
       <div className="flex-1 overflow-y-auto p-1 space-y-1">
         {layers.slice().reverse().map((layer) => {
