@@ -1600,7 +1600,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const targetLayer = layers.find(l => l.id === activeLayerId);
       if (!targetLayer) return;
 
-      const surfaceHit = raycastSurface(e);
+      const surfaceHit = raycastSurfaceAt(e.clientX, e.clientY);
       if (!surfaceHit) {
         // Leaving the visible mesh breaks the surface path. Do not let the
         // next valid hit interpolate from the last UV point across the atlas.
