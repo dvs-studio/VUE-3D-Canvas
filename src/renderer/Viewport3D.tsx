@@ -394,6 +394,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           : layer.blendMode === 'overlay' ? 'overlay'
           : layer.blendMode === 'darken' ? 'darken'
           : layer.blendMode === 'lighten' ? 'lighten'
+          : layer.blendMode === 'difference' || layer.blendMode === 'subtract' ? 'difference'
+          : layer.blendMode === 'add' ? 'lighter'
+          : layer.blendMode === 'color-dodge' ? 'color-dodge'
+          : layer.blendMode === 'color-burn' ? 'color-burn'
           : 'source-over';
         ctx.drawImage(createLayerCompositeSource(layer, layers), 0, 0, width, height);
         ctx.restore();
