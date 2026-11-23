@@ -142,18 +142,11 @@ export class XBlendManager {
       const entry = layerMapManifest(layer, index, cleanProjectName, layer.visible && !layer.isGroup && (!layer.groupId || layers.find(parent => parent.id === layer.groupId)?.visible !== false));
       const { _pbr, ...manifest } = entry;
       return {
-        id: layer.id,
-        name: layer.name,
-        layerType: layer.layerType || 'paint',
-        targetLayerId: layer.targetLayerId || null,
-        visible: layer.visible,
-        opacity: layer.opacity,
-        blendMode: layer.blendMode,
+        ...manifest,
         locked: layer.locked,
         channel: layer.channel,
         dataUrl: layer.canvas.toDataURL('image/png'),
         pbrSettings: _pbr,
-        ...manifest,
         // Preserve the layer's own visibility in .xblend; effective group visibility belongs to the ZIP manifest.
         visible: layer.visible,
       };
