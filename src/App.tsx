@@ -1984,7 +1984,6 @@ export default function App() {
                 onSeamlessUV={handleSeamlessUV}
               isSplitView={viewMode === 'split'}
                  textureVersion={textureVersion}
-                 checkerboard={checkerboard}
                 />
             </div>
           )}
@@ -2101,9 +2100,6 @@ export default function App() {
                             onAddLayer={handleAddLayer}
                  onAddMaskLayer={handleAddMaskLayer}
                  onAddTearLayer={handleAddTearLayer}
-                       onUpdateLayerTarget={handleUpdateLayerTarget}
-                 checkerboard={checkerboard}
-                 onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
@@ -2281,9 +2277,6 @@ export default function App() {
                       onAddLayer={handleAddLayer}
                        onAddMaskLayer={handleAddMaskLayer}
                        onAddTearLayer={handleAddTearLayer}
-                       onUpdateLayerTarget={handleUpdateLayerTarget}
-                       checkerboard={checkerboard}
-                       onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
                       onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             onDeleteSelectedLayers={handleDeleteSelectedLayers}
@@ -2309,6 +2302,10 @@ export default function App() {
                       onConvertToEmissive={handleConvertToEmissive}
                       onImportTexture={() => textureFileInputRef.current?.click()}
                       onBakeTextureFill={handleBakeTextureFill}
+                      onOpenLayerSettings={(id) => {
+                        setLayerSettingsTargetId(id);
+                        setIsLayerSettingsOpen(true);
+                      }}
                     />
                   </DockablePanelFrame>
                 </div>
@@ -2683,9 +2680,6 @@ export default function App() {
         layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
         layers={layers}
         onSavePBR={handleSaveLayerPBR}
-        checkerboard={checkerboard}
-        onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
-        onUpdateLayerTarget={handleUpdateLayerTarget}
         onUpdateOpacity={handleUpdateLayerOpacityFromPreferences}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
