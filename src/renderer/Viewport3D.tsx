@@ -23,7 +23,7 @@ import { BrushEngine } from '../tools/brushEngine';
 import { PatternStampEngine } from '../tools/patternStampTool';
 import { SelectionTool } from '../tools/selectionTool';
 import { SymmetryConfig, SymmetryEngine, SymmetryAxis } from '../tools/symmetryEngine';
-import { MaskEngine } from '../tools/maskEngine';
+import { MaskEngine, grayscaleHex } from '../tools/maskEngine';
 import { HDRIManager, HDRIPreset } from './hdriManager';
 import { UndoRingBuffer } from '../core/history';
 import { BoxGizmo } from './boxGizmo';
@@ -1795,20 +1795,23 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     const ctx = layer.ctx;
+    const paintBrush = layer.layerType === 'mask'
+      ? { ...brush, color: grayscaleHex(brush.color) }
+      : brush;
 
     const applyDabAt = (dx: number, dy: number, strokeKey = 'primary') => {
       ctx.save();
       if (uvIslandPathRef.current) ctx.clip(uvIslandPathRef.current);
       if (activeTool === 'brush') {
-        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false, strokeKey);
+        brushEngine.paintDabs(ctx, dx, dy, paintBrush, pressure, false, strokeKey);
       } else if (activeTool === 'eraser') {
-        brushEngine.paintDabs(ctx, dx, dy, brush, pressure, true, strokeKey);
+        brushEngine.paintDabs(ctx, dx, dy, paintBrush, pressure, true, strokeKey);
       } else if (activeTool === 'pen') {
         brushEngine.paintDabs(ctx, dx, dy, { ...brush, hardness: 100, size: Math.max(2, brush.size * 0.4) }, pressure, false, strokeKey);
       } else if (activeTool === 'blur') {
-        brushEngine.applyBlurAt(ctx, dx, dy, brush);
+        brushEngine.applyBlurAt(ctx, dx, dy, paintBrush);
       } else if (activeTool === 'clone') {
-        brushEngine.applyCloneStampAt(ctx, dx, dy, brush);
+        brushEngine.applyCloneStampAt(ctx, dx, dy, paintBrush);
       } else if (activeTool === 'smudge') {
         brushEngine.applySmudgeAt(ctx, dx, dy, dx, dy, brush, strokeKey);
       } else if (activeTool === 'bucket') {
