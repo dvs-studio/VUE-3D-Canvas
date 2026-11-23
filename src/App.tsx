@@ -492,31 +492,13 @@ export default function App() {
       const colorOn = pbr.colorOn ?? !['height', 'normal', 'emission', 'roughness'].includes(layer.channel);
       const colorInfluence = Math.max(0, Math.min(1, pbr.colorInfluence ?? 1));
       if (!colorOn || colorInfluence <= 0) return;
-      ctx.save();
-      ctx.globalAlpha = (layer.opacity / 100) * colorInfluence;
-      let gco: GlobalCompositeOperation = 'source-over';
-      switch (layer.blendMode) {
-        case 'multiply': gco = 'multiply'; break;
-        case 'screen': gco = 'screen'; break;
-        case 'overlay': gco = 'overlay'; break;
-        case 'darken': gco = 'darken'; break;
-        case 'lighten': gco = 'lighten'; break;
-        case 'hard_light': gco = 'hard-light'; break;
-        case 'soft_light': gco = 'soft-light'; break;
-        case 'difference': gco = 'difference'; break;
-        case 'add': gco = 'lighter'; break;
-        case 'subtract': gco = 'difference'; break;
-        case 'color-dodge': gco = 'color-dodge'; break;
-        case 'color-burn': gco = 'color-burn'; break;
-        default: gco = 'source-over'; break;
-      }
-      ctx.globalCompositeOperation = gco;
-      if (layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') {
-        ctx.restore();
-        return;
-      }
-      ctx.drawImage(createLayerCompositeSource(layer, layers), 0, 0, 1024, 1024);
-      ctx.restore();
+      if (layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') return;
+      drawLayerWithBlend(
+        ctx,
+        createLayerCompositeSource(layer, layers),
+        layer.blendMode,
+        (layer.opacity / 100) * colorInfluence,
+      );
     });
   }, [layers, compositeCanvas]);
 
@@ -1093,19 +1075,14 @@ export default function App() {
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const operation: Record<string, GlobalCompositeOperation> = {
-      normal: 'source-over', multiply: 'multiply', screen: 'screen', overlay: 'overlay',
-      darken: 'darken', lighten: 'lighten', hard_light: 'hard-light',
-      soft_light: 'soft-light', difference: 'difference', add: 'lighter',
-      subtract: 'difference', 'color-dodge': 'color-dodge', 'color-burn': 'color-burn',
-    };
     selected.forEach(layer => {
       if (!layer.visible || layer.isGroup || layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') return;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
-      ctx.globalCompositeOperation = operation[layer.blendMode] || 'source-over';
-      ctx.drawImage(createLayerCompositeSource(layer, selected), 0, 0, 1024, 1024);
-      ctx.restore();
+      drawLayerWithBlend(
+        ctx,
+        createLayerCompositeSource(layer, selected),
+        layer.blendMode,
+        Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100)),
+      );
     });
     const selectedIds = new Set(selected.map(layer => layer.id));
     const firstIndex = layers.findIndex(layer => selectedIds.has(layer.id));
