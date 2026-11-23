@@ -1219,8 +1219,7 @@ export default function App() {
       if (l.id === layerId) {
         return {
           ...l,
-          pbrSettings: pbr,
-          opacity: Math.round(pbr.opacity * 100),
+          pbrSettings: { ...pbr, opacity: (l.opacity ?? 100) / 100 },
         };
       }
       return l;
