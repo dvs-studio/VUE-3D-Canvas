@@ -239,7 +239,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const isPaintingRef = useRef(false);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
-  const lastSurfaceHitRef = useRef<{ uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null } | null>(null);
+  const lastSurfaceHitRef = useRef<{ uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null; screenX: number; screenY: number } | null>(null);
   const uvIslandPathRef = useRef<Path2D | null>(null);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
@@ -1407,8 +1407,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current) return;
     const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
     const geom = meshRef.current.geometry;
     const pos = geom.getAttribute('position');
     if (!pos) return;
@@ -1469,9 +1469,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     // Touch Navigation & Tool Execution Mode
-    const surfaceHit = raycastSurface(e);
+    const surfaceHit = raycastSurfaceAt(e.clientX, e.clientY);
     const uv = surfaceHit?.uv || null;
-    lastSurfaceHitRef.current = surfaceHit ? { uv: surfaceHit.uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex } : null;
+    lastSurfaceHitRef.current = surfaceHit ? { uv: surfaceHit.uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex, screenX: e.clientX, screenY: e.clientY } : null;
     const isNavigationTool = activeTool === 'hand' || activeTool === 'zoom';
     const isExplicitOrbit = e.altKey || e.button === 1 || e.button === 2;
 
@@ -1626,7 +1626,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const seamUVArray = activeUVChannel
         ? geometryForSeam?.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
         : undefined;
-      const topologicalSeam = !!previousHit && isUVSeamTransition(
+
+      // Trace the pointer segment in screen space instead of trusting only its
+      // endpoints. Fast drags can skip several small UV triangles in one event;
+      // sampling every ~4 screen pixels catches the shared edge where the UV
+      // chart changes and also detects a brief leave/re-enter of the mesh.
+      let topologicalSeam = !!previousHit && isUVSeamTransition(
         geometryForSeam,
         previousHit.faceIndex,
         surfaceHit.faceIndex,
@@ -1634,6 +1639,40 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         targetLayer.canvas.height,
         seamUVArray,
       );
+      let sampledSurfaceGap = false;
+      if (previousHit) {
+        const screenDX = e.clientX - previousHit.screenX;
+        const screenDY = e.clientY - previousHit.screenY;
+        const screenDistance = Math.hypot(screenDX, screenDY);
+        const sampleCount = Math.min(96, Math.max(1, Math.ceil(screenDistance / 4)));
+        let previousSample: typeof surfaceHit | null = previousHit;
+        for (let sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex++) {
+          const t = sampleIndex / sampleCount;
+          const sampleHit = sampleIndex === sampleCount
+            ? surfaceHit
+            : raycastSurfaceAt(
+                previousHit.screenX + screenDX * t,
+                previousHit.screenY + screenDY * t,
+              );
+          if (!sampleHit) {
+            sampledSurfaceGap = true;
+            previousSample = null;
+            continue;
+          }
+          if (previousSample && isUVSeamTransition(
+            geometryForSeam,
+            previousSample.faceIndex,
+            sampleHit.faceIndex,
+            targetLayer.canvas.width,
+            targetLayer.canvas.height,
+            seamUVArray,
+          )) {
+            topologicalSeam = true;
+          }
+          previousSample = sampleHit;
+        }
+      }
+
       let meshSpan = 1;
       if (meshRef.current) {
         const bounds = new THREE.Box3().setFromObject(meshRef.current);
@@ -1641,23 +1680,21 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
       const worldDelta = previousHit ? surfaceHit.point.distanceTo(previousHit.point) : Number.POSITIVE_INFINITY;
       // Fallback for meshes with unstable / unavailable face adjacency metadata:
-      // compare the observed atlas motion to the motion on the actual surface.
-      // Normal UV movement scales with world movement; a huge texel jump from a
-      // tiny surface step is an atlas discontinuity, not a paintable segment.
+      // a large atlas jump over a short world-space movement is a chart cut.
       const expectedUVTravel = Number.isFinite(worldDelta)
         ? (worldDelta / meshSpan) * Math.max(targetLayer.canvas.width, targetLayer.canvas.height) * 9
         : 0;
       const heuristicSeam = !!previousHit
         && uvDelta > Math.max(brush.size * 3, expectedUVTravel + brush.size * 3)
         && worldDelta < meshSpan * 0.16;
-      const seamDiscontinuity = topologicalSeam || heuristicSeam;
+      const seamDiscontinuity = topologicalSeam || heuristicSeam || sampledSurfaceGap;
 
       if (!previousHit || seamDiscontinuity) {
         brushEngine.beginStroke(targetX, targetY, e.pressure || 1.0);
         lastCompositePaintPointRef.current = null;
         lastCompositeMirrorPointsRef.current = [];
       }
-      lastSurfaceHitRef.current = { uv: uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex };
+      lastSurfaceHitRef.current = { uv: uv.clone(), point: surfaceHit.point.clone(), faceIndex: surfaceHit.faceIndex, screenX: e.clientX, screenY: e.clientY };
 
         if (activeTool === 'mask_brush') {
           const baseMask = selectionMask || {
@@ -1733,7 +1770,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     updateCameraPosition();
   };
 
-  const raycastSurface = (e: React.PointerEvent<HTMLCanvasElement>): { uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null } | null => {
+  const raycastSurfaceAt = (clientX: number, clientY: number): { uv: THREE.Vector2; point: THREE.Vector3; faceIndex: number | null } | null => {
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current || !cameraPerspRef.current) return null;
 
