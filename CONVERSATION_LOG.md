@@ -195,3 +195,23 @@ No real browser pen, mouse, stylus, Android or touch visual testing was performe
 Detailed implementation and checklist: `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`.
 
 ## [END GPT6-UVATLAS-LIVE-SYNC-2026-11-23]
+
+## [BEGIN GPT6-LAYER-PREFERENCES-FIX-2026-11-23]
+
+Victory tested the branch and reported `drawLayerWithBlend is not defined` and requested type-specific settings be moved out of the always-visible Layers panel into right-click Layer Preferences.
+
+Changes:
+- Imported `drawLayerWithBlend` and `createLayerCompositeSource` in App.tsx.
+- Moved blend mode and opacity into Layer Preferences for all layers.
+- Background preferences include transparency plus checkerboard colours and independent alpha sliders; the checkerboard is wired to Viewport2D and remains preview-only.
+- Mask/Tear preferences include target selection and role-specific explanation. Removed their inline target dropdown from layer rows.
+- Removed the checkerboard editor and blend/opacity toolbar from the always-visible Layers panel to increase visible layer rows.
+- Ensured Layer Preferences opens from both standard and grouped/docked panel layouts.
+- Fixed saving PBR settings so it does not overwrite the common layer opacity value.
+- Added TypeScript diagnostics to the workflow and fixed the issues found, including compositor imports, UV geometry version prop, raycast coordinates, XBlend duplicate keys and unrelated typing errors in HDRI, surface shading, texture filter wood stack and MeshPartsPanel.
+- Workflow #230 / ID `45211937996` passed TypeScript diagnostics, self-host build/sync, blank-package checks and artifact upload. Workflow #231 checks the latest opacity preservation commit and must be verified before claiming the final tip passed.
+- Detailed record: `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`.
+
+No real device or visual acceptance is claimed.
+
+## [END GPT6-LAYER-PREFERENCES-FIX-2026-11-23]
