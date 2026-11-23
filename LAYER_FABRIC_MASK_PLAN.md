@@ -1,122 +1,87 @@
-# Layer fabric, cloth, mask, logo fabric plan — 2026-11-21 (expanded)
+# Layer / filter plan — Tear layer, Pattern Craft, mask (2026-11-23)
 
-**Status:** Design / to-do only. **Not implemented.**  
-**Scope:** self-host (`src/` → `npm run host:sync`). No `crates/vue3d_core`.  
-**Testing:** Victory tests unless he explicitly asks the agent to hunt errors.  
-**Logo fabric F7:** **ON HOLD** until Victory gives go-ahead.  
-**Cloth family F2–F5:** active plan (layer filter menu) — implement when ordered.
-
----
-
-## Layer summary — old vs new
-
-### Shipped (verify; do not re-spec)
-| Layer / capability | Notes |
-|--------------------|-------|
-| Ordinary paint | Default add |
-| Groups | Multi-select merge / move-to-group / delete |
-| PBR toggles | Colour, reflection, emission, bump+ramp, normal |
-| Material texture fill | Import / auto-role |
-| Per-layer UV channel | + seamless gutter action |
-| Export packages | Classic / RGB+ORM / AO×albedo |
-
-### Planned earlier (not built)
-| Layer | Notes |
-|-------|-------|
-| Matcap | Image = material; paint = alpha only; convert-to-colour recipe; JPG |
-| Narrow Add menu | Special types under one Add when panel is narrow |
-
-### New planned layers
-| ID | Layer | Notes |
-|----|-------|-------|
-| F1 | **Torn fabric** | Dedicated layer type; black/white/green colour roles; stacking influence controls; convert-from-paint; export bake |
-| F6 | **Mask** | Beside (clip one) or independent (checkbox targets) |
+**Status:** Design / to-do. **Not fully implemented.**  
+**Scope:** self-host (`src/` → `npm run host:sync`).  
+**F7 Logo fabric:** ON HOLD.  
+**Authority on F1:** Victory 2026-11-23 via **Grok-Atelier-PIN** — supersedes Claude INVEST “procedural fabric multiply” definition.
 
 ---
 
-## Filter summary — old vs new
-
-### Shipped filters (verify)
-Wood (band/ring), hatching, cross-hatch, hashing, powder, noise, dither, mosaic; hatch scale/position/angle jitter.
-
-### Planned filters / tools
-| ID | Filter / tool | Notes |
-|----|---------------|-------|
-| F1b | **Mesh/UV influence switch** | Filter-side control; governs which mesh UV islands Pattern Craft and related filters apply to. Default off. |
-| F2–F5 | **Pattern Craft** (renamed from "Cloth filter family") | **Active plan** — layer filter menu when ordered; world cloth, wool/fur, cotton, bamboo-raft, wrap, strip stack |
-| F8 | **Merged bump/displacement** | One Levels greyscale tool → 100% bump surface (same job) |
-| F7 | **Logo fabric** | Isolate colours → weave + bump/thread; needs visible pixels — **ON HOLD** |
-
-Optional later: wear edge, fray, stitch-line preset.
-
----
-
-## F1 — Torn fabric (expanded)
+## F1 — Tear layer (renamed from Torn fabric)
 
 ### Colour roles (authoritative)
+
 | Pixel | Meaning |
 |-------|---------|
-| **Black or transparent** | Hole: composite shows **true colour of layers below** |
-| **White** | **Torn edge** (fray rim). Can be **auto-generated procedurally** in the tear control panel |
-| **Green** (key) | **True tear influence** — which layers below are affected |
+| **Black or transparent** | Hole — shows the **immediate layer below** |
+| **White** | **Torn / fray edges** (hand-paint or procedural auto-edge) |
+| **Green** | **Mask** — influence / stack participation (which depth is affected) |
 
-Paint first for visuals → **Convert to Torn Fabric**. Procedural **Auto edge** for white. Convert back / apply-down erases holes on targets and bakes patch onto the layer below. **Export:** apply bake → export → **restore** session state.
+### What was mixed up (do not implement as F1)
+
+Prior notes described F1 as a **procedural seamless fabric pattern** that multiplies micro-contrast into the layer beneath, auto-enables displacement, and rotates by world normal. That is **not** the Tear layer. Discard that as F1’s identity.
+
+### Intended behaviour
+
+1. Dedicated **layer type** in the stack (clip-like participation, not a pixel filter kind).
+2. User may **paint first** on a normal layer, then **Convert to Tear layer**.
+3. **Hand-paint** white edges and green mask regions; black opens to the layer immediately under this tear layer.
+4. Optional **procedural white edge** from the tear control panel (width, roughness, threads).
+5. On **apply / convert to normal**: erase open holes on affected targets; bake white rim (and agreed under-paint) so that **two levels below** can receive painted edge contribution where the design calls for under-rim colour.
+6. **Export:** snapshot → apply tear composite → export → **restore** editable tear stack.
+
+### Controls (panel on this layer)
+
+- Auto edge on/off + width / roughness
+- Mask strength / which below targets (green-driven)
+- Convert to / from paint; Apply permanently vs session
 
 ---
 
-## F1b — Mesh / UV influence switch (filter side)
+## Mesh / UV limits (two separate ideas)
 
-> **Classification (Victory 2026-11-23):** F1b is a filter-side control. It is not a layer type and does not belong in the layer stack. Any influence or rules described in the F1 torn fabric layer spec remain in that layer's own section and are not to be mixed with this entry.
+| Control | Where | Role |
+|---------|--------|------|
+| Tear target / mesh scope | **Tear layer panel** | Which meshes or how deep green mask reaches for **this tear layer** |
+| Filter mesh/UV influence | **Filter side** (Pattern Craft / related) | Restrict **filter apply** to checked UV islands — not the same widget as tear scope |
 
-Default off. When on: filters (Pattern Craft and related) apply only to the UV islands of the checked meshes rather than the full texture.
+Do not collapse these into one confused “F1b” that means both.
 
 ---
 
-## F2–F5 — Pattern Craft filter family (ACTIVE PLAN)
+## F2–F5 — Pattern Craft (filters, not layers)
 
-> **Renamed (Victory 2026-11-22):** Previously called "Cloth filter family". Correct name is **Pattern Craft**.
-
-Layer **filter menu** item — not on hold.
-
-- **F2** World-space cloth displacement → B/W mask or colour modulate; scale, uniformity, rotation jitter, seed
-- **F3** Sub-modes: cloth, wool/fur, cotton, bamboo-raft
-- **F4** Cylindrical wrap rebuild from painted patches; sparse → cross plaster/bandaid; dirtiness + ramp
-- **F5** Strip stack with per-strip colour ramps from paint only
-
-Implement when Victory orders filter work (same priority class as F1/F6/F8).
+World cloth, wool/fur, cotton, bamboo-raft, cylindrical wrap, strip stack — **filter menu**. Active plan when ordered.
 
 ---
 
 ## F6 — Mask layer
 
-Beside = clip one layer. Independent = checkbox targets above/below. Greyscale; white reveal / black hide.
+Beside (clip one) or independent (checkbox targets). Greyscale; white reveal / black hide. **Not** the same as Tear green mask (Tear is a specialised tear/hole/edge layer).
 
 ---
 
-## F7 — Logo fabric filter (**ON HOLD**)
-
-Do **not** implement until Victory gives go-ahead.
-
-When released: own filter entry (not under cloth). Requires **visible pixels**. Isolate colours → weave each with unique bump + colour threading dispersal.
+## F7 — Logo fabric — ON HOLD
 
 ---
 
-## F8 — Merge Convert-to-Bump and Convert-to-Displacement
+## F8 — Merge bump / displacement
 
-Same job: Levels greyscale → **100% bump surface**. One menu/tool, not two divergent paths. “Displacement” may remain a synonym in UI copy only.
+One Levels greyscale → 100% bump surface.
 
 ---
 
-## Implementation order (when ordered)
+## Related filter work (see AGENTS PIN)
 
-1. **F8** merge bump/displace UI  
-2. **F6** mask infrastructure  
-3. **F1** torn + convert + procedural edge + export snapshot/restore  
-4. **F1b** mesh influence switch  
-5. **F2–F5** cloth filter menu family  
-6. **F7** logo fabric **only after explicit go-ahead**
+- **Wood rings:** uniform tree-year rings vs organic fingerprint/merged rings; world vs object coords; curvature-aware.
+- **Triplanar / dual-texture fill:** normal-weighted triplanar; Mix A/B with noise/height mask; sample folder replaces built-ins.
 
-After each slice: `npm run host:sync`; short commit; Victory tests by default.
+---
 
-### Non-goals
-No native cloth sim; no breaking old `.xblend`; no permanent flatten on export without restore; no logo fabric until go-ahead.
+## Implementation order (when building)
+
+1. Stabilisation / Step 0 as in AGENTS  
+2. Wood rings behaviour  
+3. Triplanar correction  
+4. F8, F6, F1 Tear layer, Pattern Craft  
+5. F7 only after go-ahead  
