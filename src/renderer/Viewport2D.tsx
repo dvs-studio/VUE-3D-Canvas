@@ -192,20 +192,12 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (!ctx) return;
 
     // CS5 / ArmorPaint Dark Neutral Checkerboard Background
-    ctx.fillStyle = checkerboard.color1;
-    ctx.globalAlpha = Math.max(0, Math.min(100, checkerboard.alpha1)) / 100;
-    ctx.fillRect(0, 0, 1024, 1024);
     for (let y = 0; y < 1024; y += 32) {
       for (let x = 0; x < 1024; x += 32) {
-        if ((x / 32 + y / 32) % 2 === 0) {
-          ctx.globalAlpha = Math.max(0, Math.min(100, checkerboard.alpha2)) / 100;
-          ctx.fillStyle = checkerboard.color2;
-          ctx.fillRect(x, y, 32, 32);
-        } else {
-          ctx.globalAlpha = Math.max(0, Math.min(100, checkerboard.alpha1)) / 100;
-          ctx.fillStyle = checkerboard.color1;
-          ctx.fillRect(x, y, 32, 32);
-        }
+        const second = ((x / 32 + y / 32) % 2) === 0;
+        ctx.globalAlpha = Math.max(0, Math.min(100, second ? checkerboard.alpha2 : checkerboard.alpha1)) / 100;
+        ctx.fillStyle = second ? checkerboard.color2 : checkerboard.color1;
+        ctx.fillRect(x, y, 32, 32);
       }
     }
     ctx.globalAlpha = 1;
