@@ -108,3 +108,13 @@ Prior history in git. F7 / HOLD-SEL / dedicated UV desk remain excluded.
 ### GPT-6 implementation status — 2026-11-23 branch pass
 
 The checked S0-1, S0-2 and 2B entries above mean the source implementation is committed and the self-host build/package pipeline succeeded. They do **not** mean user visual acceptance is complete. Victory's manual test checklist is in `notes/UV_SEAM_LIVE_SYNC_LAYER_REPAIR_2026-11-23.md`. Remaining unmarked 2A, 2A-W, 2A-T, filter-scope, M1, 2C and 2D items remain open and must not be treated as delivered by this branch.
+
+### Follow-up correction — 2026-11-23
+
+- The tested `drawLayerWithBlend is not defined` failure was caused by missing imports in `src/App.tsx`; both `drawLayerWithBlend` and `createLayerCompositeSource` are now imported.
+- Type-specific layer controls are not to be rendered permanently in the Layers panel. Use right-click **Layer Preferences** for Background, Mask, Tear and ordinary paint/PBR settings. The layer list should remain compact.
+- Background preferences own the main transparency slider and preview-only checkerboard colours/alpha. The checkerboard must remain connected to the 2D UV viewport and must never enter exported texture pixels.
+- Mask/Tear target selection belongs in Layer Preferences, not inline under each layer row.
+- Both standard and grouped/docked Layers panel layouts must expose the same Preferences entry.
+- TypeScript diagnostics are now part of `build-self-host.yml` before packaging. The latest checked source passed workflow #231; artifact ID `14834514744`.
+- Keep manual runtime acceptance separate from CI success. Do not claim visual seam, gizmo or viewport behaviour verified until Victory confirms it.
