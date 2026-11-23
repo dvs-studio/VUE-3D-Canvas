@@ -64,6 +64,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   // Correctly aligned 3D angles for the CSS fallback and projected 2D arrows.
   const degX = (rotation.x * 180) / Math.PI;
   const degY = (rotation.y * 180) / Math.PI;
+  const degZ = ((rotation.z || 0) * 180) / Math.PI;
   const gizmoEuler = new THREE.Euler(rotation.x, rotation.y, rotation.z || 0, 'YXZ');
   const projectAxis = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyEuler(gizmoEuler);
   const arrowFor = (x: number, y: number) => {
@@ -391,7 +392,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
             className="w-full h-full relative transform-style-3d transition-transform duration-75"
             style={{
               transformStyle: 'preserve-3d',
-              transform: `rotateX(${degX}deg) rotateY(${degY}deg)`,
+              transform: `rotateY(${degY}deg) rotateX(${degX}deg) rotateZ(${degZ}deg)`,
             }}
           >
             {/* Front Face (+Z) */}
