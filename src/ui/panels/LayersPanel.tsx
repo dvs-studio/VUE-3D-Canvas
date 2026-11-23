@@ -511,13 +511,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
           <button
             onClick={() => onDeleteLayer(activeLayerId)}
-            disabled={layers.length <= 1}
+            disabled={layers.length <= 1 || activeLayer?.layerType === 'background'}
             className={`p-1 rounded border transition-colors ${
-              layers.length > 1
+              layers.length > 1 && activeLayer?.layerType !== 'background'
                 ? 'bg-[#3a3a3a] hover:bg-[#8b2626] text-[#eee] border-[#505050]'
                 : 'bg-[#292929] text-[#666] border-[#3a3a3a] cursor-not-allowed'
             }`}
-            title="Delete Active Layer"
+            title={activeLayer?.layerType === 'background' ? "Background layer is permanent" : "Delete Active Layer"}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
