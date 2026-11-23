@@ -1547,6 +1547,13 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       return;
     }
 
+    // On-canvas brush/mask cursor. Navigation tools deliberately hide it.
+    if (!isPaintingRef.current && !orbitState.current.isOrbiting && !orbitState.current.isPanning
+      && activePointers.current.size < 2 && activeTool !== 'hand' && activeTool !== 'zoom') {
+      const cursorLayer = layers.find(layer => layer.id === activeLayerId) || layers[0];
+      if (cursorLayer) drawStabilizerTether(e, { x: 0, y: 0 }, cursorLayer);
+    }
+
     // Multi-touch gestures (Pinch-to-zoom & two-finger pan)
     if (activePointers.current.size >= 2) {
       const pts = Array.from(activePointers.current.values());
@@ -2005,16 +2012,32 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, tether.width, tether.height);
-    if (brush.stabilizer <= 10) return;
 
     const rect = tether.getBoundingClientRect();
     const cursorX = e.clientX - rect.left;
     const cursorY = e.clientY - rect.top;
+    const scale = rect.width / Math.max(1, layer.canvas.width);
+    const radius = Math.max(4, Math.min(44, brush.size * scale * 0.5));
+    const cursorColor = activeTool === 'mask_brush' ? '#22d3ee' : '#f8fafc';
 
+    // Brush footprint and center marker remain visible even with stabilizer off.
+    ctx.save();
+    ctx.strokeStyle = cursorColor;
+    ctx.fillStyle = activeTool === 'mask_brush' ? 'rgba(34,211,238,0.06)' : 'rgba(248,250,252,0.035)';
+    ctx.lineWidth = 1.25;
+    ctx.setLineDash(activeTool === 'mask_brush' ? [4, 3] : [3, 3]);
     ctx.beginPath();
-    ctx.arc(cursorX, cursorY, 3, 0, Math.PI * 2);
-    ctx.fillStyle = '#3d7fb8';
+    ctx.arc(cursorX, cursorY, radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(cursorX, cursorY, 2.2, 0, Math.PI * 2);
+    ctx.fillStyle = cursorColor;
+    ctx.fill();
+    ctx.restore();
+
+    if (brush.stabilizer <= 10) return;
 
     ctx.strokeStyle = 'rgba(61, 127, 184, 0.7)';
     ctx.lineWidth = 1.5;
@@ -2045,6 +2068,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onPointerLeave={() => { if (!isPaintingRef.current) clearStabilizerTether(); }}
         onWheel={handleWheel}
         onContextMenu={(e) => e.preventDefault()}
         className="w-full h-full cursor-crosshair block touch-none"
