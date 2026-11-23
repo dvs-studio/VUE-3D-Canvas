@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import type { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
+import type { Layer, LayerPBRSettings, BumpRampStop, BlendMode } from '../core/types';
 import { Sliders, X, Check, Sun, Flame, Shield, Layers, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 
 interface LayerSettingsModalProps {
@@ -19,6 +19,7 @@ interface LayerSettingsModalProps {
   onUpdateCheckerboard?: (patch: Partial<{ color1: string; color2: string; alpha1: number; alpha2: number }>) => void;
   onUpdateLayerTarget?: (layerId: string, targetLayerId: string) => void;
   onUpdateOpacity?: (layerId: string, opacity: number) => void;
+  onUpdateBlendMode?: (layerId: string, blendMode: BlendMode) => void;
   uvChannels?: { id: string; name: string }[];
   onSetUVChannel?: (layerId: string, channelId: string) => void;
 }
@@ -73,6 +74,7 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
   onUpdateCheckerboard,
   onUpdateLayerTarget,
   onUpdateOpacity,
+  onUpdateBlendMode,
   uvChannels = [],
   onSetUVChannel,
 }) => {
@@ -159,16 +161,23 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
         )}
 
         <div className="p-4 flex-1 overflow-y-auto space-y-3 text-xs text-[#ccc]">
+          <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
+            <strong className="text-[#eee]">Layer compositing</strong>
+            <label className="block text-[#aaa]">Blend mode
+              <select aria-label="Layer blend mode" value={layer.blendMode} onChange={e => onUpdateBlendMode?.(layer.id, e.target.value as BlendMode)} className="mt-1 w-full bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1.5">
+                {(['normal','multiply','screen','overlay','darken','lighten','hard_light','soft_light','difference','add','subtract','color-dodge','color-burn'] as BlendMode[]).map(mode => <option key={mode} value={mode}>{mode.replace('_',' ').replace(/\\b\\w/g, letter => letter.toUpperCase())}</option>)}
+              </select>
+            </label>
+            <label className="block text-[#aaa]">{layer.layerType === 'background' ? 'Background transparency' : layer.layerType === 'mask' ? 'Mask influence' : layer.layerType === 'tear' ? 'Tear influence' : 'Layer opacity'} · {layer.opacity}%
+              <input aria-label="Layer opacity or influence" type="range" min="0" max="100" value={layer.opacity} onChange={e => onUpdateOpacity?.(layer.id, Number(e.target.value))} className="w-full accent-[#3d7fb8]"/>
+            </label>
+          </section>
+
           {layer.layerType === 'background' && (
             <>
-              <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
-                <div className="flex items-center justify-between">
-                  <strong className="text-[#eee]">Background layer</strong>
-                  <span className="text-[10px] text-[#888]">Editable base layer</span>
-                </div>
-                <label className="block text-[#aaa]">Background transparency · {layer.opacity}%
-                  <input aria-label="Background layer transparency" type="range" min="0" max="100" value={layer.opacity} onChange={e => onUpdateOpacity?.(layer.id, Number(e.target.value))} className="w-full accent-[#3d7fb8]"/>
-                </label>
+              <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-2">
+                <strong className="text-[#eee]">Editable Background</strong>
+                <p className="text-[10px] text-[#888]">This is the bottom-most paintable layer. Its transparency is controlled above; the checkerboard below remains a separate visual aid.</p>
               </section>
               <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-3">
                 <div className="flex items-center justify-between">
@@ -203,9 +212,6 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
                     <option value="">Choose target layer…</option>
                     {layers.filter(target => !target.isGroup && target.id !== layer.id && target.layerType !== 'mask' && target.layerType !== 'tear' && target.layerType !== 'matcap').map(target => <option key={target.id} value={target.id}>{target.name}</option>)}
                   </select>
-                </label>
-                <label className="block text-[#aaa]">{layer.layerType === 'mask' ? 'Mask influence' : 'Tear influence'} · {layer.opacity}%
-                  <input aria-label="Mask or Tear influence" type="range" min="0" max="100" value={layer.opacity} onChange={e => onUpdateOpacity?.(layer.id, Number(e.target.value))} className="w-full accent-[#3d7fb8]"/>
                 </label>
               </section>
               {layer.layerType === 'mask' ? (
