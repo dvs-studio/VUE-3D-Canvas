@@ -33,6 +33,7 @@ export function createLayerCompositeSource(target: Layer, stack: Layer[]): HTMLC
       if (!maskContext) continue;
       maskContext.drawImage(maskLayer.canvas, 0, 0, canvas.width, canvas.height);
       const mask = maskContext.getImageData(0, 0, canvas.width, canvas.height).data;
+      const layerInfluence = Math.max(0, Math.min(1, (maskLayer.opacity ?? 100) / 100));
       for (let y = 0; y < canvas.height; y++) {
         for (let x = 0; x < canvas.width; x++) {
           const i = (y * canvas.width + x) * 4;
@@ -42,7 +43,8 @@ export function createLayerCompositeSource(target: Layer, stack: Layer[]): HTMLC
 
           if (maskLayer.layerType !== 'tear') {
             // F6 Mask: black hides, white reveals, greyscale softens the edge.
-            const influence = luminance * alpha;
+            const maskValue = luminance * alpha;
+            const influence = 1 - layerInfluence + layerInfluence * maskValue;
             data[i + 3] = Math.round(data[i + 3] * Math.max(0, Math.min(1, influence)));
             continue;
           }
@@ -52,9 +54,10 @@ export function createLayerCompositeSource(target: Layer, stack: Layer[]): HTMLC
           // - green-dominant pixels act as the stack mask
           // - white pixels form the torn rim next to a cut
           const isGreenMask = g > r * 1.2 && g > b * 1.2;
-          const keep = isGreenMask ? g * alpha : luminance * alpha;
+          const tearValue = isGreenMask ? g * alpha : luminance * alpha;
+          const keep = 1 - layerInfluence + layerInfluence * tearValue;
 
-          if (!isGreenMask && alpha > 0.65 && luminance > 0.78) {
+          if (!isGreenMask && alpha > 0.65 && luminance > 0.78 && layerInfluence > 0) {
             let edgeSignal = 0;
             for (let oy = -1; oy <= 1; oy++) {
               for (let ox = -1; ox <= 1; ox++) {
@@ -71,9 +74,8 @@ export function createLayerCompositeSource(target: Layer, stack: Layer[]): HTMLC
                 }
               }
             }
-            // Warm, slightly pale torn fibre rim. It is confined to the white
-            // pixels directly bordering the hole, not the entire white canvas.
-            const edgeMix = Math.max(0, Math.min(0.42, edgeSignal * 0.42));
+            // Opacity scales the torn rim together with the hole/edge influence.
+            const edgeMix = Math.max(0, Math.min(0.42, edgeSignal * 0.42 * layerInfluence));
             if (edgeMix > 0) {
               data[i] = Math.round(data[i] * (1 - edgeMix) + 232 * edgeMix);
               data[i + 1] = Math.round(data[i + 1] * (1 - edgeMix) + 220 * edgeMix);
