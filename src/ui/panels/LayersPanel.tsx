@@ -39,8 +39,6 @@ interface LayersPanelProps {
   onAddMaskLayer?: () => void;
   onAddTearLayer?: () => void;
   onUpdateLayerTarget?: (layerId: string, targetLayerId: string) => void;
-  checkerboard?: { color1: string; color2: string; alpha1: number; alpha2: number };
-  onUpdateCheckerboard?: (patch: Partial<{ color1: string; color2: string; alpha1: number; alpha2: number }>) => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -96,8 +94,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onAddLayer,
   onAddMaskLayer,
   onAddTearLayer,
-  checkerboard = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 },
-  onUpdateCheckerboard,
   onAddGroup,
   onToggleGroupCollapse,
   onGroupSelectedLayers,
@@ -189,30 +185,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           </span>
         </div>
       </div>
-
-      {backgroundLayer && onUpdateCheckerboard && (
-        <div className="px-2 py-2 border-b border-[#494949] bg-[#2d2d2d] space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-[#aaa] uppercase font-mono">UV transparency preview</span>
-            <span className="text-[9px] text-[#777]">Visual aid only</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center gap-1 text-[10px] text-[#aaa]">Colour 1
-              <input aria-label="Checkerboard colour 1" type="color" value={checkerboard.color1} onChange={e => onUpdateCheckerboard({ color1: e.target.value })} className="h-6 flex-1 bg-transparent border-0"/>
-            </label>
-            <label className="flex items-center gap-1 text-[10px] text-[#aaa]">Colour 2
-              <input aria-label="Checkerboard colour 2" type="color" value={checkerboard.color2} onChange={e => onUpdateCheckerboard({ color2: e.target.value })} className="h-6 flex-1 bg-transparent border-0"/>
-            </label>
-          </div>
-          <label className="block text-[10px] text-[#aaa]">Colour 1 transparency · {checkerboard.alpha1}%
-            <input aria-label="Checkerboard colour 1 transparency" type="range" min="0" max="100" value={checkerboard.alpha1} onChange={e => onUpdateCheckerboard({ alpha1: Number(e.target.value) })} className="w-full accent-[#3d7fb8]"/>
-          </label>
-          <label className="block text-[10px] text-[#aaa]">Colour 2 transparency · {checkerboard.alpha2}%
-            <input aria-label="Checkerboard colour 2 transparency" type="range" min="0" max="100" value={checkerboard.alpha2} onChange={e => onUpdateCheckerboard({ alpha2: Number(e.target.value) })} className="w-full accent-[#3d7fb8]"/>
-          </label>
-          <p className="text-[9px] text-[#777]">The Background layer's opacity slider controls the main background transparency. Checkerboard colours never enter the texture or export.</p>
-        </div>
-      )}
 
       {/* Layer List Stack */}
       <div className="flex-1 overflow-y-auto p-1 space-y-1">
@@ -342,22 +314,6 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                     </span>
                   )}
                 </div>
-                {(layer.layerType === 'mask' || layer.layerType === 'tear') && onUpdateLayerTarget && (
-                  <div className="mt-1 flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                    <span className="text-[9px] text-[#777] shrink-0">Affects</span>
-                    <select
-                      aria-label={layer.layerType === 'mask' ? 'Mask target layer' : 'Tear target layer'}
-                      value={layer.targetLayerId || ''}
-                      onChange={e => onUpdateLayerTarget(layer.id, e.target.value)}
-                      className="min-w-0 w-full bg-[#1d1d1d] border border-[#555] text-[#bbb] rounded px-1 py-0.5 text-[9px]"
-                    >
-                      <option value="">Choose target layer…</option>
-                      {layers.filter(target => !target.isGroup && target.id !== layer.id && target.layerType !== 'mask' && target.layerType !== 'tear' && target.layerType !== 'matcap').map(target => (
-                        <option key={target.id} value={target.id}>{target.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
 
               {/* Bake Texture Fill button */}
@@ -394,7 +350,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                     onOpenLayerSettings(layer.id);
                   }}
                   className="text-[#888] hover:text-[#3d7fb8] p-0.5 transition-colors"
-                  title="Layer Material & PBR Settings"
+                  title="Layer Preferences"
                 >
                   <Sliders className="w-3 h-3" />
                 </button>
@@ -710,7 +666,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white text-[#fab387] flex items-center gap-2"
             >
               <Sliders className="w-3.5 h-3.5 text-[#fab387]" />
-              <span>Layer Material &amp; PBR Settings...</span>
+              <span>Layer Preferences...</span>
             </button>
           )}
 
