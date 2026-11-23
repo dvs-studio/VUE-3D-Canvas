@@ -133,15 +133,28 @@ export default function App() {
       };
     };
 
-    const baseLayer = createLayer('layer_base', 'Base Color Layer');
-    // Pre-fill base coat with neutral studio primer
-    baseLayer.ctx.fillStyle = '#9c9c9c';
-    baseLayer.ctx.fillRect(0, 0, 1024, 1024);
+    const baseLayer = createLayer('layer_base', 'Background');
+    // The Background starts transparent so the UV editor's checkerboard can
+    // reveal empty pixels. It remains a normal editable layer and its opacity
+    // is the main background-transparency control.
+    baseLayer.layerType = 'background';
 
     const decalLayer = createLayer('layer_details', 'Paint & Details Layer');
+    decalLayer.layerType = 'paint';
 
     return [baseLayer, decalLayer];
   });
+
+  const [checkerboard, setCheckerboard] = useState<{ color1: string; color2: string; alpha1: number; alpha2: number }>(() => {
+    const fallback = { color1: '#222222', color2: '#2b2b2b', alpha1: 100, alpha2: 100 };
+    try {
+      const saved = localStorage.getItem('vue3d_uv_checkerboard');
+      return saved ? { ...fallback, ...JSON.parse(saved) } : fallback;
+    } catch { return fallback; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('vue3d_uv_checkerboard', JSON.stringify(checkerboard)); } catch {}
+  }, [checkerboard]);
 
   const [activeLayerId, setActiveLayerId] = useState<string>('layer_details');
   const [activeTool, setActiveTool] = useState<ToolType>('brush');
@@ -491,10 +504,18 @@ export default function App() {
         case 'hard_light': gco = 'hard-light'; break;
         case 'soft_light': gco = 'soft-light'; break;
         case 'difference': gco = 'difference'; break;
+        case 'add': gco = 'lighter'; break;
+        case 'subtract': gco = 'difference'; break;
+        case 'color-dodge': gco = 'color-dodge'; break;
+        case 'color-burn': gco = 'color-burn'; break;
         default: gco = 'source-over'; break;
       }
       ctx.globalCompositeOperation = gco;
-      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
+      if (layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') {
+        ctx.restore();
+        return;
+      }
+      ctx.drawImage(createLayerCompositeSource(layer, layers), 0, 0, 1024, 1024);
       ctx.restore();
     });
   }, [layers, compositeCanvas]);
@@ -715,6 +736,7 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: 'color',
+      layerType: 'paint',
     };
 
     const updated = [...layers, newLayer];
@@ -723,6 +745,46 @@ export default function App() {
     undoBuffer.pushState('Add Layer', updated);
     notifyTextureUpdated();
   };
+
+  const handleAddSpecialLayer = (layerType: 'mask' | 'tear' | 'matcap') => {
+    const target = layers.find(layer => layer.id === activeLayerId && !layer.isGroup)
+      || [...layers].reverse().find(layer => !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear');
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024;
+    cvs.height = 1024;
+    const ctx = cvs.getContext('2d')!;
+    if (layerType === 'mask' || layerType === 'tear') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 1024, 1024);
+    }
+    const labels = { mask: 'Mask Layer', tear: 'Tear Layer', matcap: 'Matcap Layer' };
+    const newLayer: Layer = {
+      id: `layer_${layerType}_${Date.now()}`,
+      name: labels[layerType],
+      layerType,
+      targetLayerId: target?.id,
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas: cvs,
+      ctx,
+      channel: 'color',
+      ...(layerType === 'matcap' ? { pbrSettings: {
+        roughness: 0.5, metallic: 0, bumpHeight: 1, normalStrength: 1,
+        emissionStrength: 0, opacity: 1, enableColor: false, enableBump: false,
+        reflectionSource: 'matcap' as const, reflectionIntensity: 0.8,
+      } } : {}),
+    };
+    const updated = [...layers, newLayer];
+    setLayers(updated);
+    setActiveLayerId(newLayer.id);
+    undoBuffer.pushState(`Add ${labels[layerType]}`, updated);
+    notifyTextureUpdated();
+  };
+  const handleAddMaskLayer = () => handleAddSpecialLayer('mask');
+  const handleAddTearLayer = () => handleAddSpecialLayer('tear');
+  const handleAddMatcapLayer = () => handleAddSpecialLayer('matcap');
 
   const handleDeleteLayer = (id: string) => {
     if (layers.length <= 1) return;
@@ -757,6 +819,8 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: src.channel,
+      layerType: src.layerType || 'paint',
+      targetLayerId: src.targetLayerId,
     };
 
     const updated = [...layers, dup];
@@ -1018,16 +1082,12 @@ export default function App() {
   const handleMergeSelectedLayers = (layerIds: string[]) => {
     const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && !layer.locked && layer.visible);
     if (selected.length < 2) return;
-    const channel = selected[0].channel;
-    if (selected.some(layer => layer.channel !== channel)) {
-      window.alert('Merge selected visible layers with the same texture channel only.');
-      return;
-    }
-    const pbrSignature = JSON.stringify(selected[0].pbrSettings ?? null);
-    if (selected.some(layer => JSON.stringify(layer.pbrSettings ?? null) !== pbrSignature)) {
-      window.alert('Merge layers with matching PBR settings only. This preserves their material response.');
-      return;
-    }
+    // Merge is a flattening operation: heterogeneous blend modes are resolved
+    // in stack order, even when layer PBR/channel settings differ. Incompatible
+    // channels are baked into colour; only identical PBR settings are retained.
+    const sameChannel = selected.every(layer => layer.channel === selected[0].channel);
+    const channel = sameChannel ? selected[0].channel : 'color';
+    const samePBR = selected.every(layer => JSON.stringify(layer.pbrSettings ?? null) === JSON.stringify(selected[0].pbrSettings ?? null));
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
@@ -1036,14 +1096,15 @@ export default function App() {
     const operation: Record<string, GlobalCompositeOperation> = {
       normal: 'source-over', multiply: 'multiply', screen: 'screen', overlay: 'overlay',
       darken: 'darken', lighten: 'lighten', hard_light: 'hard-light',
-      soft_light: 'soft-light', difference: 'difference',
+      soft_light: 'soft-light', difference: 'difference', add: 'lighter',
+      subtract: 'difference', 'color-dodge': 'color-dodge', 'color-burn': 'color-burn',
     };
     selected.forEach(layer => {
-      if (!layer.visible) return;
+      if (!layer.visible || layer.isGroup || layer.layerType === 'mask' || layer.layerType === 'tear' || layer.layerType === 'matcap') return;
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
       ctx.globalCompositeOperation = operation[layer.blendMode] || 'source-over';
-      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
+      ctx.drawImage(createLayerCompositeSource(layer, selected), 0, 0, 1024, 1024);
       ctx.restore();
     });
     const selectedIds = new Set(selected.map(layer => layer.id));
@@ -1060,7 +1121,8 @@ export default function App() {
       ctx,
       channel,
       ...(sameGroup && selected[0].groupId ? { groupId: selected[0].groupId } : {}),
-      ...(selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
+      ...(samePBR && selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
+      layerType: 'paint',
     };
     const remaining = layers.filter(layer => !selectedIds.has(layer.id));
     remaining.splice(Math.max(0, firstIndex), 0, merged);
@@ -2038,6 +2100,11 @@ export default function App() {
                             activeLayerId={activeLayerId}
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
+                 onAddMaskLayer={handleAddMaskLayer}
+                 onAddTearLayer={handleAddTearLayer}
+                 onAddMatcapLayer={handleAddMatcapLayer}
+                 checkerboard={checkerboard}
+                 onUpdateCheckerboard={(patch) => setCheckerboard(current => ({ ...current, ...patch }))}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
