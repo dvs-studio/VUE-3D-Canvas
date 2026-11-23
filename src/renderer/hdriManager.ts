@@ -142,7 +142,7 @@ export class HDRIManager {
         undefined,
         undefined,
         () => {
-          tex.image = this.generateEquirectangularCanvas('studio');
+          tex.image = this.generateEquirectangularCanvas('studio') as unknown as HTMLImageElement;
           tex.needsUpdate = true;
         }
       );
