@@ -25,7 +25,7 @@ import { GizmoStyle } from '../core/types';
 import { loadMountainGizmoGLB, saveMountainGizmoGLB } from './mountainGizmoStorage';
 
 interface BoxGizmoProps {
-  rotation: { x: number; y: number };
+  rotation: { x: number; y: number; z?: number };
   onSnapView: (view: 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom') => void;
   onFlipView?: () => void;
   onPanDelta?: (dx: number, dy: number) => void;
@@ -64,7 +64,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
   // Correctly aligned 3D angles for the CSS fallback and projected 2D arrows.
   const degX = (rotation.x * 180) / Math.PI;
   const degY = (rotation.y * 180) / Math.PI;
-  const gizmoEuler = new THREE.Euler(rotation.x, rotation.y, 0, 'YXZ');
+  const gizmoEuler = new THREE.Euler(rotation.x, rotation.y, rotation.z || 0, 'YXZ');
   const projectAxis = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).applyEuler(gizmoEuler);
   const arrowFor = (x: number, y: number) => {
     const arrows = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘'];
@@ -259,7 +259,7 @@ export const BoxGizmo: React.FC<BoxGizmoProps> = ({
     const scene = modelSceneRef.current;
     const camera = modelCameraRef.current;
     if (!model || !renderer || !scene || !camera) return;
-    model.rotation.set(rotation.x, rotation.y, 0, 'YXZ');
+    model.rotation.set(rotation.x, rotation.y, rotation.z || 0, 'YXZ');
     const helpers = (model.userData.axisArrowHelpers || []) as THREE.ArrowHelper[];
     helpers.forEach(helper => {
       const direction = (helper.userData.axisDirection as THREE.Vector3).clone().applyEuler(model.rotation);
