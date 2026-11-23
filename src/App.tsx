@@ -730,8 +730,10 @@ export default function App() {
   };
 
   const handleAddSpecialLayer = (layerType: 'mask' | 'tear') => {
-    const target = layers.find(layer => layer.id === activeLayerId && !layer.isGroup)
-      || [...layers].reverse().find(layer => !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear');
+    const isPaintTarget = (layer: Layer) =>
+      !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear' && layer.layerType !== 'matcap';
+    const target = layers.find(layer => layer.id === activeLayerId && isPaintTarget(layer))
+      || [...layers].reverse().find(isPaintTarget);
     const cvs = document.createElement('canvas');
     cvs.width = 1024;
     cvs.height = 1024;
@@ -764,7 +766,7 @@ export default function App() {
   const handleAddMaskLayer = () => handleAddSpecialLayer('mask');
   const handleAddTearLayer = () => handleAddSpecialLayer('tear');
   const handleUpdateLayerTarget = (layerId: string, targetLayerId: string) => {
-    if (!layers.some(layer => layer.id === targetLayerId && !layer.isGroup)) return;
+    if (!layers.some(layer => layer.id === targetLayerId && !layer.isGroup && layer.layerType !== 'mask' && layer.layerType !== 'tear' && layer.layerType !== 'matcap')) return;
     setLayers(previous => previous.map(layer => layer.id === layerId ? { ...layer, targetLayerId } : layer));
     notifyTextureUpdated();
   };
