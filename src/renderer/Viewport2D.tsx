@@ -133,6 +133,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const [sculptStrength, setSculptStrength] = useState<number>(0.35);
   const uvSelectionRef = useRef<Set<number>>(new Set());
   const uvDragLast = useRef<{ u: number; v: number } | null>(null);
+  const hoverPointRef = useRef<{ x: number; y: number } | null>(null);
 
   const effectiveGeom = React.useMemo(() => {
     if (geometry) return geometry;
@@ -242,7 +243,10 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (showUVOverlay) {
       try {
         const geom = effectiveGeom;
-        const uvAttr = geom.attributes.uv;
+        const activeUVArray = geom.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined;
+        const uvAttr = activeUVArray
+          ? new THREE.BufferAttribute(activeUVArray, 2)
+          : geom.attributes.uv;
         if (uvAttr && uvAttr.count > 0) {
           ctx.save();
           ctx.strokeStyle = uvWireColor;
@@ -453,7 +457,47 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       });
       ctx.restore();
     }
-  }, [showUVOverlay, uvWireColor, uvOverlayOpacity, modelKey, customOBJText, selectionMask]);
+
+    // Brush/mask cursor and selection status are non-destructive visual aids.
+    const hover = hoverPointRef.current;
+    if (hover && !isPanning) {
+      const outsideSelection = !!(selectionMask?.active && !SelectionTool.isPointInSelection(hover.x, hover.y, selectionMask));
+      const radius = Math.max(2.5, brush.size / 2);
+      ctx.save();
+      ctx.strokeStyle = outsideSelection ? '#fb7185' : activeTool === 'mask_brush' ? '#22d3ee' : '#f8fafc';
+      ctx.fillStyle = outsideSelection ? 'rgba(251,113,133,0.08)' : activeTool === 'mask_brush' ? 'rgba(34,211,238,0.07)' : 'rgba(248,250,252,0.04)';
+      ctx.lineWidth = 1.35;
+      ctx.setLineDash(activeTool === 'mask_brush' ? [4, 3] : [3, 3]);
+      ctx.beginPath();
+      ctx.arc(hover.x, hover.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(hover.x - 5, hover.y);
+      ctx.lineTo(hover.x + 5, hover.y);
+      ctx.moveTo(hover.x, hover.y - 5);
+      ctx.lineTo(hover.x, hover.y + 5);
+      ctx.stroke();
+      if (activeTool === 'mask_brush') {
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillText('MASK', Math.min(hover.x + radius + 5, 965), Math.max(12, hover.y - radius - 4));
+      }
+      ctx.restore();
+    }
+
+    if (selectionMask?.active) {
+      ctx.save();
+      ctx.font = 'bold 10px monospace';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.strokeStyle = 'rgba(15,23,42,0.8)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(selectionMask.inverted ? 'PROTECTED AREA' : 'EDITABLE AREA', 10, 18);
+      ctx.fillText(selectionMask.inverted ? 'PROTECTED AREA' : 'EDITABLE AREA', 10, 18);
+      ctx.restore();
+    }
+  }, [showUVOverlay, uvWireColor, uvOverlayOpacity, modelKey, customOBJText, selectionMask, isPanning, activeTool, brush, activeUVChannel]);
 
   // Convert screen pointer coordinates to 1024x1024 UV canvas coordinates
   const getCanvasCoords = (clientX: number, clientY: number) => {
@@ -717,9 +761,17 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       return;
     }
 
+    // Update the on-canvas brush/mask cursor without starting a stroke.
+    if (!isPaintingRef.current && !isPanning) {
+      hoverPointRef.current = getCanvasCoords(e.clientX, e.clientY);
+      drawOverlay();
+      return;
+    }
+
     // Direct 2D Painting / Tool Interaction
     if (!isPaintingRef.current) return;
-    const { x, y } = getCanvasCoords(e.clientX, e.clientY);
+    hoverPointRef.current = getCanvasCoords(e.clientX, e.clientY);
+    const { x, y } = hoverPointRef.current;
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
 
     // 2D UV Sculpt Brush Dragging
@@ -780,7 +832,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           brush.hardness || 50,
           false,
           1024,
-          1024
+          1024,
+          uvIslandPath
         );
       }
       lastPointRef.current = { x, y };
@@ -1237,6 +1290,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* Layer 1: Paint Texture Canvas */}
         <canvas
           ref={canvasRef}
+          onPointerLeave={() => { hoverPointRef.current = null; drawOverlay(); }}
           className="block cursor-crosshair touch-none"
           style={{ width: '640px', height: '640px' }}
         />
