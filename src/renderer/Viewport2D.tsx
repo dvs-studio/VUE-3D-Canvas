@@ -31,7 +31,7 @@ import { UVSculptEngine } from '../tools/uvSculptEngine';
 import { UVSculptMode } from '../core/types';
 import { UVChannelManager } from '../tools/uvChannelManager';
 import { buildUVIslandClipPath } from '../tools/uvIslandClip';
-import { createLayerCompositeSource } from '../tools/layerStackCompositor';
+import { createLayerCompositeSource, drawLayerWithBlend } from '../tools/layerStackCompositor';
 import { 
   Layers, 
   ZoomIn, 
@@ -210,20 +210,12 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         const parent = layers.find(candidate => candidate.id === layer.groupId);
         if (parent && !parent.visible) return;
       }
-      ctx.save();
-      ctx.globalAlpha = layer.opacity / 100;
-      ctx.globalCompositeOperation = layer.blendMode === 'multiply' ? 'multiply'
-        : layer.blendMode === 'screen' ? 'screen'
-        : layer.blendMode === 'overlay' ? 'overlay'
-        : layer.blendMode === 'darken' ? 'darken'
-        : layer.blendMode === 'lighten' ? 'lighten'
-        : layer.blendMode === 'difference' || layer.blendMode === 'subtract' ? 'difference'
-        : layer.blendMode === 'add' ? 'lighter'
-        : layer.blendMode === 'color-dodge' ? 'color-dodge'
-        : layer.blendMode === 'color-burn' ? 'color-burn'
-        : 'source-over';
-      ctx.drawImage(createLayerCompositeSource(layer, layers), 0, 0);
-      ctx.restore();
+      drawLayerWithBlend(
+        ctx,
+        createLayerCompositeSource(layer, layers),
+        layer.blendMode,
+        layer.opacity / 100,
+      );
     });
 
     drawOverlay();
