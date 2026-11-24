@@ -522,9 +522,7 @@ export default function App() {
     if (!activeLayer || activeLayer.isGroup || activeLayer.locked) return;
 
     const bakedCanvas = UVChannelManager.rebakeTexture(activeGeometry, activeLayer.canvas, fromChannel, toChannel, resolution);
-    // Snapshot the old layer canvases before replacing every layer with the new resolution.
-    undoBuffer.pushState('Re-Bake Texture [' + fromChannel + ' -> ' + toChannel + ']', layers);
-
+    // Rebuild every layer at the requested texture resolution.
     const nextLayers = layers.map(layer => {
       const canvas = document.createElement('canvas');
       canvas.width = resolution;
@@ -543,6 +541,7 @@ export default function App() {
     UVChannelManager.setActiveChannel(activeGeometry, toChannel);
     setActiveUVChannel(toChannel);
     setLayers(nextLayers);
+    undoBuffer.pushState('Re-Bake Texture [' + fromChannel + ' -> ' + toChannel + ']', nextLayers);
     setUvGeometryVersion(v => v + 1);
     syncCompositeCanvas(nextLayers);
     setTextureVersion(v => v + 1);
