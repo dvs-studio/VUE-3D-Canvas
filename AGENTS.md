@@ -143,3 +143,11 @@ Latest source revision: `9a123232144be0a979e7961dfa80a944c78e8c59`.
 - A7 and combined latest package: [Run #283](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45389964959), artifact `14917704031`.
 
 CI verifies TypeScript diagnostics, Vite build, self-host sync, package validation and upload only. No browser/device visual acceptance is claimed. Manual checks remain for part-filter isolation, alternate UV channels, rebake resolution, blend modes, title dragging, non-destructive color preservation, bump influence, height merge and XBlend/export round-trips. Built-in triplanar sample textures remain untouched pending user replacements.
+
+
+### 2026-11-24 — External asset scanner foundation
+- Added `src/tools/externalAssetLibrary.ts` and `notes/EXTERNAL_ASSET_LIBRARY_2026-11-24.md`.
+- This is scanner/data-access groundwork only. It is **not** complete Brush Library integration; UI wiring for external texture, brush, and mask galleries remains outstanding.
+- The user will supply triplanar/texture assets in a ZIP later. Do not invent or replace built-in sample images. Future import should normalise triplanar texture width to 512 px while preserving aspect ratio and alpha; PNG brush transparency must be retained. Black-background extraction, if provided, must be an optional previewed operation.
+- Root folder selection requires explicit browser permission; folder-name matching is case-insensitive and recursive. Do not claim silent unrestricted PC folder access.
+- Continue the ordered TODO above. Do not mark 2A-W, 2A-T, 2B, 2C, or 2D complete on the basis of this scanner foundation.
