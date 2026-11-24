@@ -895,8 +895,18 @@ export default function App() {
   const handleApplyTextureFilter = async (config: TextureFilterConfig) => {
     const target = layers.find(layer => layer.id === activeLayerId);
     if (!target || target.locked || target.isGroup) return;
+    const maskRequested = config.useMeshPartMask !== false && !!config.targetMeshPart && config.targetMeshPart !== 'all';
+    if (maskRequested && (
+      !config.meshPartMask ||
+      config.meshPartMaskWidth !== target.canvas.width ||
+      config.meshPartMaskHeight !== target.canvas.height ||
+      config.meshPartMask.length < target.canvas.width * target.canvas.height
+    )) {
+      console.error('Texture filter was not applied: the selected mesh-part UV mask is missing or has the wrong dimensions.');
+      return;
+    }
     try {
-      undoBuffer.pushState(`Apply ${config.kind} Image Filter`, layers);
+      undoBuffer.pushState('Apply ' + config.kind + ' Image Filter', layers);
       await applyTextureFilterToCanvas(target.canvas, config);
       setLayers(previous => previous.map(layer => layer.id === target.id ? target : layer));
       notifyTextureUpdated();
@@ -2514,6 +2524,9 @@ export default function App() {
         activeLayer={layers.find(layer => layer.id === activeLayerId)}
         geometry={activeGeometry}
         activeUVChannel={activeUVChannel}
+        uvGeometryVersion={uvGeometryVersion}
+        meshParts={meshPartOptions}
+        selectedMeshPart={meshComponentVisibility}
         defaultColor={primaryColor}
         autoHideOnBlur={preferences.autoHideFloatingDialogs !== false}
         onClose={() => setIsTextureFilterOpen(false)}
