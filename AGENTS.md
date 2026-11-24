@@ -42,9 +42,10 @@
 
 ### CURRENT TODO — all active for this pass
 
-> **Last agent:** Claude Sonnet 4.6 / `LOG-2026-11-24-CLAUDE-WORK` — 2026-11-24  
-> **Push needed:** 3 commits local (`f551511`, `221e5cf`, `1768387`). Victory must run `git push origin main` first.  
-> **Next agent picks up at:** A4 completion → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D
+> **Last code agent:** Claude Sonnet 4.6 / `LOG-2026-11-24-CLAUDE-WORK` — 2026-11-24  
+> **Latest audit agent (docs/troubleshoot only):** Gemini Hydrogen / `LOG-2026-11-24-GEMINI-HYDROGEN-TROUBLESHOOT` — 2026-11-24 (10 `tsc` errors + pinpointed P0–P2 bug list recorded in [`AGENT_STATE.md`](AGENT_STATE.md); **no `src/` edits in audit**)  
+> **Push needed:** 3 commits local (`f551511`, `221e5cf`, `1768387`) plus pending doc updates. Victory should run `git push origin main` after reviewing.  
+> **Next code agent picks up at:** P0 snapshot/compile/regression fixes in [`AGENT_STATE.md`](AGENT_STATE.md) (`TS-1..5`, `UI-BUG-1..4`, `EXPT-1`, `SUBD-1`, `FILT-1`, `PAINT-1..2`) → A4 completion → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D
 
 #### Step 0
 - [x] **S0-1** Stroke teleport — `raycastUV` returns faceIndex; island-crossing triggers endStroke+beginStroke; maxJumpPx guard added (`f551511`)
@@ -101,7 +102,7 @@
 5. User sample folder overrides built-ins.  
 6. Keep off-mesh NaN / gutter behaviour unless replaced safely.
 
-**Detail:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md) · **Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md)
+**Detail:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md) · **Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) · **Pinpointed Bugs:** [`AGENT_STATE.md`](AGENT_STATE.md) · **API:** [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) · **Architecture:** [`DEVELOPMENT.md`](DEVELOPMENT.md)
 
 ### Work rules
 

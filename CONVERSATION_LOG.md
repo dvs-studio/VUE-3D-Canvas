@@ -382,3 +382,57 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 
 **Next agent: pick up at A4 completion → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D. Run `npm run host:sync` after each group. Record your session under a unique LOG id.**
 
+---
+
+## 2026-11-24 — Gemini Hydrogen — id `LOG-2026-11-24-GEMINI-HYDROGEN-TROUBLESHOOT`
+
+**Unique identity for this conversation:** Display **Gemini Hydrogen**, id `LOG-2026-11-24-GEMINI-HYDROGEN-TROUBLESHOOT`.  
+**Mode:** Full conversation archive (Phase 1 implementation plans + Phase 2 full-repo MD & self-host troubleshooting pass; read-only on `src/` during troubleshooting pass).
+
+### Part 1 — Chronological Conversation & Earlier Implementation Plans
+
+1. **Request 1 & Clarifications (Tablet/Windows UI Declutter, Normals, Stroke Controls, Refresh Rate):**
+   - Victory reported painting in Windows/self-host still felt choppy, surface normal toggles (`default`, `smooth`, `flat`) were behaving unexpectedly, refresh-rate controls lacked configurable/uncapped options, brush stroke controls (`Dots`, `Drag Dot`, `Airbrush`, `Lazy Mouse`) were missing from the active control bar/carousel, and oversized options bars/buttons overflowed and overlapped in both Tablet and Windows modes.
+   - **Clarified Decisions:**
+     - Allow all 3 shading/surface normal/interface toggles in both Windows and Tablet top Menu Bar dropdowns while keeping Windows default toolbar controls alongside them.
+     - Add Stroke Control (`Dots`, `Drag Dot`, `Airbrush`, `Lazy Mouse` + spacing/flow) inside the Tablet `TabletBrushCarousel` AND verify it remains editable inside the docked Brush Library panel.
+     - Add selectable Viewport Refresh Rate in `PreferencesModal.tsx` (`on-demand`, `30fps`, `60fps`, `120fps`, typed `custom` VSync Hz, and `uncapped` / disabled cap).
+   - **Plan 1 Approved ("Proceed"):** Executed updates to `ToolOptionsBar`, `PhotoshopMenuBar`, `TabletBrushCarousel`, `PreferencesModal`, `Viewport3D`, and dev-server startup.
+
+2. **Request 2 & Clarifications (Lagoon Radial Menu, View Menu Viewpoints, Refresh Cap Disable, Master Docs):**
+   - Victory requested:
+     - A Sketchbook-style **Lagoon radial toggle** (`src/ui/LagoonMenu.tsx`) usable across all modes, placed before `Projection [F8]` in `PhotoshopMenuBar`, hiding surrounding chrome when active while leaving the **3D Orientation Gizmo** and **Side Dockers** visible.
+     - Fix camera viewpoints (`Front`, `Back`, `Left`, `Right`, `Top`, `Bottom`, `Ortho/Persp`, `Frame Selected`) inside the existing **View** menu of `PhotoshopMenuBar`.
+     - Explicit option in Preferences to disable/uncap the refresh-rate limit.
+     - Author `API_DOCUMENTATION.md` (Viewport, Brush, Layers, Filters, WebGL, Node Graph, Textures, ANGLE DirectX 11 / OpenGL bridging) and `DEVELOPMENT.md` (program genesis, Rust Wry/WebView2 vs Self-Host Node architecture, AI handover recommendations) and update `AGENTS.md`.
+   - **Plan 2 Approved ("Proceed") & Resumed Across Quota Stops:** Implemented `LagoonMenu.tsx`, View menu viewpoints, `API_DOCUMENTATION.md`, and `DEVELOPMENT.md`.
+
+3. **Request 3 (2026-11-24 — Post-Snapshot Full Troubleshooting & MD Archival):**
+   - After other sessions pushed commits/snapshots (`CONVERSATION_LOG.md`, `AGENTS.md` Grok-Atelier-PIN, `TextureFilterDialog.tsx`, `BumpLevelsDialog.tsx`, `SubdivisionPanel.tsx`, `MeshPartsPanel.tsx`, `freeCamera.ts`, `subdivisionPreview.ts`), Victory instructed:
+     - Read **every `.md` file** in the repo (27 `.md` files read).
+     - Troubleshoot the current self-hosted project (`src/` and `self-host/`) and pinpoint exact file paths + code lines where bugs or snapshot regressions exist, plus concrete fix ideas and recommendations.
+     - Record the entire conversation (including earlier plans and interactive opinions) in `CONVERSATION_LOG.md` under a unique identity, and place the full pinpointed bug/fix report in `AGENT_STATE.md` (+ pointers in `AGENTS.md`) before pushing to GitHub.
+
+### Part 2 — Interactive Engineering Opinions & Honest Critique (Gemini Hydrogen)
+
+1. **Why the UI Feels Broken After Snapshot Merges (`PhotoshopMenuBar.tsx`, `PreferencesModal.tsx`, `App.tsx`):**
+   - Merging multi-agent snapshots without running `tsc --noEmit` created silent collisions that Vite/esbuild happily bundled anyway:
+     - **Two `View` menus side by side** (`PhotoshopMenuBar.tsx:297-378` and `:520-706`) sharing `openMenu === 'view'` — clicking either `View` opens *both* dropdown panels overlapping!
+     - **`PreferencesModal.tsx` refresh-rate UI was overwritten** with static notice text ("The refresh-rate cap is not used here", `:76-81`) even though `Viewport3D.tsx:166-173` still holds unused `refreshRateModeRef`/`customRefreshRateRef` and `animate()` (`:697-702`) hardcodes on-demand sleep! The code and UI literally disagree with each other.
+     - **Missing TypeScript gate in CI (`npx tsc --noEmit`):** 10 real TS errors currently fail typecheck across 5 files, and one of them (`MeshPartsPanel.tsx:80`) causes a genuine runtime bug (passing `React.MouseEvent` instead of `selectedPart` string into `onFrameSelected`).
+2. **Critique on Current Step 0 Fixes (`S0-1` & `PERF`):**
+   - `raycastUV` + RAF coalescing (`221e5cf` / `f551511`) helped tablet raw throughput, **but** checking `Math.abs(faceIndex - prevFace) > 2` at `Viewport3D.tsx:1628` is only a heuristic: smooth organic meshes often have non-adjacent triangle IDs inside one UV island (causing unwanted stroke breaks), while faces with adjacent indices across a UV cut (`|delta| <= 2`) can still bridge! Worse, `brushEngine.beginStroke(...)` clears `this.strokeStates.clear()` (`brushEngine.ts:76`), which **wipes symmetry mirror stroke states whenever one path crosses a seam**. Precomputing per-triangle `uvIslandId` once per mesh and adding a single-key `resetStrokePath(key)` method will make S0-1 mathematically exact without breaking symmetry.
+   - Also, `blur`, `clone`, and `smudge` in both `Viewport3D.tsx:1763-1768` and `Viewport2D.tsx:869-875` do **zero dab spacing interpolation** on fast strokes, and both pass `fromX === toX, fromY === toY` to `applySmudgeAt`, disabling directional smudging.
+3. **Critique on Lagoon & Floating Dialogs:**
+   - Right now `TextureFilterDialog.tsx:39` and `BumpLevelsDialog.tsx:18` wrap themselves in `fixed inset-0 bg-black/65`, which dims and blocks the 3D viewport underneath (unlike `GaussianBlurDialog` / `TriplanarDialog` which use `pointer-events-none` wrappers). Also `App.tsx:1563` applies CSS `transform: scale(uiScale)`, which turns the root wrapper into a containing block for `position: fixed` elements — breaking `window.innerWidth`/`innerHeight` clamping in `LagoonMenu.tsx:117-118`, `TextureFilterDialog.tsx:28`, and `BumpLevelsDialog.tsx:12` whenever `uiScale !== 1`.
+4. **Critique on 2A / A4 / 2A-W / 2A-T / 2E:**
+   - **A4 (`TextureFilterDialog`)** has dead prop types at `TextureFilterDialog.tsx:9-11` — neither `App.tsx` passes them nor `transformTexturePixels` reads any part mask.
+   - **2A-W (Wood Grain)** currently hashes 2D pixel grid `(x/48, y/48)` (`textureFilters.ts:296-298`) and white noise (`line 309`) even when 3D object coordinates are available — so grain jumps across UV borders and lacks smooth organic/merged tree rings.
+   - **2A-T (`fillSuite.ts:75`)** has a subtle double-escaped regex `/^(rgba?|hsla?)\\((.*)\\)$/i` inside a regex literal — meaning every `rgb(...)` / `rgba(...)` / `hsl(...)` tint silently fails to parse and defaults to white `#ffffff`!
+   - **2E (Subdivision Preview)** triggers synchronous full Catmull-Clark splitting (`App.tsx:450-463`) after **every single paint stroke** if `displacement > 0` (because `layers` is in `subdivisionHeightMap` deps) and has no level cap (`SubdivisionPanel.tsx:39`), risking an instant browser freeze/OOM at level 4+.
+5. **Recommended Immediate Order Before Pushing / Next Coding Pass:**
+   - **First:** Fix the 10 `tsc --noEmit` errors (especially `MeshPartsPanel.tsx:80` and `xblendFormat.ts:142-153`), delete the duplicate `View` menu (`PhotoshopMenuBar.tsx:297-378`), fix `LayersPanel.tsx:382-411` broken flex nesting, fix `fillSuite.ts:75` regex, and fix `handleExportOBJ` (`App.tsx:1290-1293`) which currently exports a hardcoded 4-vertex unit quad instead of `activeGeometry`!
+   - **Second:** Restore the `PreferencesModal` refresh-rate UI + wire `animate()` timer/uncap logic cleanly, wire `A4` mesh-part masking + remove `bg-black/65` modal blockers, fix `Viewport3D` GPU material/UV-texture leaks (`:937-989`), and pass missing props to Expanded Stack panels (`App.tsx:2211-2241, 2304-2315`).
+   - **Full pinpointed breakdown:** See [`AGENT_STATE.md`](AGENT_STATE.md) under `2026-11-24 — Troubleshooting Audit, Pinpointed Bugs & Fix Blueprint (Gemini Hydrogen)`.
+
+
