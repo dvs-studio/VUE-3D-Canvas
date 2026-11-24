@@ -77,7 +77,7 @@
 - [ ] **A5** Filter panel title-drag — drag already implemented in TextureFilterDialog; **verify only** on desktop and touch.
 - [x] **A6** 2D UV workspace — active UV channel selector, blend-mode-aware composite, resolution-aware canvases/rebake, cached selection shade canvas, shelf layout and scoped `N` shortcut landed; CI passed. Manual viewport acceptance remains.
 - [x] **A7 / F8** Bump/Displacement → Levels — Levels now stored as non-destructive PBR metadata; original color pixels remain intact; height merge opens Levels at 100% bump influence; viewport, subdivision and XBlend height output consume the Levels data. CI passed. Manual PBR/export acceptance remains.
-- [ ] **UI1** Persist window enable/disable
+- [x] **UI1** Persist Window menu panel visibility and floating/docked state in browser storage; defaults remain backward-compatible.
 - [x] **UI2** Menu dropdowns dismiss on outside pointer or Escape; pointer-leave no longer closes native selects.
 - [ ] **UI3** Giant Undo/Redo lower 3D viewport — could not reproduce; scan for oversized element
 
