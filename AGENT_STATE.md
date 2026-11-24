@@ -782,3 +782,48 @@ No browser/device visual test is claimed. Victory must still test startup, fast 
 
 ### Remaining order
 A4 mesh-part filter selection; A5 title-drag verification; A6 UV shelf; A7 bump/Levels workflow; UI1 window persistence; 2A-W Wood rings; 2A-T triplanar A/B; 2B layer/filter additions; 2C filters; 2D texture gallery. Do not replace built-in triplanar samples until Victory supplies replacements. PR #2 remains open and unmerged.
+
+
+## 2026-11-24 — GPT-6 follow-up execution: A4 / A6 / A7
+
+This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The work was committed directly to remote `main` in the self-hosted TypeScript application. No changes were made to `crates/vue3d_core`, user OBJ assets, safety archives or built-in triplanar sample textures.
+
+### A4 — mesh-part filter targeting
+
+- `TextureFilterDialog` now receives the live mesh-part list, selected part, active UV channel and UV geometry version.
+- Added `targetMeshPart`, `useMeshPartMask` and a per-texel coverage mask to `TextureFilterConfig`.
+- `buildMeshPartPixelMask` rasterizes only the chosen component's triangles using the active UV channel; it supports component-index lists and geometry groups.
+- Every filter output path applies the mask so texels outside the selected part remain unchanged. Atlas dilation is skipped when a part mask is active to avoid modifying neighbouring parts.
+- Preview and Apply both validate mask creation; a missing/empty mask reports an inline error instead of silently filtering the whole layer.
+- The filter dialog is rendered through a portal with a pointer-transparent outer surface, so clicks outside its card reach the viewport and close the floating dialog.
+- CI: Run #262 passed; artifact `14918105222`.
+
+### A6 — 2D UV workspace
+
+- Replaced the disconnected local UV-set selector with the real `activeUVChannel` and `UVChannelManager.getChannels` list; App passes `uvGeometryVersion`.
+- The 2D layer composite now respects each layer's Canvas-supported blend mode and opacity.
+- UV canvas, overlay, pointer coordinates, sculpt coordinates, selection masks and fit-to-view dimensions now follow the active layer's actual canvas size.
+- Re-bake now creates the requested resolution for every layer, rebakes the active layer to the target UV channel, preserves the other layers by resampling them, and rebuilds the composite from the updated layer array.
+- XBlend image loading restores each layer's natural image dimensions and refreshes the composite as each image finishes loading.
+- Reused the selection-shade offscreen canvas instead of allocating a new full-size canvas during pointer movement.
+- Removed conflicting CSS order tokens, reserved room for the top-right touch controls, and scoped the `N` shortcut so the UV N-Panel does not collide with the App Tablet drawer shortcut.
+- CI: Run #265 passed; artifact `14918012437`.
+
+### A7 / F8 — non-destructive Bump Levels and height merge
+
+- Added shared `HeightLevels` metadata and `applyHeightLevels` mapping.
+- `BumpLevelsDialog` previews grayscale height but Apply stores the input/output Levels and bump influence in PBR metadata; it no longer overwrites the source color canvas.
+- Added a 0–100% bump-influence control, defaulting to 100% for a new conversion/merged height result.
+- Paint-to-Bump retains its original color contribution. Height-only layers remain color-disabled. Bump/Displacement conversion preserves Levels metadata and defaults a newly enabled bump contribution to full influence.
+- `Viewport3D`, subdivision height generation and XBlend height-map export now apply the stored Levels before the height ramp.
+- Merging selected bump-only/height-only contributors on the same UV channel creates a dedicated grayscale height layer, evaluates each source layer's Levels/ramp/influence, and opens Bump Levels on the result at 100% influence. Color-enabled bump layers are excluded from this height-only merge to prevent losing their color contribution.
+- PBR settings saves and XBlend normalization preserve/default the Levels metadata.
+- CI: Run #283 passed; latest artifact `14917704031`.
+
+### Verification boundary and next work
+
+- These CI runs establish TypeScript/build/self-host package success; they do not establish visual or device-level correctness.
+- Manual acceptance remains for: selected-part filtering on multiple components and UV seams; alternate UV channels; 512/1024/2048 rebake alignment across all layers; blend-mode display; `N` shortcut routing; Bump Levels preserving color; 100% influence; merging bump/displacement sources; XBlend save/load and exported height maps.
+- A5 title dragging remains verify-only.
+- Next implementation priority: UI1 window enable/disable persistence, then 2A-W wood rings, 2A-T true triplanar A/B, 2B Mask/Tear/Pattern Craft/Matcap, 2C additional filters and 2D texture gallery. 2E subdivision remains verify-only.
+- PR #2 remains open and unmerged.
