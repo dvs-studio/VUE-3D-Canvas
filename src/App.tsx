@@ -1413,7 +1413,7 @@ export default function App() {
             bumpOn: l.bumpOn ?? l.channel === 'height',
             bumpInfluence: l.bumpInfluence ?? (l.channel === 'height' ? 1 : 0),
             bumpRamp: l.bumpRamp || [{ position: 0, height: 0 }, { position: 1, height: 1 }],
-            heightLevels: l.pbrSettings?.heightLevels ?? DEFAULT_HEIGHT_LEVELS,
+            heightLevels: DEFAULT_HEIGHT_LEVELS,
             normalLock: l.normalLock ?? l.channel === 'normal',
           },
         };
