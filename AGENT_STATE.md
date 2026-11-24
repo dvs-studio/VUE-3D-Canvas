@@ -852,3 +852,5 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - **Not complete:** BrushLibraryPanel integration, texture/brush/mask gallery presentation, preference controls, PNG alpha workflow, and runtime browser acceptance.
 - **Not touched:** built-in triplanar textures, supplied asset packs (not yet provided), Rust core, protected OBJ assets, and safety archives.
 - Next ordered code task remains 2A-W Organic Wood. Do not jump ahead and mark the broader backlog complete. The user's future texture ZIP should be processed separately: rename consistently, resize triplanar texture images to 512 px width with aspect ratio preserved, and retain transparency where present.
+
+- CI: self-host workflow #287 passed (run ID `45434787995`), artifact `14939569386`. This is build/package validation only; no browser runtime or UI acceptance is claimed.
