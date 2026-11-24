@@ -1460,8 +1460,36 @@ export default function App() {
         };
       });
 
-      setLayers(loadedLayers);
-      if (loadedLayers.length > 0) setActiveLayerId(loadedLayers[0].id);
+      // Every project keeps one protected fallback layer at the bottom of the stack.
+      // Legacy projects without it receive a neutral base coat; an existing base is normalised.
+      let baseLayer = loadedLayers.find(layer => layer.isBaseLayer || layer.id === 'layer_base');
+      if (!baseLayer) {
+        const baseCanvas = document.createElement('canvas');
+        const baseSize = loadedLayers[0]?.canvas.width || 1024;
+        baseCanvas.width = baseSize;
+        baseCanvas.height = loadedLayers[0]?.canvas.height || baseSize;
+        const baseContext = baseCanvas.getContext('2d')!;
+        baseContext.fillStyle = '#9c9c9c';
+        baseContext.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+        baseLayer = {
+          id: 'layer_base',
+          name: 'Base Color Layer',
+          visible: true,
+          opacity: 100,
+          blendMode: 'normal',
+          locked: true,
+          canvas: baseCanvas,
+          ctx: baseContext,
+          channel: 'color',
+          isBaseLayer: true,
+        };
+      } else {
+        baseLayer = { ...baseLayer, name: 'Base Color Layer', visible: true, opacity: 100, blendMode: 'normal', locked: true, isBaseLayer: true, groupId: undefined };
+      }
+      const normalizedLayers = [baseLayer, ...loadedLayers.filter(layer => layer !== baseLayer && layer.id !== 'layer_base' && !layer.isBaseLayer)];
+      setLayers(normalizedLayers);
+      if (normalizedLayers.length > 1) setActiveLayerId(normalizedLayers[normalizedLayers.length - 1].id);
+      else setActiveLayerId(baseLayer.id);
 
       if (project.materialProperties) {
         setMaterialProps(project.materialProperties);
