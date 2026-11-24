@@ -166,7 +166,8 @@ export class MaskEngine {
     hardness: number,
     erase = false,
     w = 1024,
-    h = 1024
+    h = 1024,
+    clipPath?: Path2D | null
   ): SelectionMask {
     let cvs = mask.maskCanvas;
     if (!cvs) {
@@ -174,6 +175,7 @@ export class MaskEngine {
     }
     const ctx = cvs.getContext('2d')!;
     ctx.save();
+    if (clipPath) ctx.clip(clipPath);
     ctx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
 
     const r = Math.max(1, size / 2);
