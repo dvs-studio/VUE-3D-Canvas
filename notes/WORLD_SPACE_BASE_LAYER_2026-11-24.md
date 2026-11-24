@@ -37,7 +37,9 @@ The key `vue3d_base_layer_colours` stores only `colorA` and `colorB`. Do not add
 
 ## Verification status
 
-CI compilation/build and packaging are required. Manual checks are still needed for:
+<https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45464462231> — workflow #303 passed TypeScript diagnostics, Vite build, self-host sync, package validation, and artifact upload. Artifact: `VUE_3D_Canvas_SelfHost` (ID `14955460054`). This validates compilation and packaging, not runtime shader rendering or manual UI acceptance.
+
+Manual checks are still needed for:
 1. Equal-grey startup appearance and checker visibility after changing one colour.
 2. World-space checker movement/scale consistency while rotating and moving the model.
 3. Independent colour opacity and overall layer opacity.
