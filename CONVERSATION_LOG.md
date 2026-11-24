@@ -491,3 +491,18 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Latest combined source: Run #283 passed TypeScript diagnostics, Vite build, self-host sync, package checks, generated-output commit, ZIP and artifact upload. Source revision `9a123232144be0a979e7961dfa80a944c78e8c59`; artifact `14917704031`.
 - CI does not prove visual/browser/device behaviour. Manual acceptance remains required for A4 part isolation, A6 UV/rebake/blend behaviour, A7 color preservation/height merge/influence and XBlend/export round-trips.
 - A5 title-drag remains verify-only. UI1, 2A-W, 2A-T, 2B, 2C and 2D remain open; 2E remains verify-only. Built-in triplanar sample textures were not changed. PR #2 remains open and unmerged.
+
+## 2026-11-24 — GPT-6 — id `LOG-2026-11-24-GPT6-UI1-PERSISTENCE`
+
+**Request:** Perform the outstanding self-hosted programme task.
+
+**UI1 — Window panel persistence**
+- Added restoration and persistence of panel visibility (Window menu enabled/disabled state) using `vue3d_panel_visibility`.
+- Added restoration and persistence of floating/docked state using `vue3d_panel_floating`.
+- Restoration merges validated booleans into known defaults; malformed storage and storage exceptions are safely handled.
+- Existing Window menu, close and float interactions are retained.
+- Source commit: `b45c1054e601f4820fc98392cea970ede312bf87`.
+
+**Verification:** Build workflow pending at time of this log entry. Manual browser restart and file:// persistence checks remain necessary.
+
+**Next:** Continue root AGENTS.md CURRENT TODO in order: 2A-W, 2A-T, 2B, 2C and 2D. Keep A5 and 2E verify-only; scan UI3. Built-in triplanar sample textures remain untouched pending user replacements. Do not merge PR #2.
