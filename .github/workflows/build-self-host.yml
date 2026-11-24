@@ -63,6 +63,12 @@ jobs:
           git add -A self-host/public
           if ! git diff --cached --quiet; then
             git commit -m "chore(self-host): sync generated painter output [skip ci]"
+            # Other source/documentation commits can land while the build is running.
+            # Rebase the generated-output commit onto the latest main instead of
+            # failing with a non-fast-forward push. Any real content conflict still
+            # fails safely and requires a fresh build.
+            git fetch origin main
+            git rebase origin/main
             git push origin HEAD:main
           else
             echo "self-host/public already matches the current build."
