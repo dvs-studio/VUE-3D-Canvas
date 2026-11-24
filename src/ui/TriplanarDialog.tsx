@@ -423,10 +423,10 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                             id: p.id, 
                             name: p.name, 
                             isTransparentBlank: false,
-                            dataUrl: undefined,
+                            dataUrl: p.dataUrl,
                             tintColor: p.color,
                             colorAlpha: 1,
-                            useInstanceColor: true
+                            useInstanceColor: false
                           })}
                           className={`px-2 py-0.5 rounded text-[10px] border flex items-center gap-1 transition-colors ${
                             !tex.isTransparentBlank && tex.id.startsWith(p.id)
