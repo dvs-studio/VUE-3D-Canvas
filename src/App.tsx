@@ -336,7 +336,10 @@ export default function App() {
   const updateBaseLayerSettings = (patch: Partial<BaseLayerSettings>) => {
     setBaseLayerSettings(current => ({ ...current, ...patch }));
   };
-  const resetBaseLayerSettings = () => setBaseLayerSettings({ ...DEFAULT_BASE_LAYER_SETTINGS });
+  const resetBaseLayerSettings = () => {
+    setBaseLayerSettings({ ...DEFAULT_BASE_LAYER_SETTINGS });
+    setLayers(prev => prev.map(layer => layer.isBaseLayer ? { ...layer, opacity: 100 } : layer));
+  };
   const saveBaseLayerSettings = () => {
     try {
       localStorage.setItem('vue3d_base_layer_colours', JSON.stringify({ colorA: baseLayerSettings.colorA, colorB: baseLayerSettings.colorB }));
@@ -525,11 +528,10 @@ export default function App() {
   const syncCompositeCanvas = useCallback((sourceLayers: Layer[] = layers) => {
     const ctx = compositeCanvas.getContext('2d');
     if (!ctx) return;
-    ctx.fillStyle = '#2b2b2b';
-    ctx.fillRect(0, 0, 1024, 1024);
+    ctx.clearRect(0, 0, 1024, 1024);
 
     sourceLayers.forEach(layer => {
-      if (!layer.visible || layer.isGroup) return;
+      if (!layer.visible || layer.isGroup || layer.isBaseLayer) return;
       if (layer.groupId) {
         const parent = sourceLayers.find(l => l.id === layer.groupId);
         if (parent && !parent.visible) return;
@@ -1510,6 +1512,7 @@ export default function App() {
         baseLayer = { ...baseLayer, name: 'Base Color Layer', visible: true, opacity: 100, blendMode: 'normal', locked: true, isBaseLayer: true, groupId: undefined };
       }
       const normalizedLayers = [baseLayer, ...loadedLayers.filter(layer => layer !== baseLayer && layer.id !== 'layer_base' && !layer.isBaseLayer)];
+      setBaseLayerSettings(current => ({ ...current, colorAOpacity: 100, colorBOpacity: 100, layerOpacity: 100 }));
       setLayers(normalizedLayers);
       if (normalizedLayers.length > 1) setActiveLayerId(normalizedLayers[normalizedLayers.length - 1].id);
       else setActiveLayerId(baseLayer.id);
