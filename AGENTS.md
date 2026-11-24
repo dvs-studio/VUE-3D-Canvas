@@ -151,3 +151,10 @@ CI verifies TypeScript diagnostics, Vite build, self-host sync, package validati
 - The user will supply triplanar/texture assets in a ZIP later. Do not invent or replace built-in sample images. Future import should normalise triplanar texture width to 512 px while preserving aspect ratio and alpha; PNG brush transparency must be retained. Black-background extraction, if provided, must be an optional previewed operation.
 - Root folder selection requires explicit browser permission; folder-name matching is case-insensitive and recursive. Do not claim silent unrestricted PC folder access.
 - Continue the ordered TODO above. Do not mark 2A-W, 2A-T, 2B, 2C, or 2D complete on the basis of this scanner foundation.
+
+
+### 2026-11-24 — Protected base layer
+- The layer stack must retain a permanent bottom `Base Color Layer` marked `isBaseLayer`, locked and always visible. It is a non-editable fallback coat, not an ordinary paint layer.
+- Do not allow it to be unlocked, hidden, deleted, duplicated, reordered, grouped, or merged. Keep it below all working layers.
+- Legacy project loading must restore the base if absent and normalise it if present.
+- See `notes/PROTECTED_BASE_LAYER_2026-11-24.md`.
