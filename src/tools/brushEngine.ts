@@ -21,6 +21,7 @@ interface BrushStrokeState {
   dotPlaced: boolean;
   curvePoints: { x: number; y: number }[];
   smudgeColor: { r: number; g: number; b: number; a: number } | null;
+  entryDabPending: boolean;
 }
 
 export class BrushEngine {
@@ -64,7 +65,7 @@ export class BrushEngine {
   private getStrokeState(strokeKey = 'primary'): BrushStrokeState {
     let state = this.strokeStates.get(strokeKey);
     if (!state) {
-      state = { lastDabPos: null, residualDistance: 0, strokeStartPos: null, dotPlaced: false, curvePoints: [], smudgeColor: null };
+      state = { lastDabPos: null, residualDistance: 0, strokeStartPos: null, dotPlaced: false, curvePoints: [], smudgeColor: null, entryDabPending: true };
       this.strokeStates.set(strokeKey, state);
     }
     return state;
@@ -82,7 +83,25 @@ export class BrushEngine {
       dotPlaced: false,
       curvePoints: [{ x, y }],
       smudgeColor: null,
+      entryDabPending: true,
     });
+  }
+
+  /**
+   * Break one brush path without clearing the independent symmetry paths.
+   * A pending entry dab stamps at the next point, then normal spacing resumes.
+   */
+  public resetStrokePath(strokeKey = 'primary', x?: number, y?: number) {
+    const state = this.getStrokeState(strokeKey);
+    const hasPoint = typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y);
+    state.lastDabPos = hasPoint ? { x: x!, y: y! } : null;
+    state.residualDistance = 0;
+    state.strokeStartPos = hasPoint ? { x: x!, y: y! } : null;
+    state.dotPlaced = false;
+    state.curvePoints = hasPoint ? [{ x: x!, y: y! }] : [];
+    state.smudgeColor = null;
+    state.entryDabPending = true;
+    if (strokeKey === 'primary') this.stabilizedPos = hasPoint ? { x: x!, y: y! } : null;
   }
 
   public endStroke() {
@@ -140,6 +159,19 @@ export class BrushEngine {
   ) {
     const state = this.getStrokeState(strokeKey);
     const strokeType: BrushStrokeType = brush.strokeType || 'space';
+
+    if (state.entryDabPending) {
+      state.entryDabPending = false;
+      state.lastDabPos = { x: toX, y: toY };
+      state.residualDistance = 0;
+      state.strokeStartPos = { x: toX, y: toY };
+      state.curvePoints = [{ x: toX, y: toY }];
+      if (strokeType === 'dot' || strokeType === 'space' || strokeType === 'airbrush') {
+        this.renderSingleDab(ctx, toX, toY, brush.size * pressure, brush, isEraser);
+        if (strokeType === 'dot') state.dotPlaced = true;
+        return;
+      }
+    }
 
     // 1. DOT MODE: exactly 1 dab per stroke at start position
     if (strokeType === 'dot') {
