@@ -827,3 +827,18 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - A5 title dragging remains verify-only.
 - Next implementation priority: UI1 window enable/disable persistence, then 2A-W wood rings, 2A-T true triplanar A/B, 2B Mask/Tear/Pattern Craft/Matcap, 2C additional filters and 2D texture gallery. 2E subdivision remains verify-only.
 - PR #2 remains open and unmerged.
+
+## 2026-11-24 — GPT-6 — UI1 Window layout persistence
+
+**Request:** Continue the outstanding self-hosted application tasks in the order specified by the root AGENTS.md PIN.
+
+**UI1 implementation (`src/App.tsx`):**
+- Added backward-compatible restoration for the Window menu panel visibility map from `vue3d_panel_visibility`.
+- Added restoration for floating versus docked panel state from `vue3d_panel_floating`.
+- Both readers merge only known panel keys with current defaults and ignore malformed JSON or non-boolean values, so future panels retain their defaults and corrupt browser storage cannot prevent startup.
+- Added guarded persistence effects for both maps. Storage failures produce a warning but do not interrupt the application.
+- The existing Window menu and close/float controls remain the controls for changing these states; no new panel UI was introduced.
+
+**Verification boundary:** Source change committed to main. The CI workflow triggered by the source commit must pass before this is considered build-verified. Browser restart persistence and file:// storage behaviour still require manual acceptance.
+
+**Next in the root PIN:** 2A-W Wood rings, then 2A-T true triplanar A/B, 2B Mask/Tear/Pattern Craft/Matcap, 2C additional filters, 2D texture gallery. A5 title dragging and 2E subdivision remain verify-only; UI3 requires a focused scan. Do not replace built-in triplanar samples before Victory supplies replacement textures. PR #2 remains unmerged.
