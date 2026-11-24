@@ -53,6 +53,14 @@ export interface BumpRampStop {
   height: number;
 }
 
+export interface HeightLevels {
+  blackInput: number;
+  whiteInput: number;
+  gamma: number;
+  blackOutput: number;
+  whiteOutput: number;
+}
+
 export interface LayerPBRSettings {
   // Per-layer map contributions. Optional so legacy .xblend files remain valid.
   colorOn?: boolean;
@@ -64,6 +72,8 @@ export interface LayerPBRSettings {
   bumpOn?: boolean;
   bumpInfluence?: number;
   bumpRamp?: BumpRampStop[];
+  /** Non-destructive grayscale-to-height Levels adjustment. */
+  heightLevels?: HeightLevels;
   normalLock?: boolean;
   roughness: number; // 0.0 to 1.0
   metallic: number; // 0.0 to 1.0
