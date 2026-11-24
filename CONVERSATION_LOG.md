@@ -528,3 +528,28 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Added `isBaseLayer`, locked/always-visible UI state, protections for direct and bulk operations, and legacy project-load restoration/normalisation.
 - Documented the distinction between this texture-stack base coat and the viewport UV grid/checkerboard to avoid conflating the two.
 - Manual browser acceptance and .xblend round-trip still required.
+
+## LOG-2026-11-24-GPT6-WORLD-SPACE-BASE-LAYER
+
+**Agent:** GPT-6  
+**Date:** 2026-11-24  
+**Task:** Replace the conventional Base Color Layer fallback coat with a protected world-space procedural checker background and add Save / Cancel / Reset behaviour.
+
+### Implemented
+- Added `BaseLayerSettings` and a dedicated `BaseLayerSettingsDialog`.
+- Base checker colours A and B default to `#9c9c9c`; each has an independent opacity control.
+- Save stores only the two colours under `vue3d_base_layer_colours`; colour opacities and overall Base Layer opacity are not stored as global preferences.
+- Cancel closes the dialog without reverting live edits and without persisting colour preferences.
+- Reset restores both colours to neutral grey and all opacity values to 100%; it is available in the dialog and in the Base Layer row where multi-select checkboxes appear.
+- The Base Layer's normal layer opacity slider is enabled and independent; its blend selector remains disabled.
+- Base canvas is no longer used as a UV texture coat. The UV composite is transparent and skips the Base Layer.
+- The 3D material shader samples a procedural checker from world X/Z coordinates and blends painted texture over it.
+- Updated `AGENTS.md` and `AGENT_STATE.md`; added `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` with facility bookmarks and acceptance checks.
+
+### Not yet verified
+- TypeScript/Vite/self-host package CI for this commit set.
+- Runtime shader compilation and the world-space checker on multiple model orientations.
+- Save/Cancel persistence semantics across a fresh application session.
+- Base Layer opacity and checker opacity independence, UV/export exclusion, and `.xblend` round-trips.
+
+CI is not a substitute for manual browser/device acceptance.
