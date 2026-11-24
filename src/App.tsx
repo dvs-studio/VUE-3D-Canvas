@@ -1042,7 +1042,8 @@ export default function App() {
     const canMergeHeight = selected.every(layer => {
       const isHeightLayer = layer.channel === 'height';
       const bumpOn = layer.pbrSettings?.bumpOn ?? isHeightLayer;
-      return bumpOn && (isHeightLayer || layer.pbrSettings?.colorOn === false);
+      const colorOn = layer.pbrSettings?.colorOn ?? !isHeightLayer;
+      return bumpOn && !colorOn;
     });
     if (canMergeHeight) {
       const uvChannel = selected[0].uvChannel || 'uv_original';
