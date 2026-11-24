@@ -518,3 +518,13 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Explicitly not claimed complete: the Brush Library UI integration, asset gallery binding into actual brush/texture pipelines, user preferences, and runtime folder-permission acceptance. The browser must ask the user to select and grant access to the folder; arbitrary PC folders cannot be scanned silently.
 - No built-in triplanar images were replaced and no placeholder texture pack was fabricated. The future import procedure is to rename supplied assets consistently and resize triplanar images to 512 px width while preserving aspect ratio and transparency.
 - The next documented implementation task remains 2A-W Organic Wood; the wider 2A-T/2B/2C/2D backlog remains open.
+
+
+---
+
+## 2026-11-24 — GPT-6 — protected base layer correction
+- User reported that the base layer was missing from the layer grid and clarified that it must be non-editable and act as a fallback base.
+- Inspected existing implementation: a grey Base Color Layer was created initially but was not protected, and loading older projects could replace the stack without restoring it.
+- Added `isBaseLayer`, locked/always-visible UI state, protections for direct and bulk operations, and legacy project-load restoration/normalisation.
+- Documented the distinction between this texture-stack base coat and the viewport UV grid/checkerboard to avoid conflating the two.
+- Manual browser acceptance and .xblend round-trip still required.
