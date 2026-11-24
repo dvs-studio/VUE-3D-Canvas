@@ -270,3 +270,37 @@ The A2 symmetry fix (commit 1969550) added per-path stroke state and runs `apply
 
 *Read-only investigation. No code was modified. All findings are suggestions for Victory and other agents to act on.*
 
+
+---
+
+## LOG-2026-11-24-CLAUDE-RESUME — Context Resumption + Task Handover Verification
+
+**Agent:** Claude Sonnet 4.6 / `LOG-2026-11-24-CLAUDE-RESUME`  
+**Date:** 2026-11-24  
+**Mode:** Read-only log entry; no code changed this entry
+
+### Context restored from
+
+Previous session (`LOG-2026-11-23-CLAUDE-PERF`) ended with investigation complete, findings committed (commit `8811822`). Session was resumed after context compaction.
+
+### State verified on resume
+
+- `LOG-2026-11-23-CLAUDE-PERF` — confirmed committed and pushed (commit `8811822`); working tree clean
+- `AGENTS.md` — current; Grok-Atelier-PIN authored; PIN + three-boxes + full CURRENT TODO active
+- `LAYER_FABRIC_MASK_PLAN.md` — current; F1 = layer type, Pattern Craft F2–F5 = filters, F1b = filter-side mesh/UV limit; correct
+- `INVESTIGATION_2026-11-22.md` — on disk; full Powderiser root cause + S0-1 root cause + bug sweep
+
+### Classification state confirmed correct
+
+| Name | Kind | Status |
+|------|------|--------|
+| F1 Tear layer | Layer type | Documented correctly |
+| F2–F5 Pattern Craft | Filters | Documented correctly |
+| F1b (mesh/UV influence switch) | Filter-side control | Documented correctly — filter side only |
+
+### Outstanding task
+
+Victory has asked for the full CURRENT TODO pass (Step 0 → 2A → 2A-W → 2A-T → 2B → 2C → 2D) per AGENTS.md PIN. This session is resuming that pass now.
+
+**Entry purpose:** Pre-task log entry per rules. Code entries will follow in separate commits.
+
