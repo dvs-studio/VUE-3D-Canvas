@@ -854,3 +854,15 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Next ordered code task remains 2A-W Organic Wood. Do not jump ahead and mark the broader backlog complete. The user's future texture ZIP should be processed separately: rename consistently, resize triplanar texture images to 512 px width with aspect ratio preserved, and retain transparency where present.
 
 - CI: self-host workflow #287 passed (run ID `45434787995`), artifact `14939569386`. This is build/package validation only; no browser runtime or UI acceptance is claimed.
+
+
+---
+
+## 2026-11-24 — Protected base layer restored
+- Added `Layer.isBaseLayer` metadata.
+- Initial base layer is locked and permanently visible.
+- Layers panel marks it as BASE and disables visibility, lock, grouping, blend, opacity, duplicate, move, and delete operations for it.
+- App-level handlers block direct and bulk deletion, duplication, grouping, visibility/lock/opacity/blend changes, and reordering.
+- Legacy `.xblend` loading recreates a neutral `#9c9c9c` base coat when absent and normalises the base to the bottom when present.
+- Note: this is the texture-stack fallback layer, not the UV viewport grid/checkerboard.
+- CI run #291/#292 is pending at the time of this note; manual browser acceptance and project round-trip remain outstanding.
