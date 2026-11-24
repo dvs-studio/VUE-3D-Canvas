@@ -13,7 +13,7 @@ export const BumpLevelsDialog:React.FC<Props>=({isOpen,layer,mode='bump',onClose
  const handleHeaderMove=(e:React.PointerEvent<HTMLDivElement>)=>{const d=dragRef.current;if(!d)return;setWindowOffset({x:Math.max(-window.innerWidth/2,Math.min(window.innerWidth/2,d.left+e.clientX-d.x)),y:Math.max(-window.innerHeight/2,Math.min(window.innerHeight/2,d.top+e.clientY-d.y))});};
  const handleHeaderUp=()=>{dragRef.current=null;};
  useEffect(()=>{if(!isOpen)return;setValues({...DEFAULT_BUMP_LEVELS,...(layer?.pbrSettings?.heightLevels||{}),bumpInfluence:Math.round((layer?.pbrSettings?.bumpInfluence??1)*100)});},[isOpen,layer?.id]);
- useEffect(()=>{const canvas=previewRef.current;if(!canvas||!layer?.canvas||!isOpen)return;canvas.width=layer.canvas.width;canvas.height=layer.canvas.height;const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(layer.canvas,0,0);const image=ctx.getImageData(0,0,canvas.width,canvas.height);ctx.putImageData(levelsPixels(image,values),0,0);},[isOpen,layer,values]);
+ useEffect(()=>{const canvas=previewRef.current;if(!canvas||!layer?.canvas||!isOpen)return;if(canvas.width!==layer.canvas.width)canvas.width=layer.canvas.width;if(canvas.height!==layer.canvas.height)canvas.height=layer.canvas.height;const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(layer.canvas,0,0);const image=ctx.getImageData(0,0,canvas.width,canvas.height);ctx.putImageData(levelsPixels(image,values),0,0);},[isOpen,layer,values]);
  if(!isOpen)return null;
  const range=(label:keyof BumpLevels,min:number,max:number,step:number)=> <label className="block space-y-1 text-[11px]"><span className="flex justify-between"><span>{label}</span><b className="font-mono">{values[label]}</b></span><input type="range" min={min} max={max} step={step} value={values[label]} onChange={e=>setValues(v=>({...v,[label]:Number(e.target.value)}))} className="w-full accent-blue-500"/></label>;
  return <div className="fixed inset-0 z-[72] bg-black/65 flex items-center justify-center p-2"><div style={{transform:`translate(${windowOffset.x}px, ${windowOffset.y}px)`}} className="w-[min(680px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd]">
@@ -22,6 +22,7 @@ export const BumpLevelsDialog:React.FC<Props>=({isOpen,layer,mode='bump',onClose
  <footer className="border-t border-[#444] p-3 flex justify-end gap-2"><button onClick={onClose} className="px-3 py-1.5 border border-[#555] rounded">Cancel</button><button onClick={()=>onApply(values)} disabled={!layer||layer.locked} className="px-4 py-1.5 bg-blue-600 rounded text-white font-semibold disabled:opacity-40">Apply Levels &amp; Convert</button></footer>
  </div></div>;
 };
+/** Store Levels and bump influence as PBR metadata; preserve the source colour canvas. */
 export function applyBumpLevelsToLayer(layer:Layer,levels:BumpLevels){
  const previous=layer.pbrSettings;
  const isHeightLayer=layer.channel==='height';
