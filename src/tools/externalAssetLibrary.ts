@@ -29,6 +29,7 @@ interface AssetRecord {
 }
 
 interface ProcessedAsset {
+  index: number;
   blob: Blob;
   width: number;
   height: number;
@@ -130,7 +131,8 @@ function processFilesInWorker(records: AssetRecord[]): Promise<ProcessedAsset[]>
   return new Promise(resolve => {
     const fallback = async (): Promise<ProcessedAsset[]> => {
       const result: ProcessedAsset[] = [];
-      for (const record of records) {
+      for (let index = 0; index < records.length; index++) {
+        const record = records[index];
         try {
           const bitmap = await createImageBitmap(record.file);
           const scale = Math.min(1, MAX_LIBRARY_EDGE / Math.max(bitmap.width, bitmap.height));
@@ -146,7 +148,7 @@ function processFilesInWorker(records: AssetRecord[]): Promise<ProcessedAsset[]>
           let r = 0, g = 0, b = 0, count = 0;
           for (let i = 0; i < pixels.length; i += 4) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; count++; }
           const blob = await new Promise<Blob>((ok, no) => canvas.toBlob(value => value ? ok(value) : no(new Error('Image normalisation failed')), 'image/webp', 0.92));
-          result.push({ blob, width, height, averageColor: averageHex(r / count, g / count, b / count), mimeType: blob.type || 'image/webp' });
+          result.push({ index, blob, width, height, averageColor: averageHex(r / count, g / count, b / count), mimeType: blob.type || 'image/webp' });
         } catch (error) { console.warn('[External assets] Image processing skipped:', record.relativePath, error); }
       }
       return result;
@@ -178,7 +180,7 @@ function processFilesInWorker(records: AssetRecord[]): Promise<ProcessedAsset[]>
             for (let i = 0; i < pixels.length; i += 4) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; count++; }
             const hex = '#' + [r / count, g / count, b / count].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
             const blob = await canvas.convertToBlob({ type: 'image/webp', quality: 0.92 });
-            output.push({ blob, width, height, averageColor: hex, mimeType: blob.type || 'image/webp' });
+            output.push({ index: files.indexOf(row), blob, width, height, averageColor: hex, mimeType: blob.type || 'image/webp' });
           } catch (error) {
             output.push({ error: String(error) });
           }
@@ -213,10 +215,9 @@ async function scanHandle(handle: FileSystemDirectoryHandle, requestPermission: 
   const records = await collectAssets(handle as unknown as DirectoryHandleLike);
   const processed = await processFilesInWorker(records);
   const result: ExternalAsset[] = [];
-  let processedIndex = 0;
   for (let index = 0; index < records.length; index++) {
     const record = records[index];
-    const image = processed[processedIndex++];
+    const image = processed.find(item => item.index === index);
     if (!image) continue;
     try {
       result.push({
