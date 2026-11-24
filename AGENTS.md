@@ -153,8 +153,10 @@ CI verifies TypeScript diagnostics, Vite build, self-host sync, package validati
 - Continue the ordered TODO above. Do not mark 2A-W, 2A-T, 2B, 2C, or 2D complete on the basis of this scanner foundation.
 
 
-### 2026-11-24 — Protected base layer
-- The layer stack must retain a permanent bottom `Base Color Layer` marked `isBaseLayer`, locked and always visible. It is a non-editable fallback coat, not an ordinary paint layer.
-- Do not allow it to be unlocked, hidden, deleted, duplicated, reordered, grouped, or merged. Keep it below all working layers.
-- Legacy project loading must restore the base if absent and normalise it if present.
-- See `notes/PROTECTED_BASE_LAYER_2026-11-24.md`.
+### 2026-11-24 — Protected world-space Base Layer
+- The permanent bottom `Base Color Layer` is a world-space procedural checker background, not a UV texture or paintable colour coat. It is locked, always visible, and excluded from the UV composite/export.
+- The two checker colours default to equal neutral grey (`#9c9c9c`) at 100% opacity. Their individual opacity controls are independent and session-only.
+- The ordinary Base Layer opacity slider is separate from the two colour opacity controls.
+- Cancel retains the live session setup without persisting colours; Save persists only the two colours. Reset restores both grey colours and all opacity values to 100%.
+- The Base Layer row has a Reset button in the multi-select checkbox position and a dedicated properties button. Keep it protected from paint, visibility, stack, duplicate, delete, group, and merge operations.
+- See `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` for the facility bookmark/code map and manual acceptance checklist; see `notes/PROTECTED_BASE_LAYER_2026-11-24.md` for the original protection history.
