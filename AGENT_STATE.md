@@ -842,3 +842,13 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 **Verification:** Run #285 passed TypeScript diagnostics, Vite build, self-host sync, package validation, generated-output commit (rebased over concurrent documentation commits), ZIP creation and artifact upload. Artifact ID `14921232460`; source workflow head `da53debd3ace8986c1259266d04585017a310ffc`. Browser restart persistence and file:// storage behaviour still require manual acceptance.
 
 **Next in the root PIN:** 2A-W Wood rings, then 2A-T true triplanar A/B, 2B Mask/Tear/Pattern Craft/Matcap, 2C additional filters, 2D texture gallery. A5 title dragging and 2E subdivision remain verify-only; UI3 requires a focused scan. Do not replace built-in triplanar samples before Victory supplies replacement textures. PR #2 remains unmerged.
+
+---
+
+## 2026-11-24 — GPT-6 — external asset scanner foundation
+- Source commit: `17c020d` added `src/tools/externalAssetLibrary.ts`; `cd2eef1` corrected classification when the selected root itself is named for an asset category.
+- Documentation commit: `ce5f899` added `notes/EXTERNAL_ASSET_LIBRARY_2026-11-24.md`; `53bb548` recorded scope in `AGENTS.md`.
+- The module stores a user-selected directory handle in IndexedDB where supported, scans matching folder names case-insensitively, and uses a Worker for sorting/classification. Browser permission remains explicit.
+- **Not complete:** BrushLibraryPanel integration, texture/brush/mask gallery presentation, preference controls, PNG alpha workflow, and runtime browser acceptance.
+- **Not touched:** built-in triplanar textures, supplied asset packs (not yet provided), Rust core, protected OBJ assets, and safety archives.
+- Next ordered code task remains 2A-W Organic Wood. Do not jump ahead and mark the broader backlog complete. The user's future texture ZIP should be processed separately: rename consistently, resize triplanar texture images to 512 px width with aspect ratio preserved, and retain transparency where present.
