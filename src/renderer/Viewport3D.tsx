@@ -1725,7 +1725,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const intersects = raycaster.current.intersectObject(meshRef.current);
     if (intersects.length > 0 && intersects[0].uv) {
       const faceIndex = intersects[0].faceIndex ?? -1;
-      const islandIds = faceIndex >= 0 ? getUVIslandIds(meshRef.current.geometry) : null;
+      const activeUVArray = activeUVChannel
+        ? meshRef.current.geometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
+        : undefined;
+      const islandIds = faceIndex >= 0
+        ? getUVIslandIds(meshRef.current.geometry, activeUVArray, uvGeometryVersion)
+        : null;
       const uvIslandId = islandIds && faceIndex < islandIds.length ? islandIds[faceIndex] : -1;
       return { uv: intersects[0].uv, faceIndex, uvIslandId };
     }
