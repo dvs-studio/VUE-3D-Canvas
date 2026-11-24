@@ -1032,15 +1032,15 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };
         shader.vertexShader = shader.vertexShader.replace(
           '#include <common>',
-          '#include <common>\\nvarying vec3 vVueWorldPosition;\\nvarying vec3 vVueWorldNormal;'
+          '#include <common>\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;'
         );
         shader.vertexShader = shader.vertexShader.replace(
           '#include <worldpos_vertex>',
-          '#include <worldpos_vertex>\\nvVueWorldPosition = worldPosition.xyz;\\nvVueWorldNormal = normalize(mat3(modelMatrix) * objectNormal);'
+          '#include <worldpos_vertex>\nvVueWorldPosition = worldPosition.xyz;\nvVueWorldNormal = normalize(mat3(modelMatrix) * objectNormal);'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <common>',
-          '#include <common>\\nvarying vec3 vVueWorldPosition;\\nvarying vec3 vVueWorldNormal;\\nuniform vec3 vueBaseColourA;\\nuniform vec3 vueBaseColourB;\\nuniform float vueBaseOpacityA;\\nuniform float vueBaseOpacityB;\\nuniform float vueBaseLayerOpacity;'
+          '#include <common>\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;\nuniform vec3 vueBaseColourA;\nuniform vec3 vueBaseColourB;\nuniform float vueBaseOpacityA;\nuniform float vueBaseOpacityB;\nuniform float vueBaseLayerOpacity;'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <map_fragment>',
