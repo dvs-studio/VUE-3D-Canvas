@@ -458,3 +458,36 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 **Verification boundary:** no visual/browser/device test was performed. Manual acceptance is still required for startup, UV seam continuity, UV clipping, alternate UV channels, symmetry, pointer/touch final samples, undo/redo and export round-trips. Subdivision remains verify-only.
 
 **Next:** A4 mesh-part filter selection, then A5 verify, A6, A7, UI1, 2A-W, 2A-T, 2B, 2C and 2D. Built-in triplanar sample textures remain untouched pending Victory's replacements. PR #2 remains unmerged.
+
+
+## 2026-11-24 — GPT-6 — A4 / A6 / A7 self-host follow-up
+
+**Request:** Continue reading the troubleshooting handover and fixing the self-hosted programme.
+
+**A4 — mesh-part filter target**
+- Connected the mesh-part list and selected part to TextureFilterDialog.
+- Added active-UV triangle coverage masks; filtering preserves pixels outside the selected component and skips atlas dilation while the mask is active.
+- Added preview/apply validation and inline errors for empty masks.
+- Moved the floating filter dialog into a portal with pointer-transparent outer space.
+
+**A6 — 2D UV workspace**
+- Connected the UV toolbar to the active UV channel manager.
+- Added layer blend-mode/opacity compositing to the 2D view.
+- Made UV display/overlay/pointer/sculpt/selection dimensions follow the active layer resolution.
+- Re-bake resizes the complete layer stack, rebakes the active layer to the selected UV channel, and refreshes the composite; XBlend loading restores image natural dimensions.
+- Reused selection-shade canvas; removed conflicting shelf order classes and reserved room for touch controls.
+- Scoped the UV N-Panel shortcut to pointer/focus inside the 2D pane to avoid the Tablet drawer collision.
+
+**A7 / F8 — non-destructive Bump Levels**
+- Added persistent height Levels metadata and a shared levels mapping helper.
+- Levels preview remains grayscale, but Apply no longer overwrites the original color pixels; it stores Levels and bump influence in PBR metadata.
+- New bump conversions default to 100% influence, preserve the color contribution for paint layers, and keep height-only layers color-disabled.
+- Viewport height composition, subdivision height and XBlend height export consume the stored Levels.
+- Bump-only/height-only layers on the same UV channel can merge into a dedicated evaluated height layer that opens Bump Levels at 100% influence.
+
+**Verification**
+- A4: Run #262 passed; artifact `14918105222`.
+- A6: Run #265 passed; artifact `14918012437`.
+- Latest combined source: Run #283 passed TypeScript diagnostics, Vite build, self-host sync, package checks, generated-output commit, ZIP and artifact upload. Source revision `9a123232144be0a979e7961dfa80a944c78e8c59`; artifact `14917704031`.
+- CI does not prove visual/browser/device behaviour. Manual acceptance remains required for A4 part isolation, A6 UV/rebake/blend behaviour, A7 color preservation/height merge/influence and XBlend/export round-trips.
+- A5 title-drag remains verify-only. UI1, 2A-W, 2A-T, 2B, 2C and 2D remain open; 2E remains verify-only. Built-in triplanar sample textures were not changed. PR #2 remains open and unmerged.
