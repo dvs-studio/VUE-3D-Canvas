@@ -359,28 +359,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         })}
       </div>
 
-      {/* Bottom Actions Bar */}
-      <div className="p-1.5 bg-[#2d2d2d] border-t border-[#444] flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onAddLayer}
-            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
-            title="Create New Texture Layer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-          {onImportTexture && (
-            <button
-              onClick={onImportTexture}
-              className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#38bdf8] rounded border border-[#505050] transition-colors"
-              title="Import Texture (Layer PBR Role / Material Texture Fill)..."
-            >
-              <Upload className="w-3.5 h-3.5" />
-            </button>
-          )}
-          
         {checkedLayerIds.length > 0 && (
-          <div className="flex items-center gap-1 px-2 py-1 bg-[#2a2a2a] border-b border-[#444] text-[10px]">
+          <div className="flex flex-wrap items-center gap-1 px-2 py-1 bg-[#2a2a2a] border-b border-[#444] text-[10px]">
             <span className="text-[#aaa]">{checkedLayerIds.length} selected</span>
             {onGroupSelectedLayers && (
               <button type="button" className="px-1.5 py-0.5 rounded border border-[#666] hover:bg-[#3a3a3a]"
@@ -409,6 +389,28 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               onClick={() => setCheckedLayerIds([])}>Clear</button>
           </div>
         )}
+
+      {/* Bottom Actions Bar */}
+      <div className="p-1.5 bg-[#2d2d2d] border-t border-[#444] flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onAddLayer}
+            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
+            title="Create New Texture Layer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+          {onImportTexture && (
+            <button
+              onClick={onImportTexture}
+              className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#38bdf8] rounded border border-[#505050] transition-colors"
+              title="Import Texture (Layer PBR Role / Material Texture Fill)..."
+            >
+              <Upload className="w-3.5 h-3.5" />
+            </button>
+          )}
+          
+
         {onAddGroup && (
             <button
               onClick={onAddGroup}
