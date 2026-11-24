@@ -8,6 +8,7 @@
 import JSZip from 'jszip';
 import type { Layer, MeshModelAsset, XBlendProject, LayerPBRSettings } from './types';
 import { UndoRingBuffer } from './history';
+import { applyHeightLevels, DEFAULT_HEIGHT_LEVELS } from '../tools/heightLevels';
 
 type LayerMapKind = 'color' | 'emission' | 'height' | 'reflection' | 'normal';
 
@@ -37,6 +38,7 @@ function getLayerPbr(layer: Layer): LayerPBRSettings {
     bumpRamp: (saved.bumpRamp?.length ? saved.bumpRamp : [{ position: 0, height: 0 }, { position: 1, height: 1 }])
       .map(stop => ({ position: Math.max(0, Math.min(1, stop.position)), height: Math.max(0, Math.min(1, stop.height)) }))
       .sort((a, b) => a.position - b.position),
+    heightLevels: saved.heightLevels ?? DEFAULT_HEIGHT_LEVELS,
     normalLock: saved.normalLock ?? channel === 'normal',
   };
 }
@@ -78,7 +80,7 @@ function makeLayerMapDataUrl(layer: Layer, kind: LayerMapKind, pbr: LayerPBRSett
 
   for (let i = 0; i < data.length; i += 4) {
     const luminance = (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]) / 255;
-    const value = kind === 'height' ? rampHeight(luminance) : luminance;
+    const value = kind === 'height' ? rampHeight(applyHeightLevels(luminance, pbr.heightLevels)) : luminance;
     const byte = Math.round(Math.max(0, Math.min(1, value)) * 255);
     data[i] = data[i + 1] = data[i + 2] = byte;
   }
