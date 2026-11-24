@@ -20,6 +20,7 @@ import {
   GizmoStyle,
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
+import { getUVIslandIds } from '../tools/uvIslandMap';
 import { PatternStampEngine } from '../tools/patternStampTool';
 import { SelectionTool } from '../tools/selectionTool';
 import { SymmetryConfig, SymmetryEngine, SymmetryAxis } from '../tools/symmetryEngine';
@@ -235,7 +236,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   }, []);
 
   const isPaintingRef = useRef(false);
-  const lastFaceIndexRef = useRef<number>(-1);
+  const lastUVIslandIdRef = useRef<number>(-1);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
   const brushEngine = BrushEngine.getInstance();
@@ -243,6 +244,16 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   // PERF-1/PERF-2: RAF gate — pending paint events queued per frame
   const pendingPaintEventsRef = useRef<PointerEvent[]>([]);
   const rafPaintHandleRef = useRef<number | null>(null);
+
+  const resetPaintPaths = (x?: number, y?: number) => {
+    brushEngine.resetStrokePath('primary', x, y);
+    for (const key of ['mirror-X', 'mirror-Y', 'mirror-Z', 'mirror-XY']) {
+      brushEngine.resetStrokePath(key);
+    }
+    lastCompositePaintPointRef.current =
+      typeof x === 'number' && typeof y === 'number' ? { x, y } : null;
+    lastCompositeMirrorPointsRef.current = [];
+  };
 
   // HDRI Reflections & Viewport Lighting Settings
   const [internalHdri, setInternalHdri] = useState<HDRISettings>({
@@ -1427,6 +1438,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
     activePointers.current.set(e.pointerId, { 
       x: e.clientX, 
       y: e.clientY, 
@@ -1439,7 +1451,15 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     if (activePointers.current.size >= 2) {
+      if (isPaintingRef.current) {
+        if (rafPaintHandleRef.current !== null) {
+          cancelAnimationFrame(rafPaintHandleRef.current);
+          rafPaintHandleRef.current = null;
+        }
+        flushPendingPaintEvents();
+      }
       isPaintingRef.current = false;
+      lastUVIslandIdRef.current = -1;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
@@ -1472,9 +1492,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (!targetLayer || targetLayer.locked || !targetLayer.visible) return;
 
     if (hit) {
-      const { uv, faceIndex } = hit;
+      const { uv, uvIslandId } = hit;
       isPaintingRef.current = true;
-      lastFaceIndexRef.current = faceIndex;
+      lastUVIslandIdRef.current = uvIslandId;
       const pixelX = uv.x * targetLayer.canvas.width;
       const pixelY = (1 - uv.y) * targetLayer.canvas.height;
 
@@ -1571,76 +1591,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     if (isPaintingRef.current) {
-      // PERF-1/PERF-2: Queue the event and schedule a single RAF tick.
-      // Inside the RAF we drain all coalesced events so no input is lost
-      // but the GPU pipeline is only hit once per display frame.
+      // Queue native pointer events and drain them once per animation frame.
       pendingPaintEventsRef.current.push(e.nativeEvent);
       if (rafPaintHandleRef.current === null) {
         rafPaintHandleRef.current = requestAnimationFrame(() => {
           rafPaintHandleRef.current = null;
-          const events = pendingPaintEventsRef.current;
-          pendingPaintEventsRef.current = [];
-          // Expand each queued event using getCoalescedEvents to preserve high-frequency input
-          const coalesced: PointerEvent[] = [];
-          for (const ev of events) {
-            if (typeof ev.getCoalescedEvents === 'function') {
-              const cl = ev.getCoalescedEvents();
-              if (cl.length > 0) { coalesced.push(...cl); continue; }
-            }
-            coalesced.push(ev);
-          }
-          const targetLayer = layers.find(l => l.id === activeLayerId);
-          if (!targetLayer) return;
-          for (const ev of coalesced) {
-            // Wrap in a minimal React-PointerEvent-compatible shape for raycastUV
-            const synth = ev as unknown as React.PointerEvent<HTMLCanvasElement>;
-            const hit = raycastUV(synth);
-            if (!hit) continue;
-            const { uv, faceIndex } = hit;
-            const targetX = uv.x * targetLayer.canvas.width;
-            const targetY = (1 - uv.y) * targetLayer.canvas.height;
-
-            if (activeTool === 'mask_brush') {
-              const baseMask = selectionMask || {
-                active: true,
-                type: 'brush' as const,
-                points: [],
-                bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
-                inverted: false,
-              };
-              const updated = MaskEngine.paintMaskDab(
-                baseMask,
-                targetX,
-                targetY,
-                brush.size,
-                brush.hardness || 50,
-                false,
-                targetLayer.canvas.width,
-                targetLayer.canvas.height
-              );
-              if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
-              needsRenderRef.current = true;
-              continue;
-            }
-
-            // S0-1 UV island crossing guard
-            const prevFace = lastFaceIndexRef.current;
-            const faceJump = prevFace >= 0 && faceIndex >= 0 && Math.abs(faceIndex - prevFace) > 2;
-            if (faceJump) {
-              brushEngine.endStroke();
-              brushEngine.beginStroke(targetX, targetY, ev.pressure || 1.0);
-              lastFaceIndexRef.current = faceIndex;
-            } else {
-              lastFaceIndexRef.current = faceIndex;
-              const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
-              const lastDab = brushEngine.getLastDabPos?.();
-              const jumped = lastDab != null && Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
-              if (!jumped) {
-                executePaintTool(targetLayer, stabilized.x, stabilized.y, ev.pressure || 1.0);
-                drawStabilizerTether(synth, stabilized, targetLayer);
-              }
-            }
-          }
+          flushPendingPaintEvents();
         });
       }
     }
@@ -1648,6 +1604,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     activePointers.current.delete(e.pointerId);
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
 
     if (activePointers.current.size < 2) {
       pinchStartDist.current = null;
@@ -1660,20 +1621,21 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     if (isPaintingRef.current) {
-      isPaintingRef.current = false;
-      lastFaceIndexRef.current = -1;
-      // PERF-1: cancel any pending RAF paint tick and flush queue on pointer-up
+      // Include the final pointer position and drain every queued/coalesced event
+      // before ending the stroke. Clearing this queue here used to drop the tail.
+      pendingPaintEventsRef.current.push(e.nativeEvent);
       if (rafPaintHandleRef.current !== null) {
         cancelAnimationFrame(rafPaintHandleRef.current);
         rafPaintHandleRef.current = null;
       }
-      pendingPaintEventsRef.current = [];
+      flushPendingPaintEvents();
+
+      isPaintingRef.current = false;
+      lastUVIslandIdRef.current = -1;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
       clearStabilizerTether();
-      // onTextureUpdated schedules the canonical composite; the textureVersion
-      // effect performs the single full PBR-map rebuild after the stroke.
       if (dynamicTextureRef.current) {
         dynamicTextureRef.current.generateMipmaps = true;
         dynamicTextureRef.current.minFilter = THREE.LinearMipmapLinearFilter;
@@ -1681,7 +1643,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
       needsRenderRef.current = true;
       onTextureUpdated();
-      undoBuffer.pushState(`${brush.name} 3D Paint`, layers);
+      undoBuffer.pushState(\`\${brush.name} 3D Paint\`, layers);
     }
   };
 
@@ -1694,7 +1656,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     updateCameraPosition();
   };
 
-  const raycastUV = (e: React.PointerEvent<HTMLCanvasElement>): { uv: THREE.Vector2; faceIndex: number } | null => {
+  const raycastUV = (e: React.PointerEvent<HTMLCanvasElement>): { uv: THREE.Vector2; faceIndex: number; uvIslandId: number } | null => {
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current || !cameraPerspRef.current) return null;
 
@@ -1739,8 +1701,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     const intersects = raycaster.current.intersectObject(meshRef.current);
     if (intersects.length > 0 && intersects[0].uv) {
-      // S0-1: return faceIndex alongside uv so the pointer-move handler can detect UV-island crossings
-      return { uv: intersects[0].uv, faceIndex: intersects[0].faceIndex ?? -1 };
+      const faceIndex = intersects[0].faceIndex ?? -1;
+      const islandIds = faceIndex >= 0 ? getUVIslandIds(meshRef.current.geometry) : null;
+      const uvIslandId = islandIds && faceIndex < islandIds.length ? islandIds[faceIndex] : -1;
+      return { uv: intersects[0].uv, faceIndex, uvIslandId };
     }
     return null;
   };
@@ -1940,6 +1904,87 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       dynamicTextureRef.current.needsUpdate = true;
     }
     needsRenderRef.current = true;
+  };
+
+  const flushPendingPaintEvents = () => {
+    const events = pendingPaintEventsRef.current;
+    pendingPaintEventsRef.current = [];
+    if (events.length === 0) return;
+
+    const coalesced: PointerEvent[] = [];
+    for (const event of events) {
+      if (typeof event.getCoalescedEvents === 'function') {
+        const samples = event.getCoalescedEvents();
+        if (samples.length > 0) {
+          coalesced.push(...samples);
+          continue;
+        }
+      }
+      coalesced.push(event);
+    }
+
+    const targetLayer = layers.find(layer => layer.id === activeLayerId);
+    if (!targetLayer) return;
+
+    for (const event of coalesced) {
+      const synth = event as unknown as React.PointerEvent<HTMLCanvasElement>;
+      const hit = raycastUV(synth);
+      if (!hit) {
+        lastUVIslandIdRef.current = -1;
+        resetPaintPaths();
+        continue;
+      }
+
+      const { uv, uvIslandId } = hit;
+      const targetX = uv.x * targetLayer.canvas.width;
+      const targetY = (1 - uv.y) * targetLayer.canvas.height;
+
+      if (activeTool === 'mask_brush') {
+        const baseMask = selectionMask || {
+          active: true,
+          type: 'brush' as const,
+          points: [],
+          bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
+          inverted: false,
+        };
+        const updated = MaskEngine.paintMaskDab(
+          baseMask,
+          targetX,
+          targetY,
+          brush.size,
+          brush.hardness || 50,
+          false,
+          targetLayer.canvas.width,
+          targetLayer.canvas.height
+        );
+        if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
+        lastUVIslandIdRef.current = uvIslandId;
+        needsRenderRef.current = true;
+        continue;
+      }
+
+      const previousIsland = lastUVIslandIdRef.current;
+      const crossedUVIsland = previousIsland >= 0 && uvIslandId >= 0 && uvIslandId !== previousIsland;
+      if (crossedUVIsland) {
+        // Start a fresh path at the corresponding UV location. Do not infer
+        // seams from face-index ordering; triangle order is not topological.
+        resetPaintPaths(targetX, targetY);
+        lastUVIslandIdRef.current = uvIslandId;
+        executePaintTool(targetLayer, targetX, targetY, event.pressure || 1.0);
+        drawStabilizerTether(synth, { x: targetX, y: targetY }, targetLayer);
+        continue;
+      }
+
+      lastUVIslandIdRef.current = uvIslandId;
+      const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
+      const lastDab = brushEngine.getLastDabPos();
+      const jumped = lastDab != null &&
+        Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
+      if (!jumped) {
+        executePaintTool(targetLayer, stabilized.x, stabilized.y, event.pressure || 1.0);
+        drawStabilizerTether(synth, stabilized, targetLayer);
+      }
+    }
   };
 
   const drawStabilizerTether = (
