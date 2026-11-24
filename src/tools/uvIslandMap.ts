@@ -18,7 +18,7 @@ const UV_EPSILON = 1e-5;
 
 const attributeVersion = (attribute: GeometryAttribute | THREE.BufferAttribute | null): number => {
   if (!attribute) return -1;
-  const value = attribute as GeometryAttribute & { data?: { version?: number } };
+  const value = attribute as GeometryAttribute & { version?: number; data?: { version?: number } };
   return value.version ?? value.data?.version ?? 0;
 };
 
