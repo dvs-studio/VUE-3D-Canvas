@@ -7,6 +7,7 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as THREE from 'three';
+import { applyHeightLevels } from '../tools/heightLevels';
 import { 
   ToolType, 
   BrushPreset, 
@@ -479,7 +480,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
               if (alpha <= 0) continue;
               const luminance = (0.299 * sourceData[si] + 0.587 * sourceData[si + 1] + 0.114 * sourceData[si + 2]) / 255;
               if (bumpOn && bumpInfluence > 0) {
-                heightValues[di] = Math.min(1, heightValues[di] + rampValue(luminance) * bumpInfluence * opacity * alpha);
+                heightValues[di] = Math.min(1, heightValues[di] + rampValue(applyHeightLevels(luminance, saved.heightLevels)) * bumpInfluence * opacity * alpha);
               }
               if (reflectionOn && reflectionInfluence > 0) {
                 reflectionValues[di] = Math.max(reflectionValues[di], luminance * reflectionInfluence * opacity * alpha);
