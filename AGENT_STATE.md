@@ -755,3 +755,30 @@ Suzanne candidate model binaries are still not available in the current conversa
 - Commands run during audit: `npx tsc --noEmit` (10 errors above reproduced), `grep -rnE` checks across `src/`, full manual read of all 27 `.md` files and core `src/` + `self-host/` modules.
 - No files in `src/`, `crates/vue3d_core/`, `self-host/public/`, or safety ZIPs were modified in this troubleshooting pass. Next session should execute the P0 fixes first, verify `npx tsc --noEmit && npm run build && npm run host:sync`, and keep `AGENTS.md` PIN updated only after synced verification.
 
+
+
+## 2026-11-24 — GPT-6 P0 repair execution (LOG-2026-11-24-GPT6-REPAIR-PASS-02)
+
+The Gemini Hydrogen troubleshooting report was read and the audited P0 defects were repaired on remote main.
+
+### Landed
+- TypeScript fixes across xblendFormat.ts, hdriManager.ts, surfaceShading.ts, textureFilters.ts and MeshPartsPanel.tsx; npm run lint is now a required self-host CI step.
+- Duplicate View menu removed; dropdown dismissal fixed; Layers bulk-action layout, Expanded Stack props and viewport toolbar overlap corrected.
+- OBJ export now serializes the active geometry; glTF/FBX export receives a mesh wrapping active geometry.
+- RGB/RGBA/HSL tint parsing fixed.
+- UV seam detection now uses cached connected UV-island IDs from shared geometric edges and matching UV coordinates. The active UV channel and uvGeometryVersion are respected.
+- Brush path resets preserve symmetry path state and stamp the new island entry dab. Pointer capture is enabled and queued/coalesced events are flushed before pointer-up/cancel ends a stroke.
+- UV coverage is generated from the active mesh triangles and applied to 3D brush/eraser/pen, gradients, clone, smudge, blur and Mask Brush. Blur writes through drawImage because putImageData ignores clipping.
+- New helpers: src/renderer/objExporter.ts, src/tools/uvIslandMap.ts, src/tools/uvIslandClip.ts.
+
+### Final CI verification
+- Run #258: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45386790536 — success.
+- Tested source revision: b54476cc1455c9bc18d895bc638cf5d858d315b3.
+- TypeScript diagnostics, Vite build, self-host sync, blank-package checks, generated-output commit, ZIP and artifact upload all succeeded.
+- Artifact VUE_3D_Canvas_SelfHost: ID 14917995630 (~2.07 MB).
+
+### Not verified by CI
+No browser/device visual test is claimed. Victory must still test startup, fast UV seam strokes, no-paint-outside-islands, non-default UV channels, symmetry, pointer capture/final dab, undo/redo and OBJ/glTF/FBX round-trips. 2E subdivision remains verify-only and was not changed.
+
+### Remaining order
+A4 mesh-part filter selection; A5 title-drag verification; A6 UV shelf; A7 bump/Levels workflow; UI1 window persistence; 2A-W Wood rings; 2A-T triplanar A/B; 2B layer/filter additions; 2C filters; 2D texture gallery. Do not replace built-in triplanar samples until Victory supplies replacements. PR #2 remains open and unmerged.
