@@ -42,17 +42,34 @@
 
 ### CURRENT TODO — all active for this pass
 
-> **Last code agent:** Claude Sonnet 4.6 / `LOG-2026-11-24-CLAUDE-WORK` — 2026-11-24  
-> **Latest audit agent (docs/troubleshoot only):** Gemini Hydrogen / `LOG-2026-11-24-GEMINI-HYDROGEN-TROUBLESHOOT` — 2026-11-24 (10 `tsc` errors + pinpointed P0–P2 bug list recorded in [`AGENT_STATE.md`](AGENT_STATE.md); **no `src/` edits in audit**)  
-> **Push needed:** 3 commits local (`f551511`, `221e5cf`, `1768387`) plus pending doc updates. Victory should run `git push origin main` after reviewing.  
-> **Next code agent picks up at:** P0 snapshot/compile/regression fixes in [`AGENT_STATE.md`](AGENT_STATE.md) (`TS-1..5`, `UI-BUG-1..4`, `EXPT-1`, `SUBD-1`, `FILT-1`, `PAINT-1..2`) → A4 completion → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D
+> **Last code repair agent:** GPT-6 / LOG-2026-11-24-GPT6-REPAIR-PASS-02 — 2026-11-24  
+> **Latest audit agent:** Gemini Hydrogen / LOG-2026-11-24-GEMINI-HYDROGEN-TROUBLESHOOT — 2026-11-24 (pinpointed P0–P2 report in AGENT_STATE.md).  
+> **Remote main:** the audited P0 source fixes are committed to remote main; no manual git push is pending.  
+> **Latest verification:** workflow #258 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID 14917995630.  
+> **Next code agent picks up at:** A4 mesh-part filter selection → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D. Keep 2E verify-only. Victory’s manual acceptance checklist is in notes/SELF_HOST_P0_REPAIR_2026-11-24.md.
 
 #### Step 0
-- [x] **S0-1** Stroke teleport — `raycastUV` returns faceIndex; island-crossing triggers endStroke+beginStroke; maxJumpPx guard added (`f551511`)
+- [x] **S0-1** UV seam continuity — cached per-triangle UV-island IDs based on shared geometric edges and matching UV coordinates; reset only affected stroke paths and retain the entry dab. Active UV channel/version is respected.
+- [x] **S0-2** Powderiser double noise/100 — fixed to noise at line 363 (f551511).
+- [x] **PERF-1/2** RAF gate + coalesced pointer events; pointer-up/cancel flushes final samples before ending stroke.
+- [x] **PERF-4** Clone stamp temp canvas cached per stroke (f551511).
+- [x] **P0 TS-1..5** audited TypeScript issues fixed; npm run lint is now required in CI.
+- [x] **P0 UI-BUG-1..4** duplicate View menu, bulk action layout, Expanded Stack props and viewport toolbar overlap corrected.
+- [x] **P0 EXPT-1** OBJ exports active geometry; glTF/FBX dialog receives active mesh.
+- [x] **P0 FILT-1** RGB/RGBA/HSL tint parser corrected.
+- [x] **P0 PAINT-1..2** UV-island seam detection, per-path reset, pointer capture and final queue flush corrected.
+- [x] **UV coverage** 3D brush, eraser, pen, gradients, clone, smudge, blur and Mask Brush are clipped to active UV triangle coverage.
+- [ ] Manual acceptance still outstanding: startup, Undo/Redo, symmetry, paint seam/clipping, export round-trip, pointer/touch and UI sizing. CI is not visual acceptance.
+- [ ] **2E** Subdivision preview — verify only; do not redesign unless a reproducible regression is found.
+- [ ] Continue remaining Step 0 regression scrutiny as part of manual acceptance.
+
+
+#### Step 0
+- [x] **S0-1** UV seam continuity — cached per-triangle UV-island IDs, per-path reset and entry dab; active UV channel/version respected.
 - [x] **S0-2** Powderiser double `noise/100` — fixed to `noise` at line 363 (`f551511`)
-- [x] **PERF-1/2** RAF gate + getCoalescedEvents on paint pointer-move (`221e5cf`)
+- [x] **PERF-1/2** RAF gate + coalesced pointer events; pointer-up/cancel flushes final samples before ending stroke.
 - [x] **PERF-4** Clone stamp temp canvas cached per stroke (`f551511`)
-- [ ] Other regressions (UI3 giant Undo/Redo — could not reproduce; symmetry/boot/export — not yet checked)
+- [ ] Manual acceptance still outstanding: startup, Undo/Redo, symmetry, paint seam/clipping, export round-trip, pointer/touch and UI sizing.
 - [ ] **2E** Subdiv preview — verify only
 
 #### 2A Stabilisation
@@ -61,7 +78,7 @@
 - [ ] **A6** 2D UV tool shelf layout
 - [ ] **A7 / F8** Merge bump/displacement → Levels → 100% bump
 - [ ] **UI1** Persist window enable/disable
-- [x] **UI2** Menu dropdowns dismiss on unfocus — click-outside handler added (`221e5cf`)
+- [x] **UI2** Menu dropdowns dismiss on outside pointer or Escape; pointer-leave no longer closes native selects.
 - [ ] **UI3** Giant Undo/Redo lower 3D viewport — could not reproduce; scan for oversized element
 
 #### 2A-W Wood rings
@@ -92,6 +109,10 @@
 - [ ] Bundle → browser/device storage + preview; GPU-tier auto-scale; can share path with triplanar samples
 
 ---
+
+### P0 audit repair status (2026-11-24)
+
+See notes/SELF_HOST_P0_REPAIR_2026-11-24.md. The audited TypeScript, UI, OBJ export, RGB/HSL parsing, UV seam/pointer queue and UV coverage clipping defects have source fixes on remote main. Final CI run #258 passed with artifact 14917995630. Manual acceptance remains outstanding; 2E is verify-only.
 
 ### Triplanar correction specification
 
