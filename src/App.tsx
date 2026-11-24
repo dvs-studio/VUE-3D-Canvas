@@ -1039,7 +1039,11 @@ export default function App() {
 
     // Bump/displacement layers are height contributors, not ordinary color layers.
     // Merge their evaluated height into a dedicated height layer and open Levels.
-    const canMergeHeight = selected.every(layer => layer.channel === 'height' || (layer.pbrSettings?.bumpOn === true && layer.pbrSettings?.colorOn === false));
+    const canMergeHeight = selected.every(layer => {
+      const isHeightLayer = layer.channel === 'height';
+      const bumpOn = layer.pbrSettings?.bumpOn ?? isHeightLayer;
+      return bumpOn && (isHeightLayer || layer.pbrSettings?.colorOn === false);
+    });
     if (canMergeHeight) {
       const uvChannel = selected[0].uvChannel || 'uv_original';
       if (selected.some(layer => (layer.uvChannel || 'uv_original') !== uvChannel)) {
@@ -1054,7 +1058,7 @@ export default function App() {
         const pbr = layer.pbrSettings;
         const bumpOn = pbr?.bumpOn ?? layer.channel === 'height';
         const influence = Math.max(0, Math.min(1,
-          (pbr?.bumpInfluence ?? (layer.channel === 'height' ? 1 : 0)) * (layer.opacity ?? 100) / 100
+          (pbr?.bumpInfluence ?? (bumpOn ? 1 : 0)) * (layer.opacity ?? 100) / 100
         ));
         if (!bumpOn || influence <= 0) continue;
 
