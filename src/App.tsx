@@ -26,6 +26,7 @@ import {
   PreferencesState,
   TextureFillConfig,
   GizmoStyle,
+  BaseLayerSettings,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
 import { UndoRingBuffer } from './core/history';
@@ -55,6 +56,7 @@ import { GaussianBlurDialog } from './ui/GaussianBlurDialog';
 import { StochasticScatterDialog } from './ui/StochasticScatterDialog';
 import { StitchStudioDialog } from './ui/StitchStudioDialog';
 import { LayerSettingsModal } from './ui/LayerSettingsModal';
+import { BaseLayerSettingsDialog, DEFAULT_BASE_LAYER_SETTINGS } from './ui/BaseLayerSettingsDialog';
 import { PatternStampDialog } from './ui/PatternStampDialog';
 import { EdgeWearDialog } from './ui/EdgeWearDialog';
 import { ExportModelDialog } from './ui/ExportModelDialog';
@@ -138,9 +140,8 @@ export default function App() {
     const baseLayer = createLayer('layer_base', 'Base Color Layer');
     baseLayer.isBaseLayer = true;
     baseLayer.locked = true;
-    // Pre-fill base coat with neutral studio primer
-    baseLayer.ctx.fillStyle = '#9c9c9c';
-    baseLayer.ctx.fillRect(0, 0, 1024, 1024);
+    // The base is a protected world-space background, not a UV paint canvas.
+    baseLayer.ctx.clearRect(0, 0, 1024, 1024);
 
     const decalLayer = createLayer('layer_details', 'Paint & Details Layer');
 
@@ -324,6 +325,24 @@ export default function App() {
   // Layer Material & PBR Settings Modal
   const [isLayerSettingsOpen, setIsLayerSettingsOpen] = useState<boolean>(false);
   const [layerSettingsTargetId, setLayerSettingsTargetId] = useState<string | null>(null);
+  const [isBaseLayerSettingsOpen, setIsBaseLayerSettingsOpen] = useState(false);
+  const [baseLayerSettings, setBaseLayerSettings] = useState<BaseLayerSettings>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('vue3d_base_layer_colours') || 'null');
+      return { ...DEFAULT_BASE_LAYER_SETTINGS, ...(saved || {}), colorAOpacity: 100, colorBOpacity: 100, layerOpacity: 100 };
+    } catch { return { ...DEFAULT_BASE_LAYER_SETTINGS }; }
+  });
+
+  const updateBaseLayerSettings = (patch: Partial<BaseLayerSettings>) => {
+    setBaseLayerSettings(current => ({ ...current, ...patch }));
+  };
+  const resetBaseLayerSettings = () => setBaseLayerSettings({ ...DEFAULT_BASE_LAYER_SETTINGS });
+  const saveBaseLayerSettings = () => {
+    try {
+      localStorage.setItem('vue3d_base_layer_colours', JSON.stringify({ colorA: baseLayerSettings.colorA, colorB: baseLayerSettings.colorB }));
+    } catch (error) { console.warn('Base layer colour preferences could not be saved:', error); }
+    setIsBaseLayerSettingsOpen(false);
+  };
 
   // Pattern Stamp Tool Config & Dialog
   const [isPatternStampDialogOpen, setIsPatternStampDialogOpen] = useState<boolean>(false);
@@ -834,7 +853,11 @@ export default function App() {
   };
 
   const handleUpdateOpacity = (id: string, opacity: number) => {
-    if (layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
+    if (layers.some(layer => layer.id === id && layer.isBaseLayer)) {
+      updateBaseLayerSettings({ layerOpacity: opacity });
+      setLayers(prev => prev.map(layer => layer.id === id ? { ...layer, opacity } : layer));
+      return;
+    }
     setLayers(layers.map(l => l.id === id ? { ...l, opacity } : l));
     notifyTextureUpdated();
   };
@@ -2062,6 +2085,7 @@ export default function App() {
             <div className={`relative ${viewMode === 'split' ? 'w-1/2 border-r border-[#444]' : 'w-full'} h-full`}>
               <Viewport3D
                 layers={layers}
+                baseLayerSettings={baseLayerSettings}
                 activeLayerId={activeLayerId}
                 activeTool={activeTool}
                 brush={activeBrush}
@@ -2252,6 +2276,8 @@ export default function App() {
                         <div className="h-64">
                           <LayersPanel
                             layers={layers}
+                            onOpenBaseLayerSettings={() => setIsBaseLayerSettingsOpen(true)}
+                            onResetBaseLayerSettings={resetBaseLayerSettings}
                             activeLayerId={activeLayerId}
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
@@ -2427,6 +2453,8 @@ export default function App() {
                   >
                     <LayersPanel
                       layers={layers}
+                      onOpenBaseLayerSettings={() => setIsBaseLayerSettingsOpen(true)}
+                      onResetBaseLayerSettings={resetBaseLayerSettings}
                       activeLayerId={activeLayerId}
                       onSelectLayer={handleSelectLayer}
                       onAddLayer={handleAddLayer}
@@ -2836,6 +2864,15 @@ export default function App() {
       />
 
       {/* 12. Layer Material & PBR Settings Modal */}
+      <BaseLayerSettingsDialog
+        isOpen={isBaseLayerSettingsOpen}
+        settings={baseLayerSettings}
+        onChange={updateBaseLayerSettings}
+        onSave={saveBaseLayerSettings}
+        onReset={resetBaseLayerSettings}
+        onClose={() => setIsBaseLayerSettingsOpen(false)}
+      />
+
       <LayerSettingsModal
         isOpen={isLayerSettingsOpen}
         onClose={() => setIsLayerSettingsOpen(false)}
