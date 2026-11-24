@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { applyHeightLevels } from '../tools/heightLevels';
 import type { Layer } from '../core/types';
 
 export interface SubdivisionPreviewOptions {
@@ -337,7 +338,7 @@ export function buildCombinedHeightMap(layers: Layer[], resolution = 256): HTMLC
       const offset = i * 4;
       const alpha = pixels[offset + 3] / 255;
       const luminance = (0.299 * pixels[offset] + 0.587 * pixels[offset + 1] + 0.114 * pixels[offset + 2]) / 255;
-      values[i] = Math.min(1, values[i] + mapRamp(luminance) * influence * alpha);
+      values[i] = Math.min(1, values[i] + mapRamp(applyHeightLevels(luminance, pbr.heightLevels)) * influence * alpha);
     }
   }
   const image = context.createImageData(resolution, resolution);
