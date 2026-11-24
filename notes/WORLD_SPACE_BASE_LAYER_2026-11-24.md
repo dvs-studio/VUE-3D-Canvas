@@ -4,7 +4,7 @@
 
 The protected Base Layer is a procedural world-space background, not a UV paint canvas and not a conventional colour coat.
 
-- It renders behind the colour texture using world X/Z coordinates in the 3D material shader.
+- It renders behind the colour texture using world position and a surface-normal-selected world-axis projection in the 3D material shader, so differently oriented faces use a suitable world-space plane.
 - The UV composite remains transparent where no paint exists. The Base Layer is excluded from UV compositing and texture export.
 - Checker colours A and B default to the same neutral grey (`#9c9c9c`), each at 100% opacity.
 - Each checker colour has its own opacity control. These values are session-only and reset to 100% when another project is loaded or the application starts.
