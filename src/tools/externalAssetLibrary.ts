@@ -115,7 +115,9 @@ async function collectAssets(root: DirectoryHandleLike): Promise<AssetRecord[]> 
     }
   };
 
-  await walk(root, '');
+  const rootName = root.name.toLowerCase();
+  const rootKind: ExternalAssetKind | undefined = rootName.includes('texture') ? 'texture' : rootName.includes('brush') ? 'brush' : rootName.includes('mask') ? 'mask' : undefined;
+  await walk(root, '', rootKind);
   return records;
 }
 
