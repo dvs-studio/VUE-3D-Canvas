@@ -436,3 +436,25 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
    - **Full pinpointed breakdown:** See [`AGENT_STATE.md`](AGENT_STATE.md) under `2026-11-24 — Troubleshooting Audit, Pinpointed Bugs & Fix Blueprint (Gemini Hydrogen)`.
 
 
+
+
+## 2026-11-24 — GPT-6 — id LOG-2026-11-24-GPT6-REPAIR-PASS-02
+
+**Request:** Read the latest troubleshooting result and continue fixing the self-hosted programme.
+
+**Audit reviewed:** Gemini Hydrogen's 2026-11-24 pinpointed P0–P2 report in AGENT_STATE.md, plus the root AGENTS.md instructions and self-host handover.
+
+**Source changes on remote main:**
+- Fixed five TypeScript problem areas and made npm run lint mandatory in build-self-host.yml; added concurrency cancellation for stale builds.
+- Fixed duplicate View menu, dropdown dismissal, bulk Layers toolbar layout, Expanded Stack props and viewport toolbar overlap.
+- Replaced hard-coded OBJ quad with active-geometry OBJ serialization; supplied the active mesh to glTF/FBX dialog.
+- Fixed RGB/RGBA/HSL tint parsing.
+- Replaced face-index ordering heuristic with cached UV-island IDs; made the map respect active UV channel and version.
+- Added per-path brush reset/entry dab, pointer capture and final queued/coalesced pointer-event flush.
+- Added UV triangle coverage clipping for paint, erase, pen, gradients, clone, smudge, blur and Mask Brush; fixed blur's clip-bypassing putImageData path.
+
+**Final verification:** Run #258 passed all TypeScript, Vite, self-host sync, package validation and artifact steps. Source revision b54476cc1455c9bc18d895bc638cf5d858d315b3; artifact ID 14917995630. Earlier intermediate build failures were corrected before the final pass.
+
+**Verification boundary:** no visual/browser/device test was performed. Manual acceptance is still required for startup, UV seam continuity, UV clipping, alternate UV channels, symmetry, pointer/touch final samples, undo/redo and export round-trips. Subdivision remains verify-only.
+
+**Next:** A4 mesh-part filter selection, then A5 verify, A6, A7, UI1, 2A-W, 2A-T, 2B, 2C and 2D. Built-in triplanar sample textures remain untouched pending Victory's replacements. PR #2 remains unmerged.
