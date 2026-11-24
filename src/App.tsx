@@ -136,6 +136,8 @@ export default function App() {
     };
 
     const baseLayer = createLayer('layer_base', 'Base Color Layer');
+    baseLayer.isBaseLayer = true;
+    baseLayer.locked = true;
     // Pre-fill base coat with neutral studio primer
     baseLayer.ctx.fillStyle = '#9c9c9c';
     baseLayer.ctx.fillRect(0, 0, 1024, 1024);
@@ -779,7 +781,7 @@ export default function App() {
   };
 
   const handleDeleteLayer = (id: string) => {
-    if (layers.length <= 1) return;
+    if (layers.length <= 1 || layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     const updated = layers.filter(l => l.id !== id);
     setLayers(updated);
     if (activeLayerId === id) {
@@ -791,7 +793,7 @@ export default function App() {
 
   const handleDuplicateLayer = (id: string) => {
     const src = layers.find(l => l.id === id);
-    if (!src) return;
+    if (!src || src.isBaseLayer) return;
 
     const memory = WasmMemoryEngine.getInstance();
     const cvs = document.createElement('canvas');
@@ -821,28 +823,33 @@ export default function App() {
   };
 
   const handleToggleVisibility = (id: string) => {
+    if (layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     setLayers(layers.map(l => l.id === id ? { ...l, visible: !l.visible } : l));
     notifyTextureUpdated();
   };
 
   const handleToggleLock = (id: string) => {
+    if (layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     setLayers(layers.map(l => l.id === id ? { ...l, locked: !l.locked } : l));
   };
 
   const handleUpdateOpacity = (id: string, opacity: number) => {
+    if (layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     setLayers(layers.map(l => l.id === id ? { ...l, opacity } : l));
     notifyTextureUpdated();
   };
 
   const handleUpdateBlendMode = (id: string, blendMode: BlendMode) => {
+    if (layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     setLayers(layers.map(l => l.id === id ? { ...l, blendMode } : l));
     notifyTextureUpdated();
   };
 
   const handleMoveLayer = (id: string, dir: 'up' | 'down') => {
     const idx = layers.findIndex(l => l.id === id);
-    if (idx === -1) return;
+    if (idx === -1 || layers[idx].isBaseLayer) return;
     const targetIdx = dir === 'up' ? idx + 1 : idx - 1;
+    if (targetIdx < 0 || targetIdx >= layers.length || layers[targetIdx].isBaseLayer) return;
     if (targetIdx < 0 || targetIdx >= layers.length) return;
 
     const copy = [...layers];
