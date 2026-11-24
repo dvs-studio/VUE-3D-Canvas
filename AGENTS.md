@@ -73,10 +73,10 @@
 - [ ] **2E** Subdiv preview — verify only
 
 #### 2A Stabilisation
-- [ ] **A4** Filter mesh-part selection — props added to TextureFilterDialog; **still needs:** App.tsx wiring + `targetMeshPart` in TextureFilterConfig + pixel mask in transformTexturePixels
-- [ ] **A5** Filter panel title-drag — drag already implemented in TextureFilterDialog; **verify only**
-- [ ] **A6** 2D UV tool shelf layout
-- [ ] **A7 / F8** Merge bump/displacement → Levels → 100% bump
+- [x] **A4** Filter mesh-part selection — App wiring, active-UV triangle mask, outside-part pixel preservation, preview mask and non-blocking portal dialog landed; CI passed. Manual component/edge acceptance remains.
+- [ ] **A5** Filter panel title-drag — drag already implemented in TextureFilterDialog; **verify only** on desktop and touch.
+- [x] **A6** 2D UV workspace — active UV channel selector, blend-mode-aware composite, resolution-aware canvases/rebake, cached selection shade canvas, shelf layout and scoped `N` shortcut landed; CI passed. Manual viewport acceptance remains.
+- [x] **A7 / F8** Bump/Displacement → Levels — Levels now stored as non-destructive PBR metadata; original color pixels remain intact; height merge opens Levels at 100% bump influence; viewport, subdivision and XBlend height output consume the Levels data. CI passed. Manual PBR/export acceptance remains.
 - [ ] **UI1** Persist window enable/disable
 - [x] **UI2** Menu dropdowns dismiss on outside pointer or Escape; pointer-leave no longer closes native selects.
 - [ ] **UI3** Giant Undo/Redo lower 3D viewport — could not reproduce; scan for oversized element
@@ -132,3 +132,14 @@ Meticulous. Unique agent ids. Short commits. Do not damage accepted 3D view. Mar
 ## STOP
 
 Prior history in git. F7 / HOLD-SEL / dedicated UV desk remain excluded.
+
+
+### 2026-11-24 follow-up execution — A4, A6 and A7
+
+Latest source revision: `9a123232144be0a979e7961dfa80a944c78e8c59`.
+
+- A4 CI: [Run #262](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45387796699), artifact `14918105222`.
+- A6 CI: [Run #265](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45388498049), artifact `14918012437`.
+- A7 and combined latest package: [Run #283](https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45389964959), artifact `14917704031`.
+
+CI verifies TypeScript diagnostics, Vite build, self-host sync, package validation and upload only. No browser/device visual acceptance is claimed. Manual checks remain for part-filter isolation, alternate UV channels, rebake resolution, blend modes, title dragging, non-destructive color preservation, bump influence, height merge and XBlend/export round-trips. Built-in triplanar sample textures remain untouched pending user replacements.
