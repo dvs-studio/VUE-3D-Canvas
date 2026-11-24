@@ -2380,7 +2380,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       )}
 
       {/* Drone Flight Mode & Navigation Axis Quick Toggles */}
-      <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5">
+      <div className="absolute top-12 left-3 z-20 flex items-center gap-1.5">
         <button
           onClick={() => setIsDroneNavActive(d => !d)}
           className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-mono font-bold border transition-colors shadow-xs ${
