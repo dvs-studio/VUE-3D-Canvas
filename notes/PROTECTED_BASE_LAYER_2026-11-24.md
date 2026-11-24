@@ -1,21 +1,24 @@
-# Protected base layer restoration — 2026-11-24
+# Protected Base Layer history — 2026-11-24
 
-## User clarification
-The layer stack must contain a permanent base layer. It is a fallback/base coat, not a paintable working layer.
+## Original protection pass
 
-## Changes
-- Added optional `Layer.isBaseLayer` metadata.
-- Initial `Base Color Layer` is now tagged as the base and locked from creation.
-- The Layers panel displays a `BASE` marker and fixed lock icon. The base cannot be hidden, unlocked, reordered, duplicated, deleted, grouped, or merged through the provided controls.
-- Blend and opacity controls are disabled while the base is selected.
-- Loading legacy `.xblend` projects now restores a neutral base layer if missing, or normalises an existing base layer to the protected state and bottom-of-stack position.
-- The base remains selectable for reference but is not a painting target because the existing locked-layer guards reject edits.
+The initial implementation introduced `Layer.isBaseLayer`, kept a permanent bottom `Base Color Layer`, and blocked painting, hiding, unlocking, reordering, duplication, deletion, grouping, and merging.
 
-## Design details
-- Fallback base coat: neutral `#9c9c9c`.
-- Base is always visible, 100% opacity, normal blend, locked.
-- Additional user-created layers remain above it.
-- This is a texture-stack fallback coat, not the viewport's UV grid/checkerboard display.
+That first pass treated the layer as a neutral grey UV fallback coat. **That rendering model was superseded by the user's clarification and the world-space checker implementation.** Do not restore the old solid-colour UV-coat behaviour.
+
+## Current authoritative behaviour
+
+The Base Layer is a protected world-space procedural checker background. It is not a UV texture and is excluded from the UV composite and exported texture. It remains below the working layers and appears behind painted colour in the 3D material.
+
+See [WORLD_SPACE_BASE_LAYER_2026-11-24.md](WORLD_SPACE_BASE_LAYER_2026-11-24.md) for the current behaviour contract, Save / Cancel / Reset rules, facility bookmarks, code map, and manual acceptance checklist.
+
+## Original protection controls retained
+
+- `Layer.isBaseLayer` metadata identifies the reserved base layer.
+- The layer is locked against painting and remains permanently visible.
+- App handlers and Layers-panel controls protect it from ordinary stack operations.
+- Legacy `.xblend` projects restore a base layer if missing and place it at the bottom.
 
 ## Verification
-CI is running after the commits. Browser UI acceptance and project round-trip tests are still required; do not claim those are manually completed.
+
+The original protection pass was CI-checked separately. The world-space checker implementation requires its own successful CI run and manual browser/device acceptance. Do not treat the earlier CI run as validation of the current shader or dialog.
