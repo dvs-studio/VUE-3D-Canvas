@@ -72,7 +72,7 @@ function parseTextureColor(input: string | undefined, separateAlpha = 1): [numbe
     b = parseInt(digits.slice(4, 6), 16);
     if (digits.length === 8) a = parseInt(digits.slice(6, 8), 16) / 255;
   } else {
-    const fn = value.match(/^(rgba?|hsla?)\\((.*)\\)$/i);
+    const fn = value.match(/^(rgba?|hsla?)\((.*)\)$/i);
     if (fn) {
       const parts = fn[2].split(',').map(part => part.trim());
       const isHsl = fn[1].toLowerCase().startsWith('hsl');
