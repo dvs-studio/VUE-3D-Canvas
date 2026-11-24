@@ -33,6 +33,7 @@ import { WasmMemoryEngine } from './core/wasmMemoryEngine';
 import { XBlendManager } from './core/xblendFormat';
 import { FillSuite, TriplanarConfig } from './tools/fillSuite';
 import * as THREE from 'three';
+import { geometryToOBJ } from './renderer/objExporter';
 import { BUILTIN_MODELS, parseOBJ, repairArchitecturalMesh, reimportUVsFromOBJ } from './renderer/modelGeometry';
 import { UVChannelManager } from './tools/uvChannelManager';
 import { SmartUVUnwrapEngine } from './tools/smartUVUnwrap';
@@ -201,6 +202,7 @@ export default function App() {
     UVChannelManager.ensureBaseChannels(geom);
     return geom;
   });
+  const exportMesh = useMemo(() => new THREE.Mesh(activeGeometry), [activeGeometry]);
   const [activeUVChannel, setActiveUVChannel] = useState<string>('uv_original');
   const [uvGeometryVersion, setUvGeometryVersion] = useState(0);
   const [isXRayBrushActive, setIsXRayBrushActive] = useState<boolean>(false);
@@ -1286,9 +1288,10 @@ export default function App() {
     }
   };
 
-  // Export .OBJ
+  // Export the actual active mesh, including its vertex, UV and normal data.
   const handleExportOBJ = () => {
-    const objData = `# VUE 3D Canvas OBJ Export\n# Author: Victory Ukpong\n# Project: ${projectName}\no ${projectName}\nv -1.0 -1.0 1.0\nv 1.0 -1.0 1.0\nv -1.0 1.0 1.0\nv 1.0 1.0 1.0\nvt 0.0 0.0\nvt 1.0 0.0\nvt 0.0 1.0\nvt 1.0 1.0\nvn 0.0 0.0 1.0\nf 1/1/1 2/2/1 4/4/1\nf 1/1/1 4/4/1 3/3/1\n`;
+    const uvChannels = activeGeometry.userData?.uvChannels as Record<string, ArrayLike<number>> | undefined;
+    const objData = geometryToOBJ(activeGeometry, projectName, uvChannels?.[activeUVChannel]);
     XBlendManager.downloadFile(objData, `${projectName}.obj`, 'text/plain');
   };
 
@@ -2648,7 +2651,7 @@ export default function App() {
         isOpen={isExportModelDialogOpen}
         onClose={() => setIsExportModelDialogOpen(false)}
         layers={layers}
-        currentMesh={null}
+        currentMesh={exportMesh}
         activeModelName={modelKey}
         activeUVChannel={activeUVChannel}
       />
