@@ -1022,7 +1022,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // The dominant world-space face normal selects the projection plane for stable coverage.
     // Keep the checker underneath the alpha-composited paint map.
     const baseMaterial = mesh.material;
-    if (baseMaterial instanceof THREE.MeshStandardMaterial || baseMaterial instanceof THREE.MeshBasicMaterial) {
+    if (baseMaterial instanceof THREE.MeshStandardMaterial) {
       const colourA = new THREE.Color(baseLayerSettings.colorA || '#9c9c9c');
       const colourB = new THREE.Color(baseLayerSettings.colorB || '#9c9c9c');
       baseMaterial.onBeforeCompile = (shader) => {
