@@ -839,6 +839,6 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Added guarded persistence effects for both maps. Storage failures produce a warning but do not interrupt the application.
 - The existing Window menu and close/float controls remain the controls for changing these states; no new panel UI was introduced.
 
-**Verification boundary:** Source change committed to main. The CI workflow triggered by the source commit must pass before this is considered build-verified. Browser restart persistence and file:// storage behaviour still require manual acceptance.
+**Verification:** Run #285 passed TypeScript diagnostics, Vite build, self-host sync, package validation, generated-output commit (rebased over concurrent documentation commits), ZIP creation and artifact upload. Artifact ID `14921232460`; source workflow head `da53debd3ace8986c1259266d04585017a310ffc`. Browser restart persistence and file:// storage behaviour still require manual acceptance.
 
 **Next in the root PIN:** 2A-W Wood rings, then 2A-T true triplanar A/B, 2B Mask/Tear/Pattern Craft/Matcap, 2C additional filters, 2D texture gallery. A5 title dragging and 2E subdivision remain verify-only; UI3 requires a focused scan. Do not replace built-in triplanar samples before Victory supplies replacement textures. PR #2 remains unmerged.
