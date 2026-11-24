@@ -1032,21 +1032,25 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };
         shader.vertexShader = shader.vertexShader.replace(
           '#include <common>',
-          '#include <common>\\nvarying vec3 vVueWorldPosition;'
+          '#include <common>\\nvarying vec3 vVueWorldPosition;\\nvarying vec3 vVueWorldNormal;'
         );
         shader.vertexShader = shader.vertexShader.replace(
           '#include <worldpos_vertex>',
-          '#include <worldpos_vertex>\\nvVueWorldPosition = worldPosition.xyz;'
+          '#include <worldpos_vertex>\\nvVueWorldPosition = worldPosition.xyz;\\nvVueWorldNormal = normalize(mat3(modelMatrix) * objectNormal);'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <common>',
-          '#include <common>\\nvarying vec3 vVueWorldPosition;\\nuniform vec3 vueBaseColourA;\\nuniform vec3 vueBaseColourB;\\nuniform float vueBaseOpacityA;\\nuniform float vueBaseOpacityB;\\nuniform float vueBaseLayerOpacity;'
+          '#include <common>\\nvarying vec3 vVueWorldPosition;\\nvarying vec3 vVueWorldNormal;\\nuniform vec3 vueBaseColourA;\\nuniform vec3 vueBaseColourB;\\nuniform float vueBaseOpacityA;\\nuniform float vueBaseOpacityB;\\nuniform float vueBaseLayerOpacity;'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <map_fragment>',
           `#ifdef USE_MAP
             vec4 vuePaintSample = texture2D(map, vMapUv);
-            float vueCheckerIndex = mod(floor(vVueWorldPosition.x * 2.0) + floor(vVueWorldPosition.z * 2.0), 2.0);
+            vec3 vueAbsWorldNormal = abs(normalize(vVueWorldNormal));
+            vec2 vueCheckerCoordinates = vueAbsWorldNormal.x >= vueAbsWorldNormal.y && vueAbsWorldNormal.x >= vueAbsWorldNormal.z
+              ? vVueWorldPosition.yz
+              : (vueAbsWorldNormal.y >= vueAbsWorldNormal.z ? vVueWorldPosition.xz : vVueWorldPosition.xy);
+            float vueCheckerIndex = mod(floor(vueCheckerCoordinates.x * 2.0) + floor(vueCheckerCoordinates.y * 2.0), 2.0);
             vec3 vueCheckerColour = mix(vueBaseColourA, vueBaseColourB, vueCheckerIndex);
             float vueCheckerOpacity = mix(vueBaseOpacityA, vueBaseOpacityB, vueCheckerIndex) * vueBaseLayerOpacity;
             vec3 vueBackgroundColour = mix(vec3(0.1569), vueCheckerColour, vueCheckerOpacity);
