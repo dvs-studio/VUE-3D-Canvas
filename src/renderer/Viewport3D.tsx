@@ -11,7 +11,8 @@ import { applyHeightLevels } from '../tools/heightLevels';
 import { 
   ToolType, 
   BrushPreset, 
-  Layer, 
+  Layer,
+  BaseLayerSettings,
   ViewportShadingMode,
   SelectionMask,
   HDRISettings,
