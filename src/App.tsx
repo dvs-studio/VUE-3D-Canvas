@@ -391,8 +391,8 @@ export default function App() {
     },
   });
 
-  // Floating & Docked Panels Visibility
-  const [activePanels, setActivePanels] = useState<Record<string, boolean>>({
+  // Floating & Docked Panels Visibility. Keep the Window menu state between launches.
+  const defaultActivePanels: Record<string, boolean> = {
     layers: true,
     brushes: true,
     colorWheel: true,
@@ -402,9 +402,8 @@ export default function App() {
     uvEditor: false,
     subdivision: true,
     meshParts: true,
-  });
-
-  const [panelFloating, setPanelFloating] = useState<Record<string, boolean>>({
+  };
+  const defaultPanelFloating: Record<string, boolean> = {
     layers: false,
     brushes: false,
     colorWheel: false,
@@ -413,7 +412,43 @@ export default function App() {
     masking: false,
     uvEditor: true,
     meshParts: false,
-  });
+  };
+  const readPanelLayout = (key: string, defaults: Record<string, boolean>) => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return defaults;
+      const restored = { ...defaults };
+      Object.keys(defaults).forEach(id => {
+        if (typeof saved[id] === 'boolean') restored[id] = saved[id];
+      });
+      return restored;
+    } catch {
+      return defaults;
+    }
+  };
+  const [activePanels, setActivePanels] = useState<Record<string, boolean>>(
+    () => readPanelLayout('vue3d_panel_visibility', defaultActivePanels)
+  );
+
+  const [panelFloating, setPanelFloating] = useState<Record<string, boolean>>(
+    () => readPanelLayout('vue3d_panel_floating', defaultPanelFloating)
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vue3d_panel_visibility', JSON.stringify(activePanels));
+    } catch (error) {
+      console.warn('Could not persist panel visibility preferences.', error);
+    }
+  }, [activePanels]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vue3d_panel_floating', JSON.stringify(panelFloating));
+    } catch (error) {
+      console.warn('Could not persist floating panel preferences.', error);
+    }
+  }, [panelFloating]);
 
   // 3D Viewport UnrealBloomPass Post-Processing Settings
   const [bloomSettings, setBloomSettings] = useState<BloomSettings>({
