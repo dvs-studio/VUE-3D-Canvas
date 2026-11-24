@@ -503,6 +503,6 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Existing Window menu, close and float interactions are retained.
 - Source commit: `b45c1054e601f4820fc98392cea970ede312bf87`.
 
-**Verification:** Build workflow pending at time of this log entry. Manual browser restart and file:// persistence checks remain necessary.
+**Verification:** Run #285 passed TypeScript diagnostics, Vite build, self-host sync, package validation, generated-output commit, ZIP and artifact upload. Artifact ID `14921232460`; workflow URL https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45396995647. Manual browser restart and file:// persistence checks remain necessary.
 
 **Next:** Continue root AGENTS.md CURRENT TODO in order: 2A-W, 2A-T, 2B, 2C and 2D. Keep A5 and 2E verify-only; scan UI3. Built-in triplanar sample textures remain untouched pending user replacements. Do not merge PR #2.
