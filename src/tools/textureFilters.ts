@@ -273,7 +273,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  const edge=cfg.edge/100, noise=cfg.noise/100, bleed=cfg.bleed/100;
  if(cfg.kind==='wood'){
    // Each stacked colour/image contributes a grain band; density controls its spatial frequency and blend weight.
-   const stack=woodStack.length?woodStack:[{item:{density:50},image:null,color}];
+   const stack=woodStack.length?woodStack:[{item:{id:'fallback',source:'color' as const,color:cfg.color,density:50},image:null,color}];
    const totalWeight=stack.reduce((sum,row)=>sum+Math.max(1,row.item.density),0);
    // Resolve the seed before the pixel loop: frequency jitter uses it below.
    const woodSeed=Math.floor(cfg.woodSeed||17);
