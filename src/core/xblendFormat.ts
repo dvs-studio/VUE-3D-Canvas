@@ -139,6 +139,7 @@ export class XBlendManager {
       const entry = layerMapManifest(layer, index, cleanProjectName, layer.visible && !layer.isGroup && (!layer.groupId || layers.find(parent => parent.id === layer.groupId)?.visible !== false));
       const { _pbr, ...manifest } = entry;
       return {
+        ...manifest,
         id: layer.id,
         name: layer.name,
         visible: layer.visible,
@@ -148,9 +149,6 @@ export class XBlendManager {
         channel: layer.channel,
         dataUrl: layer.canvas.toDataURL('image/png'),
         pbrSettings: _pbr,
-        ...manifest,
-        // Preserve the layer's own visibility in .xblend; effective group visibility belongs to the ZIP manifest.
-        visible: layer.visible,
       };
     });
 
