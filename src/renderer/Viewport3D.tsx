@@ -1019,6 +1019,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     // The protected Base Layer is a world-space checker background, not a UV texture.
+    // The dominant world-space face normal selects the projection plane for stable coverage.
     // Keep the checker underneath the alpha-composited paint map.
     const baseMaterial = mesh.material;
     if (baseMaterial instanceof THREE.MeshStandardMaterial || baseMaterial instanceof THREE.MeshBasicMaterial) {
