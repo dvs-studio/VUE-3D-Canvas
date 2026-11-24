@@ -664,7 +664,12 @@ export default function App() {
         else if (e.key === 'g' || e.key === 'G') setActiveTool('bucket');
         else if (e.key === 'i' || e.key === 'I') setActiveTool('eyedropper');
         else if (e.key === 'h' || e.key === 'H') setActiveTool('hand');
-        else if (e.key === 'n' || e.key === 'N') setTabletDrawerOpen(open => !open);
+        else if (e.key === 'n' || e.key === 'N') {
+          const target = e.target as HTMLElement | null;
+          const pointerInsideUV2D = document.body.dataset.uv2dPointerInside === 'true';
+          const focusInsideUV2D = !!target?.closest('[data-vue3d-viewport2d="true"]');
+          if (!pointerInsideUV2D && !focusInsideUV2D) setTabletDrawerOpen(open => !open);
+        }
         else if (e.key === 'x' || e.key === 'X') swapColors();
         else if (e.key === 'd' || e.key === 'D') resetColors();
       }
@@ -1932,6 +1937,7 @@ export default function App() {
                 geometry={activeGeometry}
                 onGeometryUpdated={notifyUVGeometryUpdated}
                 activeUVChannel={activeUVChannel}
+                uvGeometryVersion={uvGeometryVersion}
                 onSelectUVChannel={(channelId) => { setActiveUVChannel(channelId); setLayers(prev => prev.map(layer => layer.id === activeLayerId ? { ...layer, uvChannel: channelId } : layer)); setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }}
                 selectedVertices={xrayVertexSelection}
                 onRebakeTexture={handleRebakeTexture}
