@@ -7,6 +7,8 @@
 
 import React, { useState, useRef } from 'react';
 import { TriplanarConfig, TriplanarTextureItem } from '../core/types';
+import type { ExternalAsset } from '../tools/externalAssetLibrary';
+import { BUILTIN_TRIPLANAR_TEXTURES } from '../tools/triplanarTextureCatalog';
 import { 
   Box, Sliders, Check, X, Mountain, Compass, Plus, Trash2, 
   Upload, Layers, Sparkles
@@ -17,50 +19,51 @@ interface TriplanarDialogProps {
   onClose: () => void;
   onConfirm: (config: TriplanarConfig) => void;
   defaultColor: string;
+  externalTextures?: ExternalAsset[];
+  onScanTextureFolder?: () => void;
+  isScanningTextures?: boolean;
 }
 
-const BUILTIN_PRESETS: { id: string; name: string; color: string; desc: string }[] = [
-  { id: 'sand_fine', name: 'Desert Sand (Fine)', color: '#dabb7d', desc: 'Golden sand with ripples' },
-  { id: 'sand_coarse', name: 'River Grit (Coarse)', color: '#a5875f', desc: 'Coarse sand and small pebbles' },
-  { id: 'forest_moss', name: 'Forest Moss', color: '#4a6738', desc: 'Organic mossy green foliage' },
-  { id: 'granite_rock', name: 'Granite Rock', color: '#888888', desc: 'Flecked mountain stone' },
-  { id: 'weathered_wood', name: 'Weathered Wood', color: '#7a5a3a', desc: 'Natural grain plank texture' },
-  { id: 'rusty_metal', name: 'Rusty Metal', color: '#9e472a', desc: 'Oxidized rough iron patina' },
-];
+const BUILTIN_PRESETS = BUILTIN_TRIPLANAR_TEXTURES;
 
 export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
   isOpen,
   onClose,
   onConfirm,
   defaultColor,
+  externalTextures = [],
+  onScanTextureFolder,
+  isScanningTextures = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'textures' | 'mixing' | 'projection' | 'slope' | 'altitude'>('textures');
 
   // Textures Stack
   const [textures, setTextures] = useState<TriplanarTextureItem[]>([
     {
-      id: 'sand_fine',
-      name: 'Desert Sand (Fine)',
+      id: BUILTIN_PRESETS[0].id,
+      name: BUILTIN_PRESETS[0].name,
+      dataUrl: BUILTIN_PRESETS[0].dataUrl,
       isTransparentBlank: false,
       opacity: 100,
       scale: 1.0,
       offsetX: 0,
       offsetY: 0,
-      tintColor: defaultColor || '#dabb7d',
+      tintColor: BUILTIN_PRESETS[0].color,
       colorAlpha: 1,
-      useInstanceColor: true
+      useInstanceColor: false
     },
     {
-      id: 'sand_coarse',
-      name: 'River Grit (Coarse)',
+      id: BUILTIN_PRESETS[1].id,
+      name: BUILTIN_PRESETS[1].name,
+      dataUrl: BUILTIN_PRESETS[1].dataUrl,
       isTransparentBlank: false,
       opacity: 100,
       scale: 1.0,
       offsetX: 0,
       offsetY: 0,
-      tintColor: '#a5875f',
+      tintColor: BUILTIN_PRESETS[1].color,
       colorAlpha: 1,
-      useInstanceColor: true
+      useInstanceColor: false
     }
   ]);
 
@@ -117,8 +120,9 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
         offsetX: 0,
         offsetY: 0,
         tintColor: preset.color,
+        dataUrl: preset.dataUrl,
         colorAlpha: 1,
-        useInstanceColor: true
+        useInstanceColor: false
       }
     ]);
   };
@@ -346,6 +350,8 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                     Operates directly on photographic textures. Mixes textures seamlessly without UV stretching.
                   </p>
                 </div>
+                <div className="flex items-center gap-2">
+                <button type="button" onClick={onScanTextureFolder} disabled={isScanningTextures} className="px-2 py-1 bg-[#333] hover:bg-[#444] disabled:opacity-50 text-[#ddd] rounded text-[10px] border border-[#555]" title="Scan a user-selected texture folder">{isScanningTextures ? 'Scanning…' : 'Scan Texture Folder'}</button>
                 <button
                   type="button"
                   onClick={handleAddTexture}
@@ -354,6 +360,7 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Texture</span>
                 </button>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -427,8 +434,13 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                               : 'bg-[#1f1f1f] border-[#383838] text-[#aaa] hover:text-white'
                           }`}
                         >
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                          <span>{p.name.split(' ')[0]}</span>
+                          <img src={p.src} alt="" className="w-7 h-7 rounded object-cover border border-[#555]" />
+                          <span>{p.name}</span>
+                        </button>
+                      ))}
+                      {externalTextures.filter(asset => asset.kind === 'texture').map(asset => (
+                        <button key={asset.id} type="button" onClick={() => handleTextureChange(idx, { id: asset.id, name: asset.name, dataUrl: asset.dataUrl, tintColor: asset.averageColor, colorAlpha: 1, isTransparentBlank: false, useInstanceColor: false })} className="px-2 py-1 rounded text-[10px] border border-[#4b6655] bg-[#1d2b22] text-[#c7e7ce] flex items-center gap-1" title={asset.relativePath}>
+                          <img src={asset.dataUrl} alt="" className="w-7 h-7 rounded object-cover" />{asset.name}
                         </button>
                       ))}
 
