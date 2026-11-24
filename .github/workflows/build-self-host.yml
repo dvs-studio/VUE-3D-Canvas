@@ -16,6 +16,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: self-host-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-self-host:
     name: Pack the painter for file and http
