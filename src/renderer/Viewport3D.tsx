@@ -49,6 +49,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 interface Viewport3DProps {
   layers: Layer[];
+  baseLayerSettings: BaseLayerSettings;
   activeLayerId: string;
   activeTool: ToolType;
   brush: BrushPreset;
@@ -105,6 +106,7 @@ interface Viewport3DProps {
 
 export const Viewport3D: React.FC<Viewport3DProps> = ({
   layers,
+  baseLayerSettings,
   activeLayerId,
   activeTool,
   brush,
@@ -377,12 +379,11 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const reflectionValues = new Float32Array(pixelCount);
     let lockedNormalLayer: Layer | null = null;
 
-    ctx.fillStyle = '#2b2b2b';
-    ctx.fillRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, height);
 
     let hasEmissive = false;
     for (const layer of layers) {
-      if (!layer.visible || layer.isGroup) continue;
+      if (!layer.visible || layer.isGroup || layer.isBaseLayer) continue;
       if (layer.groupId) {
         const parentGroup = layers.find(candidate => candidate.id === layer.groupId);
         if (parentGroup && !parentGroup.visible) continue;
@@ -1016,11 +1017,51 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       });
     }
 
+    // The protected Base Layer is a world-space checker background, not a UV texture.
+    // Keep the checker underneath the alpha-composited paint map.
+    const baseMaterial = mesh.material;
+    if (baseMaterial instanceof THREE.MeshStandardMaterial || baseMaterial instanceof THREE.MeshBasicMaterial) {
+      const colourA = new THREE.Color(baseLayerSettings.colorA || '#9c9c9c');
+      const colourB = new THREE.Color(baseLayerSettings.colorB || '#9c9c9c');
+      baseMaterial.onBeforeCompile = (shader) => {
+        shader.uniforms.vueBaseColourA = { value: colourA };
+        shader.uniforms.vueBaseColourB = { value: colourB };
+        shader.uniforms.vueBaseOpacityA = { value: Math.max(0, Math.min(1, baseLayerSettings.colorAOpacity / 100)) };
+        shader.uniforms.vueBaseOpacityB = { value: Math.max(0, Math.min(1, baseLayerSettings.colorBOpacity / 100)) };
+        shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <common>',
+          '#include <common>\\nvarying vec3 vVueWorldPosition;'
+        );
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <worldpos_vertex>',
+          '#include <worldpos_vertex>\\nvVueWorldPosition = worldPosition.xyz;'
+        );
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <common>',
+          '#include <common>\\nvarying vec3 vVueWorldPosition;\\nuniform vec3 vueBaseColourA;\\nuniform vec3 vueBaseColourB;\\nuniform float vueBaseOpacityA;\\nuniform float vueBaseOpacityB;\\nuniform float vueBaseLayerOpacity;'
+        );
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <map_fragment>',
+          `#ifdef USE_MAP
+            vec4 vuePaintSample = texture2D(map, vMapUv);
+            float vueCheckerIndex = mod(floor(vVueWorldPosition.x * 2.0) + floor(vVueWorldPosition.z * 2.0), 2.0);
+            vec3 vueCheckerColour = mix(vueBaseColourA, vueBaseColourB, vueCheckerIndex);
+            float vueCheckerOpacity = mix(vueBaseOpacityA, vueBaseOpacityB, vueCheckerIndex) * vueBaseLayerOpacity;
+            vec3 vueBackgroundColour = mix(vec3(0.1569), vueCheckerColour, vueCheckerOpacity);
+            diffuseColor.rgb = mix(vueBackgroundColour, vuePaintSample.rgb, vuePaintSample.a);
+          #endif`
+        );
+      };
+      baseMaterial.customProgramCacheKey = () => 'vue-world-space-base-checker-v1';
+      baseMaterial.needsUpdate = true;
+    }
+
     // A material replacement only needs its flat-shading flag synchronised;
     // the geometry normal buffers are handled by the dedicated mode effect.
     const effMode: SurfaceShadingType = surfaceMode === 'hard' ? 'flat' : surfaceMode;
     SurfaceShadingEngine.syncMaterialFlatShading(mesh.material, effMode);
-  }, [shadingMode, materialProps, layers]);
+  }, [shadingMode, materialProps, layers, baseLayerSettings]);
 
   // Mesh Parts Inventory visibility: all part changes update the same geometry
   // index used by both rendering and raycasting, so hidden parts cannot receive paint.
