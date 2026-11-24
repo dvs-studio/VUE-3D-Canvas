@@ -2,24 +2,35 @@
 
 ## PIN — read only this far
 
-2026-11-22: Authoritative daily task order: AGENTS.md. Append-only work log: CONVERSATION_LOG.md. Read the log only when a bug names an older day.
+2026-11-24: Root AGENTS.md is authoritative. Detailed P0 audit and execution status are in AGENT_STATE.md; append-only work log is CONVERSATION_LOG.md.
 
-After Victory's next reply, execute every unchecked CURRENT TODO item in `AGENTS.md` in one pass. Do not start `HOLD-SEL-2026-11-22`. F7 stays on hold.
+The Gemini Hydrogen troubleshooting audit has been read and its P0 source fixes have landed on remote main. Latest verified source revision: b54476cc1455c9bc18d895bc638cf5d858d315b3. Workflow #258 passed all steps, including TypeScript diagnostics, Vite build, self-host sync, package validation, ZIP and artifact upload. Artifact ID: 14917995630.
 
-Work rule: change src/, then run npm run host:sync so self-host/public/ matches. A src/** push to main starts build-self-host.yml, which builds, syncs and commits the bundle. Do not hand-edit generated output during an active build. Self-host only unless Victory explicitly orders shell work.
+The current repair pass fixed the audited TypeScript errors, duplicate View menu, Layers toolbar/Expanded Stack wiring, viewport toolbar overlap, RGB/HSL parsing, hard-coded OBJ export, UV seam continuity, pointer-up event loss, active-UV-channel seam mapping, UV triangle clipping and blur's clip-bypassing image write.
 
-Protected baseline: Victory accepted Suzanne Head + Eyes and the UV-island filter edge fix. The 3D viewport/paint experience is satisfactory. Do not alter Viewport3D, brush dab compositing, UV unwrap/rebake or island padding without a new reproducible issue.
+**Verification boundary:** CI confirms compilation and packaging only. Victory still needs to visually test startup, UV seam continuity, UV clipping, symmetry, touch/pen pointer capture, undo/redo, export round-trip and UI layout. Use the checklist in notes/SELF_HOST_P0_REPAIR_2026-11-24.md.
 
-Landed phases: A3 filter recovery (Powderiser two-pass scatter and Wood frequency-randomisation control), A1 model menu/default (Squail removed from menu; Suzanne Head + Eyes default), and A2 symmetry stroke-state isolation are in source. Prior CI run #191 / ID 44966292558 passed with generated output commit e740d02, bundle index-DFGiqoP7.js, artifact 14731757820. That run predates the current Step 0 repair.
+## Next task order
 
-Current Step 0 finding: a source scan found a Wood Grain runtime defect: the frequency-randomisation code read woodSeed before its const declaration. The seed is now resolved before entering the pixel loop in source commit 7475d5368f9813f1d6f50db3e10f58d11dd036a8. The automatic self-host build/sync completed and committed generated output at 297f230; the bundle is index-CqmOQpy4.js. The bundle was inspected and contains the seed initialisation before the frequency-jitter loop. This repair is not yet device-tested.
+1. A4 — filter mesh-part selection and per-texel UV/part mask.
+2. A5 — verify title-drag only; it is already implemented.
+3. A6 — 2D UV tool shelf layout, canvas allocation and blend-mode sync.
+4. A7 / F8 — non-destructive bump conversion and bump/displacement merge into Levels.
+5. UI1 — persist window enable/disable.
+6. 2A-W — uniform and organic Wood rings with object/world-space continuity.
+7. 2A-T — true triplanar and A/B texture mixing; do not replace built-in sample textures until Victory supplies replacements.
+8. 2B, 2C and 2D — layer/filter additions and texture gallery.
 
-Current task order: Step 0 regression scrutiny first: diagnose/last-command launch path, all existing filters, symmetry, startup, Head + Eyes initial state, paint, export, and verify-only subdivision preview. The GPU diagnostics callback and modal are present in source, but do not mark the reported launch issue fixed without an actual runtime test/reproduction. Fix proven regressions minimally. Only after Step 0, proceed to A4 mesh-part filter selection; then remaining 2A stabilisation items in AGENTS.md.
+2E subdivision remains verify-only. If an item is blocked, document the reason in AGENT_STATE.md and continue the rest of the pass.
 
-Verification boundary: CI confirms build/package only. Victory should visually verify Wood Grain and Powderiser output, model at launch, symmetry OFF vs X/Y/XY/Z, and the diagnose/last-command workflow. No device or browser interaction test is claimed here.
+## Protected baseline
 
-Assets and safety: src/assets/Suzanne.obj and src/assets/Suzanne.head-eyes.obj remain tracked. Do not delete ZIPs under release/ or self-host/. Do not edit crates/vue3d_core without explicit order.
+- Self-host TypeScript application only. Do not modify crates/vue3d_core without explicit order.
+- Preserve src/assets/Suzanne.obj, src/assets/Suzanne.head-eyes.obj, release ZIPs and safety archives.
+- Do not merge PR #2 or modify its branch unless Victory explicitly asks.
+- Do not hand-edit generated self-host/public output while the workflow is running; the workflow builds and syncs it.
+- F7 Logo fabric, HOLD-SEL selection cage and dedicated UV desk remain on hold.
+- Do not alter the accepted 3D viewport/paint baseline again without a new reproducible issue or explicit user request.
 
 ## STOP
 
-Historical checkpoints remain below in git history. Prefer the current PIN in AGENTS.md for task order.
