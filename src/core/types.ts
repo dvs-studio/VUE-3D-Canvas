@@ -111,6 +111,8 @@ export interface Layer {
   uvChannel?: string;
   textureFillConfig?: TextureFillConfig;
   isTextureFill?: boolean;
+  /** Reserved, immutable bottom-of-stack fallback/base layer. */
+  isBaseLayer?: boolean;
 }
 
 export interface TextureFillConfig {
