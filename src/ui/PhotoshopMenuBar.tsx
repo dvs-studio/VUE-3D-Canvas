@@ -131,16 +131,22 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
 
   const close = () => setOpenMenu(null);
 
-  // UI2: dismiss dropdown when clicking outside the menu bar
+  // Dismiss dropdowns on outside pointer input or Escape. Do not close on mouseleave:
+  // native selects inside Options can temporarily move the pointer outside the menu.
   useEffect(() => {
     if (!openMenu) return;
-    const handler = (ev: MouseEvent) => {
-      if (menuBarRef.current && !menuBarRef.current.contains(ev.target as Node)) {
-        close();
-      }
+    const handler = (ev: PointerEvent) => {
+      if (menuBarRef.current && !menuBarRef.current.contains(ev.target as Node)) close();
     };
-    document.addEventListener('mousedown', handler, true);
-    return () => document.removeEventListener('mousedown', handler, true);
+    const escapeHandler = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') close();
+    };
+    document.addEventListener('pointerdown', handler, true);
+    document.addEventListener('keydown', escapeHandler);
+    return () => {
+      document.removeEventListener('pointerdown', handler, true);
+      document.removeEventListener('keydown', escapeHandler);
+    };
   }, [openMenu]);
 
   return (
@@ -173,7 +179,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'file' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-52 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               <button
                 onClick={() => { onNewProject(); close(); }}
@@ -244,7 +249,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'edit' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-56 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               <button
                 onClick={() => { onUndo(); close(); }}
@@ -294,89 +298,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           )}
         </div>
 
-        {/* VIEW MENU */}
-        <div className="relative">
-          <button
-            onClick={() => toggle('view')}
-            className={`px-2 py-0.5 rounded hover:bg-[#444] hover:text-white transition-colors ${
-              openMenu === 'view' ? 'bg-[#2b2b2b] text-white' : ''
-            }`}
-          >
-            View
-          </button>
-          {openMenu === 'view' && (
-            <div 
-              className="absolute top-full left-0 mt-0.5 w-56 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
-            >
-              <button
-                onClick={() => { onNumpadKey('1', false); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Front View</span>
-                <span className="text-[#888] font-mono text-[10px]">Numpad 1</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('1', true); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Back View</span>
-                <span className="text-[#888] font-mono text-[10px]">Ctrl+1</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('3', false); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Right View</span>
-                <span className="text-[#888] font-mono text-[10px]">Numpad 3</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('3', true); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Left View</span>
-                <span className="text-[#888] font-mono text-[10px]">Ctrl+3</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('7', false); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Top View</span>
-                <span className="text-[#888] font-mono text-[10px]">Numpad 7</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('7', true); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Bottom View</span>
-                <span className="text-[#888] font-mono text-[10px]">Ctrl+7</span>
-              </button>
-              <div className="my-1 border-t border-[#444]" />
-              <button
-                onClick={() => { onNumpadKey('5', false); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Toggle Ortho / Persp</span>
-                <span className="text-[#888] font-mono text-[10px]">Numpad 5</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('0', false); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Reset Camera View</span>
-                <span className="text-[#888] font-mono text-[10px]">Numpad 0</span>
-              </button>
-              <button
-                onClick={() => { onNumpadKey('.', false); close(); }}
-                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between"
-              >
-                <span>Frame Selected Mesh</span>
-                <span className="text-[#888] font-mono text-[10px]">Numpad .</span>
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* Direct-access Layer Filter command: keep available even if submenu rendering is clipped. */}
         {onOpenTextureFilters && (
           <button
@@ -402,7 +323,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'filter' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-60 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               <button
                 onClick={() => { onOpenTriplanarDialog(); close(); }}
@@ -530,7 +450,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'view' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-64 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider flex items-center gap-1">
                 <Eye className="w-3 h-3 text-[#3d7fb8]" />
@@ -701,6 +620,13 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 <span>Reset View Zoom</span>
                 <span className="font-mono text-[9px] text-[#888]">Num 0</span>
               </button>
+              <button
+                onClick={() => { onNumpadKey('.', false); close(); }}
+                className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex items-center justify-between text-[#eee]"
+              >
+                <span>Frame Selected Mesh</span>
+                <span className="font-mono text-[9px] text-[#888]">Numpad .</span>
+              </button>
             </div>
           )}
         </div>
@@ -718,7 +644,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'options' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-68 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               <div className="px-3 py-0.5 text-[9px] font-mono text-[#888] uppercase tracking-wider flex items-center gap-1">
                 <Box className="w-3 h-3 text-[#3d7fb8]" />
@@ -845,7 +770,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'window' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-56 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               {[
                 { id: 'layers', label: 'Texture Layers Manager' },
@@ -884,7 +808,6 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
           {openMenu === 'help' && (
             <div 
               className="absolute top-full left-0 mt-0.5 w-60 bg-[#333333] border border-[#555] rounded shadow-2xl py-1 z-50 text-[11px] cs5-outset"
-              onMouseLeave={close}
             >
               <button
                 onClick={() => { if (onOpenHelpPDF) onOpenHelpPDF(); close(); }}
