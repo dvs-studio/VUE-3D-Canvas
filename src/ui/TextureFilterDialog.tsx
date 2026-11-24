@@ -5,9 +5,10 @@ import * as THREE from 'three';
 import { buildObjectSpacePositionMap } from '../tools/textureFilters';
 import { DEFAULT_TEXTURE_FILTER, TextureFilterConfig, TextureFilterKind, WoodSource, transformTexturePixels } from '../tools/textureFilters';
 
-interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; autoHideOnBlur?:boolean; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
+interface MeshPartOption { id: string; name: string; }
+interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; autoHideOnBlur?:boolean; meshParts?:MeshPartOption[]; selectedMeshPart?:string; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
 const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic'};
-export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,autoHideOnBlur=false,onClose,onApply})=>{
+export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,autoHideOnBlur=false,meshParts=[],selectedMeshPart,onClose,onApply})=>{
  const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor});
  const [windowOffset,setWindowOffset]=useState({x:0,y:0});
  const dragRef=useRef<{x:number;y:number;left:number;top:number}|null>(null);

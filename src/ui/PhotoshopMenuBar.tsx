@@ -5,7 +5,7 @@
  * Created by Victory Ukpong
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Camera, Info, Save, FolderOpen, Layers, Undo2, Redo2, Sliders, Eye, Palette, Check, Stamp, Settings, SplitSquareVertical, LayoutGrid, Activity, Compass } from 'lucide-react';
 import { ThemeMode, ViewportShadingMode, SurfaceShadingMode } from '../core/types';
 
@@ -123,6 +123,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onToggleLagoon,
 }) => {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const menuBarRef = useRef<HTMLDivElement>(null);
 
   const toggle = (menu: string) => {
     setOpenMenu(openMenu === menu ? null : menu);
@@ -130,8 +131,20 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
 
   const close = () => setOpenMenu(null);
 
+  // UI2: dismiss dropdown when clicking outside the menu bar
+  useEffect(() => {
+    if (!openMenu) return;
+    const handler = (ev: MouseEvent) => {
+      if (menuBarRef.current && !menuBarRef.current.contains(ev.target as Node)) {
+        close();
+      }
+    };
+    document.addEventListener('mousedown', handler, true);
+    return () => document.removeEventListener('mousedown', handler, true);
+  }, [openMenu]);
+
   return (
-    <div className="h-7 bg-[#333333] border-b border-[#242424] flex items-center justify-between px-2 text-xs text-[#c8c8c8] select-none z-50">
+    <div ref={menuBarRef} className="h-7 bg-[#333333] border-b border-[#242424] flex items-center justify-between px-2 text-xs text-[#c8c8c8] select-none z-50">
       {/* Brand Icon and Top Menus */}
       <div className="flex items-center gap-1">
         {/* Brand Lockup */}

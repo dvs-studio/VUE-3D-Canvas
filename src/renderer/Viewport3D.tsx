@@ -240,6 +240,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
+  // PERF-1/PERF-2: RAF gate — pending paint events queued per frame
+  const pendingPaintEventsRef = useRef<PointerEvent[]>([]);
+  const rafPaintHandleRef = useRef<number | null>(null);
 
   // HDRI Reflections & Viewport Lighting Settings
   const [internalHdri, setInternalHdri] = useState<HDRISettings>({
@@ -1568,59 +1571,77 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     if (isPaintingRef.current) {
-      const targetLayer = layers.find(l => l.id === activeLayerId);
-      if (!targetLayer) return;
-
-      const hit = raycastUV(e);
-      if (hit) {
-        const { uv, faceIndex } = hit;
-        const targetX = uv.x * targetLayer.canvas.width;
-        const targetY = (1 - uv.y) * targetLayer.canvas.height;
-
-        if (activeTool === 'mask_brush') {
-          const baseMask = selectionMask || {
-            active: true,
-            type: 'brush' as const,
-            points: [],
-            bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
-            inverted: false,
-          };
-          const updated = MaskEngine.paintMaskDab(
-            baseMask,
-            targetX,
-            targetY,
-            brush.size,
-            brush.hardness || 50,
-            false,
-            targetLayer.canvas.width,
-            targetLayer.canvas.height
-          );
-          if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
-          needsRenderRef.current = true;
-          return;
-        }
-
-        // S0-1: UV island crossing guard — adjacent triangle faces share an edge, so a sudden
-        // face-index jump (> 1 triangle apart from last) indicates a UV seam teleport.
-        // Treat the crossing as an implicit endStroke + beginStroke so the dab loop never
-        // bridges the seam.  Safety net: also skip dab if distance > 4× brush size.
-        const prevFace = lastFaceIndexRef.current;
-        const faceJump = prevFace >= 0 && faceIndex >= 0 && Math.abs(faceIndex - prevFace) > 2;
-        if (faceJump) {
-          brushEngine.endStroke();
-          brushEngine.beginStroke(targetX, targetY, e.pressure || 1.0);
-          lastFaceIndexRef.current = faceIndex;
-        } else {
-          lastFaceIndexRef.current = faceIndex;
-          const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
-          // S0-1 safety net: skip dab if the stabilised position jumped too far (> 4× brush size)
-          const lastDab = brushEngine.getLastDabPos?.();
-          const jumped = lastDab != null && Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
-          if (!jumped) {
-            executePaintTool(targetLayer, stabilized.x, stabilized.y, e.pressure || 1.0);
-            drawStabilizerTether(e, stabilized, targetLayer);
+      // PERF-1/PERF-2: Queue the event and schedule a single RAF tick.
+      // Inside the RAF we drain all coalesced events so no input is lost
+      // but the GPU pipeline is only hit once per display frame.
+      pendingPaintEventsRef.current.push(e.nativeEvent);
+      if (rafPaintHandleRef.current === null) {
+        rafPaintHandleRef.current = requestAnimationFrame(() => {
+          rafPaintHandleRef.current = null;
+          const events = pendingPaintEventsRef.current;
+          pendingPaintEventsRef.current = [];
+          // Expand each queued event using getCoalescedEvents to preserve high-frequency input
+          const coalesced: PointerEvent[] = [];
+          for (const ev of events) {
+            if (typeof ev.getCoalescedEvents === 'function') {
+              const cl = ev.getCoalescedEvents();
+              if (cl.length > 0) { coalesced.push(...cl); continue; }
+            }
+            coalesced.push(ev);
           }
-        }
+          const targetLayer = layers.find(l => l.id === activeLayerId);
+          if (!targetLayer) return;
+          for (const ev of coalesced) {
+            // Wrap in a minimal React-PointerEvent-compatible shape for raycastUV
+            const synth = ev as unknown as React.PointerEvent<HTMLCanvasElement>;
+            const hit = raycastUV(synth);
+            if (!hit) continue;
+            const { uv, faceIndex } = hit;
+            const targetX = uv.x * targetLayer.canvas.width;
+            const targetY = (1 - uv.y) * targetLayer.canvas.height;
+
+            if (activeTool === 'mask_brush') {
+              const baseMask = selectionMask || {
+                active: true,
+                type: 'brush' as const,
+                points: [],
+                bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
+                inverted: false,
+              };
+              const updated = MaskEngine.paintMaskDab(
+                baseMask,
+                targetX,
+                targetY,
+                brush.size,
+                brush.hardness || 50,
+                false,
+                targetLayer.canvas.width,
+                targetLayer.canvas.height
+              );
+              if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
+              needsRenderRef.current = true;
+              continue;
+            }
+
+            // S0-1 UV island crossing guard
+            const prevFace = lastFaceIndexRef.current;
+            const faceJump = prevFace >= 0 && faceIndex >= 0 && Math.abs(faceIndex - prevFace) > 2;
+            if (faceJump) {
+              brushEngine.endStroke();
+              brushEngine.beginStroke(targetX, targetY, ev.pressure || 1.0);
+              lastFaceIndexRef.current = faceIndex;
+            } else {
+              lastFaceIndexRef.current = faceIndex;
+              const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
+              const lastDab = brushEngine.getLastDabPos?.();
+              const jumped = lastDab != null && Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
+              if (!jumped) {
+                executePaintTool(targetLayer, stabilized.x, stabilized.y, ev.pressure || 1.0);
+                drawStabilizerTether(synth, stabilized, targetLayer);
+              }
+            }
+          }
+        });
       }
     }
   };
@@ -1641,6 +1662,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (isPaintingRef.current) {
       isPaintingRef.current = false;
       lastFaceIndexRef.current = -1;
+      // PERF-1: cancel any pending RAF paint tick and flush queue on pointer-up
+      if (rafPaintHandleRef.current !== null) {
+        cancelAnimationFrame(rafPaintHandleRef.current);
+        rafPaintHandleRef.current = null;
+      }
+      pendingPaintEventsRef.current = [];
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
