@@ -235,6 +235,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   }, []);
 
   const isPaintingRef = useRef(false);
+  const lastFaceIndexRef = useRef<number>(-1);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
   const brushEngine = BrushEngine.getInstance();
@@ -1447,12 +1448,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     }
 
     // Touch Navigation & Tool Execution Mode
-    const uv = raycastUV(e);
+    const hit = raycastUV(e);
     const isNavigationTool = activeTool === 'hand' || activeTool === 'zoom';
     const isExplicitOrbit = e.altKey || e.button === 1 || e.button === 2;
 
     // Orbit camera if explicit navigation, or if touching empty background space outside the mesh
-    if (isExplicitOrbit || isNavigationTool || (!uv && (e.pointerType === 'mouse' || touchNavEnabled))) {
+    if (isExplicitOrbit || isNavigationTool || (!hit && (e.pointerType === 'mouse' || touchNavEnabled))) {
       if (e.shiftKey || activeTool === 'hand') {
         orbitState.current.isPanning = true;
       } else {
@@ -1467,8 +1468,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const targetLayer = layers.find(l => l.id === activeLayerId);
     if (!targetLayer || targetLayer.locked || !targetLayer.visible) return;
 
-    if (uv) {
+    if (hit) {
+      const { uv, faceIndex } = hit;
       isPaintingRef.current = true;
+      lastFaceIndexRef.current = faceIndex;
       const pixelX = uv.x * targetLayer.canvas.width;
       const pixelY = (1 - uv.y) * targetLayer.canvas.height;
 
@@ -1568,8 +1571,9 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const targetLayer = layers.find(l => l.id === activeLayerId);
       if (!targetLayer) return;
 
-      const uv = raycastUV(e);
-      if (uv) {
+      const hit = raycastUV(e);
+      if (hit) {
+        const { uv, faceIndex } = hit;
         const targetX = uv.x * targetLayer.canvas.width;
         const targetY = (1 - uv.y) * targetLayer.canvas.height;
 
@@ -1596,9 +1600,27 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           return;
         }
 
-        const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
-        executePaintTool(targetLayer, stabilized.x, stabilized.y, e.pressure || 1.0);
-        drawStabilizerTether(e, stabilized, targetLayer);
+        // S0-1: UV island crossing guard — adjacent triangle faces share an edge, so a sudden
+        // face-index jump (> 1 triangle apart from last) indicates a UV seam teleport.
+        // Treat the crossing as an implicit endStroke + beginStroke so the dab loop never
+        // bridges the seam.  Safety net: also skip dab if distance > 4× brush size.
+        const prevFace = lastFaceIndexRef.current;
+        const faceJump = prevFace >= 0 && faceIndex >= 0 && Math.abs(faceIndex - prevFace) > 2;
+        if (faceJump) {
+          brushEngine.endStroke();
+          brushEngine.beginStroke(targetX, targetY, e.pressure || 1.0);
+          lastFaceIndexRef.current = faceIndex;
+        } else {
+          lastFaceIndexRef.current = faceIndex;
+          const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
+          // S0-1 safety net: skip dab if the stabilised position jumped too far (> 4× brush size)
+          const lastDab = brushEngine.getLastDabPos?.();
+          const jumped = lastDab != null && Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
+          if (!jumped) {
+            executePaintTool(targetLayer, stabilized.x, stabilized.y, e.pressure || 1.0);
+            drawStabilizerTether(e, stabilized, targetLayer);
+          }
+        }
       }
     }
   };
@@ -1618,6 +1640,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     if (isPaintingRef.current) {
       isPaintingRef.current = false;
+      lastFaceIndexRef.current = -1;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
@@ -1644,7 +1667,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     updateCameraPosition();
   };
 
-  const raycastUV = (e: React.PointerEvent<HTMLCanvasElement>): THREE.Vector2 | null => {
+  const raycastUV = (e: React.PointerEvent<HTMLCanvasElement>): { uv: THREE.Vector2; faceIndex: number } | null => {
     const canvas = canvasRef.current;
     if (!canvas || !meshRef.current || !cameraPerspRef.current) return null;
 
@@ -1689,7 +1712,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     const intersects = raycaster.current.intersectObject(meshRef.current);
     if (intersects.length > 0 && intersects[0].uv) {
-      return intersects[0].uv;
+      // S0-1: return faceIndex alongside uv so the pointer-move handler can detect UV-island crossings
+      return { uv: intersects[0].uv, faceIndex: intersects[0].faceIndex ?? -1 };
     }
     return null;
   };

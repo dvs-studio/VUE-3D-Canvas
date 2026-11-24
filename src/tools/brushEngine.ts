@@ -39,6 +39,8 @@ export class BrushEngine {
 
   private imageMaskCache = new Map<string, HTMLImageElement>();
   private patternCanvasCache = new Map<string, HTMLCanvasElement>();
+  // PERF-4: reuse a single temp canvas per stroke instead of allocating inside applyCloneStampAt per dab
+  private cloneTempCanvas: HTMLCanvasElement | null = null;
 
   public static getInstance(): BrushEngine {
     if (!BrushEngine.instance) {
@@ -117,6 +119,11 @@ export class BrushEngine {
 
   public getStabilizedPos() {
     return this.stabilizedPos;
+  }
+
+  /** S0-1: returns the last dab position for the primary stroke so the caller can guard against large jumps */
+  public getLastDabPos(): { x: number; y: number } | null {
+    return this.strokeStates.get('primary')?.lastDabPos ?? null;
   }
 
   /**
@@ -569,9 +576,11 @@ export class BrushEngine {
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.clip();
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = sW;
-    tempCanvas.height = sH;
+    // PERF-4: reuse a cached canvas rather than allocating a new one per dab
+    if (!this.cloneTempCanvas) this.cloneTempCanvas = document.createElement('canvas');
+    const tempCanvas = this.cloneTempCanvas;
+    if (tempCanvas.width !== sW) tempCanvas.width = sW;
+    if (tempCanvas.height !== sH) tempCanvas.height = sH;
     const tempCtx = tempCanvas.getContext('2d')!;
     tempCtx.putImageData(sourceData, 0, 0);
 
