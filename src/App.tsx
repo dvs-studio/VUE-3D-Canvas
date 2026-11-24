@@ -2042,10 +2042,7 @@ export default function App() {
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
                             onAddGroup={handleAddGroup}
-                      onGroupSelectedLayers={handleGroupSelectedLayers}
-                      groups={layers.filter(layer => layer.isGroup)}
-                      onMoveSelectedLayersToGroup={handleMoveSelectedLayersToGroup}
-                      onMergeSelectedLayers={handleMergeSelectedLayers}
+                            onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
                             onMoveSelectedLayersToGroup={handleMoveSelectedLayersToGroup}
                             onMergeSelectedLayers={handleMergeSelectedLayers}
@@ -2220,7 +2217,10 @@ export default function App() {
                       onSelectLayer={handleSelectLayer}
                       onAddLayer={handleAddLayer}
                       onAddGroup={handleAddGroup}
-                            onGroupSelectedLayers={handleGroupSelectedLayers}
+                      onGroupSelectedLayers={handleGroupSelectedLayers}
+                      groups={layers.filter(layer => layer.isGroup)}
+                      onMoveSelectedLayersToGroup={handleMoveSelectedLayersToGroup}
+                      onMergeSelectedLayers={handleMergeSelectedLayers}
                             onDeleteSelectedLayers={handleDeleteSelectedLayers}
                             onRenameGroup={handleRenameGroup}
                       onToggleGroupCollapse={handleToggleGroupCollapse}
