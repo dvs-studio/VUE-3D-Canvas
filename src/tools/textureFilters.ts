@@ -54,6 +54,13 @@ export interface TextureFilterConfig {
   objectPositionMap?: Float32Array;
   objectMapWidth?: number;
   objectMapHeight?: number;
+  /** Optional filter target. "all" leaves the full layer eligible. */
+  targetMeshPart?: string;
+  useMeshPartMask?: boolean;
+  /** Per-texel coverage (0–255) for the selected mesh part. */
+  meshPartMask?: Uint8Array;
+  meshPartMaskWidth?: number;
+  meshPartMaskHeight?: number;
 }
 export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   kind: 'wood', source: 'color', color: '#8a5a35', edge: 65, noise: 25, bleed: 18, blur: 1,
@@ -62,7 +69,9 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   featureScale: 100, positionJitter: 0, angleJitter: 0,
   woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15,
   ditherPattern: 'hash', filterSeed: 71,
-  woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}]
+  woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}],
+  targetMeshPart: 'all',
+  useMeshPartMask: true,
 };
 const clamp=(v:number,min:number,max:number)=>Math.max(min,Math.min(max,v));
 const hash=(x:number,y:number,seed:number)=>{const n=Math.sin(x*127.1+y*311.7+seed*74.7)*43758.5453;return n-Math.floor(n);};
@@ -263,6 +272,73 @@ export function buildObjectSpacePositionMap(geometry: THREE.BufferGeometry, widt
   return rasterizeMeshSurface(geometry, width, height, uvArray, 4).position01;
 }
 
+/**
+ * Rasterises only the triangles belonging to one named mesh component (or geometry group)
+ * into a byte coverage mask aligned to the active UV channel.
+ */
+export function buildMeshPartPixelMask(
+  geometry: THREE.BufferGeometry,
+  width: number,
+  height: number,
+  targetMeshPart: string,
+  uvArray?: Float32Array,
+): Uint8Array | null {
+  if (!geometry || !targetMeshPart || targetMeshPart === 'all' || width <= 0 || height <= 0) return null;
+  const position = geometry.getAttribute('position') as THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined;
+  const uvAttribute = geometry.getAttribute('uv') as THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined;
+  const useUVOverride = !!uvArray && !!position && uvArray.length >= position.count * 2;
+  if (!position || (!useUVOverride && (!uvAttribute || uvAttribute.count < position.count))) return null;
+
+  const componentIndices = geometry.userData?.componentIndices as Record<string, ArrayLike<number>> | undefined;
+  const component = componentIndices?.[targetMeshPart];
+  const allowed = component ? new Set<number>(Array.from(component, value => Number(value))) : null;
+  const groupIndex = Number(targetMeshPart);
+  const group = !allowed && Number.isInteger(groupIndex) ? geometry.groups[groupIndex] : undefined;
+  if (!allowed && !group) return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#ffffff';
+  const index = geometry.getIndex();
+  const elementCount = index ? index.count : position.count;
+  const uvAt = (vertex: number) => useUVOverride
+    ? { u: uvArray![vertex * 2], v: uvArray![vertex * 2 + 1] }
+    : { u: uvAttribute!.getX(vertex), v: uvAttribute!.getY(vertex) };
+
+  for (let offset = 0; offset + 2 < elementCount; offset += 3) {
+    if (group && (offset < group.start || offset + 2 >= group.start + group.count)) continue;
+    const a = index ? index.getX(offset) : offset;
+    const b = index ? index.getX(offset + 1) : offset + 1;
+    const c = index ? index.getX(offset + 2) : offset + 2;
+    if ([a, b, c].some(vertex => !Number.isInteger(vertex) || vertex < 0 || vertex >= position.count)) continue;
+    if (allowed && (!allowed.has(a) || !allowed.has(b) || !allowed.has(c))) continue;
+
+    const ua = uvAt(a), ub = uvAt(b), uc = uvAt(c);
+    const ax = ua.u * width, ay = (1 - ua.v) * height;
+    const bx = ub.u * width, by = (1 - ub.v) * height;
+    const cx = uc.u * width, cy = (1 - uc.v) * height;
+    if (![ax, ay, bx, by, cx, cy].every(Number.isFinite)) continue;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  try {
+    const pixels = ctx.getImageData(0, 0, width, height).data;
+    const mask = new Uint8Array(width * height);
+    for (let pixel = 0; pixel < mask.length; pixel++) mask[pixel] = pixels[pixel * 4 + 3];
+    return mask;
+  } catch {
+    return null;
+  }
+}
+
 export async function transformTexturePixels(source:ImageData,cfg:TextureFilterConfig):Promise<ImageData>{
  const w=source.width,h=source.height, out=new ImageData(w,h), data=source.data, dst=out.data;
  const srcImg=cfg.kind==='wood'&&cfg.source==='image'?await imageSource(cfg.sourceImageDataUrl,w,h):null;
@@ -271,6 +347,25 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  const axisAngle=cfg.directionSpace==='uv'?0:(cfg.axis==='X'?0:cfg.axis==='Y'?90:45);
  const angle=(axisAngle+cfg.angle)*Math.PI/180, dx=Math.cos(angle),dy=Math.sin(angle);
  const edge=cfg.edge/100, noise=cfg.noise/100, bleed=cfg.bleed/100;
+ const meshMask = cfg.useMeshPartMask !== false ? cfg.meshPartMask : undefined;
+ const hasMeshMask = !!meshMask &&
+   cfg.meshPartMaskWidth === w &&
+   cfg.meshPartMaskHeight === h &&
+   meshMask.length >= w * h;
+ const applyMeshMask = (result: ImageData): ImageData => {
+   if (!hasMeshMask) return result;
+   const resultData = result.data;
+   for (let pixel = 0; pixel < w * h; pixel++) {
+     const coverage = meshMask![pixel] / 255;
+     if (coverage >= 0.999) continue;
+     const i = pixel * 4;
+     const outside = 1 - coverage;
+     for (let channel = 0; channel < 4; channel++) {
+       resultData[i + channel] = Math.round(data[i + channel] * outside + resultData[i + channel] * coverage);
+     }
+   }
+   return result;
+ };
  if(cfg.kind==='wood'){
    // Each stacked colour/image contributes a grain band; density controls its spatial frequency and blend weight.
    const stack=woodStack.length?woodStack:[{item:{id:'fallback',source:'color' as const,color:cfg.color,density:50},image:null,color}];
@@ -333,15 +428,15 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      dilateImageData(out, Math.ceil(clamp(cfg.blur,0,20))+3);
      const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d')!.putImageData(out,0,0);
      const blurred=document.createElement('canvas');blurred.width=w;blurred.height=h;const ctx=blurred.getContext('2d')!;
-     ctx.filter=`blur(${clamp(cfg.blur,0,20)}px)`;ctx.drawImage(tmp,0,0);return ctx.getImageData(0,0,w,h);
+     ctx.filter=`blur(${clamp(cfg.blur,0,20)}px)`;ctx.drawImage(tmp,0,0);return applyMeshMask(ctx.getImageData(0,0,w,h));
    }
-   return out;
+   return applyMeshMask(out);
  }
  if(cfg.kind==='mosaic'){
    const size=Math.max(2,Math.round(cfg.mosaicSize));for(let y=0;y<h;y+=size)for(let x=0;x<w;x+=size){
      let r=0,g=0,b=0,a=0,count=0;for(let yy=y;yy<Math.min(h,y+size);yy++)for(let xx=x;xx<Math.min(w,x+size);xx++){let i=(yy*w+xx)*4;r+=data[i];g+=data[i+1];b+=data[i+2];a+=data[i+3];count++;}
      r/=count;g/=count;b/=count;a/=count;for(let yy=y;yy<Math.min(h,y+size);yy++)for(let xx=x;xx<Math.min(w,x+size);xx++){let i=(yy*w+xx)*4;dst[i]=r;dst[i+1]=g;dst[i+2]=b;dst[i+3]=a;}
-   }return out;
+   }return applyMeshMask(out);
  }
  if(cfg.kind==='dither'){
    const levels=Math.max(2,Math.round(cfg.levels));
@@ -352,18 +447,18 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const n=cfg.ditherPattern==='bayer'?((bayer4[y&3][x&3]/15)-0.5)*noise*60:(hash(x,y,seed)-0.5)*noise*50;
      for(let k=0;k<3;k++){const v=clamp(data[i+k]+n,0,255);dst[i+k]=Math.round(v/255*(levels-1))*255/(levels-1);}dst[i+3]=data[i+3];
    }
-   return out;
+   return applyMeshMask(out);
  }
  if(cfg.kind==='noise-shader'){
    const seed=Math.floor(cfg.filterSeed??71);
    for(let i=0;i<data.length;i+=4){const x=(i/4)%w,y=Math.floor(i/4/w);const darkness=1-hash(x,y,seed)*(noise*0.78);for(let k=0;k<3;k++)dst[i+k]=clamp(data[i+k]*darkness,0,255);dst[i+3]=data[i+3];}
-   return out;
+   return applyMeshMask(out);
  }
  if(cfg.kind==='powderiser'){
    const strength=clamp(noise,0,1),drift=clamp(cfg.shift||12,1,48);
    const seed=Math.floor(cfg.filterSeed??211);
    dst.set(data);
-   if(strength<=0)return out;
+   if(strength<=0)return applyMeshMask(out);
    const selected=new Uint8Array(w*h);
    // Pass one only changes source coverage. Keep scatter writes out of this pass so
    // later source pixels cannot overwrite fragments emitted by earlier pixels.
@@ -397,7 +492,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      }
      dst[j+3]=Math.round(combinedAlpha*255);
    }
-   return out;
+   return applyMeshMask(out);
  }
  // Directional displacement: line-mask controlled shifts, not line painting/overlay.
  const featureScale=clamp(cfg.featureScale??100,25,400)/100;
@@ -446,16 +541,20 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    const p=sample(source,sx,sy);const i=(y*w+x)*4;
    dst[i]=p[0];dst[i+1]=p[1];dst[i+2]=p[2];dst[i+3]=p[3];
  }
- return out;
+ return applyMeshMask(out);
 }
 export async function applyTextureFilterToCanvas(canvas:HTMLCanvasElement,cfg:TextureFilterConfig):Promise<void>{
  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Selected layer canvas is unavailable');
  const probe=ctx.getImageData(0,0,canvas.width,canvas.height);
  let transparent=0, opaque=0;
  for(let i=3;i<probe.data.length;i+=4){ if(probe.data[i]<10) transparent++; else opaque++; }
- // Neighbourhood filters sample across UV gutters. Pad first when the layer is an island atlas.
- if(opaque>0 && transparent>0) dilateImageData(probe, 8);
+ // Neighbourhood filters sample across UV gutters. Pad first for whole-layer work;
+ // a selected-part mask must preserve every texel outside its target unchanged.
+ const hasPartMask = cfg.useMeshPartMask !== false && !!cfg.meshPartMask &&
+   cfg.meshPartMaskWidth === canvas.width && cfg.meshPartMaskHeight === canvas.height &&
+   cfg.meshPartMask.length >= canvas.width * canvas.height;
+ if(opaque>0 && transparent>0 && !hasPartMask) dilateImageData(probe, 8);
  const result=await transformTexturePixels(probe,cfg);
  ctx.putImageData(result,0,0);
- if(opaque>0 && transparent>0) dilateImageData(result, 8), ctx.putImageData(result,0,0);
+ if(opaque>0 && transparent>0 && !hasPartMask) dilateImageData(result, 8), ctx.putImageData(result,0,0);
 }
