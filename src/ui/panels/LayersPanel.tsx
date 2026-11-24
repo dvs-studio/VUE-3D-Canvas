@@ -148,6 +148,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
         <div className="flex items-center justify-between gap-1">
           <label className="text-[10px] text-[#999] uppercase font-mono">Blend</label>
           <select
+            disabled={!!activeLayer?.isBaseLayer}
             value={activeLayer?.blendMode || 'normal'}
             onChange={(e) => activeLayer && onUpdateBlendMode(activeLayer.id, e.target.value as BlendMode)}
             className="bg-[#242424] border border-[#555] text-[#eee] rounded px-1.5 py-0.5 text-[11px] outline-none flex-1 cs5-inset"
@@ -164,6 +165,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           <span className="text-[10px] text-[#999] uppercase font-mono">Opacity</span>
           <input
             type="range"
+            disabled={!!activeLayer?.isBaseLayer}
             min="0"
             max="100"
             value={activeLayer?.opacity ?? 100}
@@ -265,7 +267,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 type="checkbox"
                 className="w-3 h-3 accent-blue-500 shrink-0"
                 checked={checkedLayerIds.includes(layer.id)}
-                title="Select layer for group / multi actions"
+                disabled={!!layer.isBaseLayer}
+                title={layer.isBaseLayer ? 'Protected base layer' : 'Select layer for group / multi actions'}
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   e.stopPropagation();
@@ -273,16 +276,17 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 }}
               />
               {/* Visibility eye */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleVisibility(layer.id);
-                }}
-                className="text-[#999] hover:text-white p-0.5"
-                title={layer.visible ? 'Hide Layer' : 'Show Layer'}
-              >
-                {layer.visible ? <Eye className="w-3.5 h-3.5 text-[#a6e3a1]" /> : <EyeOff className="w-3.5 h-3.5 text-[#666]" />}
-              </button>
+              {layer.isBaseLayer ? (
+                <span className="text-[#e5a038] p-0.5" title="Protected base layer — always visible and non-editable"><Lock className="w-3.5 h-3.5" /></span>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleVisibility(layer.id); }}
+                  className="text-[#999] hover:text-white p-0.5"
+                  title={layer.visible ? 'Hide Layer' : 'Show Layer'}
+                >
+                  {layer.visible ? <Eye className="w-3.5 h-3.5 text-[#a6e3a1]" /> : <EyeOff className="w-3.5 h-3.5 text-[#666]" />}
+                </button>
+              )}
 
               {/* Layer Thumbnail Preview */}
               <div className="w-7 h-7 bg-[#202020] border border-[#555] rounded-xs flex items-center justify-center overflow-hidden shrink-0 cs5-inset">
@@ -293,6 +297,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="truncate font-medium text-[11px] leading-tight">
                   {layer.name}
+                  {layer.isBaseLayer && <span className="ml-1 px-1 py-0.5 rounded border border-[#9a7138] text-[#e5a038] text-[8px]">BASE</span>}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[9px] text-[#888] font-mono">
@@ -321,16 +326,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               )}
 
               {/* Lock toggle */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleLock(layer.id);
-                }}
+              {!layer.isBaseLayer && <button
+                onClick={(e) => { e.stopPropagation(); onToggleLock(layer.id); }}
                 className="text-[#999] hover:text-white p-0.5"
                 title={layer.locked ? 'Unlock Layer' : 'Lock Layer'}
               >
                 {layer.locked ? <Lock className="w-3 h-3 text-[#e5a038]" /> : <Unlock className="w-3 h-3 text-[#666]" />}
-              </button>
+              </button>}
 
               {/* Layer Settings & PBR Modal button */}
               {onOpenLayerSettings && (
@@ -422,6 +424,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           )}
           <button
             onClick={() => onDuplicateLayer(activeLayerId)}
+            disabled={!!activeLayer?.isBaseLayer}
             className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
             title="Duplicate Layer"
           >
@@ -429,6 +432,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           </button>
           <button
             onClick={() => onMoveLayer(activeLayerId, 'up')}
+            disabled={!!activeLayer?.isBaseLayer}
             className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
             title="Move Layer Up"
           >
@@ -436,6 +440,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           </button>
           <button
             onClick={() => onMoveLayer(activeLayerId, 'down')}
+            disabled={!!activeLayer?.isBaseLayer}
             className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
             title="Move Layer Down"
           >
@@ -454,7 +459,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 
           <button
             onClick={() => onDeleteLayer(activeLayerId)}
-            disabled={layers.length <= 1}
+            disabled={layers.length <= 1 || !!activeLayer?.isBaseLayer}
             className={`p-1 rounded border transition-colors ${
               layers.length > 1
                 ? 'bg-[#3a3a3a] hover:bg-[#8b2626] text-[#eee] border-[#505050]'
