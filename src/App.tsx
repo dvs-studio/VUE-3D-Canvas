@@ -29,6 +29,7 @@ import {
   BaseLayerSettings,
 } from './core/types';
 import { DEFAULT_BRUSH_PRESETS } from './tools/brushPresets';
+import { chooseExternalAssetFolder, scanRememberedExternalAssetFolder, type ExternalAsset } from './tools/externalAssetLibrary';
 import { UndoRingBuffer } from './core/history';
 import { WasmMemoryEngine } from './core/wasmMemoryEngine';
 import { XBlendManager } from './core/xblendFormat';
@@ -295,6 +296,29 @@ export default function App() {
   // UI Dialogs
   const [isCarouselOpen, setIsCarouselOpen] = useState<boolean>(false);
   const [isTriplanarOpen, setIsTriplanarOpen] = useState<boolean>(false);
+  const [externalAssets, setExternalAssets] = useState<ExternalAsset[]>([]);
+  const [isScanningExternalAssets, setIsScanningExternalAssets] = useState(false);
+  const [externalAssetStatus, setExternalAssetStatus] = useState('');
+
+  const handleScanExternalAssetFolder = useCallback(async () => {
+    setIsScanningExternalAssets(true);
+    setExternalAssetStatus('Scanning selected library…');
+    try {
+      const assets = await chooseExternalAssetFolder();
+      setExternalAssets(assets);
+      setExternalAssetStatus(assets.length ? `${assets.length} library images found` : 'No images found in texture / brush / mask folders');
+    } catch (error) {
+      setExternalAssetStatus(error instanceof Error ? error.message : 'Could not scan the selected folder');
+    } finally { setIsScanningExternalAssets(false); }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    scanRememberedExternalAssetFolder().then(assets => {
+      if (active && assets.length) { setExternalAssets(assets); setExternalAssetStatus(`${assets.length} remembered library images loaded`); }
+    }).catch(() => { /* Re-select the folder when permission is required. */ });
+    return () => { active = false; };
+  }, []);
   const [isTextureFilterOpen, setIsTextureFilterOpen] = useState<boolean>(false);
   const [bumpLevelsTargetId, setBumpLevelsTargetId] = useState<string | null>(null);
   const [bumpLevelsMode, setBumpLevelsMode] = useState<'bump' | 'displacement'>('bump');
@@ -2774,6 +2798,9 @@ export default function App() {
         onClose={() => setIsTriplanarOpen(false)}
         onConfirm={handleConfirmTriplanar}
         defaultColor={primaryColor}
+        externalTextures={externalAssets.filter(asset => asset.kind === 'texture')}
+        onScanTextureFolder={handleScanExternalAssetFolder}
+        isScanningTextures={isScanningExternalAssets}
       />
 
       {/* 6b. Gaussian Blur (Selected Layer Only) */}
