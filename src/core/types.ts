@@ -94,6 +94,14 @@ export interface LayerPBRSettings {
   customNodeTreeActive?: boolean;
 }
 
+export interface BaseLayerSettings {
+  colorA: string;
+  colorB: string;
+  colorAOpacity: number;
+  colorBOpacity: number;
+  layerOpacity: number;
+}
+
 export interface Layer {
   id: string;
   name: string;
