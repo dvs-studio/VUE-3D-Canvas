@@ -304,3 +304,81 @@ Victory has asked for the full CURRENT TODO pass (Step 0 → 2A → 2A-W → 2A-
 
 **Entry purpose:** Pre-task log entry per rules. Code entries will follow in separate commits.
 
+
+---
+
+## LOG-2026-11-24-CLAUDE-WORK — Step 0 + PERF fixes + backup
+
+**Agent:** Claude Sonnet 4.6 / `LOG-2026-11-24-CLAUDE-WORK`  
+**Date:** 2026-11-24  
+**Commits:** f551511, 221e5cf, 1768387 (all local — push blocked by auto-mode classifier; Victory must run `git push origin main`)
+
+### Work completed this session
+
+#### S0-2 — Powderiser double-division (FIXED ✓)
+- `src/tools/textureFilters.ts` line 363: `noise/100` → `noise`
+- `noise` was already divided by 100 at line 273; second division made strength ≈ 0.0025, selecting ~0 pixels
+- Commit: f551511
+
+#### S0-1 — UV island stroke teleport (FIXED ✓)
+- `raycastUV` now returns `{uv, faceIndex}` instead of `uv` alone
+- `lastFaceIndexRef` tracks previous face per pointer-move
+- On face-index jump > 2 (UV seam): `endStroke` + `beginStroke` — no bridge line
+- Safety net: skip dab if distance from last dab pos > 4× brush size
+- `BrushEngine.getLastDabPos()` accessor added
+- `lastFaceIndexRef` reset to -1 on pointer-up
+- Commit: f551511
+
+#### PERF-4 — Clone stamp canvas allocation (FIXED ✓)
+- `brushEngine.ts applyCloneStampAt`: cached `this.cloneTempCanvas` replaces `document.createElement` per dab
+- Commit: f551511
+
+#### PERF-1/PERF-2 — RAF gate + getCoalescedEvents (FIXED ✓)
+- `handlePointerMove` now queues `nativeEvent` into `pendingPaintEventsRef`
+- One `requestAnimationFrame` tick scheduled per frame
+- RAF callback drains all events, expanding with `getCoalescedEvents()` for high-frequency stylus fidelity
+- Caps full pipeline (raycast + stabilizer + dab loop + composite) at display Hz
+- RAF cancelled + queue flushed on pointer-up
+- Commit: 221e5cf
+
+#### UI2 — Menu dropdowns dismiss on unfocus (FIXED ✓)
+- `PhotoshopMenuBar.tsx`: `useEffect` click-outside listener on `document`
+- Clicking outside the bar closes the open menu
+- Commit: 221e5cf
+
+#### A4 (WIP) — Filter mesh-part selection
+- `TextureFilterDialog.tsx`: `meshParts` and `selectedMeshPart` props added to component interface
+- **Still needed:** wire props from App.tsx, add `targetMeshPart?: string` to `TextureFilterConfig`, pixel-level masking in `transformTexturePixels`
+- Commit: 221e5cf (props only)
+
+#### Backup created
+- `backup/repo-backup-2026-11-24.zip` — full source snapshot (3.7MB, excludes node_modules/.git/dist/safety ZIPs)
+- Commit: 1768387
+
+### Push status
+All 3 commits are local (`git log --oneline` shows them ahead of origin). `git push origin main` is blocked by the session's auto-mode classifier. Victory must run:
+```
+git push origin main
+```
+from their machine, or confirm the push in this session.
+
+### What the next agent must continue
+
+See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this session:
+
+| Item | Status | Notes |
+|------|--------|-------|
+| A4 filter mesh-part | WIP — props added | Needs App.tsx wiring + config field + pixel mask |
+| A5 filter panel title-drag | Already working (dragRef in TextureFilterDialog) — verify only |
+| A6 2D UV tool shelf layout | Not started |
+| A7/F8 bump/displacement merge | Not started |
+| UI1 persist window enable/disable | Not started |
+| UI3 giant Undo/Redo viewport | Could not reproduce — scan `src/` for oversized undo element |
+| 2A-W Wood rings | Not started |
+| 2A-T Triplanar | Not started |
+| 2B F6/F1 Tear/Pattern Craft/M1 | Not started |
+| 2C Warp/Pointillism/Honeycomb/Scatter | Not started |
+| 2D Texture gallery | Not started |
+
+**Next agent: pick up at A4 completion → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D. Run `npm run host:sync` after each group. Record your session under a unique LOG id.**
+

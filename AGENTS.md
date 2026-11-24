@@ -42,20 +42,26 @@
 
 ### CURRENT TODO — all active for this pass
 
+> **Last agent:** Claude Sonnet 4.6 / `LOG-2026-11-24-CLAUDE-WORK` — 2026-11-24  
+> **Push needed:** 3 commits local (`f551511`, `221e5cf`, `1768387`). Victory must run `git push origin main` first.  
+> **Next agent picks up at:** A4 completion → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D
+
 #### Step 0
-- [ ] **S0-1** Stroke teleport across UV islands (investigate, then minimal fix)
-- [ ] **S0-2** Powderiser / filter suite (fix double `noise/100`; audit all kinds)
-- [ ] Other regressions (diagnose UI, symmetry, boot, Head+Eyes default, paint, export)
+- [x] **S0-1** Stroke teleport — `raycastUV` returns faceIndex; island-crossing triggers endStroke+beginStroke; maxJumpPx guard added (`f551511`)
+- [x] **S0-2** Powderiser double `noise/100` — fixed to `noise` at line 363 (`f551511`)
+- [x] **PERF-1/2** RAF gate + getCoalescedEvents on paint pointer-move (`221e5cf`)
+- [x] **PERF-4** Clone stamp temp canvas cached per stroke (`f551511`)
+- [ ] Other regressions (UI3 giant Undo/Redo — could not reproduce; symmetry/boot/export — not yet checked)
 - [ ] **2E** Subdiv preview — verify only
 
 #### 2A Stabilisation
-- [ ] **A4** Filter mesh-part selection
-- [ ] **A5** Filter panel title-drag
+- [ ] **A4** Filter mesh-part selection — props added to TextureFilterDialog; **still needs:** App.tsx wiring + `targetMeshPart` in TextureFilterConfig + pixel mask in transformTexturePixels
+- [ ] **A5** Filter panel title-drag — drag already implemented in TextureFilterDialog; **verify only**
 - [ ] **A6** 2D UV tool shelf layout
 - [ ] **A7 / F8** Merge bump/displacement → Levels → 100% bump
 - [ ] **UI1** Persist window enable/disable
-- [ ] **UI2** Menu dropdowns dismiss on unfocus
-- [ ] **UI3** Giant Undo/Redo lower 3D viewport
+- [x] **UI2** Menu dropdowns dismiss on unfocus — click-outside handler added (`221e5cf`)
+- [ ] **UI3** Giant Undo/Redo lower 3D viewport — could not reproduce; scan for oversized element
 
 #### 2A-W Wood rings
 - [ ] Uniform tree-year rings **and** organic fingerprint/merged rings; curvature-aware; world vs object — not phase-push only
