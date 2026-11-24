@@ -159,4 +159,5 @@ CI verifies TypeScript diagnostics, Vite build, self-host sync, package validati
 - The ordinary Base Layer opacity slider is separate from the two colour opacity controls.
 - Cancel retains the live session setup without persisting colours; Save persists only the two colours. Reset restores both grey colours and all opacity values to 100%.
 - The Base Layer row has a Reset button in the multi-select checkbox position and a dedicated properties button. Keep it protected from paint, visibility, stack, duplicate, delete, group, and merge operations.
+- CI: workflow #303 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `14955460054`). This is not runtime/device acceptance.
 - See `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` for the facility bookmark/code map and manual acceptance checklist; see `notes/PROTECTED_BASE_LAYER_2026-11-24.md` for the original protection history.
