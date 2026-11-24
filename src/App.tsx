@@ -1377,7 +1377,8 @@ export default function App() {
             if (cvs.height !== img.naturalHeight) cvs.height = img.naturalHeight;
           }
           ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
-          notifyTextureUpdated();
+          syncCompositeCanvas(loadedLayers);
+          setTextureVersion(v => v + 1);
         };
         img.src = l.dataUrl;
 
