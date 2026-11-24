@@ -24,3 +24,8 @@ A browser cannot silently enumerate arbitrary PC folders. The user must choose a
 
 ## Verification
 The normal self-host workflow is triggered by source commits. Passing TypeScript/build/package checks will not prove folder picker permission persistence or Worker operation in a real browser. Manual acceptance is required on the Windows desktop browser and on the intended self-host launch mode.
+
+## CI result
+- Self-host workflow #287 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45434787995
+- Artifact: `VUE_3D_Canvas_SelfHost`, ID `14939569386` (about 2.08 MB).
+- This validates TypeScript diagnostics, Vite build, self-host synchronisation, package validation and artifact upload. It does not validate live folder permission prompts, IndexedDB handle persistence, or visual gallery integration.
