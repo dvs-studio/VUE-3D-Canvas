@@ -4,10 +4,12 @@ type GeometryAttribute = THREE.BufferAttribute | THREE.InterleavedBufferAttribut
 
 interface UVIslandCacheEntry {
   position: GeometryAttribute;
-  uv: GeometryAttribute;
+  uvAttribute: GeometryAttribute | null;
+  uvArray?: Float32Array;
   index: THREE.BufferAttribute | null;
   positionVersion: number;
   uvVersion: number;
+  uvChannelVersion: number;
   indexVersion: number;
   ids: Int32Array;
 }
@@ -23,7 +25,6 @@ const attributeVersion = (attribute: GeometryAttribute | THREE.BufferAttribute |
 };
 
 const quantizedPosition = (value: number) => Math.round(value / POSITION_EPSILON);
-
 const sameUV = (a: number, b: number) => Math.abs(a - b) <= UV_EPSILON;
 
 /**
@@ -31,27 +32,36 @@ const sameUV = (a: number, b: number) => Math.abs(a - b) <= UV_EPSILON;
  * they share a geometric edge whose UV coordinates agree at both endpoints.
  * Position matching also recognises duplicated vertices along UV seams.
  */
-export function getUVIslandIds(geometry: THREE.BufferGeometry): Int32Array | null {
+export function getUVIslandIds(
+  geometry: THREE.BufferGeometry,
+  uvArray?: Float32Array,
+  uvChannelVersion = 0,
+): Int32Array | null {
   const position = geometry.getAttribute('position') as GeometryAttribute | undefined;
-  const uv = geometry.getAttribute('uv') as GeometryAttribute | undefined;
+  const uvAttribute = geometry.getAttribute('uv') as GeometryAttribute | undefined;
+  const useUVOverride = !!uvArray && !!position && uvArray.length >= position.count * 2;
   const index = geometry.getIndex();
 
-  if (!position || !uv || uv.itemSize < 2) return null;
+  if (!position || (!useUVOverride && (!uvAttribute || uvAttribute.itemSize < 2 || uvAttribute.count < position.count))) {
+    return null;
+  }
 
   const faceCount = Math.floor((index?.count ?? position.count) / 3);
   if (faceCount < 1) return null;
 
   const positionVersion = attributeVersion(position);
-  const uvVersion = attributeVersion(uv);
+  const uvVersion = useUVOverride ? uvChannelVersion : attributeVersion(uvAttribute || null);
   const indexVersion = attributeVersion(index);
   const cached = cache.get(geometry);
   if (
     cached &&
     cached.position === position &&
-    cached.uv === uv &&
+    cached.uvAttribute === (uvAttribute || null) &&
+    cached.uvArray === (useUVOverride ? uvArray : undefined) &&
     cached.index === index &&
     cached.positionVersion === positionVersion &&
     cached.uvVersion === uvVersion &&
+    cached.uvChannelVersion === uvChannelVersion &&
     cached.indexVersion === indexVersion &&
     cached.ids.length === faceCount
   ) {
@@ -92,6 +102,9 @@ export function getUVIslandIds(geometry: THREE.BufferGeometry): Int32Array | nul
 
   const edges = new Map<string, EdgeUse[]>();
   const vertexAt = (element: number) => index ? index.getX(element) : element;
+  const uvAt = (vertex: number) => useUVOverride
+    ? { u: uvArray![vertex * 2], v: uvArray![vertex * 2 + 1] }
+    : { u: uvAttribute!.getX(vertex), v: uvAttribute!.getY(vertex) };
 
   const positionKey = (vertex: number) => {
     const x = quantizedPosition(position.getX(vertex));
@@ -103,7 +116,7 @@ export function getUVIslandIds(geometry: THREE.BufferGeometry): Int32Array | nul
   for (let face = 0; face < faceCount; face++) {
     const element = face * 3;
     const vertices = [vertexAt(element), vertexAt(element + 1), vertexAt(element + 2)];
-    if (vertices.some(vertex => !Number.isInteger(vertex) || vertex < 0 || vertex >= position.count || vertex >= uv.count)) continue;
+    if (vertices.some(vertex => !Number.isInteger(vertex) || vertex < 0 || vertex >= position.count)) continue;
 
     for (const [from, to] of [[0, 1], [1, 2], [2, 0]] as const) {
       const a = vertices[from];
@@ -116,12 +129,14 @@ export function getUVIslandIds(geometry: THREE.BufferGeometry): Int32Array | nul
       const edgeKey = forward ? `${keyA}|${keyB}` : `${keyB}|${keyA}`;
       const startVertex = forward ? a : b;
       const endVertex = forward ? b : a;
+      const startUV = uvAt(startVertex);
+      const endUV = uvAt(endVertex);
       const use: EdgeUse = {
         face,
-        startU: uv.getX(startVertex),
-        startV: uv.getY(startVertex),
-        endU: uv.getX(endVertex),
-        endV: uv.getY(endVertex),
+        startU: startUV.u,
+        startV: startUV.v,
+        endU: endUV.u,
+        endV: endUV.v,
       };
       const uses = edges.get(edgeKey);
       if (uses) uses.push(use);
@@ -161,10 +176,12 @@ export function getUVIslandIds(geometry: THREE.BufferGeometry): Int32Array | nul
 
   cache.set(geometry, {
     position,
-    uv,
+    uvAttribute: uvAttribute || null,
+    uvArray: useUVOverride ? uvArray : undefined,
     index,
     positionVersion,
     uvVersion,
+    uvChannelVersion,
     indexVersion,
     ids,
   });
