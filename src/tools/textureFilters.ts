@@ -332,8 +332,12 @@ export function buildMeshPartPixelMask(
   try {
     const pixels = ctx.getImageData(0, 0, width, height).data;
     const mask = new Uint8Array(width * height);
-    for (let pixel = 0; pixel < mask.length; pixel++) mask[pixel] = pixels[pixel * 4 + 3];
-    return mask;
+    let coveredPixels = 0;
+    for (let pixel = 0; pixel < mask.length; pixel++) {
+      mask[pixel] = pixels[pixel * 4 + 3];
+      if (mask[pixel] > 0) coveredPixels++;
+    }
+    return coveredPixels > 0 ? mask : null;
   } catch {
     return null;
   }
