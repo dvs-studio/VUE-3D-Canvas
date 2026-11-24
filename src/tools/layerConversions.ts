@@ -73,7 +73,7 @@ export class LayerConversions {
       emissionOn: false,
       emissionInfluence: 0,
       bumpOn: true,
-      bumpInfluence: previous?.bumpInfluence ?? 1,
+      bumpInfluence: previous?.bumpOn ? (previous.bumpInfluence ?? 1) : 1,
       bumpRamp: previous?.bumpRamp ?? [{ position: 0, height: 0 }, { position: 1, height: 1 }],
       heightLevels: previous?.heightLevels ?? DEFAULT_HEIGHT_LEVELS,
       normalLock: false,
