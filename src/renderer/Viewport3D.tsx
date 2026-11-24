@@ -1643,7 +1643,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
       needsRenderRef.current = true;
       onTextureUpdated();
-      undoBuffer.pushState(\`\${brush.name} 3D Paint\`, layers);
+      undoBuffer.pushState(`${brush.name} 3D Paint`, layers);
     }
   };
 
