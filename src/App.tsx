@@ -66,6 +66,7 @@ import { TextureFilterConfig, applyTextureFilterToCanvas } from './tools/texture
 import { TextureFilterDialog } from './ui/TextureFilterDialog';
 import { BumpLevelsDialog, BumpLevels, applyBumpLevelsToLayer } from './ui/BumpLevelsDialog';
 import { LayerConversions } from './tools/layerConversions';
+import { applyHeightLevels, DEFAULT_HEIGHT_LEVELS } from './tools/heightLevels';
 import { GaussianBlurOptions } from './tools/gaussianBlur';
 import { StochasticScatterConfig } from './tools/stochasticScatter';
 import { StitchConfig } from './tools/stitchStudio';
@@ -1035,6 +1036,110 @@ export default function App() {
   const handleMergeSelectedLayers = (layerIds: string[]) => {
     const selected = layers.filter(layer => layerIds.includes(layer.id) && !layer.isGroup && !layer.locked && layer.visible);
     if (selected.length < 2) return;
+
+    // Bump/displacement layers are height contributors, not ordinary color layers.
+    // Merge their evaluated height into a dedicated height layer and open Levels.
+    const canMergeHeight = selected.every(layer => layer.pbrSettings?.bumpOn ?? layer.channel === 'height');
+    if (canMergeHeight) {
+      const uvChannel = selected[0].uvChannel || 'uv_original';
+      if (selected.some(layer => (layer.uvChannel || 'uv_original') !== uvChannel)) {
+        window.alert('Merge bump/displacement layers using the same UV channel only.');
+        return;
+      }
+
+      const width = Math.max(1, selected[0].canvas.width);
+      const height = Math.max(1, selected[0].canvas.height);
+      const values = new Float32Array(width * height);
+      for (const layer of selected) {
+        const pbr = layer.pbrSettings;
+        const bumpOn = pbr?.bumpOn ?? layer.channel === 'height';
+        const influence = Math.max(0, Math.min(1,
+          (pbr?.bumpInfluence ?? (layer.channel === 'height' ? 1 : 0)) * (layer.opacity ?? 100) / 100
+        ));
+        if (!bumpOn || influence <= 0) continue;
+
+        const sourceCanvas = document.createElement('canvas');
+        sourceCanvas.width = width;
+        sourceCanvas.height = height;
+        const sourceContext = sourceCanvas.getContext('2d');
+        if (!sourceContext) continue;
+        sourceContext.drawImage(layer.canvas, 0, 0, width, height);
+        const pixels = sourceContext.getImageData(0, 0, width, height).data;
+        const ramp = (pbr?.bumpRamp?.length ? pbr.bumpRamp : [{ position: 0, height: 0 }, { position: 1, height: 1 }])
+          .slice().sort((a, b) => a.position - b.position);
+        const rampValue = (value: number) => {
+          if (value <= ramp[0].position) return ramp[0].height;
+          if (value >= ramp[ramp.length - 1].position) return ramp[ramp.length - 1].height;
+          for (let i = 0; i < ramp.length - 1; i++) {
+            const left = ramp[i], right = ramp[i + 1];
+            if (value >= left.position && value <= right.position) {
+              const t = (value - left.position) / Math.max(0.000001, right.position - left.position);
+              return left.height + (right.height - left.height) * t;
+            }
+          }
+          return value;
+        };
+
+        for (let pixel = 0; pixel < values.length; pixel++) {
+          const offset = pixel * 4;
+          const alpha = pixels[offset + 3] / 255;
+          if (alpha <= 0) continue;
+          const luminance = (0.299 * pixels[offset] + 0.587 * pixels[offset + 1] + 0.114 * pixels[offset + 2]) / 255;
+          const adjusted = applyHeightLevels(luminance, pbr?.heightLevels);
+          values[pixel] = Math.min(1, values[pixel] + rampValue(adjusted) * influence * alpha);
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      const image = ctx.createImageData(width, height);
+      for (let pixel = 0; pixel < values.length; pixel++) {
+        const value = Math.round(Math.max(0, Math.min(1, values[pixel])) * 255);
+        const offset = pixel * 4;
+        image.data[offset] = image.data[offset + 1] = image.data[offset + 2] = value;
+        image.data[offset + 3] = 255;
+      }
+      ctx.putImageData(image, 0, 0);
+
+      const selectedIds = new Set(selected.map(layer => layer.id));
+      const firstIndex = layers.findIndex(layer => selectedIds.has(layer.id));
+      const sameGroup = selected.every(layer => layer.groupId === selected[0].groupId);
+      const mergedHeight: Layer = {
+        id: 'layer_merged_height_' + Date.now(),
+        name: 'Merged Height (' + selected.length + ' Layers)',
+        visible: true,
+        opacity: 100,
+        blendMode: 'normal',
+        locked: false,
+        canvas,
+        ctx,
+        channel: 'height',
+        uvChannel,
+        ...(sameGroup && selected[0].groupId ? { groupId: selected[0].groupId } : {}),
+        pbrSettings: {
+          roughness: 0.5, metallic: 0, bumpHeight: 1, normalStrength: 1,
+          emissionStrength: 0, emissionColor: '#ffffff', opacity: 1,
+          enableColor: false, enableBump: true, reflectionSource: 'hdri', reflectionIntensity: 0.8,
+          colorOn: false, colorInfluence: 0, reflectionOn: false, reflectionInfluence: 0,
+          emissionOn: false, emissionInfluence: 0, bumpOn: true, bumpInfluence: 1,
+          bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+          heightLevels: DEFAULT_HEIGHT_LEVELS, normalLock: false,
+        },
+      };
+      const remaining = layers.filter(layer => !selectedIds.has(layer.id));
+      remaining.splice(Math.max(0, firstIndex), 0, mergedHeight);
+      setLayers(remaining);
+      setActiveLayerId(mergedHeight.id);
+      undoBuffer.pushState('Merge Bump/Displacement Layers to Height', remaining);
+      notifyTextureUpdated();
+      setBumpLevelsMode('bump');
+      setBumpLevelsTargetId(mergedHeight.id);
+      return;
+    }
+
     const channel = selected[0].channel;
     if (selected.some(layer => layer.channel !== channel)) {
       window.alert('Merge selected visible layers with the same texture channel only.');
@@ -1045,9 +1150,11 @@ export default function App() {
       window.alert('Merge layers with matching PBR settings only. This preserves their material response.');
       return;
     }
+    const width = Math.max(1, selected[0].canvas.width);
+    const height = Math.max(1, selected[0].canvas.height);
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const operation: Record<string, GlobalCompositeOperation> = {
@@ -1056,19 +1163,18 @@ export default function App() {
       soft_light: 'soft-light', difference: 'difference',
     };
     selected.forEach(layer => {
-      if (!layer.visible) return;
       ctx.save();
       ctx.globalAlpha = Math.max(0, Math.min(1, (layer.opacity ?? 100) / 100));
       ctx.globalCompositeOperation = operation[layer.blendMode] || 'source-over';
-      ctx.drawImage(layer.canvas, 0, 0, 1024, 1024);
+      ctx.drawImage(layer.canvas, 0, 0, width, height);
       ctx.restore();
     });
     const selectedIds = new Set(selected.map(layer => layer.id));
     const firstIndex = layers.findIndex(layer => selectedIds.has(layer.id));
     const sameGroup = selected.every(layer => layer.groupId === selected[0].groupId);
     const merged: Layer = {
-      id: `layer_merged_${Date.now()}`,
-      name: `Merged ${selected.length} Layers`,
+      id: 'layer_merged_' + Date.now(),
+      name: 'Merged ' + selected.length + ' Layers',
       visible: true,
       opacity: 100,
       blendMode: 'normal',
@@ -1076,6 +1182,7 @@ export default function App() {
       canvas,
       ctx,
       channel,
+      uvChannel: selected[0].uvChannel,
       ...(sameGroup && selected[0].groupId ? { groupId: selected[0].groupId } : {}),
       ...(selected[0].pbrSettings ? { pbrSettings: { ...selected[0].pbrSettings } } : {}),
     };
@@ -1086,7 +1193,6 @@ export default function App() {
     undoBuffer.pushState('Merge Selected Layers', remaining);
     notifyTextureUpdated();
   };
-
   const handleDeleteSelectedLayers = (layerIds: string[]) => {
     const ids = new Set(layerIds);
     if (ids.size === 0) return;
@@ -1179,7 +1285,7 @@ export default function App() {
       if (l.id === layerId) {
         return {
           ...l,
-          pbrSettings: pbr,
+          pbrSettings: { ...pbr, heightLevels: pbr.heightLevels ?? l.pbrSettings?.heightLevels },
           opacity: Math.round(pbr.opacity * 100),
         };
       }
@@ -1285,6 +1391,7 @@ export default function App() {
             bumpOn: l.bumpOn ?? l.channel === 'height',
             bumpInfluence: l.bumpInfluence ?? (l.channel === 'height' ? 1 : 0),
             bumpRamp: l.bumpRamp || [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+            heightLevels: l.heightLevels ?? DEFAULT_HEIGHT_LEVELS,
             normalLock: l.normalLock ?? l.channel === 'normal',
           },
         };
