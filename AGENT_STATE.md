@@ -43,6 +43,10 @@ Specialised UV research and Windows shell work are not this slice. See the PIN i
 
 When the to-do set is concluded, it becomes Current history, the view set becomes History, and the filter set moves under `STOP`.
 
+## 2026-11-24 — World-space Base Layer checker
+
+The current Base Layer is a procedural world-space background, excluded from UV compositing/export. Its two checker colours are saved globally only when Save is pressed; per-colour opacity and overall Base Layer opacity reset to 100% for a new project/session. Cancel keeps live in-session edits without persisting colour preferences. Reset restores both colours to #9c9c9c and all opacity values to 100%. See [WORLD_SPACE_BASE_LAYER_2026-11-24.md](notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md) for the file/symbol facility index and manual acceptance checklist.
+
 ## STOP
 
 Read past this line only if absolutely necessary.
