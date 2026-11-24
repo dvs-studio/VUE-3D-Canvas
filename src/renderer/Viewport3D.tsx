@@ -21,6 +21,7 @@ import {
 } from '../core/types';
 import { BrushEngine } from '../tools/brushEngine';
 import { getUVIslandIds } from '../tools/uvIslandMap';
+import { buildUVIslandClipPath } from '../tools/uvIslandClip';
 import { PatternStampEngine } from '../tools/patternStampTool';
 import { SelectionTool } from '../tools/selectionTool';
 import { SymmetryConfig, SymmetryEngine, SymmetryAxis } from '../tools/symmetryEngine';
@@ -241,6 +242,27 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
   const brushEngine = BrushEngine.getInstance();
   const raycaster = useRef(new THREE.Raycaster());
+  const uvIslandPathRef = useRef<Path2D | null>(null);
+
+  // Keep the live paint clip in the same UV channel and pixel dimensions as the active layer.
+  useEffect(() => {
+    const sourceGeometry = geometry || meshRef.current?.geometry;
+    const layer = layers.find(item => item.id === activeLayerId) || layers[0];
+    if (!sourceGeometry || !layer) {
+      uvIslandPathRef.current = null;
+      return;
+    }
+    const uvArray = activeUVChannel
+      ? sourceGeometry.userData?.uvChannels?.[activeUVChannel] as Float32Array | undefined
+      : undefined;
+    uvIslandPathRef.current = buildUVIslandClipPath(
+      sourceGeometry,
+      layer.canvas.width,
+      layer.canvas.height,
+      uvArray,
+    );
+  }, [geometry, activeLayerId, layers, activeUVChannel, uvGeometryVersion]);
+
   // PERF-1/PERF-2: RAF gate — pending paint events queued per frame
   const pendingPaintEventsRef = useRef<PointerEvent[]>([]);
   const rafPaintHandleRef = useRef<number | null>(null);
@@ -1514,7 +1536,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           brush.hardness || 50,
           false,
           targetLayer.canvas.width,
-          targetLayer.canvas.height
+          targetLayer.canvas.height,
+          uvIslandPathRef.current
         );
         if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
         needsRenderRef.current = true;
@@ -1718,6 +1741,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const ctx = layer.ctx;
 
     const applyDabAt = (dx: number, dy: number, strokeKey = 'primary') => {
+      ctx.save();
+      if (uvIslandPathRef.current) ctx.clip(uvIslandPathRef.current);
       if (activeTool === 'brush') {
         brushEngine.paintDabs(ctx, dx, dy, brush, pressure, false, strokeKey);
       } else if (activeTool === 'eraser') {
@@ -1745,6 +1770,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const hex = `#${((1 << 24) + (p[0] << 16) + (p[1] << 8) + p[2]).toString(16).slice(1)}`;
         onColorSampled(hex);
       }
+      ctx.restore();
     };
 
     // Primary stroke dab. Retain the previous input point so the dirty
@@ -1955,7 +1981,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           brush.hardness || 50,
           false,
           targetLayer.canvas.width,
-          targetLayer.canvas.height
+          targetLayer.canvas.height,
+          uvIslandPathRef.current
         );
         if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
         lastUVIslandIdRef.current = uvIslandId;
