@@ -1,15 +1,18 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
+import { createPortal } from 'react-dom';
 import { X, Filter, Upload, RotateCcw, Move } from 'lucide-react';
 import { Layer } from '../core/types';
 import * as THREE from 'three';
-import { buildObjectSpacePositionMap } from '../tools/textureFilters';
+import { buildMeshPartPixelMask, buildObjectSpacePositionMap } from '../tools/textureFilters';
 import { DEFAULT_TEXTURE_FILTER, TextureFilterConfig, TextureFilterKind, WoodSource, transformTexturePixels } from '../tools/textureFilters';
 
 interface MeshPartOption { id: string; name: string; }
-interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; autoHideOnBlur?:boolean; meshParts?:MeshPartOption[]; selectedMeshPart?:string; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
+interface Props { isOpen:boolean; activeLayer?:Layer; geometry?:THREE.BufferGeometry; activeUVChannel?:string; defaultColor:string; autoHideOnBlur?:boolean; meshParts?:MeshPartOption[]; selectedMeshPart?:string; uvGeometryVersion?:number; onClose:()=>void; onApply:(cfg:TextureFilterConfig)=>void; }
 const names:Record<TextureFilterKind,string>={wood:'Wood Grain',hatching:'Hatching', 'cross-hatching':'Cross-Hatching',hashing:'Hashing',powderiser:'Powderiser (Dust)', 'noise-shader':'Noise Shader (Colour Blend)',dither:'Dithering',mosaic:'Mosaic'};
-export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,autoHideOnBlur=false,meshParts=[],selectedMeshPart,onClose,onApply})=>{
- const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor});
+export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,activeUVChannel='uv_original',defaultColor,autoHideOnBlur=false,meshParts=[],selectedMeshPart,uvGeometryVersion=0,onClose,onApply})=>{
+ const [cfg,setCfg]=useState<TextureFilterConfig>({...DEFAULT_TEXTURE_FILTER,color:defaultColor,targetMeshPart:selectedMeshPart||'all'});
+ const [filterError,setFilterError]=useState<string|null>(null);
+ const dialogRef=useRef<HTMLDivElement|null>(null);
  const [windowOffset,setWindowOffset]=useState({x:0,y:0});
  const dragRef=useRef<{x:number;y:number;left:number;top:number}|null>(null);
  const lastTapRef=useRef(0);
@@ -30,20 +33,38 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,a
  const handleHeaderPointerUp=()=>{dragRef.current=null;setTouchDragArmed(false);};
  const [sourceImage,setSourceImage]=useState<string|undefined>();const [preview,setPreview]=useState<ImageData|null>(null);const previewCanvas=useRef<HTMLCanvasElement|null>(null);const uploadRef=useRef<HTMLInputElement|null>(null);
  const update=(patch:Partial<TextureFilterConfig>)=>setCfg(c=>({...c,...patch}));
- const previewObjectMap=useMemo(()=>{if(!geometry)return undefined;try{return buildObjectSpacePositionMap(geometry,320,320,geometry.userData?.uvChannels?.[activeUVChannel] as Float32Array|undefined);}catch{return undefined;}},[geometry,activeUVChannel]);
- useEffect(()=>{if(!isOpen)return;setCfg(c=>({...c,color:defaultColor}));},[isOpen,defaultColor]);
- useEffect(()=>{let cancelled=false;const run=async()=>{if(!isOpen||!activeLayer?.canvas)return;try{const copy=document.createElement('canvas');copy.width=320;copy.height=320;const c=copy.getContext('2d');if(!c)return;c.drawImage(activeLayer.canvas,0,0,copy.width,copy.height);const pixels=c.getImageData(0,0,copy.width,copy.height);const result=await transformTexturePixels(pixels,cfg.kind==='wood'?{...cfg,objectPositionMap:previewObjectMap,objectMapWidth:320,objectMapHeight:320}:cfg);if(!cancelled)setPreview(result);}catch{if(!cancelled)setPreview(null);}};run();return()=>{cancelled=true};},[isOpen,activeLayer,cfg,previewObjectMap]);
+ const activeUVArray=geometry?.userData?.uvChannels?.[activeUVChannel] as Float32Array|undefined;
+ const previewObjectMap=useMemo(()=>{if(!geometry)return undefined;try{return buildObjectSpacePositionMap(geometry,320,320,activeUVArray);}catch{return undefined;}},[geometry,activeUVChannel,uvGeometryVersion]);
+ const previewPartMask=useMemo(()=>{if(!geometry||cfg.useMeshPartMask===false||!cfg.targetMeshPart||cfg.targetMeshPart==='all')return undefined;try{return buildMeshPartPixelMask(geometry,320,320,cfg.targetMeshPart,activeUVArray)||undefined;}catch{return undefined;}},[geometry,activeUVChannel,uvGeometryVersion,cfg.targetMeshPart,cfg.useMeshPartMask]);
+ useEffect(()=>{if(!isOpen)return;setCfg(c=>({...c,color:defaultColor,targetMeshPart:selectedMeshPart||'all',useMeshPartMask:true}));setFilterError(null);},[isOpen,defaultColor,selectedMeshPart]);
+ useEffect(()=>{if(!isOpen||!autoHideOnBlur)return;const handler=(event:PointerEvent)=>{if(dialogRef.current&&!dialogRef.current.contains(event.target as Node))onClose();};document.addEventListener('pointerdown',handler,true);return()=>document.removeEventListener('pointerdown',handler,true);},[isOpen,autoHideOnBlur,onClose]);
+ useEffect(()=>{let cancelled=false;const run=async()=>{if(!isOpen||!activeLayer?.canvas)return;try{const copy=document.createElement('canvas');copy.width=320;copy.height=320;const c=copy.getContext('2d');if(!c)return;c.drawImage(activeLayer.canvas,0,0,copy.width,copy.height);const pixels=c.getImageData(0,0,copy.width,copy.height);const maskRequested=cfg.useMeshPartMask!==false&&!!cfg.targetMeshPart&&cfg.targetMeshPart!=='all';if(maskRequested&&!previewPartMask){setPreview(pixels);setFilterError('Unable to build a UV mask for this mesh part. Select another part or turn off the restriction.');return;}const previewConfig={...cfg,objectPositionMap:previewObjectMap,objectMapWidth:320,objectMapHeight:320,meshPartMask:previewPartMask,meshPartMaskWidth:320,meshPartMaskHeight:320};const result=await transformTexturePixels(pixels,previewConfig);if(!cancelled){setPreview(result);setFilterError(null);}}catch{if(!cancelled){setPreview(null);setFilterError('The filter preview could not be generated for this mesh.');}}};run();return()=>{cancelled=true};},[isOpen,activeLayer,cfg,previewObjectMap,previewPartMask]);
  useEffect(()=>{const canvas=previewCanvas.current;if(!canvas||!preview)return;canvas.width=preview.width;canvas.height=preview.height;canvas.getContext('2d')?.putImageData(preview,0,0);},[preview]);
  const isWood=cfg.kind==='wood';const isDirectional=['hatching','cross-hatching','hashing'].includes(cfg.kind);
  if(!isOpen)return null;
- return <div className="fixed inset-0 z-[70] bg-black/65 flex items-center justify-center p-2 sm:p-4" onMouseDown={e=>{if(autoHideOnBlur&&e.target===e.currentTarget)onClose();}}>
-  <div tabIndex={-1} style={{transform:`translate(${windowOffset.x}px, ${windowOffset.y}px)`}} className="w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd] outline-none">
+ return createPortal(
+  <div className="fixed inset-0 z-[70] pointer-events-none flex items-center justify-center p-2 sm:p-4">
+  <div ref={dialogRef} tabIndex={-1} style={{transform:'translate('+windowOffset.x+'px, '+windowOffset.y+'px)'}} className="pointer-events-auto w-[min(760px,calc(100vw-16px))] max-h-[calc(100dvh-16px)] bg-[#303030] border-2 border-[#555] rounded shadow-2xl flex flex-col overflow-hidden text-[#ddd] outline-none">
    <header onPointerDown={handleHeaderPointerDown} onPointerMove={handleHeaderPointerMove} onPointerUp={handleHeaderPointerUp} onPointerCancel={handleHeaderPointerUp} style={{touchAction:touchDragArmed?"none":"pan-y"}} className="flex items-center justify-between p-3 bg-[#252525] border-b border-[#444] shrink-0 cursor-move select-none"><div className="flex items-center gap-2 text-sm font-bold"><Move className="w-3 h-3 text-[#888]"/><Filter className="w-4 h-4 text-blue-400"/> Layer Filter — Selected Layer</div><button onClick={onClose} aria-label="Close"><X className="w-4 h-4"/></button></header>
    <div className="flex-1 min-h-0 overflow-auto p-3 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(240px,300px)] gap-3">
     <section className="space-y-3 min-w-0">
      <label className="block text-xs">Filter
       <select value={cfg.kind} onChange={e=>update({kind:e.target.value as TextureFilterKind})} className="block mt-1 w-full min-w-0 bg-[#1c1c1c] border border-[#555] rounded p-2">{Object.entries(names).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
      </label>
+     {meshParts.length>0&&<div className="space-y-2 p-2 border border-[#555] rounded min-w-0">
+      <div className="text-xs font-semibold">Mesh Part Target</div>
+      <label className="block text-xs">Apply filter to
+       <select value={cfg.targetMeshPart||selectedMeshPart||'all'} onChange={e=>{update({targetMeshPart:e.target.value});setFilterError(null);}} className="block mt-1 w-full min-w-0 bg-[#1c1c1c] border border-[#555] rounded p-2">
+        <option value="all">All mesh parts</option>
+        {meshParts.map(part=><option key={part.id} value={part.id}>{part.name}</option>)}
+       </select>
+      </label>
+      <label className="flex items-center gap-2 text-[11px]">
+       <input type="checkbox" checked={cfg.useMeshPartMask!==false} onChange={e=>{update({useMeshPartMask:e.target.checked});setFilterError(null);}}/>
+       Restrict processing to this part's UV triangles
+      </label>
+      <p className="text-[10px] text-[#aaa]">Pixels outside the selected part remain unchanged. The mask follows the active UV channel.</p>
+     </div>}
      {isWood&&<div className="space-y-2 p-2 border border-[#555] rounded min-w-0">
       <div className="flex items-center justify-between gap-2"><div className="text-xs font-semibold">Wood Source Stack</div><button onClick={()=>update({woodSources:[...(cfg.woodSources||[]),{id:`wood-${Date.now()}`,source:'color',color:cfg.color,density:50}]})} className="px-2 py-1 rounded border border-[#666] text-[10px]">+ Add Source</button></div>
       {(cfg.woodSources||[]).map((item,index)=><div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 p-2 bg-[#222] rounded border border-[#444]">
@@ -76,15 +97,16 @@ export const TextureFilterDialog:React.FC<Props>=({isOpen,activeLayer,geometry,a
      {cfg.kind==='dither'&&<><Slider label="Tonal Levels" value={cfg.levels} min={2} max={16} onChange={v=>update({levels:v})}/><label className="block text-xs">Pattern<select value={cfg.ditherPattern||'hash'} onChange={e=>update({ditherPattern:e.target.value as TextureFilterConfig['ditherPattern']})} className="block mt-1 w-full bg-[#1c1c1c] border border-[#555] rounded p-2"><option value="hash">Hash</option><option value="bayer">Bayer 4x4</option></select></label><Slider label="Pattern seed" value={cfg.filterSeed??71} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
      {cfg.kind==='powderiser'&&<><Slider label="Dust breakup" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Dust drift distance" value={cfg.shift} min={1} max={48} onChange={v=>update({shift:v})}/><Slider label="Drift angle" value={cfg.angle} min={-180} max={180} onChange={v=>update({angle:v})}/><Slider label="Powder seed" value={cfg.filterSeed??211} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
      {cfg.kind==='noise-shader'&&<><Slider label="Random darkness blend" value={cfg.noise} min={0} max={100} onChange={v=>update({noise:v})}/><Slider label="Noise seed" value={cfg.filterSeed??71} min={1} max={999} onChange={v=>update({filterSeed:v})}/></>}
-     <button onClick={()=>setCfg({...DEFAULT_TEXTURE_FILTER,color:defaultColor})} className="w-full border border-[#555] rounded p-1.5 text-xs flex items-center justify-center gap-1"><RotateCcw className="w-3 h-3"/>Reset Settings</button>
+     <button onClick={()=>{setCfg({...DEFAULT_TEXTURE_FILTER,color:defaultColor,targetMeshPart:selectedMeshPart||'all',useMeshPartMask:true});setFilterError(null);}} className="w-full border border-[#555] rounded p-1.5 text-xs flex items-center justify-center gap-1"><RotateCcw className="w-3 h-3"/>Reset Settings</button>
     </section>
     <section className="min-w-0 flex flex-col gap-2">
      <div className="text-xs font-semibold">Preview</div><div className="bg-[#1c1c1c] border border-[#555] rounded p-1 min-h-[200px] flex items-center justify-center overflow-hidden"><canvas ref={previewCanvas} className="max-w-full max-h-[340px] object-contain"/></div><div className="text-[10px] text-[#999]">Preview is calculated from the active layer image. Apply replaces the selected layer image pixels.</div>
     </section>
    </div>
-   <footer className="border-t border-[#444] p-3 flex justify-end gap-2"><button onClick={onClose} className="px-3 py-1.5 border border-[#555] rounded">Cancel</button><button onClick={()=>{if(cfg.kind==='wood'&&geometry&&activeLayer?.canvas){try{const map=buildObjectSpacePositionMap(geometry,activeLayer.canvas.width,activeLayer.canvas.height,geometry.userData?.uvChannels?.[activeUVChannel] as Float32Array|undefined);onApply({...cfg,objectPositionMap:map,objectMapWidth:activeLayer.canvas.width,objectMapHeight:activeLayer.canvas.height});}catch(error){window.alert(error instanceof Error?error.message:'Unable to map wood grain to this mesh');}}else onApply(cfg);}} disabled={!activeLayer||activeLayer.locked} className="px-4 py-1.5 bg-blue-600 disabled:opacity-40 rounded text-white font-semibold">Apply to Selected Layer</button></footer>
+   {filterError&&<div className="px-3 py-2 text-[11px] text-amber-300 bg-[#382b1b] border-t border-[#66502f]">{filterError}</div>}
+   <footer className="border-t border-[#444] p-3 flex justify-end gap-2"><button onClick={onClose} className="px-3 py-1.5 border border-[#555] rounded">Cancel</button><button onClick={()=>{if(!activeLayer?.canvas)return;try{const width=activeLayer.canvas.width,height=activeLayer.canvas.height;const uvArray=geometry?.userData?.uvChannels?.[activeUVChannel] as Float32Array|undefined;const objectPositionMap=geometry?buildObjectSpacePositionMap(geometry,width,height,uvArray):undefined;const maskRequested=cfg.useMeshPartMask!==false&&!!cfg.targetMeshPart&&cfg.targetMeshPart!=='all';const meshPartMask=maskRequested&&geometry?buildMeshPartPixelMask(geometry,width,height,cfg.targetMeshPart!,uvArray):undefined;if(maskRequested&&!meshPartMask){setFilterError('Unable to build a UV mask for this mesh part. No pixels were changed.');return;}onApply({...cfg,objectPositionMap,objectMapWidth:width,objectMapHeight:height,meshPartMask:meshPartMask||undefined,meshPartMaskWidth:width,meshPartMaskHeight:height});}catch(error){setFilterError(error instanceof Error?error.message:'Unable to prepare this mesh filter.');}}} disabled={!activeLayer||activeLayer.locked} className="px-4 py-1.5 bg-blue-600 disabled:opacity-40 rounded text-white font-semibold">Apply to Selected Layer</button></footer>
   </div>
- </div>;
+ </div>, document.body);
 };
 const Slider:React.FC<{label:string,value:number,min:number,max:number,onChange:(v:number)=>void}> = ({label,value,min,max,onChange}) => (
  <label className="block text-[11px] space-y-1">
