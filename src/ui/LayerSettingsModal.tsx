@@ -5,8 +5,9 @@
  * Created by Victory Ukpong
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
+import type { ExternalAsset } from '../tools/externalAssetLibrary';
 import { Sliders, X, Check, Sun, Flame, Shield, Layers, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 
 interface LayerSettingsModalProps {
@@ -17,6 +18,9 @@ interface LayerSettingsModalProps {
   onOpenNodeEditor?: () => void;
   uvChannels?: { id: string; name: string }[];
   onSetUVChannel?: (layerId: string, channelId: string) => void;
+  externalTextureAssets?: ExternalAsset[];
+  onBrowseTextureLibrary?: () => void;
+  isScanningTextureLibrary?: boolean;
 }
 
 const DEFAULT_RAMP: BumpRampStop[] = [
@@ -66,8 +70,12 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
   onSavePBR,
   uvChannels = [],
   onSetUVChannel,
+  externalTextureAssets = [],
+  onBrowseTextureLibrary,
+  isScanningTextureLibrary = false,
 }) => {
   const [pbr, setPbr] = useState<LayerPBRSettings | null>(null);
+  const matcapFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setPbr(layer ? settingsFor(layer) : null);
@@ -77,6 +85,16 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
 
   const update = (patch: Partial<LayerPBRSettings>) => {
     setPbr(previous => previous ? { ...previous, ...patch } : previous);
+  };
+
+  const handleMatcapFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') update({ customMatcapUrl: reader.result, matcapPreset: 'custom', reflectionSource: 'matcap' });
+    };
+    reader.readAsDataURL(file);
   };
 
   const updateRamp = (index: number, patch: Partial<BumpRampStop>) => {
@@ -179,6 +197,27 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
             <label className="flex justify-between items-center gap-3">Metallic <input type="range" min="0" max="1" step="0.01" value={pbr.metallic} onChange={e => update({ metallic: Number(e.target.value) })} className="w-40 accent-[#fab387]" /><span className="font-mono">{pbr.metallic.toFixed(2)}</span></label>
             <label className="flex justify-between items-center gap-3">Emission strength <input type="range" min="0" max="10" step="0.1" value={pbr.emissionStrength} onChange={e => update({ emissionStrength: Number(e.target.value) })} className="w-40 accent-[#ff9900]" /><span className="font-mono">{pbr.emissionStrength.toFixed(1)}</span></label>
             <label className="flex items-center justify-between">Emission tint <input type="color" value={pbr.emissionColor || '#ffffff'} onChange={e => update({ emissionColor: e.target.value })} className="w-8 h-6 bg-transparent border-0" /></label>
+          </section>
+
+          <section className="p-3 bg-[#242424] border border-[#3e3e3e] rounded-md space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div><strong className="text-[#eee]">Matcap image source</strong><p className="text-[10px] text-[#888]">Choose a built-in style, browse an image, or use an image from the scanned texture library.</p></div>
+              <select value={pbr.reflectionSource} onChange={e => update({ reflectionSource: e.target.value as 'hdri' | 'matcap' })} className="bg-[#1b1b1b] border border-[#555] rounded px-2 py-1 text-[10px] text-white"><option value="hdri">HDRI</option><option value="matcap">Matcap</option></select>
+            </div>
+            {pbr.reflectionSource === 'matcap' && <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <select value={pbr.matcapPreset || 'chrome'} onChange={e => update({ matcapPreset: e.target.value as LayerPBRSettings['matcapPreset'] })} className="bg-[#1b1b1b] border border-[#555] rounded px-2 py-1 text-[10px] text-white">
+                  <option value="chrome">Chrome</option><option value="ceramic">Ceramic</option><option value="clay">Clay</option><option value="pearl">Pearl</option><option value="gold">Gold</option><option value="custom">Custom image</option>
+                </select>
+                <button type="button" onClick={() => matcapFileInputRef.current?.click()} className="px-2 py-1 bg-[#333] border border-[#555] rounded text-[10px] text-[#ddd]">Browse image…</button>
+                <button type="button" onClick={onBrowseTextureLibrary} disabled={isScanningTextureLibrary} className="px-2 py-1 bg-[#333] border border-[#555] rounded text-[10px] text-[#ddd] disabled:opacity-50">{isScanningTextureLibrary ? 'Scanning…' : 'Scan library'}</button>
+                <input ref={matcapFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleMatcapFile} />
+              </div>
+              {pbr.customMatcapUrl && <div className="flex items-center gap-2"><img src={pbr.customMatcapUrl} alt="Selected custom matcap" className="w-12 h-12 object-cover rounded border border-[#555]" /><span className="text-[10px] text-[#aaa]">Custom matcap selected</span><button type="button" onClick={() => update({ customMatcapUrl: undefined, matcapPreset: 'chrome' })} className="text-[10px] text-[#e88]">Clear</button></div>}
+              {externalTextureAssets.length > 0 && <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-36 overflow-y-auto">
+                {externalTextureAssets.map(asset => <button key={asset.id} type="button" title={asset.relativePath} onClick={() => update({ customMatcapUrl: asset.dataUrl, matcapPreset: 'custom' })} className={`p-1 rounded border ${pbr.customMatcapUrl === asset.dataUrl ? 'border-[#3d7fb8] bg-[#263b50]' : 'border-[#444] bg-[#1c1c1c]'}`}><img src={asset.dataUrl} alt={asset.name} className="w-full aspect-square object-cover rounded" /><span className="block truncate text-[9px] text-[#bbb]">{asset.name}</span></button>)}
+              </div>}
+            </>}
           </section>
 
           {pbr.normalLock && <div className="p-2 bg-[#1a2e22] border border-[#2d5a3d] rounded text-[#a6e3a1] flex items-center gap-2"><Layers className="w-4 h-4" /> This layer is the locked normal source. Other normal maps will not be mixed with it.</div>}
