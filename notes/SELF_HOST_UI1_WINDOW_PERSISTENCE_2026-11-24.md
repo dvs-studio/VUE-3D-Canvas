@@ -19,4 +19,4 @@ In `src/App.tsx`:
 4. Test normal HTTP hosting and `file://` where supported by the target browser. Browser storage policies can differ by origin and file URL.
 
 ## Verification boundary
-The source change is committed to `main`. CI is required for TypeScript/build/package verification. Persistence across actual browser restarts remains a manual acceptance test.
+The source change is committed to `main`. Run #285 passed TypeScript diagnostics, Vite build, self-host synchronisation, package validation, generated-output commit, ZIP creation and artifact upload. Artifact ID: `14921232460`. Persistence across actual browser restarts remains a manual acceptance test.
