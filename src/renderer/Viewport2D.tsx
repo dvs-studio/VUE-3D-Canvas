@@ -220,8 +220,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const drawOverlay = useCallback(() => {
     const cvs = overlayCanvasRef.current;
     if (!cvs) return;
-    cvs.width = 1024;
-    cvs.height = 1024;
+    if (cvs.width !== uvCanvasWidth) cvs.width = uvCanvasWidth;
+    if (cvs.height !== uvCanvasHeight) cvs.height = uvCanvasHeight;
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, uvCanvasWidth, uvCanvasHeight);
@@ -325,7 +325,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           } else {
             // Keep only inside the mask as dark (protected)
             offCtx.globalCompositeOperation = 'destination-in';
-            offCtx.drawImage(selectionMask.maskCanvas, 0, 0, 1024, 1024);
+            offCtx.drawImage(selectionMask.maskCanvas, 0, 0, uvCanvasWidth, uvCanvasHeight);
           }
           ctx.drawImage(offCanvas, 0, 0);
         }
@@ -546,8 +546,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
     if (isSculptModeActive) {
       isPaintingRef.current = true;
-      const u = x / 1024.0;
-      const v = 1.0 - (y / 1024.0);
+      const u = x / uvCanvasWidth;
+      const v = 1.0 - (y / uvCanvasHeight);
       const modified = UVSculptEngine.applyStroke(effectiveGeom, {
         u,
         v,
@@ -714,8 +714,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
     // 2D UV Sculpt Brush Dragging
     if (isSculptModeActive && sculptBrushMode === 'drag') {
-      const u = x / 1024.0;
-      const v = 1.0 - (y / 1024.0);
+      const u = x / uvCanvasWidth;
+      const v = 1.0 - (y / uvCanvasHeight);
       const last = uvDragLast.current;
       if (last && uvSelectionRef.current.size > 0) {
         const moved = SmartUVUnwrapEngine.moveUVs(effectiveGeom, uvSelectionRef.current, u - last.u, v - last.v);
@@ -729,8 +729,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     }
 
     if (isSculptModeActive) {
-      const u = x / 1024.0;
-      const v = 1.0 - (y / 1024.0);
+      const u = x / uvCanvasWidth;
+      const v = 1.0 - (y / uvCanvasHeight);
       const modified = UVSculptEngine.applyStroke(effectiveGeom, {
         u,
         v,
