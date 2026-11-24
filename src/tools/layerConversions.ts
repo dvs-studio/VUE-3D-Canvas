@@ -11,6 +11,7 @@
  */
 
 import { Layer } from '../core/types';
+import { DEFAULT_HEIGHT_LEVELS } from './heightLevels';
 
 export class LayerConversions {
   /**
@@ -27,19 +28,20 @@ export class LayerConversions {
       emissionStrength: previous?.emissionStrength ?? 1,
       emissionColor: previous?.emissionColor ?? '#ffffff',
       opacity: previous?.opacity ?? (layer.opacity ?? 100) / 100,
-      enableColor: true,
+      enableColor: layer.channel !== 'height',
       enableBump: true,
       reflectionSource: previous?.reflectionSource ?? 'hdri',
       reflectionIntensity: previous?.reflectionIntensity ?? 0.8,
-      colorOn: true,
-      colorInfluence: 1,
+      colorOn: layer.channel !== 'height',
+      colorInfluence: layer.channel === 'height' ? 0 : 1,
       reflectionOn: false,
       reflectionInfluence: 0,
       emissionOn: false,
       emissionInfluence: 0,
       bumpOn: true,
-      bumpInfluence: 1,
-      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      bumpInfluence: previous?.bumpInfluence ?? 1,
+      bumpRamp: previous?.bumpRamp ?? [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      heightLevels: previous?.heightLevels ?? DEFAULT_HEIGHT_LEVELS,
       normalLock: false,
     };
     if (!layer.name.includes('(Bump)')) layer.name = `${layer.name} (Bump)`;
@@ -71,8 +73,9 @@ export class LayerConversions {
       emissionOn: false,
       emissionInfluence: 0,
       bumpOn: true,
-      bumpInfluence: 1,
-      bumpRamp: [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      bumpInfluence: previous?.bumpInfluence ?? 1,
+      bumpRamp: previous?.bumpRamp ?? [{ position: 0, height: 0 }, { position: 1, height: 1 }],
+      heightLevels: previous?.heightLevels ?? DEFAULT_HEIGHT_LEVELS,
       normalLock: false,
     };
     if (!layer.name.includes('(Displacement)')) layer.name = `${layer.name} (Displacement)`;
