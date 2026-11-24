@@ -2039,7 +2039,10 @@ export default function App() {
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
                             onAddGroup={handleAddGroup}
-                            onGroupSelectedLayers={handleGroupSelectedLayers}
+                      onGroupSelectedLayers={handleGroupSelectedLayers}
+                      groups={layers.filter(layer => layer.isGroup)}
+                      onMoveSelectedLayersToGroup={handleMoveSelectedLayersToGroup}
+                      onMergeSelectedLayers={handleMergeSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
                             onMoveSelectedLayersToGroup={handleMoveSelectedLayersToGroup}
                             onMergeSelectedLayers={handleMergeSelectedLayers}
@@ -2236,8 +2239,13 @@ export default function App() {
                       onConvertToNormal={handleConvertToNormal}
                       onConvertToClipMask={handleConvertToClipMask}
                       onConvertToEmissive={handleConvertToEmissive}
+                      onInvertLayerColor={handleInvertLayerColor}
                       onImportTexture={() => textureFileInputRef.current?.click()}
                       onBakeTextureFill={handleBakeTextureFill}
+                      onOpenLayerSettings={(id) => {
+                        setLayerSettingsTargetId(id);
+                        setIsLayerSettingsOpen(true);
+                      }}
                     />
                   </DockablePanelFrame>
                 </div>
@@ -2309,6 +2317,8 @@ export default function App() {
                       materialProps={materialProps}
                       showGizmo={showGizmo}
                       onToggleGizmo={() => setShowGizmo(g => !g)}
+                      surfaceMode={surfaceMode}
+                      shadingMode={shadingMode}
                       meshComponentVisibility={meshComponentVisibility}
                       hiddenMeshComponents={hiddenMeshComponents}
                       isolateSelectedGroupOnly={isolateSelectedGroupOnly}
