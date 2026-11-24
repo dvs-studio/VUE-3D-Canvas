@@ -42,6 +42,7 @@ export class BrushEngine {
   private patternCanvasCache = new Map<string, HTMLCanvasElement>();
   // PERF-4: reuse a single temp canvas per stroke instead of allocating inside applyCloneStampAt per dab
   private cloneTempCanvas: HTMLCanvasElement | null = null;
+  private blurTempCanvas: HTMLCanvasElement | null = null;
 
   public static getInstance(): BrushEngine {
     if (!BrushEngine.instance) {
@@ -576,7 +577,17 @@ export class BrushEngine {
 
     const imgData = ctx.getImageData(minX, minY, w, h);
     this.wasmMemory.applyFastBoxBlur(imgData.data, w, h, 2);
-    ctx.putImageData(imgData, minX, minY);
+
+    // putImageData ignores the active Canvas2D clip region. Draw the blurred
+    // patch through the caller's UV-island clip instead so blur cannot spill
+    // outside the mesh's UV coverage.
+    if (!this.blurTempCanvas) this.blurTempCanvas = document.createElement('canvas');
+    const tempCanvas = this.blurTempCanvas;
+    if (tempCanvas.width !== w) tempCanvas.width = w;
+    if (tempCanvas.height !== h) tempCanvas.height = h;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.putImageData(imgData, 0, 0);
+    ctx.drawImage(tempCanvas, minX, minY);
   }
 
   /**
