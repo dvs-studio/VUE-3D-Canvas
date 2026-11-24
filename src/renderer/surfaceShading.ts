@@ -17,7 +17,7 @@ export type SurfaceShadingType = 'default' | 'smooth' | 'flat';
 export class SurfaceShadingEngine {
   // Geometry-scoped cache: switching Def/Smooth/Flat reuses computed normal
   // buffers instead of recalculating the same topology on every toggle.
-  private static normalCache = new WeakMap<THREE.BufferGeometry, Partial<Record<SurfaceShadingType, THREE.BufferAttribute>>>();
+  private static normalCache = new WeakMap<THREE.BufferGeometry, Partial<Record<SurfaceShadingType, THREE.BufferAttribute | THREE.InterleavedBufferAttribute>>>();
   /**
    * Caches original mesh normals into a 'defaultNormal' attribute if not already present.
    */
