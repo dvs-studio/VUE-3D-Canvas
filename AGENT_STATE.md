@@ -862,11 +862,8 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 
 ---
 
-## 2026-11-24 — Protected base layer restored
-- Added `Layer.isBaseLayer` metadata.
-- Initial base layer is locked and permanently visible.
-- Layers panel marks it as BASE and disables visibility, lock, grouping, blend, opacity, duplicate, move, and delete operations for it.
-- App-level handlers block direct and bulk deletion, duplication, grouping, visibility/lock/opacity/blend changes, and reordering.
-- Legacy `.xblend` loading recreates a neutral `#9c9c9c` base coat when absent and normalises the base to the bottom when present.
-- Note: this is the texture-stack fallback layer, not the UV viewport grid/checkerboard.
-- CI run #291/#292 is pending at the time of this note; manual browser acceptance and project round-trip remain outstanding.
+## 2026-11-24 — Protected base layer restored (original model superseded)
+- The original protection pass added `Layer.isBaseLayer`, a permanent bottom layer, and guards against painting and destructive stack actions.
+- Its initial solid-grey UV fallback-coat rendering was superseded by the world-space procedural checker implementation.
+- Current behaviour, Save / Cancel / Reset semantics, file/symbol bookmarks, and acceptance checks are documented in `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md`.
+- The earlier protection-only CI result does not validate the newer shader/dialog implementation; see the later GPT-6 world-space Base Layer handover entry above.
