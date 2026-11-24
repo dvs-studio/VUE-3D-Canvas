@@ -466,16 +466,16 @@ export default function App() {
   }, [subdivisionPreviewGeometry, activeGeometry]);
 
   // Synchronously composites all visible layers into canonical compositeCanvas
-  const syncCompositeCanvas = useCallback(() => {
+  const syncCompositeCanvas = useCallback((sourceLayers: Layer[] = layers) => {
     const ctx = compositeCanvas.getContext('2d');
     if (!ctx) return;
     ctx.fillStyle = '#2b2b2b';
     ctx.fillRect(0, 0, 1024, 1024);
 
-    layers.forEach(layer => {
+    sourceLayers.forEach(layer => {
       if (!layer.visible || layer.isGroup) return;
       if (layer.groupId) {
-        const parent = layers.find(l => l.id === layer.groupId);
+        const parent = sourceLayers.find(l => l.id === layer.groupId);
         if (parent && !parent.visible) return;
       }
       const pbr = layer.pbrSettings || ({} as any);
@@ -517,24 +517,36 @@ export default function App() {
   const notifyUVGeometryUpdated = useCallback(() => { setUvGeometryVersion(v => v + 1); notifyTextureUpdated(); }, [notifyTextureUpdated]);
 
   const handleRebakeTexture = useCallback((fromChannel: string, toChannel: string, resolution: number) => {
-    if (!activeGeometry) return;
-    const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
+    if (!activeGeometry || !Number.isFinite(resolution) || resolution < 1) return;
+    const activeLayer = layers.find(layer => layer.id === activeLayerId) || layers.find(layer => !layer.isGroup);
+    if (!activeLayer || activeLayer.isGroup || activeLayer.locked) return;
+
     const bakedCanvas = UVChannelManager.rebakeTexture(activeGeometry, activeLayer.canvas, fromChannel, toChannel, resolution);
-    activeLayer.canvas.width = resolution;
-    activeLayer.canvas.height = resolution;
-    activeLayer.ctx.clearRect(0, 0, resolution, resolution);
-    activeLayer.ctx.drawImage(bakedCanvas, 0, 0);
+    // Snapshot the old layer canvases before replacing every layer with the new resolution.
+    undoBuffer.pushState('Re-Bake Texture [' + fromChannel + ' -> ' + toChannel + ']', layers);
+
+    const nextLayers = layers.map(layer => {
+      const canvas = document.createElement('canvas');
+      canvas.width = resolution;
+      canvas.height = resolution;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return layer;
+      if (layer.id === activeLayer.id) {
+        ctx.drawImage(bakedCanvas, 0, 0, resolution, resolution);
+        return { ...layer, canvas, ctx, uvChannel: toChannel };
+      }
+      // Keep every other layer aligned with the rebaked active texture resolution.
+      ctx.drawImage(layer.canvas, 0, 0, resolution, resolution);
+      return { ...layer, canvas, ctx };
+    });
 
     UVChannelManager.setActiveChannel(activeGeometry, toChannel);
     setActiveUVChannel(toChannel);
-    setLayers(prev => prev.map(layer => layer.id === activeLayer.id ? { ...layer, uvChannel: toChannel } : layer));
+    setLayers(nextLayers);
     setUvGeometryVersion(v => v + 1);
-
-    undoBuffer.pushState(`Re-Bake Texture [${fromChannel} -> ${toChannel}]`, layers);
-    syncCompositeCanvas();
+    syncCompositeCanvas(nextLayers);
     setTextureVersion(v => v + 1);
   }, [activeGeometry, layers, activeLayerId, undoBuffer, syncCompositeCanvas]);
-
   const handleSeamlessUV = useCallback((radius: number) => {
     const target = layers.find(layer => layer.id === activeLayerId);
     if (!target || target.isGroup || target.locked) return;
@@ -1360,7 +1372,11 @@ export default function App() {
         const ctx = cvs.getContext('2d')!;
         const img = new Image();
         img.onload = () => {
-          ctx.drawImage(img, 0, 0);
+          if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+            if (cvs.width !== img.naturalWidth) cvs.width = img.naturalWidth;
+            if (cvs.height !== img.naturalHeight) cvs.height = img.naturalHeight;
+          }
+          ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
           notifyTextureUpdated();
         };
         img.src = l.dataUrl;
