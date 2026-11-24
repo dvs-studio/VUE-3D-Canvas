@@ -70,6 +70,7 @@ interface Viewport2DProps {
   geometry?: THREE.BufferGeometry;
   onGeometryUpdated?: () => void;
   activeUVChannel?: string;
+  uvGeometryVersion?: number;
   onSelectUVChannel?: (id: string) => void;
   selectedVertices?: Set<number>;
   onRebakeTexture?: (from: string, to: string, res: number) => void;
@@ -97,6 +98,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   geometry,
   onGeometryUpdated,
   activeUVChannel = 'uv_original',
+  uvGeometryVersion = 0,
   onSelectUVChannel,
   selectedVertices = new Set(),
   onRebakeTexture,
@@ -106,6 +108,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const maskShadeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isPointerInsideRef = useRef(false);
 
   // Pan & Zoom Navigation State
   const [zoom, setZoom] = useState(0.75);
@@ -133,19 +137,24 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     return BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]().geometry : BUILTIN_MODELS.suzanne().geometry;
   }, [geometry, modelKey, customOBJText]);
 
-  // Toggle N-Panel with 'n' key
+  // Toggle the UV N-Panel only when the 2D viewport is the active pointer/focus area.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'n' || e.key === 'N') && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      const target = e.target as HTMLElement | null;
+      const focusInside = !!containerRef.current?.contains(document.activeElement);
+      const editable = !!target && (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable);
+      if ((e.key === 'n' || e.key === 'N') && (isPointerInsideRef.current || focusInside) && !editable) {
         setIsNPanelOpen(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  useEffect(() => () => {
+    document.body.dataset.uv2dPointerInside = 'false';
+  }, []);
 
-  // Advanced UV Controls: UV Set Dropdown & Smart UV Unwrap State
-  const [activeUVSet, setActiveUVSet] = useState<'uv_0' | 'uv_1' | 'uv_2'>('uv_0');
+  // Advanced UV Controls: active UV channel and Smart UV Unwrap State
   const [showSmartUVModal, setShowSmartUVModal] = useState<boolean>(false);
   const [smartUVAngleLimit, setSmartUVAngleLimit] = useState<number>(60);
   const [smartUVMargin, setSmartUVMargin] = useState<number>(0.02);
@@ -166,22 +175,25 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const brushEngine = BrushEngine.getInstance();
 
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
+  const uvCanvasWidth = Math.max(1, activeLayer?.canvas.width ?? 1024);
+  const uvCanvasHeight = Math.max(1, activeLayer?.canvas.height ?? 1024);
+  const uvChannels = React.useMemo(() => UVChannelManager.getChannels(effectiveGeom), [effectiveGeom, uvGeometryVersion]);
 
   // Render 2D Texture Composite Layer
   useEffect(() => {
     const cvs = canvasRef.current;
     if (!cvs || !activeLayer) return;
 
-    cvs.width = 1024;
-    cvs.height = 1024;
+    if (cvs.width !== uvCanvasWidth) cvs.width = uvCanvasWidth;
+    if (cvs.height !== uvCanvasHeight) cvs.height = uvCanvasHeight;
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
 
     // CS5 / ArmorPaint Dark Neutral Checkerboard Background
     ctx.fillStyle = '#222222';
-    ctx.fillRect(0, 0, 1024, 1024);
-    for (let y = 0; y < 1024; y += 32) {
-      for (let x = 0; x < 1024; x += 32) {
+    ctx.fillRect(0, 0, uvCanvasWidth, uvCanvasHeight);
+    for (let y = 0; y < uvCanvasHeight; y += 32) {
+      for (let x = 0; x < uvCanvasWidth; x += 32) {
         if ((x / 32 + y / 32) % 2 === 0) {
           ctx.fillStyle = '#2b2b2b';
           ctx.fillRect(x, y, 32, 32);
@@ -194,12 +206,15 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       if (!layer.visible) return;
       ctx.save();
       ctx.globalAlpha = layer.opacity / 100;
+      const blend = layer.blendMode === 'normal' ? 'source-over' : layer.blendMode.replace('_', '-') as GlobalCompositeOperation;
+      ctx.globalCompositeOperation = blend;
       ctx.drawImage(layer.canvas, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
       ctx.restore();
     });
 
     drawOverlay();
-  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText]);
+  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText, uvCanvasWidth, uvCanvasHeight, activeUVChannel, uvGeometryVersion]);
 
   // Draw overlay (UV wireframe mesh unwrap, selection marching ants, pen vector paths)
   const drawOverlay = useCallback(() => {
@@ -209,7 +224,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     cvs.height = 1024;
     const ctx = cvs.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, 1024, 1024);
+    ctx.clearRect(0, 0, uvCanvasWidth, uvCanvasHeight);
 
     // 1. RENDER 3D MODEL UV WIREFRAME MESH OVERLAY
     if (showUVOverlay) {
@@ -232,12 +247,12 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
               const i1 = idxArr[i + 1];
               const i2 = idxArr[i + 2];
 
-              const u0 = uvAttr.getX(i0) * 1024;
-              const v0 = (1 - uvAttr.getY(i0)) * 1024;
-              const u1 = uvAttr.getX(i1) * 1024;
-              const v1 = (1 - uvAttr.getY(i1)) * 1024;
-              const u2 = uvAttr.getX(i2) * 1024;
-              const v2 = (1 - uvAttr.getY(i2)) * 1024;
+              const u0 = uvAttr.getX(i0) * uvCanvasWidth;
+              const v0 = (1 - uvAttr.getY(i0)) * uvCanvasHeight;
+              const u1 = uvAttr.getX(i1) * uvCanvasWidth;
+              const v1 = (1 - uvAttr.getY(i1)) * uvCanvasHeight;
+              const u2 = uvAttr.getX(i2) * uvCanvasWidth;
+              const v2 = (1 - uvAttr.getY(i2)) * uvCanvasHeight;
 
               ctx.moveTo(u0, v0);
               ctx.lineTo(u1, v1);
@@ -247,12 +262,12 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           } else {
             // Non-indexed triangle buffer
             for (let i = 0; i < uvAttr.count; i += 3) {
-              const u0 = uvAttr.getX(i) * 1024;
-              const v0 = (1 - uvAttr.getY(i)) * 1024;
-              const u1 = uvAttr.getX(i + 1) * 1024;
-              const v1 = (1 - uvAttr.getY(i + 1)) * 1024;
-              const u2 = uvAttr.getX(i + 2) * 1024;
-              const v2 = (1 - uvAttr.getY(i + 2)) * 1024;
+              const u0 = uvAttr.getX(i) * uvCanvasWidth;
+              const v0 = (1 - uvAttr.getY(i)) * uvCanvasHeight;
+              const u1 = uvAttr.getX(i + 1) * uvCanvasWidth;
+              const v1 = (1 - uvAttr.getY(i + 1)) * uvCanvasHeight;
+              const u2 = uvAttr.getX(i + 2) * uvCanvasWidth;
+              const v2 = (1 - uvAttr.getY(i + 2)) * uvCanvasHeight;
 
               ctx.moveTo(u0, v0);
               ctx.lineTo(u1, v1);
@@ -268,8 +283,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
             ctx.fillStyle = '#f472b6';
             ctx.globalAlpha = 0.95;
             for (const i of selected) {
-              const sx = uvAttr.getX(i) * 1024;
-              const sy = (1 - uvAttr.getY(i)) * 1024;
+              const sx = uvAttr.getX(i) * uvCanvasWidth;
+              const sy = (1 - uvAttr.getY(i)) * uvCanvasHeight;
               ctx.fillRect(sx - 2, sy - 2, 4, 4);
             }
           }
@@ -278,7 +293,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           ctx.strokeStyle = '#ffffff';
           ctx.globalAlpha = Math.min(1.0, uvOverlayOpacity + 0.2);
           ctx.lineWidth = 1.5;
-          ctx.strokeRect(0, 0, 1024, 1024);
+          ctx.strokeRect(0, 0, uvCanvasWidth, uvCanvasHeight);
 
           ctx.restore();
         }
@@ -293,18 +308,20 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
       // Draw dark protective tint on uneditable area
       if ((selectionMask.type === 'brush' || selectionMask.type === 'bitmap') && selectionMask.maskCanvas) {
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = 1024;
-        offCanvas.height = 1024;
+        const offCanvas = maskShadeCanvasRef.current || document.createElement('canvas');
+        maskShadeCanvasRef.current = offCanvas;
+        if (offCanvas.width !== uvCanvasWidth) offCanvas.width = uvCanvasWidth;
+        if (offCanvas.height !== uvCanvasHeight) offCanvas.height = uvCanvasHeight;
         const offCtx = offCanvas.getContext('2d');
         if (offCtx) {
           offCtx.fillStyle = 'rgba(8, 12, 22, 0.65)';
-          offCtx.fillRect(0, 0, 1024, 1024);
+          offCtx.clearRect(0, 0, uvCanvasWidth, uvCanvasHeight);
+          offCtx.fillRect(0, 0, uvCanvasWidth, uvCanvasHeight);
 
           if (!selectionMask.inverted) {
             // Cut out the painted mask area (light = editable)
             offCtx.globalCompositeOperation = 'destination-out';
-            offCtx.drawImage(selectionMask.maskCanvas, 0, 0, 1024, 1024);
+            offCtx.drawImage(selectionMask.maskCanvas, 0, 0, uvCanvasWidth, uvCanvasHeight);
           } else {
             // Keep only inside the mask as dark (protected)
             offCtx.globalCompositeOperation = 'destination-in';
@@ -316,7 +333,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         // Geometric selections: rect, ellipse, lasso
         ctx.fillStyle = 'rgba(8, 12, 22, 0.65)';
         ctx.beginPath();
-        ctx.rect(0, 0, 1024, 1024); // Full canvas
+        ctx.rect(0, 0, uvCanvasWidth, uvCanvasHeight); // Full canvas
 
         if (!selectionMask.inverted) {
           // Cut out editable area using evenodd fill rule (inside becomes light, outside is dark)
@@ -426,15 +443,15 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       });
       ctx.restore();
     }
-  }, [showUVOverlay, uvWireColor, uvOverlayOpacity, modelKey, customOBJText, selectionMask]);
+  }, [showUVOverlay, uvWireColor, uvOverlayOpacity, modelKey, customOBJText, selectionMask, effectiveGeom, selectedVertices, uvCanvasWidth, uvCanvasHeight, activeUVChannel, uvGeometryVersion]);
 
-  // Convert screen pointer coordinates to 1024x1024 UV canvas coordinates
+  // Convert screen pointer coordinates to the active layer's UV canvas coordinates
   const getCanvasCoords = (clientX: number, clientY: number) => {
     const cvs = canvasRef.current;
     if (!cvs) return { x: 0, y: 0 };
     const rect = cvs.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 1024;
-    const y = ((clientY - rect.top) / rect.height) * 1024;
+    const x = ((clientX - rect.left) / rect.width) * uvCanvasWidth;
+    const y = ((clientY - rect.top) / rect.height) * uvCanvasHeight;
     return { x, y };
   };
 
@@ -463,8 +480,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       }
       e.preventDefault();
       const hit = getCanvasCoords(e.clientX, e.clientY);
-      const u = hit.x / 1024;
-      const v = 1 - hit.y / 1024;
+      const u = hit.x / uvCanvasWidth;
+      const v = 1 - hit.y / uvCanvasHeight;
       if (uvSelectionRef.current.size === 0) {
         uvSelectionRef.current = SmartUVUnwrapEngine.pickIsland(effectiveGeom, u, v);
       }
@@ -507,8 +524,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     // DIRECT 2D PAINTING / TOOL EXECUTION
     const { x, y } = getCanvasCoords(e.clientX, e.clientY);
     const pressure = e.pressure && e.pressure > 0 ? e.pressure : 1.0;
-    const u = x / 1024.0;
-    const v = 1.0 - (y / 1024.0);
+    const u = x / uvCanvasWidth;
+    const v = 1.0 - (y / uvCanvasHeight);
 
     if (e.detail === 2 && e.button === 0) {
       uvSelectionRef.current = SmartUVUnwrapEngine.pickIsland(effectiveGeom, u, v);
@@ -632,8 +649,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         brush.size,
         brush.hardness || 50,
         false,
-        1024,
-        1024
+        uvCanvasWidth,
+        uvCanvasHeight
       );
       onUpdateSelectionMask(updated);
       drawOverlay();
@@ -752,8 +769,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
           brush.size,
           brush.hardness || 50,
           false,
-          1024,
-          1024
+          uvCanvasWidth,
+          uvCanvasHeight
         );
       }
       lastPointRef.current = { x, y };
@@ -894,8 +911,8 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         const rad = Math.ceil(brush.size * 2);
         const bx = Math.max(0, Math.floor(x - rad));
         const by = Math.max(0, Math.floor(y - rad));
-        const bw = Math.min(1024 - bx, rad * 2);
-        const bh = Math.min(1024 - by, rad * 2);
+        const bw = Math.min(uvCanvasWidth - bx, rad * 2);
+        const bh = Math.min(uvCanvasHeight - by, rad * 2);
         if (bw > 0 && bh > 0) {
           dCtx.drawImage(activeLayer.canvas, bx, by, bw, bh, bx, by, bw, bh);
         }
@@ -915,7 +932,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     if (!containerRef.current) return;
     const cw = containerRef.current.clientWidth || 600;
     const ch = containerRef.current.clientHeight || 600;
-    const fitScale = Math.min((cw - 40) / 1024, (ch - 40) / 1024);
+    const fitScale = Math.min((cw - 40) / uvCanvasWidth, (ch - 40) / uvCanvasHeight);
     setZoom(Math.max(0.2, Math.min(2.0, fitScale)));
     setPan({ x: 0, y: 0 });
   };
@@ -1015,8 +1032,11 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   };
 
   return (
-    <div 
+    <div
       ref={containerRef}
+      data-vue3d-viewport2d="true"
+      onPointerEnter={() => { isPointerInsideRef.current = true; document.body.dataset.uv2dPointerInside = 'true'; }}
+      onPointerLeave={() => { isPointerInsideRef.current = false; document.body.dataset.uv2dPointerInside = 'false'; }}
       onContextMenu={(e) => e.preventDefault()}
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
@@ -1036,13 +1056,13 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       />
 
       {/* Top Left: 2D UV Map HUD Controls */}
-      <HorizontalScrollRail className={`absolute ${isSplitView ? "bottom-3 w-[calc(100%-2rem)] max-w-[calc(100%-2rem)]" : "top-2 w-[calc(100%-12rem)] max-w-[calc(100%-12rem)]"} left-1/2 -translate-x-1/2 z-30 h-9`} contentClassName="h-full w-max min-w-full flex items-center justify-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
-        <div className="order-0 flex items-center gap-1 font-bold text-[#eee] uppercase text-[10px] shrink-0">
+      <HorizontalScrollRail className={`absolute z-30 h-9 ${isSplitView ? "bottom-3 left-2 right-2 w-auto max-w-none" : "top-2 left-2 right-[11rem] w-auto max-w-none"}`} contentClassName="h-full w-max min-w-full flex items-center justify-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
+        <div className="flex items-center gap-1 font-bold text-[#eee] uppercase text-[10px] shrink-0">
           <Paintbrush className="w-3.5 h-3.5 text-[#3d7fb8]" />
           <span>2D UV CANVAS</span>
         </div>
         <span className="text-[#666]">·</span>
-        <span className="text-[#888] font-mono text-[10px]">1024×1024</span>
+        <span className="text-[#888] font-mono text-[10px]">{uvCanvasWidth}×{uvCanvasHeight}</span>
         <span className="text-[#666]">·</span>
         <span className="text-[#3d7fb8] font-mono font-bold text-[10px]">{Math.round(zoom * 100)}%</span>
 
@@ -1051,7 +1071,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* UV WIREFRAME MESH OVERLAY TOGGLE */}
         <button
           onClick={() => setShowUVOverlay(v => !v)}
-          className={`order-30 px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1.5 transition-colors border ${
+          className={`px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1.5 transition-colors border ${
             showUVOverlay
               ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
               : 'bg-[#333] hover:bg-[#404040] text-[#888] border-[#555]'
@@ -1065,7 +1085,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         {/* Toggle UV Suite N-Panel */}
         <button
           onClick={() => setIsNPanelOpen(o => !o)}
-          className={`order-50 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors ${
+          className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors ${
             isNPanelOpen
               ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
               : 'bg-[#222] hover:bg-[#333] text-[#aaa] border-[#555]'
@@ -1078,7 +1098,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* UV Wireframe Opacity Adjuster when active */}
         {showUVOverlay && (
-          <div className="order-40 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
+          <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
             <span className="text-[9px] text-[#888]">Opac:</span>
             <input
               type="range"
@@ -1095,25 +1115,31 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         )}
 
         {/* UV Set Dropdown */}
-        <div className="order-20 flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
+        <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
           <Compass className="w-3 h-3 text-[#38bdf8]" />
           <span className="text-[9px] text-[#888]">UV Set:</span>
           <select
-            value={activeUVSet}
-            onChange={(e) => setActiveUVSet(e.target.value as any)}
+            value={activeUVChannel}
+            onChange={(e) => {
+              const channelId = e.target.value;
+              if (onSelectUVChannel) onSelectUVChannel(channelId);
+              else {
+                UVChannelManager.setActiveChannel(effectiveGeom, channelId);
+                onTextureUpdated();
+                drawOverlay();
+              }
+            }}
             className="bg-[#181818] border border-[#555] text-white px-1 py-0.5 rounded text-[9.5px] cursor-pointer outline-none font-mono"
-            title="Switch UV Map Set (Default UV is the one in topmost hierarchy)"
+            title="Switch the active UV channel"
           >
-            <option value="uv_0">UV Set 1: Default (UVMap_0)</option>
-            <option value="uv_1">UV Set 2: Lightmap (UVMap_1)</option>
-            <option value="uv_2">UV Set 3: Decals (UVMap_2)</option>
+            {uvChannels.map(channel => <option key={channel.id} value={channel.id}>{channel.name}</option>)}
           </select>
         </div>
 
         {/* Smart UV Generation Button (Exists ONLY inside 2D UV Map editor view) */}
         <button
           onClick={() => setShowSmartUVModal(true)}
-          className="order-10 px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-[#a6e3a1] border border-[#22c55e]/50 shadow-xs transition-colors"
+          className="px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-[#a6e3a1] border border-[#22c55e]/50 shadow-xs transition-colors"
           title="Open Smart UV Projection and Automatic Unwrap Engine"
         >
           <Wand2 className="w-3 h-3 text-[#a6e3a1]" />
@@ -1122,7 +1148,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* Physical Selection Shading Status Badge */}
         {selectionMask && selectionMask.active && (
-          <div className="order-60 flex items-center gap-1.5 bg-[#141824] px-2 py-0.5 rounded border border-[#3d7fb8] text-[10px] shadow-xs shrink-0">
+          <div className="flex items-center gap-1.5 bg-[#141824] px-2 py-0.5 rounded border border-[#3d7fb8] text-[10px] shadow-xs shrink-0">
             <span className="w-2 h-2 rounded-full bg-[#a6e3a1] animate-pulse" />
             <span className="font-bold text-[#89b4fa]">SELECTION:</span>
             <span className="text-[#a6e3a1] font-mono">Light = Editable</span>
@@ -1133,7 +1159,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
 
         {/* Mask Brush Active Mode Badge */}
         {activeTool === 'mask_brush' && (
-          <div className="order-70 flex items-center gap-1.5 bg-[#2a1a12] px-2 py-0.5 rounded border border-[#e5a038] text-[10px] shadow-xs shrink-0">
+          <div className="flex items-center gap-1.5 bg-[#2a1a12] px-2 py-0.5 rounded border border-[#e5a038] text-[10px] shadow-xs shrink-0">
             <span className="font-bold text-[#f5a942]">MASK BRUSH:</span>
             <span className="text-[#eee]">Paint = Light (Editable)</span>
             <span className="text-[#666]">|</span>
