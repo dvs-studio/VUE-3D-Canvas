@@ -543,7 +543,7 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Reset restores both colours to neutral grey and all opacity values to 100%; it is available in the dialog and in the Base Layer row where multi-select checkboxes appear.
 - The Base Layer's normal layer opacity slider is enabled and independent; its blend selector remains disabled.
 - Base canvas is no longer used as a UV texture coat. The UV composite is transparent and skips the Base Layer.
-- The 3D material shader samples a procedural checker from world X/Z coordinates and blends painted texture over it.
+- The 3D material shader samples a procedural checker from world position using the dominant world-space surface-normal axis to choose its projection plane, then blends painted texture over it.
 - Updated `AGENTS.md` and `AGENT_STATE.md`; added `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` with facility bookmarks and acceptance checks.
 
 ### Not yet verified
