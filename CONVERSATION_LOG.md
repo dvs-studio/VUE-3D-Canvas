@@ -547,9 +547,9 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Updated `AGENTS.md` and `AGENT_STATE.md`; added `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` with facility bookmarks and acceptance checks.
 
 ### CI result
-- Workflow #303 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45464462231
+- Workflow #304 passed after the final shader guard adjustment: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45464649512
 - TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload succeeded.
-- Artifact: `VUE_3D_Canvas_SelfHost`, ID `14955460054`.
+- Artifact: `VUE_3D_Canvas_SelfHost`, ID `14954377580`.
 
 ### Not yet verified
 - Runtime shader compilation and the world-space checker on multiple model orientations.
