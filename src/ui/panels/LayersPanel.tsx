@@ -28,7 +28,8 @@ import {
   Sliders,
   Contrast,
   Settings,
-  Upload
+  Upload,
+  RotateCcw
 } from 'lucide-react';
 
 interface LayersPanelProps {
@@ -66,6 +67,8 @@ interface LayersPanelProps {
   onOpenLayerSettings?: (layerId: string) => void;
   onImportTexture?: () => void;
   onBakeTextureFill?: (layerId: string) => void;
+  onOpenBaseLayerSettings?: () => void;
+  onResetBaseLayerSettings?: () => void;
 }
 
 const BLEND_MODES: BlendMode[] = [
@@ -115,6 +118,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onOpenLayerSettings,
   onImportTexture,
   onBakeTextureFill,
+  onOpenBaseLayerSettings,
+  onResetBaseLayerSettings,
 }) => {
   const [checkedLayerIds, setCheckedLayerIds] = useState<string[]>([]);
   const [moveTargetGroupId, setMoveTargetGroupId] = useState('');
@@ -166,7 +171,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           <span className="text-[10px] text-[#999] uppercase font-mono">Opacity</span>
           <input
             type="range"
-            disabled={!!activeLayer?.isBaseLayer}
+            disabled={false}
             min="0"
             max="100"
             value={activeLayer?.opacity ?? 100}
@@ -264,18 +269,21 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                   : 'bg-[#303030] border-[#444] text-[#ccc] hover:bg-[#393939]'
               }`}
             >
-              <input
-                type="checkbox"
-                className="w-3 h-3 accent-blue-500 shrink-0"
-                checked={checkedLayerIds.includes(layer.id)}
-                disabled={!!layer.isBaseLayer}
-                title={layer.isBaseLayer ? 'Protected base layer' : 'Select layer for group / multi actions'}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setCheckedLayerIds(prev => e.target.checked ? [...prev, layer.id] : prev.filter(id => id !== layer.id));
-                }}
-              />
+              {layer.isBaseLayer ? (
+                <button type="button" onClick={(e) => { e.stopPropagation(); onResetBaseLayerSettings?.(); }} className="w-5 h-5 shrink-0 flex items-center justify-center rounded border border-[#765c38] text-[#e5b875] hover:bg-[#4a3925]" title="Reset Base Layer colours and checker opacity to default grey / 100%"><RotateCcw className="w-3 h-3" /></button>
+              ) : (
+                <input
+                  type="checkbox"
+                  className="w-3 h-3 accent-blue-500 shrink-0"
+                  checked={checkedLayerIds.includes(layer.id)}
+                  title="Select layer for group / multi actions"
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setCheckedLayerIds(prev => e.target.checked ? [...prev, layer.id] : prev.filter(id => id !== layer.id));
+                  }}
+                />
+              )}
               {/* Visibility eye */}
               {layer.isBaseLayer ? (
                 <span className="text-[#e5a038] p-0.5" title="Protected base layer — always visible and non-editable"><Lock className="w-3.5 h-3.5" /></span>
@@ -335,6 +343,11 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 {layer.locked ? <Lock className="w-3 h-3 text-[#e5a038]" /> : <Unlock className="w-3 h-3 text-[#666]" />}
               </button>}
 
+              {/* Base checker properties */}
+              {layer.isBaseLayer && onOpenBaseLayerSettings && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); onOpenBaseLayerSettings(); }} className="text-[#e5b875] hover:text-white p-0.5" title="Base Layer Properties"><Settings className="w-3.5 h-3.5" /></button>
+              )}
+
               {/* Layer Settings & PBR Modal button */}
               {onOpenLayerSettings && !layer.isBaseLayer && (
                 <button
@@ -350,13 +363,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               )}
 
               {/* Right-click Context Trigger Button */}
-              <button
+              {!layer.isBaseLayer && <button
                 onClick={(e) => handleContextMenu(e, layer.id)}
                 className="text-[#777] hover:text-white p-0.5"
                 title="Layer Context Actions (Right-Click)"
               >
                 <MoreVertical className="w-3 h-3" />
-              </button>
+              </button>}
             </div>
           );
         })}
