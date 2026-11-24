@@ -2910,6 +2910,9 @@ export default function App() {
         onSavePBR={handleSaveLayerPBR}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
+        externalTextureAssets={externalAssets.filter(asset => asset.kind === 'texture')}
+        onBrowseTextureLibrary={handleScanExternalAssetFolder}
+        isScanningTextureLibrary={isScanningExternalAssets}
       />
 
       {/* 13. Pattern Stamp Tool Configuration Dialog */}
