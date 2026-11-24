@@ -546,8 +546,12 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - The 3D material shader samples a procedural checker from world position using the dominant world-space surface-normal axis to choose its projection plane, then blends painted texture over it.
 - Updated `AGENTS.md` and `AGENT_STATE.md`; added `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` with facility bookmarks and acceptance checks.
 
+### CI result
+- Workflow #303 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45464462231
+- TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload succeeded.
+- Artifact: `VUE_3D_Canvas_SelfHost`, ID `14955460054`.
+
 ### Not yet verified
-- TypeScript/Vite/self-host package CI for this commit set.
 - Runtime shader compilation and the world-space checker on multiple model orientations.
 - Save/Cancel persistence semantics across a fresh application session.
 - Base Layer opacity and checker opacity independence, UV/export exclusion, and `.xblend` round-trips.
