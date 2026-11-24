@@ -129,6 +129,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers[0];
 
   const handleContextMenu = (e: React.MouseEvent, layerId: string) => {
+    if (layers.some(layer => layer.id === layerId && layer.isBaseLayer)) return;
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({
@@ -335,7 +336,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               </button>}
 
               {/* Layer Settings & PBR Modal button */}
-              {onOpenLayerSettings && (
+              {onOpenLayerSettings && !layer.isBaseLayer && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
