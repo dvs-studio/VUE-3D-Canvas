@@ -1046,7 +1046,7 @@ export default function App() {
   const handleGroupSelectedLayers = (layerIds: string[]) => {
     const ids = layerIds.filter(id => {
       const layer = layers.find(l => l.id === id);
-      return layer && !layer.isGroup;
+      return layer && !layer.isGroup && !layer.isBaseLayer;
     });
     if (ids.length < 1) return;
     const groupId = `group_${Date.now()}`;
@@ -1078,7 +1078,7 @@ export default function App() {
     if (!group) return;
     const ids = new Set(layerIds.filter(id => {
       const layer = layers.find(item => item.id === id);
-      return !!layer && !layer.isGroup && !layer.locked;
+      return !!layer && !layer.isGroup && !layer.locked && !layer.isBaseLayer;
     }));
     if (!ids.size) return;
     const updated = layers.map(layer => ids.has(layer.id) ? { ...layer, groupId } : layer);
@@ -1252,7 +1252,7 @@ export default function App() {
     notifyTextureUpdated();
   };
   const handleDeleteSelectedLayers = (layerIds: string[]) => {
-    const ids = new Set(layerIds);
+    const ids = new Set(layerIds.filter(id => !layers.some(layer => layer.id === id && layer.isBaseLayer)));
     if (ids.size === 0) return;
     const updated = layers.filter(l => !ids.has(l.id));
     if (updated.length === 0) return;
