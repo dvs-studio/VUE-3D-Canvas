@@ -7,7 +7,7 @@
 - Added three selectable ring structures: uniform tree-year growth rings, organic fingerprint rings and merged/flowing rings.
 - Added a surface-space mapping path built from the active UV channel using the existing mesh-surface rasteriser.
 - Added a normal-derived curvature map. Curvature influence gently warps the ring field on curved surfaces.
-- Added Object and World coordinate choices. World mode applies `geometry.userData.worldMatrix` when supplied; if the current editor geometry has no owning-mesh matrix metadata, it explicitly falls back to object coordinates. A live mesh-matrix handoff is still needed for true transformed-instance world-space preview.
+- Added Object and World coordinate choices. World mode applies the owning mesh's live `matrixWorld`, attached ephemerally to the geometry object (not serialised into geometry userData). If no matrix is available, it falls back to object coordinates.
 - Existing band/ring modes, stacked source colours/images, frequency variation and seed controls remain.
 
 ### 2C — Additional texture filters
@@ -19,8 +19,8 @@ These are raster filter implementations, not brush engines. They do not replace 
 ### 2A-T — Triplanar world coordinates
 
 - The existing fill engine already performs three-axis projection, normal-weight blending, multi-texture mixing, slope/altitude masks, and selection-mask protection.
-- Added world-matrix application to surface positions and normals when the geometry carries `userData.worldMatrix`.
-- If the editor does not supply that matrix, world mode currently uses the object-space fallback. A direct live mesh matrix handoff is still required for translated/rotated/scaled instances.
+- Added world-matrix application to surface positions and normals using the owning mesh's live `matrixWorld`, attached ephemerally to the geometry object.
+- If the geometry has no live matrix reference, world mode uses the object-space fallback.
 
 ### Base Layer shape sensitivity
 
@@ -43,14 +43,19 @@ These are raster filter implementations, not brush engines. They do not replace 
 - Deleting a target layer also removes its dependent masks.
 - Brush editing uses the ordinary paint path: white reveals, black conceals, grey partially reveals. Manual brush/undo/group tests remain outstanding.
 
+### Pattern Craft filter
+
+- Added Pattern Craft to the selected-layer filter list. Empty transparent layers automatically generate monochrome patterns suitable as displacement sources; painted layers receive multiply-style micro-detail modulation while preserving alpha.
+- Supports flowing waves, cellular, stochastic noise, checker and concentric rings with scale, strength and seed controls.
+
 ## Still outstanding / intentionally deferred
 
 - F1 Tear layer and its black/white/green role-based stack masking.
 - F6 dedicated Mask layer and proper target-layer relationship / editing UX.
-- Material Fill layer masking trigger and integration with the canonical Asset Gallery.
+- Material Fill layer masking trigger is supported through target-linked Mask Layers; canonical Asset Gallery integration remains deferred.
 - Stencil and Brush Texture gallery consumers; image-pattern vs procedural-pattern split in the Brush options accordion.
 - Full gallery scanner reconciliation and browser persistence/migration acceptance.
-- Live world-matrix handoff for transformed instances in Wood and Triplanar.
+
 - Matcap map export, multiple Matcap layer stacking and visual verification.
 - Remaining stabilisation manual acceptance, A5 touch/desktop checks and UI3 Undo/Redo viewport reproduction.
 
