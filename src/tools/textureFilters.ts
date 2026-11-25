@@ -273,6 +273,61 @@ export function rasterizeMeshSurface(
   return { width, height, position, position01, normal, covered };
 }
 
+export interface WoodSurfaceMaps {
+  position: Float32Array;
+  normal: Float32Array;
+  curvature: Float32Array;
+}
+
+/** Build surface-space data for wood filters. Curvature is derived from local normal variation. */
+export function buildWoodSurfaceMaps(
+  geometry: THREE.BufferGeometry,
+  width: number,
+  height: number,
+  uvArray?: Float32Array,
+  coordinateSpace: 'object' | 'world' = 'object',
+): WoodSurfaceMaps {
+  const surface = rasterizeMeshSurface(geometry, width, height, uvArray, 4);
+  const position = new Float32Array(surface.position01);
+  if (coordinateSpace === 'world') {
+    const worldMatrix = geometry.userData?.worldMatrix;
+    let matrix: THREE.Matrix4 | null = null;
+    if (worldMatrix instanceof THREE.Matrix4) matrix = worldMatrix;
+    else if (Array.isArray(worldMatrix) && worldMatrix.length === 16) {
+      matrix = new THREE.Matrix4().fromArray(worldMatrix);
+    }
+    if (matrix) {
+      const point = new THREE.Vector3();
+      for (let i = 0; i < position.length; i += 3) {
+        point.set(position[i], position[i + 1], position[i + 2]).applyMatrix4(matrix);
+        position[i] = point.x; position[i + 1] = point.y; position[i + 2] = point.z;
+      }
+    }
+    // Geometry supplied by the current editor has no per-instance matrix;
+    // without one, world coordinates correctly fall back to object coordinates.
+  }
+  const curvature = new Float32Array(width * height);
+  const normal = surface.normal;
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const at = y * width + x;
+    if (!surface.covered[at]) continue;
+    const o = at * 3;
+    let bend = 0, count = 0;
+    for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]] as const) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const neighbour = ny * width + nx;
+      if (!surface.covered[neighbour]) continue;
+      const n = neighbour * 3;
+      const dot = clamp(normal[o] * normal[n] + normal[o + 1] * normal[n + 1] + normal[o + 2] * normal[n + 2], -1, 1);
+      bend += 1 - dot;
+      count++;
+    }
+    curvature[at] = count ? clamp((bend / count) * 2.5, 0, 1) : 0;
+  }
+  return { position, normal: new Float32Array(normal), curvature };
+}
+
 export function buildObjectSpacePositionMap(geometry: THREE.BufferGeometry, width: number, height: number, uvArray?: Float32Array): Float32Array {
   return rasterizeMeshSurface(geometry, width, height, uvArray, 4).position01;
 }
