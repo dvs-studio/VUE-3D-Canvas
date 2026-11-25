@@ -299,7 +299,7 @@ export function buildWoodSurfaceMaps(
   const surface = rasterizeMeshSurface(geometry, width, height, uvArray, 4);
   const position = new Float32Array(coordinateSpace === 'world' ? surface.position : surface.position01);
   if (coordinateSpace === 'world') {
-    const worldMatrix = geometry.userData?.worldMatrix;
+    const worldMatrix = (geometry as any).worldMatrix || geometry.userData?.worldMatrix;
     let matrix: THREE.Matrix4 | null = null;
     if (worldMatrix instanceof THREE.Matrix4) matrix = worldMatrix;
     else if (Array.isArray(worldMatrix) && worldMatrix.length === 16) {
