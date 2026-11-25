@@ -23,4 +23,4 @@
 
 ## Verification
 
-The code has been committed. Automated TypeScript/build/self-host checks are pending the latest workflow. Manual testing must compare the sphere at subdivision levels 0, 1 and 2, using both Catmull-Clark and Simple, and inspect the north/south poles, UV seam and silhouette. Do not mark the hole repair accepted based on compilation alone.
+Workflow #326 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload, including these source changes. Artifact ID `14979452656`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45519196459. Manual testing must compare the sphere at subdivision levels 0, 1 and 2, using both Catmull-Clark and Simple, and inspect the north/south poles, UV seam and silhouette. Do not mark the hole repair accepted based on compilation alone.
