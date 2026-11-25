@@ -86,7 +86,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   undoBuffer,
   onTextureUpdated,
   onColorSampled,
-  modelKey = 'suzanne',
+  modelKey = 'sphere',
   customOBJText,
   touchNavEnabled = false,
   onToggleTouchNav,
@@ -130,7 +130,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   const effectiveGeom = React.useMemo(() => {
     if (geometry) return geometry;
     if (customOBJText) return parseOBJ(customOBJText);
-    return BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]().geometry : BUILTIN_MODELS.suzanne().geometry;
+    return BUILTIN_MODELS[modelKey] ? BUILTIN_MODELS[modelKey]().geometry : BUILTIN_MODELS.sphere().geometry;
   }, [geometry, modelKey, customOBJText]);
 
   // Toggle the UV N-Panel only when the 2D viewport is the active pointer/focus area.
