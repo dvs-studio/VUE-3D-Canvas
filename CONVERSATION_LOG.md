@@ -678,3 +678,10 @@ CI is not a substitute for manual browser/device acceptance.
 - Updated `notes/ASSET_GALLERY_MODULE_2026-11-25.md` and the authoritative AGENTS task ledger.
 - Workflow #385 passed TypeScript, Vite build, self-host sync, package validation and artifact upload. Artifact `15001151525`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45568723627.
 - Manual browser/device testing remains outstanding for IndexedDB migration, scanner reconciliation, alpha/GIF handling, quota/memory, consumer selection, hover preview, and brush stamp/pattern rendering.
+
+
+## 2026-11-25 — GPT-6 — latest CI follow-up
+
+- Refined Tear Layer edge detection so green stack-mask strokes count as cut boundaries for adjacent white fray edges.
+- Workflow #386 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact `15000797321`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45569008417.
+- This is the latest verified source package. Manual device/visual acceptance remains with Victory.
