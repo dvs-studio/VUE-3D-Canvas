@@ -685,3 +685,12 @@ CI is not a substitute for manual browser/device acceptance.
 - Refined Tear Layer edge detection so green stack-mask strokes count as cut boundaries for adjacent white fray edges.
 - Workflow #386 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact `15000797321`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45569008417.
 - This is the latest verified source package. Manual device/visual acceptance remains with Victory.
+
+
+## 2026-11-25 — GPT-6 / LOG-2026-11-25-GPT6-TEXTURE-MASK-UV-HANDOVER
+
+User reports that texture integration is missing and supplied a ZIP with six 2K JPEGs (autumn leaf veins, brown animal fur, lawn grass, rusty metal, dark walnut wood and weathered wood). Added the authoritative implementation specification and source bookmarks in `notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md`, pinned the latest autonomous execution order in `AGENTS.md`, and added this fast-tracking pointer to `AGENT_STATE.md`.
+
+The handover requires re-auditing gallery consumer integration, preserving originals in the canonical gallery, fixing UV seam-crossing 3D brush continuity, separating UV cut-out from mesh-part filtering, implementing asynchronous 3D→2D/subdivision refresh, redefining Mask Layer (blank transparent default, Normal (Pass Through), adjacent-layer Mix, right-click/long-press creation, single-click edit toggle, double-click X diagnostic preview), grouping special layer types under Add, and placing Pattern Craft directly in the Filter menu. It also orders remaining Tear, Matcap, Pattern Craft, Honeycomb, GPU/resource and UI3 work.
+
+This entry records the handover only; it does not claim source implementation or new CI verification. Workflow #386 predates this request. Continue autonomously from the linked task note and report blockers honestly.
