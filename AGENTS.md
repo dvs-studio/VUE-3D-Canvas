@@ -193,3 +193,16 @@ Required order: (1) restore supplied texture integration; (2) repair 3D brush co
 Mask Layer requirements: new masks are blank/transparent and neutral until pixels exist. Normal (Pass Through) affects only its directly linked layer below. Mix uses only the directly adjacent layer above and below with alpha-aware black/white interpolation (white selects upper, black selects lower, grey blends). Right-click and touch long-press on a selected layer create its mask adjacent to that exact layer. Single-click highlight toggles mask-edit mode; double-click X toggles a mask-only diagnostic view (light grey positive/revealed values, subtle light-red negative/subtracted values) and toggles back to the project. Selection-tool overlays must remain clear in both views.
 
 Keep the mesh-part filter limit and UV-island cut-out limit separate. Preserve the accepted paint path, UV-island seam repair, protected Base Layer, and all excluded features. Workflow #386 predates this request and is not evidence of acceptance. Update `AGENT_STATE.md` and `CONVERSATION_LOG.md`; sync with `npm run host:sync`; report code/CI and manual visual acceptance separately.
+
+
+### Latest verified implementation — 2026-11-25 (Workflow #399)
+
+- Pattern Craft direct Filter-menu entry/preselected dialog: #389 passed.
+- Layers Add menu grouping, right-click/touch long-press context menu, target-specific adjacent Mask creation: #392 passed.
+- Asset Gallery ZIP image-pack import: #393 passed. Six supplied JPEGs still need to be selected from the device running the app (Asset Gallery → Import images / ZIP); they are not yet imported into browser IndexedDB or committed as repository binaries.
+- Transparent blank Mask default and neutral transparent-pixel compositing: #396 passed.
+- 2D UV redraw keyed by textureVersion and shared resolved subdivision geometry/versions: #397/#398 passed.
+- Sparse 3D pointer samples now get intermediate surface raycasts across UV-island transitions: #399 passed. Manual topology acceptance remains.
+- Latest verified self-host artifact: `15007545431`, Workflow #399: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582213410.
+
+Still active: Mask Normal/Mix blend semantics and edit/diagnostic toggles; full UV cut-out enforcement; visual seam-crossing acceptance; Mask/Tear UV composite parity; Tear mesh-part scope; Matcap export/stacking; Pattern Craft material/export; Honeycomb world/normal mapping; GPU/resource packaging; UI3. CI is not visual/device acceptance. Continue from the linked task note without asking for another confirmation.
