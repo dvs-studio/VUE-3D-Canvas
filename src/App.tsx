@@ -874,9 +874,8 @@ export default function App() {
     cvs.width = target.canvas.width || 1024;
     cvs.height = target.canvas.height || 1024;
     const ctx = cvs.getContext('2d')!;
-    // White reveals the target by default; paint black to conceal and grey for partial coverage.
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, cvs.width, cvs.height);
+    // New masks start transparent: untouched pixels are neutral pass-through.
+    // White reveals, black conceals and grey partially influences only where painted.
     memory.registerBuffer(cvs.width * cvs.height * 4);
     const id = `mask_${Date.now()}`;
     const newLayer: Layer = {
