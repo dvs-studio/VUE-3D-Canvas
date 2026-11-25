@@ -30,6 +30,19 @@
 
 ---
 
+### USER-UPDATED EXECUTION ORDER — 2026-11-25
+
+Victory has refined the texture architecture and sequencing. This update takes precedence over older 2D gallery integration assumptions:
+
+1. Build the shared Asset Gallery as an independent, unmounted module first. The foundation is in `src/tools/assetGallery.ts` and `src/ui/AssetGalleryModule.tsx`; see `notes/ASSET_GALLERY_MODULE_2026-11-25.md`.
+2. Do not integrate the gallery into App menus, Brush settings, Triplanar, Material Fill, Mask, Stencil, Brush Texture, or Matcap yet. Finish and verify the other outstanding application tasks first; then connect consumers individually.
+3. Add the new **A6-N 2D UV left N-Panel** task: reorganise the existing 2D UV workspace controls into a left-side N-Panel. Preserve existing UV channel/composite/rebake/selection/touch behaviour. Do not confuse this with a new dedicated UV desk, which remains excluded.
+4. Keep Brush settings' eventual Stencil and image Pattern/Texture selection as a grid-based accordion with a micro-preview beneath the menu bar. The brush stamp's stencil is the actual image including transparency; image patterns remain distinct from procedural patterns.
+5. Correct Base Layer dialog button copy from Cancel to Close. Close retains live session settings; Save alone persists checker colours.
+6. Later tasks: shape-sensitive world-space Base Layer checker, procedural sphere as startup mesh, Suzanne retained in alphabetical presets, and diagnose/fix holes in the procedural sphere under subdivision.
+
+The independent gallery foundation is committed but **not yet build- or browser-verified**. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
+
 ### READ THIS FIRST — three boxes
 
 **1. Tear layer (F1) = LAYER TYPE** — Black → layer below; White → torn edges; Green → stack mask. Not fabric multiply.
@@ -80,6 +93,7 @@
 - [x] **UI1** Persist Window menu panel visibility and floating/docked state in browser storage; defaults remain backward-compatible.
 - [x] **UI2** Menu dropdowns dismiss on outside pointer or Escape; pointer-leave no longer closes native selects.
 - [ ] **UI3** Giant Undo/Redo lower 3D viewport — could not reproduce; scan for oversized element
+- [ ] **A6-N** Reorganise existing 2D UV workspace controls into a left-side N-Panel; preserve A6 channel/composite/rebake/selection/touch behaviour.
 
 #### 2A-W Wood rings
 - [ ] Uniform tree-year rings **and** organic fingerprint/merged rings; curvature-aware; world vs object — not phase-push only
@@ -106,7 +120,10 @@
 - [ ] Stochastic scatter
 
 #### 2D Texture gallery
-- [ ] Bundle → browser/device storage + preview; GPU-tier auto-scale; can share path with triplanar samples
+- [x] Independent gallery foundation added (IndexedDB store + unmounted grid/detail UI); build/browser verification pending. See `notes/ASSET_GALLERY_MODULE_2026-11-25.md`.
+- [ ] Reconcile the existing folder scanner with the canonical gallery store; add scanning/import workflow and storage safeguards.
+- [ ] After other outstanding application tasks are completed, integrate the gallery individually into Stencil, Brush Texture, Mask, Surface Texture/Material Fill/Triplanar, Matcap and image-pattern consumers.
+- [ ] Bundle → browser/device storage + preview; GPU-tier auto-scale; share the canonical asset records with triplanar samples.
 
 ---
 
