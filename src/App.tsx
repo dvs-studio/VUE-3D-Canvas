@@ -1125,6 +1125,15 @@ export default function App() {
   const handleApplyTextureFilter = async (config: TextureFilterConfig) => {
     const target = layers.find(layer => layer.id === activeLayerId);
     if (!target || target.locked || target.isGroup) return;
+    if (
+      !config.uvCoverageMask ||
+      config.uvCoverageMaskWidth !== target.canvas.width ||
+      config.uvCoverageMaskHeight !== target.canvas.height ||
+      config.uvCoverageMask.length < target.canvas.width * target.canvas.height
+    ) {
+      console.error('Texture filter was not applied: active UV coverage is missing or has the wrong dimensions.');
+      return;
+    }
     const maskRequested = config.useMeshPartMask !== false && !!config.targetMeshPart && config.targetMeshPart !== 'all';
     if (maskRequested && (
       !config.meshPartMask ||
