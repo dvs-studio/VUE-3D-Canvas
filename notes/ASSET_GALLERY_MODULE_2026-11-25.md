@@ -55,7 +55,7 @@ The optional `onAssetSelected` callback is a future integration seam only; no co
 - Test import and thumbnail generation in the self-host browser, including transparent PNGs and animated GIFs.
 - Add storage quota reporting and a clear recovery path for IndexedDB failures before wide integration.
 - Confirm low-memory behaviour with larger image collections; do not eagerly load original blobs into the grid.
-- The module has not yet been run through the repository's TypeScript/build workflow in this session.
+- Workflow #326 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14979452656`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45519196459.
 
 ## Separate active UI task: 2D UV N-Panel
 
