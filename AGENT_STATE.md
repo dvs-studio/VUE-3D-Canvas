@@ -890,3 +890,13 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Existing N-key scoping, quick unwrap modal, channels, rebake, seamless gutter, symmetrize, sculpt, painting and touch paths are preserved in source.
 - CI workflow #320 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14977799972`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45518199675.
 - Manual desktop/tablet acceptance remains open. See `notes/UV_N_PANEL_LEFT_LAYOUT_2026-11-25.md`.
+
+
+## 2026-11-25 — Procedural sphere startup and subdivision pole repair
+
+- Changed App startup geometry and model key to the procedural sphere. Invalid-key and standalone UV viewport fallbacks now use the sphere.
+- Reordered the model preset list alphabetically and retained both Suzanne and Suzanne Head + Eyes as selectable presets; Suzanne is no longer instantiated at startup.
+- Tagged the procedural sphere geometry and added a sphere-only subdivision-preview topology pass that welds coincident top/bottom pole vertices before Catmull-Clark, centres pole U at 0.5, and omits collapsed triangles.
+- Other source meshes retain their previous subdivision topology handling. No Suzanne asset or protected paint path was changed.
+- See `notes/DEFAULT_SPHERE_AND_SUBDIVISION_2026-11-25.md`.
+- Automated workflow for the latest source and manual verification are still pending. Inspect both poles, UV seam and silhouette at subdivision levels 0–2 and under both algorithms before acceptance.
