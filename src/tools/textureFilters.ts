@@ -75,6 +75,10 @@ export interface TextureFilterConfig {
   meshPartMask?: Uint8Array;
   meshPartMaskWidth?: number;
   meshPartMaskHeight?: number;
+  /** Exact active-UV triangle coverage; filters must not write outside the UV cut-out. */
+  uvCoverageMask?: Uint8Array;
+  uvCoverageMaskWidth?: number;
+  uvCoverageMaskHeight?: number;
 }
 export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   kind: 'wood', source: 'color', color: '#8a5a35', edge: 65, noise: 25, bleed: 18, blur: 1,
@@ -425,6 +429,63 @@ export function buildMeshPartPixelMask(
   }
 }
 
+/**
+ * Rasterises all active-UV triangles without gutter dilation. This is a write
+ * boundary, not a sampling map: filter output outside actual UV coverage is
+ * restored from the original source pixels.
+ */
+export function buildUVCoverageMask(
+  geometry: THREE.BufferGeometry,
+  width: number,
+  height: number,
+  uvArray?: Float32Array,
+): Uint8Array | null {
+  const position = geometry.getAttribute('position') as THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined;
+  const uvAttribute = geometry.getAttribute('uv') as THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined;
+  const useUVOverride = !!uvArray && !!position && uvArray.length >= position.count * 2;
+  if (!position || (!useUVOverride && (!uvAttribute || uvAttribute.count < position.count)) || width <= 0 || height <= 0) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#ffffff';
+  const index = geometry.getIndex();
+  const elementCount = index ? index.count : position.count;
+  const uvAt = (vertex: number) => useUVOverride
+    ? { u: uvArray![vertex * 2], v: uvArray![vertex * 2 + 1] }
+    : { u: uvAttribute!.getX(vertex), v: uvAttribute!.getY(vertex) };
+  for (let offset = 0; offset + 2 < elementCount; offset += 3) {
+    const a = index ? index.getX(offset) : offset;
+    const b = index ? index.getX(offset + 1) : offset + 1;
+    const c = index ? index.getX(offset + 2) : offset + 2;
+    if ([a, b, c].some(vertex => !Number.isInteger(vertex) || vertex < 0 || vertex >= position.count)) continue;
+    const ua = uvAt(a), ub = uvAt(b), uc = uvAt(c);
+    const ax = ua.u * width, ay = (1 - ua.v) * height;
+    const bx = ub.u * width, by = (1 - ub.v) * height;
+    const cx = uc.u * width, cy = (1 - uc.v) * height;
+    if (![ax, ay, bx, by, cx, cy].every(Number.isFinite)) continue;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.lineTo(cx, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
+  try {
+    const pixels = ctx.getImageData(0, 0, width, height).data;
+    const mask = new Uint8Array(width * height);
+    let covered = 0;
+    for (let pixel = 0; pixel < mask.length; pixel++) {
+      mask[pixel] = pixels[pixel * 4 + 3];
+      if (mask[pixel] > 0) covered++;
+    }
+    return covered ? mask : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function transformTexturePixels(source:ImageData,cfg:TextureFilterConfig):Promise<ImageData>{
  const w=source.width,h=source.height, out=new ImageData(w,h), data=source.data, dst=out.data;
  const srcImg=cfg.kind==='wood'&&cfg.source==='image'?await imageSource(cfg.sourceImageDataUrl,w,h):null;
@@ -434,15 +495,16 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  const angle=(axisAngle+cfg.angle)*Math.PI/180, dx=Math.cos(angle),dy=Math.sin(angle);
  const edge=cfg.edge/100, noise=cfg.noise/100, bleed=cfg.bleed/100;
  const meshMask = cfg.useMeshPartMask !== false ? cfg.meshPartMask : undefined;
- const hasMeshMask = !!meshMask &&
-   cfg.meshPartMaskWidth === w &&
-   cfg.meshPartMaskHeight === h &&
-   meshMask.length >= w * h;
+ const uvMask = cfg.uvCoverageMask;
+ const hasMeshMask = !!meshMask && cfg.meshPartMaskWidth === w && cfg.meshPartMaskHeight === h && meshMask.length >= w * h;
+ const hasUVCoverage = !!uvMask && cfg.uvCoverageMaskWidth === w && cfg.uvCoverageMaskHeight === h && uvMask.length >= w * h;
  const applyMeshMask = (result: ImageData): ImageData => {
-   if (!hasMeshMask) return result;
+   if (!hasMeshMask && !hasUVCoverage) return result;
    const resultData = result.data;
    for (let pixel = 0; pixel < w * h; pixel++) {
-     const coverage = meshMask![pixel] / 255;
+     const meshCoverage = hasMeshMask ? meshMask![pixel] / 255 : 1;
+     const uvCoverage = hasUVCoverage ? uvMask![pixel] / 255 : 1;
+     const coverage = meshCoverage * uvCoverage;
      if (coverage >= 0.999) continue;
      const i = pixel * 4;
      const outside = 1 - coverage;
@@ -773,8 +835,11 @@ export async function applyTextureFilterToCanvas(canvas:HTMLCanvasElement,cfg:Te
  const hasPartMask = cfg.useMeshPartMask !== false && !!cfg.meshPartMask &&
    cfg.meshPartMaskWidth === canvas.width && cfg.meshPartMaskHeight === canvas.height &&
    cfg.meshPartMask.length >= canvas.width * canvas.height;
- if(opaque>0 && transparent>0 && !hasPartMask) dilateImageData(probe, 8);
+ const hasUVCoverage = !!cfg.uvCoverageMask && cfg.uvCoverageMaskWidth === canvas.width &&
+   cfg.uvCoverageMaskHeight === canvas.height && cfg.uvCoverageMask.length >= canvas.width * canvas.height;
+ const hasWriteBoundary = hasPartMask || hasUVCoverage;
+ if(opaque>0 && transparent>0 && !hasWriteBoundary) dilateImageData(probe, 8);
  const result=await transformTexturePixels(probe,cfg);
  ctx.putImageData(result,0,0);
- if(opaque>0 && transparent>0 && !hasPartMask) dilateImageData(result, 8), ctx.putImageData(result,0,0);
+ if(opaque>0 && transparent>0 && !hasWriteBoundary) dilateImageData(result, 8), ctx.putImageData(result,0,0);
 }
