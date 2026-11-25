@@ -879,3 +879,14 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Keep the Brush settings stencil/image-pattern selector as a grid-based accordion with a micro-preview below the menu bar when that integration is reached.
 - Additional follow-ups: Base Layer action label Cancel → Close (live session settings retained; Save alone persists colours); shape-sensitive checker sizing; procedural sphere startup mesh; Suzanne remains in alphabetical presets; investigate subdivision holes in the procedural sphere.
 - **Verification:** no TypeScript/build/self-host/browser test has yet been run for the new module. Treat source commits as landed, not accepted. See `notes/ASSET_GALLERY_MODULE_2026-11-25.md`.
+
+
+## 2026-11-25 — 2D UV controls moved into left N-Panel
+
+- Moved the existing UV N-Panel from the right edge to the left edge; collapsed handle now lives on the left.
+- Added a Display tab for UV overlay visibility, opacity and colour.
+- Removed UV overlay controls, UV set dropdown and Smart UV entry from the horizontal HUD. UV-set management remains in Channels; Smart UV access is in Unwrap.
+- Horizontal HUD now retains canvas identity, dimensions, zoom and live selection/mask status, and shifts right while the N-Panel is open.
+- Existing N-key scoping, quick unwrap modal, channels, rebake, seamless gutter, symmetrize, sculpt, painting and touch paths are preserved in source.
+- CI workflow #320 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14977799972`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45518199675.
+- Manual desktop/tablet acceptance remains open. See `notes/UV_N_PANEL_LEFT_LAYOUT_2026-11-25.md`.
