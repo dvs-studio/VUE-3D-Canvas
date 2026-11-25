@@ -38,6 +38,7 @@ interface LayersPanelProps {
   onSelectLayer: (id: string) => void;
   onAddLayer: () => void;
   onAddMatcapLayer?: () => void;
+  onAddMaskLayer?: () => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -90,6 +91,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onSelectLayer,
   onAddLayer,
   onAddMatcapLayer,
+  onAddMaskLayer,
   onAddGroup,
   onToggleGroupCollapse,
   onGroupSelectedLayers,
@@ -309,6 +311,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
                 <div className="truncate font-medium text-[11px] leading-tight">
                   {layer.name}
                   {layer.isBaseLayer && <span className="ml-1 px-1 py-0.5 rounded border border-[#9a7138] text-[#e5a038] text-[8px]">BASE</span>}
+                  {layer.layerRole === 'mask' && <span className="ml-1 px-1 py-0.5 rounded border border-[#6c9b70] text-[#a6e3a1] text-[8px]">MASK</span>}
+                  {layer.layerRole === 'matcap' && <span className="ml-1 px-1 py-0.5 rounded border border-[#8b7bb5] text-[#c4b5fd] text-[8px]">MATCAP</span>}
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[9px] text-[#888] font-mono">
@@ -424,6 +428,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
             title="Create Matcap Layer"
           >
             <ImageIcon className="w-3.5 h-3.5" />
+          </button>}
+          {onAddMaskLayer && <button
+            onClick={onAddMaskLayer}
+            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#a6e3a1] rounded border border-[#505050] transition-colors"
+            title="Add Mask to Selected Layer"
+          >
+            <Contrast className="w-3.5 h-3.5" />
           </button>}
           {onImportTexture && (
             <button
