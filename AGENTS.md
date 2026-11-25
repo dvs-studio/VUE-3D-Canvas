@@ -59,7 +59,7 @@ The canonical gallery is now mounted and integrated; folder scanning imports ori
 > **Latest audit agent:** Gemini Hydrogen / LOG-2026-11-24-GEMINI-HYDROGEN-TROUBLESHOOT — 2026-11-24 (pinpointed P0–P2 report in AGENT_STATE.md).  
 > **Remote main:** the audited P0 source fixes are committed to remote main; no manual git push is pending.  
 > **Latest verification:** workflow #258 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID 14917995630.  
-> **Next code agent picks up at:** A4 mesh-part filter selection → A5 verify → A6 → A7 → UI1 → 2A-W → 2A-T → 2B → 2C → 2D. Keep 2E verify-only. Victory’s manual acceptance checklist is in notes/SELF_HOST_P0_REPAIR_2026-11-24.md.
+> **Next code agent picks up at:** remaining focused code items are Tear mesh-part target scope, separate filter mesh/UV limit, Pattern Craft material/export workflow, Matcap export/stacking, Honeycomb world/normal-space mapping, GPU-tier gallery auto-scale and resource packaging. UI3 Undo/Redo viewport reproduction also remains. A5, 2E, A6/A7/UI1 and all recent rendering/layer work require Victory's manual acceptance; keep 2E verify-only. The Step 0 checklist is in notes/SELF_HOST_P0_REPAIR_2026-11-24.md.
 
 #### Step 0
 - [x] **S0-1** UV seam continuity — cached per-triangle UV-island IDs based on shared geometric edges and matching UV coordinates; reset only affected stroke paths and retain the entry dab. Active UV channel/version is respected.
@@ -133,14 +133,14 @@ The canonical gallery is now mounted and integrated; folder scanning imports ori
 
 See notes/SELF_HOST_P0_REPAIR_2026-11-24.md. The audited TypeScript, UI, OBJ export, RGB/HSL parsing, UV seam/pointer queue and UV coverage clipping defects have source fixes on remote main. Final CI run #258 passed with artifact 14917995630. Manual acceptance remains outstanding; 2E is verify-only.
 
-### Triplanar correction specification
+### Triplanar implementation state
 
-1. Mix A/B with factor from noise / height / mask.  
-2. Height/slope-aware blend when useful.  
-3. True triplanar: XY/YZ/ZX samples, `pow(|n|, sharpness)` weights.  
-4. World vs Object coordinates.  
-5. User sample folder overrides built-ins.  
-6. Keep off-mesh NaN / gutter behaviour unless replaced safely.
+- Three-axis XY/YZ/ZX projection with normal-weight blending and sharpness is implemented.
+- A/B mixing supports procedural mixer modes and mask/height influence.
+- Object/world coordinate sampling uses the live owning-mesh matrix.
+- Active-UV surface rasterisation and off-mesh/gutter protection are retained.
+- Canonical Surface Texture Gallery selection is integrated; built-in presets remain available as fallbacks.
+- Manual acceptance remains for transformed meshes, seams/gutters, sharpness, A/B modes and gallery selection.
 
 **Detail:** [`LAYER_FABRIC_MASK_PLAN.md`](LAYER_FABRIC_MASK_PLAN.md) · **Log:** [`CONVERSATION_LOG.md`](CONVERSATION_LOG.md) · **Pinpointed Bugs:** [`AGENT_STATE.md`](AGENT_STATE.md) · **API:** [`API_DOCUMENTATION.md`](API_DOCUMENTATION.md) · **Architecture:** [`DEVELOPMENT.md`](DEVELOPMENT.md)
 
