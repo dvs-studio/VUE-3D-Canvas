@@ -61,7 +61,7 @@ export const BaseLayerSettingsDialog: React.FC<BaseLayerSettingsDialogProps> = (
         <footer className="p-3 bg-[#222] border-t border-[#484848] flex flex-wrap items-center justify-between gap-2">
           <button type="button" onClick={onReset} className="px-2.5 py-1.5 rounded border border-[#765c38] text-[#e5b875] hover:bg-[#4a3925] text-xs flex items-center gap-1.5"><RotateCcw className="w-3.5 h-3.5" /> Reset</button>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded border border-[#555] text-[#ccc] hover:bg-[#3b3b3b] text-xs">Cancel</button>
+            <button type="button" onClick={onClose} className="px-3 py-1.5 rounded border border-[#555] text-[#ccc] hover:bg-[#3b3b3b] text-xs">Close</button>
             <button type="button" onClick={onSave} className="px-3 py-1.5 rounded bg-[#3d7fb8] text-white hover:bg-[#4a8ec9] text-xs font-semibold flex items-center gap-1.5"><Save className="w-3.5 h-3.5" /> Save</button>
           </div>
         </footer>
