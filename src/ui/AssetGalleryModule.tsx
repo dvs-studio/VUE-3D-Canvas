@@ -165,7 +165,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
 
       {error && <div role="alert" className="border-b border-[#754b4b] bg-[#3a2525] px-3 py-2 text-xs text-[#ffc4c4]">{error}</div>}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1">
+      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto]">
         <div className="min-h-0 overflow-y-auto p-2">
           {visibleAssets.length ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-2">
@@ -188,7 +188,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
 
         <aside className="flex min-h-0 flex-col border-t border-[#444] bg-[#242424] p-2">
           <div className="mb-2 text-[11px] font-semibold text-[#eee]">Asset details</div>
-          <div className="flex aspect-square items-center justify-center overflow-hidden rounded border border-[#454545] bg-[#1b1b1b]">
+          <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded border border-[#454545] bg-[#1b1b1b]">
             {selectedAsset && thumbnailUrls[selectedAsset.id]
               ? <img src={thumbnailUrls[selectedAsset.id]} alt={selectedAsset.name} className="h-full w-full object-contain" />
               : <span className="text-[10px] text-[#777]">Select an image</span>}
