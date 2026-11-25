@@ -132,6 +132,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
 }) => {
   const [checkedLayerIds, setCheckedLayerIds] = useState<string[]>([]);
   const [moveTargetGroupId, setMoveTargetGroupId] = useState('');
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [longPressMenu, setLongPressMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = React.useRef<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -431,54 +432,25 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
       {/* Bottom Actions Bar */}
       <div className="p-1.5 bg-[#2d2d2d] border-t border-[#444] flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <button
-            onClick={onAddLayer}
-            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
-            title="Create New Texture Layer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-          {onAddMatcapLayer && <button
-            onClick={onAddMatcapLayer}
-            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#c4b5fd] rounded border border-[#505050] transition-colors"
-            title="Create Matcap Layer"
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-          </button>}
-          {onAddMaskLayer && <button
-            onClick={onAddMaskLayer}
-            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#a6e3a1] rounded border border-[#505050] transition-colors"
-            title="Add Mask to Selected Layer"
-          >
-            <Contrast className="w-3.5 h-3.5" />
-          </button>}
-          {onAddTearLayer && <button
-            onClick={onAddTearLayer}
-            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#f9a8d4] rounded border border-[#505050] transition-colors"
-            title="Add Tear Layer to Selected Layer"
-          >
-            <Scissors className="w-3.5 h-3.5" />
-          </button>}
-          {onImportTexture && (
-            <button
-              onClick={onImportTexture}
-              className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#38bdf8] rounded border border-[#505050] transition-colors"
-              title="Import Texture (Layer PBR Role / Material Texture Fill)..."
-            >
-              <Upload className="w-3.5 h-3.5" />
+          <div className="relative">
+            <button type="button" onClick={(event) => { event.stopPropagation(); setAddMenuOpen(value => !value); }}
+              className="flex items-center gap-1 px-2 py-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#eee] rounded border border-[#505050] transition-colors"
+              title="Add a layer or helper type">
+              <Plus className="w-3.5 h-3.5" /><span className="text-[10px]">Add</span>
             </button>
-          )}
-          
-
-        {onAddGroup && (
-            <button
-              onClick={onAddGroup}
-              className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#e5a038] rounded border border-[#505050] transition-colors"
-              title="Create New Layer Group (Container)"
-            >
-              <FolderPlus className="w-3.5 h-3.5" />
-            </button>
-          )}
+            {addMenuOpen && (
+              <div className="absolute bottom-full left-0 mb-1 z-[90] min-w-[190px] rounded border border-[#555] bg-[#292929] py-1 shadow-2xl"
+                onClick={(event) => event.stopPropagation()}>
+                <div className="px-3 py-1 text-[9px] font-mono uppercase tracking-wider text-[#888]">New layer</div>
+                <button type="button" onClick={() => { onAddLayer(); setAddMenuOpen(false); }} className="block w-full px-3 py-1.5 text-left hover:bg-[#3d7fb8]">Paint Layer</button>
+                {onImportTexture && <button type="button" onClick={() => { onImportTexture(); setAddMenuOpen(false); }} className="block w-full px-3 py-1.5 text-left hover:bg-[#3d7fb8] text-sky-300">Material Fill / Import Texture…</button>}
+                {onAddMatcapLayer && <button type="button" onClick={() => { onAddMatcapLayer(); setAddMenuOpen(false); }} className="block w-full px-3 py-1.5 text-left hover:bg-[#3d7fb8] text-violet-300">Matcap Layer</button>}
+                {onAddMaskLayer && <button type="button" onClick={() => { onAddMaskLayer(activeLayerId); setAddMenuOpen(false); }} className="block w-full px-3 py-1.5 text-left hover:bg-[#3d7fb8] text-green-300">Mask Layer</button>}
+                {onAddTearLayer && <button type="button" onClick={() => { onAddTearLayer(); setAddMenuOpen(false); }} className="block w-full px-3 py-1.5 text-left hover:bg-[#3d7fb8] text-pink-300">Tear Layer</button>}
+                {onAddGroup && <><div className="my-1 border-t border-[#444]" /><button type="button" onClick={() => { onAddGroup(); setAddMenuOpen(false); }} className="block w-full px-3 py-1.5 text-left hover:bg-[#3d7fb8] text-amber-300">Group</button></>}
+              </div>
+            )}
+          </div>
           <button
             onClick={() => onDuplicateLayer(activeLayerId)}
             disabled={!!activeLayer?.isBaseLayer}
