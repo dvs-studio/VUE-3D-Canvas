@@ -39,7 +39,7 @@ Victory has refined the texture architecture and sequencing. This update takes p
 3. Add the new **A6-N 2D UV left N-Panel** task: reorganise the existing 2D UV workspace controls into a left-side N-Panel. Preserve existing UV channel/composite/rebake/selection/touch behaviour. Do not confuse this with a new dedicated UV desk, which remains excluded.
 4. Keep Brush settings' eventual Stencil and image Pattern/Texture selection as a grid-based accordion with a micro-preview beneath the menu bar. The brush stamp's stencil is the actual image including transparency; image patterns remain distinct from procedural patterns.
 5. Correct Base Layer dialog button copy from Cancel to Close. Close retains live session settings; Save alone persists checker colours.
-6. Later tasks: shape-sensitive world-space Base Layer checker, procedural sphere as startup mesh, Suzanne retained in alphabetical presets, and diagnose/fix holes in the procedural sphere under subdivision.
+6. Later tasks: shape-sensitive world-space Base Layer checker. The procedural sphere startup, alphabetically ordered Suzanne presets and sphere-pole subdivision repair have now been implemented; verify them before acceptance.
 
 The independent gallery foundation is committed but **not yet build- or browser-verified**. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
 
@@ -73,7 +73,7 @@ The independent gallery foundation is committed but **not yet build- or browser-
 - [x] **P0 PAINT-1..2** UV-island seam detection, per-path reset, pointer capture and final queue flush corrected.
 - [x] **UV coverage** 3D brush, eraser, pen, gradients, clone, smudge, blur and Mask Brush are clipped to active UV triangle coverage.
 - [ ] Manual acceptance still outstanding: startup, Undo/Redo, symmetry, paint seam/clipping, export round-trip, pointer/touch and UI sizing. CI is not visual acceptance.
-- [ ] **2E** Subdivision preview — verify only; do not redesign unless a reproducible regression is found.
+- [ ] **2E** Subdivision preview — verify only; do not redesign unless a reproducible regression is found. A reported procedural-sphere pole defect has a targeted repair; verify the poles/seam and confirm no regressions.
 - [ ] Continue remaining Step 0 regression scrutiny as part of manual acceptance.
 
 
