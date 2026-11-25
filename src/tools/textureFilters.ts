@@ -304,9 +304,13 @@ export function buildWoodSurfaceMaps(
     }
     if (matrix) {
       const point = new THREE.Vector3();
+      const normalMatrix = new THREE.Matrix3().getNormalMatrix(matrix);
+      const normalVector = new THREE.Vector3();
       for (let i = 0; i < position.length; i += 3) {
         point.set(position[i], position[i + 1], position[i + 2]).applyMatrix4(matrix);
         position[i] = point.x; position[i + 1] = point.y; position[i + 2] = point.z;
+        normalVector.set(surface.normal[i], surface.normal[i + 1], surface.normal[i + 2]).applyMatrix3(normalMatrix).normalize();
+        surface.normal[i] = normalVector.x; surface.normal[i + 1] = normalVector.y; surface.normal[i + 2] = normalVector.z;
       }
     }
     // Geometry supplied by the current editor has no per-instance matrix;
@@ -535,10 +539,11 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  if(cfg.kind==='warp'){
    const strength=clamp(cfg.warpStrength??18,0,100)*0.45;
    const seed=Math.floor(cfg.filterSeed??71);
+   const warpCell=Math.max(3,Math.round(18*clamp(cfg.featureScale??100,25,400)/100));
    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
      const i=(y*w+x)*4;
-     const nx=(hash(Math.floor(x/18),Math.floor(y/18),seed)-0.5)*2;
-     const ny=(hash(Math.floor(x/18),Math.floor(y/18),seed+37)-0.5)*2;
+     const nx=(hash(Math.floor(x/warpCell),Math.floor(y/warpCell),seed)-0.5)*2;
+     const ny=(hash(Math.floor(x/warpCell),Math.floor(y/warpCell),seed+37)-0.5)*2;
      const sx=clamp(Math.round(x+nx*strength),0,w-1),sy=clamp(Math.round(y+ny*strength),0,h-1);
      const si=(sy*w+sx)*4;
      dst[i]=data[si];dst[i+1]=data[si+1];dst[i+2]=data[si+2];dst[i+3]=data[si+3];
@@ -553,7 +558,7 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
    for(let gy=0;gy<h;gy+=step)for(let gx=0;gx<w;gx+=step){
      const cx=clamp(Math.round(gx+step*(0.2+hash(gx,gy,seed)*0.6)),0,w-1);
      const cy=clamp(Math.round(gy+step*(0.2+hash(gx,gy,seed+19)*0.6)),0,h-1);
-     const si=(cy*w+cx)*4,radius=size*(0.65+hash(gx,gy,seed+29)*0.45);
+     const si=(cy*w+cx)*4,variation=clamp(cfg.randomization??20,0,100)/100,radius=size*(1+(hash(gx,gy,seed+29)-0.5)*variation*0.9);
      const minX=Math.max(0,Math.floor(cx-radius)),maxX=Math.min(w-1,Math.ceil(cx+radius));
      const minY=Math.max(0,Math.floor(cy-radius)),maxY=Math.min(h-1,Math.ceil(cy+radius));
      for(let py=minY;py<=maxY;py++)for(let px=minX;px<=maxX;px++){
@@ -584,7 +589,6 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
  if(cfg.kind==='honeycomb'){
    const size=Math.max(3,Math.round(cfg.honeycombSize??16));
    const shape=cfg.honeycombShape||'hex';
-   const seed=Math.floor(cfg.filterSeed??71);
    const cellH=shape==='hex'?size*Math.sqrt(3):size;
    const rowStep=shape==='hex'?cellH*0.75:size;
    for(let gy=0;gy<h;gy+=Math.max(1,Math.floor(rowStep)))for(let gx=0;gx<w;gx+=Math.max(1,Math.floor(size))){
