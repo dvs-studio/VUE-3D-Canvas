@@ -401,9 +401,38 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
     ctx.clearRect(0, 0, width, height);
 
+    // Mask layers are non-destructive helpers. Their luminance controls the
+    // opacity of the layer they target; they are never drawn as colour layers.
+    const maskAlphaByTarget = new Map<string, Uint8ClampedArray>();
+    for (const maskLayer of layers) {
+      if (!maskLayer.visible || maskLayer.layerRole !== 'mask' || !maskLayer.maskTargetLayerId) continue;
+      if (maskLayer.groupId) {
+        const parentGroup = layers.find(candidate => candidate.id === maskLayer.groupId);
+        if (parentGroup && !parentGroup.visible) continue;
+      }
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = width; maskCanvas.height = height;
+      const maskContext = maskCanvas.getContext('2d');
+      if (!maskContext) continue;
+      maskContext.drawImage(maskLayer.canvas, 0, 0, width, height);
+      try {
+        const pixels = maskContext.getImageData(0, 0, width, height).data;
+        const combined = maskAlphaByTarget.get(maskLayer.maskTargetLayerId) || new Uint8ClampedArray(pixelCount).fill(255);
+        for (let pixel = 0; pixel < pixelCount; pixel++) {
+          const i = pixel * 4;
+          const luminance = (0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]) / 255;
+          const coverage = luminance * (pixels[i + 3] / 255);
+          combined[pixel] = Math.round(combined[pixel] * coverage);
+        }
+        maskAlphaByTarget.set(maskLayer.maskTargetLayerId, combined);
+      } catch (error) {
+        console.warn('Skipping an unreadable layer mask:', error);
+      }
+    }
+
     let hasEmissive = false;
     for (const layer of layers) {
-      if (!layer.visible || layer.isGroup || layer.isBaseLayer) continue;
+      if (!layer.visible || layer.isGroup || layer.isBaseLayer || layer.layerRole === 'mask' || layer.layerRole === 'tear') continue;
       if (layer.groupId) {
         const parentGroup = layers.find(candidate => candidate.id === layer.groupId);
         if (parentGroup && !parentGroup.visible) continue;
@@ -421,6 +450,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       const reflectionInfluence = Math.max(0, Math.min(1, saved.reflectionInfluence ?? (channel === 'roughness' ? 1 : 0)));
       const normalLock = saved.normalLock ?? channel === 'normal';
 
+      const maskAlpha = maskAlphaByTarget.get(layer.id);
+      let maskedLayerCanvas: HTMLCanvasElement | null = null;
+      if (maskAlpha) {
+        maskedLayerCanvas = document.createElement('canvas');
+        maskedLayerCanvas.width = width; maskedLayerCanvas.height = height;
+        const maskedContext = maskedLayerCanvas.getContext('2d');
+        if (maskedContext) {
+          maskedContext.drawImage(layer.canvas, 0, 0, width, height);
+          const alphaPixels = maskedContext.getImageData(0, 0, width, height);
+          for (let pixel = 0; pixel < pixelCount; pixel++) alphaPixels.data[pixel * 4 + 3] = Math.round(alphaPixels.data[pixel * 4 + 3] * maskAlpha[pixel] / 255);
+          maskedContext.putImageData(alphaPixels, 0, 0);
+        } else maskedLayerCanvas = null;
+      }
       if (colorOn && colorInfluence > 0) {
         ctx.save();
         ctx.globalAlpha = opacity * colorInfluence;
@@ -430,7 +472,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           : layer.blendMode === 'darken' ? 'darken'
           : layer.blendMode === 'lighten' ? 'lighten'
           : 'source-over';
-        ctx.drawImage(layer.canvas, 0, 0, width, height);
+        ctx.drawImage(maskedLayerCanvas || layer.canvas, 0, 0, width, height);
         ctx.restore();
       }
 
@@ -497,7 +539,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
               const sx = Math.min(layer.canvas.width - 1, Math.floor(x * layer.canvas.width / width));
               const si = (sy * layer.canvas.width + sx) * 4;
               const di = y * width + x;
-              const alpha = sourceData[si + 3] / 255;
+              const alpha = (sourceData[si + 3] / 255) * (maskAlpha ? maskAlpha[di] / 255 : 1);
               if (alpha <= 0) continue;
               const luminance = (0.299 * sourceData[si] + 0.587 * sourceData[si + 1] + 0.114 * sourceData[si + 2]) / 255;
               if (bumpOn && bumpInfluence > 0) {
