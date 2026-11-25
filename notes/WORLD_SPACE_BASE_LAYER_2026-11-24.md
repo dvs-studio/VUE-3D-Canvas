@@ -9,7 +9,7 @@ The protected Base Layer is a procedural world-space background, not a UV paint 
 - Checker colours A and B default to the same neutral grey (`#9c9c9c`), each at 100% opacity.
 - Each checker colour has its own opacity control. These values are session-only and reset to 100% when another project is loaded or the application starts.
 - The Base Layer's main layer opacity is independent and is controlled by the normal Layers-panel opacity slider.
-- Editing is live in the current session. Cancel closes the dialog without rolling back the current colour setup and without saving colour preferences.
+- Editing is live in the current session. Close closes the dialog without rolling back the current colour setup and without saving colour preferences.
 - Save persists only colour A and colour B in `localStorage`; neither checker-colour opacity nor overall Base Layer opacity is persisted as a global preference.
 - Reset restores both colours to `#9c9c9c`, both colour opacities to 100%, and overall Base Layer opacity to 100%.
 - The Reset action is available in the properties dialog and as the button in the Base Layer's usual multi-select checkbox position.
@@ -33,7 +33,7 @@ Use these paths and symbols as direct navigation points:
 
 ## Persistence rules
 
-The key `vue3d_base_layer_colours` stores only `colorA` and `colorB`. Do not add opacity fields to this saved preference object. Project loading resets all three opacity values to 100 while retaining the current saved/in-session colours. Cancel is intentionally not a rollback operation.
+The key `vue3d_base_layer_colours` stores only `colorA` and `colorB`. Do not add opacity fields to this saved preference object. Project loading resets all three opacity values to 100 while retaining the current saved/in-session colours. Close is intentionally not a rollback operation. The button is labelled Close (not Cancel) to make clear that it retains the live session settings without saving them.
 
 ## Verification status
 
@@ -44,7 +44,7 @@ Manual checks are still needed for:
 2. World-space checker movement/scale consistency while rotating and moving the model.
 3. Independent colour opacity and overall layer opacity.
 4. Paint fully covering the checker where opaque, with checker visible through untouched/transparent regions.
-5. Cancel retains current session colours but does not update saved colour preferences.
+5. Close retains current session colours but does not update saved colour preferences.
 6. Save restores both chosen colours after a fresh application session; opacity values return to 100%.
 7. Reset works both from the dialog and the Base Layer row button.
 8. UV view and exported texture remain free of the world-space checker.
