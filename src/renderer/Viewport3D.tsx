@@ -261,6 +261,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
   const isPaintingRef = useRef(false);
   const lastUVIslandIdRef = useRef<number>(-1);
+  const lastSurfacePointerRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositePaintPointRef = useRef<{ x: number; y: number } | null>(null);
   const lastCompositeMirrorPointsRef = useRef<{ x: number; y: number }[]>([]);
   const brushEngine = BrushEngine.getInstance();
@@ -1692,6 +1693,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
       isPaintingRef.current = false;
       lastUVIslandIdRef.current = -1;
+      lastSurfacePointerRef.current = null;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
@@ -1726,6 +1728,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (hit) {
       const { uv, uvIslandId } = hit;
       isPaintingRef.current = true;
+      lastSurfacePointerRef.current = { x: e.clientX, y: e.clientY };
       lastUVIslandIdRef.current = uvIslandId;
       const pixelX = uv.x * targetLayer.canvas.width;
       const pixelY = (1 - uv.y) * targetLayer.canvas.height;
@@ -1865,6 +1868,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
 
       isPaintingRef.current = false;
       lastUVIslandIdRef.current = -1;
+      lastSurfacePointerRef.current = null;
       lastCompositePaintPointRef.current = null;
       lastCompositeMirrorPointsRef.current = [];
       brushEngine.endStroke();
@@ -2168,64 +2172,79 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     if (!targetLayer) return;
 
     for (const event of coalesced) {
-      const synth = event as unknown as React.PointerEvent<HTMLCanvasElement>;
-      const hit = raycastUV(synth);
-      if (!hit) {
-        lastUVIslandIdRef.current = -1;
-        resetPaintPaths();
-        continue;
-      }
+      const previousPointer = lastSurfacePointerRef.current;
+      const dx = previousPointer ? event.clientX - previousPointer.x : 0;
+      const dy = previousPointer ? event.clientY - previousPointer.y : 0;
+      // Raycast intermediate screen samples so sparse pointer events cannot
+      // skip the surface crossing between two UV islands on the same 3D stroke.
+      const sampleCount = previousPointer
+        ? Math.max(1, Math.min(16, Math.ceil(Math.hypot(dx, dy) / 8)))
+        : 1;
 
-      const { uv, uvIslandId } = hit;
-      const targetX = uv.x * targetLayer.canvas.width;
-      const targetY = (1 - uv.y) * targetLayer.canvas.height;
+      for (let sample = 1; sample <= sampleCount; sample++) {
+        const amount = sample / sampleCount;
+        const sampleX = previousPointer ? previousPointer.x + dx * amount : event.clientX;
+        const sampleY = previousPointer ? previousPointer.y + dy * amount : event.clientY;
+        const synth = { clientX: sampleX, clientY: sampleY } as React.PointerEvent<HTMLCanvasElement>;
+        const hit = raycastUV(synth);
+        if (!hit) {
+          lastUVIslandIdRef.current = -1;
+          resetPaintPaths();
+          continue;
+        }
 
-      if (activeTool === 'mask_brush') {
-        const baseMask = selectionMask || {
-          active: true,
-          type: 'brush' as const,
-          points: [],
-          bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
-          inverted: false,
-        };
-        const updated = MaskEngine.paintMaskDab(
-          baseMask,
-          targetX,
-          targetY,
-          brush.size,
-          brush.hardness || 50,
-          false,
-          targetLayer.canvas.width,
-          targetLayer.canvas.height,
-          uvIslandPathRef.current
-        );
-        if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
+        const { uv, uvIslandId } = hit;
+        const targetX = uv.x * targetLayer.canvas.width;
+        const targetY = (1 - uv.y) * targetLayer.canvas.height;
+
+        if (activeTool === 'mask_brush') {
+          const baseMask = selectionMask || {
+            active: true,
+            type: 'brush' as const,
+            points: [],
+            bounds: { x: targetX, y: targetY, width: brush.size, height: brush.size },
+            inverted: false,
+          };
+          const updated = MaskEngine.paintMaskDab(
+            baseMask,
+            targetX,
+            targetY,
+            brush.size,
+            brush.hardness || 50,
+            false,
+            targetLayer.canvas.width,
+            targetLayer.canvas.height,
+            uvIslandPathRef.current
+          );
+          if (onUpdateSelectionMask) onUpdateSelectionMask(updated);
+          lastUVIslandIdRef.current = uvIslandId;
+          needsRenderRef.current = true;
+          continue;
+        }
+
+        const previousIsland = lastUVIslandIdRef.current;
+        const crossedUVIsland = previousIsland >= 0 && uvIslandId >= 0 && uvIslandId !== previousIsland;
+        if (crossedUVIsland) {
+          // Reset only the UV-space path; the surface-space pointer path keeps
+          // flowing and subsequent samples are rasterised on the new island.
+          resetPaintPaths(targetX, targetY);
+          lastUVIslandIdRef.current = uvIslandId;
+          executePaintTool(targetLayer, targetX, targetY, event.pressure || 1.0);
+          drawStabilizerTether(synth, { x: targetX, y: targetY }, targetLayer);
+          continue;
+        }
+
         lastUVIslandIdRef.current = uvIslandId;
-        needsRenderRef.current = true;
-        continue;
+        const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
+        const lastDab = brushEngine.getLastDabPos();
+        const jumped = lastDab != null &&
+          Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
+        if (!jumped) {
+          executePaintTool(targetLayer, stabilized.x, stabilized.y, event.pressure || 1.0);
+          drawStabilizerTether(synth, stabilized, targetLayer);
+        }
       }
-
-      const previousIsland = lastUVIslandIdRef.current;
-      const crossedUVIsland = previousIsland >= 0 && uvIslandId >= 0 && uvIslandId !== previousIsland;
-      if (crossedUVIsland) {
-        // Start a fresh path at the corresponding UV location. Do not infer
-        // seams from face-index ordering; triangle order is not topological.
-        resetPaintPaths(targetX, targetY);
-        lastUVIslandIdRef.current = uvIslandId;
-        executePaintTool(targetLayer, targetX, targetY, event.pressure || 1.0);
-        drawStabilizerTether(synth, { x: targetX, y: targetY }, targetLayer);
-        continue;
-      }
-
-      lastUVIslandIdRef.current = uvIslandId;
-      const stabilized = brushEngine.updateStabilizer(targetX, targetY, brush.stabilizer);
-      const lastDab = brushEngine.getLastDabPos();
-      const jumped = lastDab != null &&
-        Math.hypot(stabilized.x - lastDab.x, stabilized.y - lastDab.y) > brush.size * 4;
-      if (!jumped) {
-        executePaintTool(targetLayer, stabilized.x, stabilized.y, event.pressure || 1.0);
-        drawStabilizerTether(synth, stabilized, targetLayer);
-      }
+      lastSurfacePointerRef.current = { x: event.clientX, y: event.clientY };
     }
   };
 
