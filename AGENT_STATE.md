@@ -944,3 +944,10 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Workflow #354 tests the final Matcap opacity adjustment and is still running as this entry is written.
 - Manual acceptance remains outstanding for Wood, all new filters, Triplanar transformed-instance projection, adaptive Base Layer checker, Matcap, Mask Layer brush/undo/group behaviour, subdivision sphere poles, UV N-Panel, A5 touch/desktop, and all Step 0 paint/export/touch regression checks.
 - Still not implemented: F1 Tear's three-role stack mask, full Pattern Craft material/export workflow, narrow Add accordion/brush Stencil+image Pattern micro-preview, gallery consumer integration (intentionally deferred until the other application work is complete), GPU/normal-space honeycomb, and UI3 oversized Undo/Redo reproduction.
+
+
+## 2026-11-25 — Final pass verification
+
+- Workflow #354 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload after the Matcap layer-opacity change. Artifact ID `14999603968`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845.
+- The artifact contains the Wood ring modes and curvature maps, live world-matrix handoff, triplanar world transform, Warp/Pointillism/Honeycomb/Stochastic Scatter/Pattern Craft filters, adaptive Base Layer checker, dedicated Matcap layer/shader and target-linked Mask Layer with dependent-mask deletion.
+- CI does not validate the WebGL shader on device, visual output, mask brush ergonomics, undo/redo behaviour or the requested manual acceptance checklist.
