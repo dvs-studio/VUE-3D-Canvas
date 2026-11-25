@@ -93,7 +93,7 @@ The independent gallery foundation is committed but **not yet build- or browser-
 - [x] **UI1** Persist Window menu panel visibility and floating/docked state in browser storage; defaults remain backward-compatible.
 - [x] **UI2** Menu dropdowns dismiss on outside pointer or Escape; pointer-leave no longer closes native selects.
 - [ ] **UI3** Giant Undo/Redo lower 3D viewport — could not reproduce; scan for oversized element
-- [ ] **A6-N** Reorganise existing 2D UV workspace controls into a left-side N-Panel; preserve A6 channel/composite/rebake/selection/touch behaviour.
+- [x] **A6-N** Reorganised the existing 2D UV workspace into a left-side N-Panel; Display tab now owns wireframe visibility/opacity/colour, while Channels owns UV-set selection and Unwrap owns Smart UV entry. CI workflow #320 passed; manual acceptance remains. See `notes/UV_N_PANEL_LEFT_LAYOUT_2026-11-25.md`.
 
 #### 2A-W Wood rings
 - [ ] Uniform tree-year rings **and** organic fingerprint/merged rings; curvature-aware; world vs object — not phase-push only
@@ -174,7 +174,7 @@ CI verifies TypeScript diagnostics, Vite build, self-host sync, package validati
 - The permanent bottom `Base Color Layer` is a world-space procedural checker background, not a UV texture or paintable colour coat. It is locked, always visible, and excluded from the UV composite/export.
 - The two checker colours default to equal neutral grey (`#9c9c9c`) at 100% opacity. Their individual opacity controls are independent and session-only.
 - The ordinary Base Layer opacity slider is separate from the two colour opacity controls.
-- Cancel retains the live session setup without persisting colours; Save persists only the two colours. Reset restores both grey colours and all opacity values to 100%.
+- Close retains the live session setup without persisting colours; Save persists only the two colours. Reset restores both grey colours and all opacity values to 100%.
 - The Base Layer row has a Reset button in the multi-select checkbox position and a dedicated properties button. Keep it protected from paint, visibility, stack, duplicate, delete, group, and merge operations.
 - CI: workflow #304 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `14954377580`). This is not runtime/device acceptance.
 - See `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` for the facility bookmark/code map and manual acceptance checklist; see `notes/PROTECTED_BASE_LAYER_2026-11-24.md` for the original protection history.
