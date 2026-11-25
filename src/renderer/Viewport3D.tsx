@@ -1094,7 +1094,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     let matcapIntensity = 0;
     if (matcapLayer?.pbrSettings) {
       const pbr = matcapLayer.pbrSettings;
-      matcapIntensity = THREE.MathUtils.clamp((pbr.reflectionIntensity ?? 0.8) * (pbr.reflectionInfluence ?? 1), 0, 1);
+      matcapIntensity = THREE.MathUtils.clamp((pbr.reflectionIntensity ?? 0.8) * (pbr.reflectionInfluence ?? 1) * ((matcapLayer.opacity ?? 100) / 100), 0, 1);
       if (pbr.matcapPreset === 'custom' && pbr.customMatcapUrl) {
         const texture = new THREE.TextureLoader().load(pbr.customMatcapUrl, () => {
           if (meshRef.current === mesh && mesh.material === baseMaterial) { baseMaterial.needsUpdate = true; needsRenderRef.current = true; }
