@@ -45,7 +45,7 @@ When the to-do set is concluded, it becomes Current history, the view set become
 
 ## 2026-11-24 — World-space Base Layer checker
 
-The current Base Layer is a procedural world-space background, excluded from UV compositing/export. Its two checker colours are saved globally only when Save is pressed; per-colour opacity and overall Base Layer opacity reset to 100% for a new project/session. Cancel keeps live in-session edits without persisting colour preferences. Reset restores both colours to #9c9c9c and all opacity values to 100%. Workflow #304 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `14954377580`); runtime shader and device acceptance remain open. See [WORLD_SPACE_BASE_LAYER_2026-11-24.md](notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md) for the file/symbol facility index and manual acceptance checklist.
+The current Base Layer is a procedural world-space background, excluded from UV compositing/export. Its two checker colours are saved globally only when Save is pressed; per-colour opacity and overall Base Layer opacity reset to 100% for a new project/session. Close keeps live in-session edits without persisting colour preferences. Reset restores both colours to #9c9c9c and all opacity values to 100%. Workflow #304 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `14954377580`); runtime shader and device acceptance remain open. See [WORLD_SPACE_BASE_LAYER_2026-11-24.md](notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md) for the file/symbol facility index and manual acceptance checklist.
 
 ## STOP
 
@@ -900,3 +900,12 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Other source meshes retain their previous subdivision topology handling. No Suzanne asset or protected paint path was changed.
 - See `notes/DEFAULT_SPHERE_AND_SUBDIVISION_2026-11-25.md`.
 - Automated workflow for the latest source and manual verification are still pending. Inspect both poles, UV seam and silhouette at subdivision levels 0–2 and under both algorithms before acceptance.
+
+
+## 2026-11-25 — Gallery storage performance review and CI
+
+- Refined `src/tools/assetGallery.ts` to IndexedDB version 2 with separate `assets` metadata, `originals` Blob and `thumbnails` Blob stores. Browsing and thumbnail requests no longer fetch all original image blobs.
+- Added an upgrade migration from the initial version 1 combined records, preserving any imported originals and thumbnails.
+- Workflow #326 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14979452656`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45519196459.
+- The same workflow includes the procedural sphere startup, alphabetical model presets and sphere pole subdivision repair source changes.
+- No browser-level IndexedDB migration/import/alpha-preservation test or manual sphere subdivision inspection has been completed. Do not mark either feature visually accepted.
