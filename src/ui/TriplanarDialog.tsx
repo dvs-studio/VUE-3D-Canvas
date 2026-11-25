@@ -9,6 +9,7 @@ import React, { useState, useRef } from 'react';
 import { TriplanarConfig, TriplanarTextureItem } from '../core/types';
 import type { ExternalAsset } from '../tools/externalAssetLibrary';
 import { BUILTIN_TRIPLANAR_TEXTURES } from '../tools/triplanarTextureCatalog';
+import { GalleryAssetPicker } from './GalleryAssetPicker';
 import { 
   Box, Sliders, Check, X, Mountain, Compass, Plus, Trash2, 
   Upload, Layers, Sparkles
@@ -443,6 +444,24 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                           <img src={asset.dataUrl} alt="" className="w-7 h-7 rounded object-cover" />{asset.name}
                         </button>
                       ))}
+
+                      <div className="w-full pt-1">
+                        <GalleryAssetPicker
+                          categories={['surface-texture']}
+                          title="Surface Texture Gallery"
+                          compact
+                          imageMode={!(tex.useInstanceColor ?? !tex.dataUrl)}
+                          onSelect={({ asset, dataUrl }) => handleTextureChange(idx, {
+                            id: asset.id,
+                            name: asset.name,
+                            dataUrl,
+                            tintColor: asset.averageColor,
+                            colorAlpha: 1,
+                            isTransparentBlank: false,
+                            useInstanceColor: false,
+                          })}
+                        />
+                      </div>
 
                       {/* Blank Alpha Toggle */}
                       <button
