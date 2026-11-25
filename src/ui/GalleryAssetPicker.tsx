@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, RefreshCw, Search } from 'lucide-react';
 import {
   GalleryAssetCategory,
   GalleryAssetSummary,
@@ -43,6 +43,7 @@ export const GalleryAssetPicker: React.FC<GalleryAssetPickerProps> = ({
   const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
   const [error, setError] = useState('');
 
   useEffect(() => () => Object.values(thumbnailUrls).forEach(url => URL.revokeObjectURL(url)), [thumbnailUrls]);
@@ -70,7 +71,7 @@ export const GalleryAssetPicker: React.FC<GalleryAssetPickerProps> = ({
     };
     void load();
     return () => { active = false; };
-  }, [open, categories.join('|')]);
+  }, [open, categories.join('|'), refreshToken]);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
@@ -99,9 +100,14 @@ export const GalleryAssetPicker: React.FC<GalleryAssetPickerProps> = ({
       </button>
       {open && (
         <div className="space-y-2 border-t border-[#444] p-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[#777]" />
-            <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a gallery image…" className="w-full rounded border border-[#484848] bg-[#1b1b1b] py-1 pl-7 pr-2 text-[10px] text-white" />
+          <div className="flex gap-1">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[#777]" />
+              <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a gallery image…" className="w-full rounded border border-[#484848] bg-[#1b1b1b] py-1 pl-7 pr-2 text-[10px] text-white" />
+            </div>
+            <button type="button" onClick={() => setRefreshToken(value => value + 1)} title="Refresh gallery" className="rounded border border-[#484848] bg-[#303030] px-2 text-[#aaa] hover:text-white">
+              <RefreshCw className="h-3 w-3" />
+            </button>
           </div>
           {error && <p role="alert" className="text-[10px] text-[#fca5a5]">{error}</p>}
           {visible.length ? (
