@@ -41,7 +41,7 @@ Victory has refined the texture architecture and sequencing. This update takes p
 5. Correct Base Layer dialog button copy from Cancel to Close. Close retains live session settings; Save alone persists checker colours.
 6. Shape-sensitive world-space Base Layer checker is implemented with curvature-adaptive tile frequency. The procedural sphere startup, alphabetically ordered Suzanne presets and sphere-pole subdivision repair are also implemented; verify them before acceptance.
 
-The canonical gallery is now mounted and integrated; folder scanning imports originals into the same IndexedDB stores with source path/modified-time reconciliation. Workflow #385 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15001151525`). Browser migration/import/quota and picker acceptance remain outstanding. The scanner must continue feeding the canonical store, never become a competing asset database.
+The canonical gallery is now mounted and integrated; folder scanning imports originals into the same IndexedDB stores with source path/modified-time reconciliation. Workflow #386 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15000797321`). Browser migration/import/quota and picker acceptance remain outstanding. The scanner must continue feeding the canonical store, never become a competing asset database.
 
 ### READ THIS FIRST — three boxes
 
