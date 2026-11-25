@@ -24,7 +24,6 @@ import {
   Sliders,
   Eye,
   EyeOff,
-  Grid
 } from 'lucide-react';
 import { UVSculptMode, UVChannelInfo, SymmetrizeUVConfig } from '../core/types';
 import { SmartUVOptions, SmartUVUnwrapEngine } from '../tools/smartUVUnwrap';
