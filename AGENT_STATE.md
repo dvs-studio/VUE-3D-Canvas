@@ -977,3 +977,10 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Rewrote `notes/ASSET_GALLERY_MODULE_2026-11-25.md` with current architecture and consumer status.
 - Workflow #385 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `15001151525`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45568723627.
 - Browser acceptance remains outstanding: v1/v2→v3 migration, folder scan/reconcile, original Blob preservation, alpha/animated GIF handling, quota errors, large library memory use, picker selection and all consumer-specific visual behaviour.
+
+
+## 2026-11-25 — Latest CI after Tear fray-boundary correction
+
+- Updated Tear Layer edge detection so green stack-mask strokes are treated as cut boundaries for adjacent white fray edges.
+- Workflow #386 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `15000797321`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45569008417.
+- This is the latest verified self-host source. Manual WebGL/device, brush, mask/tear stack, gallery and full regression acceptance remains outstanding.
