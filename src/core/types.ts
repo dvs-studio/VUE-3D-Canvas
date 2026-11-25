@@ -119,6 +119,9 @@ export interface Layer {
   uvChannel?: string;
   textureFillConfig?: TextureFillConfig;
   isTextureFill?: boolean;
+  /** Non-destructive helper layer role; mask layers target another layer and are not composited directly. */
+  layerRole?: 'mask' | 'tear' | 'matcap';
+  maskTargetLayerId?: string;
   /** Reserved, immutable bottom-of-stack fallback/base layer. */
   isBaseLayer?: boolean;
 }
