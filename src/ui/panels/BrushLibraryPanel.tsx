@@ -77,7 +77,7 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
   });
 
   // Stencil items with thumbnail descriptions
-  const builtinStencils: { id: BrushMaskType; label: string; desc: string; preview: string }[] = [
+  const builtinStencils: { id: BrushMaskType; label: string; desc: string; preview: string; url?: string }[] = [
     { id: 'none', label: 'None', desc: 'Solid Tip', preview: '○' },
     { id: 'grunge', label: 'Grunge', desc: 'Weathered Stain', preview: '░▒▓' },
     { id: 'splat', label: 'Splat', desc: 'Ink Drops', preview: '✦' },
@@ -92,7 +92,7 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
   ];
 
   // Pattern items with thumbnail descriptions
-  const builtinPatterns: { id: BrushPatternType; label: string; desc: string; preview: string }[] = [
+  const builtinPatterns: { id: BrushPatternType; label: string; desc: string; preview: string; url?: string }[] = [
     { id: 'none', label: 'None', desc: 'Flat Pigment', preview: '—' },
     { id: 'checker', label: 'Checker', desc: 'Chess Tiles', preview: '⚀⚁' },
     { id: 'carbon', label: 'Carbon', desc: 'Composite Weave', preview: '▦' },
