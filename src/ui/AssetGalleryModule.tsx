@@ -40,10 +40,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
       const blob = await getGalleryThumbnail(asset.id);
       if (blob) nextUrls[asset.id] = URL.createObjectURL(blob);
     }
-    setThumbnailUrls(previous => {
-      Object.values(previous).forEach(url => URL.revokeObjectURL(url));
-      return nextUrls;
-    });
+    setThumbnailUrls(nextUrls);
     setSelectedId(current => current && rows.some(row => row.id === current) ? current : rows[0]?.id || null);
   }, []);
 
@@ -70,13 +67,14 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
       }
     };
     void load();
-    return () => {
-      active = false;
-      Object.values(thumbnailUrls).forEach(url => URL.revokeObjectURL(url));
-    };
+    return () => { active = false; };
     // Initial load only; refresh owns subsequent reloads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => () => {
+    Object.values(thumbnailUrls).forEach(url => URL.revokeObjectURL(url));
+  }, [thumbnailUrls]);
 
   const visibleAssets = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
@@ -91,7 +89,8 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
   const selectedAsset = assets.find(asset => asset.id === selectedId) || null;
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.currentTarget.files;
+    const input = event.currentTarget;
+    const files = input.files;
     if (!files?.length) return;
     setBusy(true);
     setError('');
@@ -102,7 +101,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
       setError(reason instanceof Error ? reason.message : 'Image import failed.');
     } finally {
       setBusy(false);
-      event.currentTarget.value = '';
+      input.value = '';
     }
   };
 
