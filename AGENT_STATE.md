@@ -932,3 +932,15 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Workflow #345 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `15000271108`). It includes the Mask layer implementation before the dependent-mask cleanup change.
 - Workflow #346 passed through code validation/build but failed while committing generated `self-host/public` output due to a concurrent generated bundle rename/content conflict. The only source delta after #345 is dependent-mask cleanup on target deletion; re-run the workflow to obtain a clean artifact.
 - Manual mask brush editing, undo/redo, target visibility, multiple masks, group visibility and deletion tests remain outstanding.
+
+
+## 2026-11-25 — Latest source and self-host artifact verification
+
+- The live owning-mesh `matrixWorld` is now attached ephemerally to the active geometry object (not Three.js serialised `userData`) and refreshed when geometry is replaced. Wood and Triplanar read this matrix for world-space sampling.
+- Pattern Craft is now part of the selected-layer filter list: empty layers generate monochrome procedural patterns; painted layers receive multiply-style micro-detail while preserving alpha. Styles: waves, cells, noise, checker and rings.
+- F6 target-linked Mask Layer is in source: white-default, black conceals, white reveals, grey partially reveals; multiple masks multiply; mask visibility and opacity apply; deleting a target removes its masks.
+- Matcap layers are created from the Layers panel and the viewport shader uses the topmost visible Matcap-enabled layer; built-in and custom sources are supported, and layer opacity is respected.
+- Workflow #353 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `15000152404`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566173236. This artifact contains the source through the target-mask deletion fix, Pattern Craft and live matrix handoff.
+- Workflow #354 tests the final Matcap opacity adjustment and is still running as this entry is written.
+- Manual acceptance remains outstanding for Wood, all new filters, Triplanar transformed-instance projection, adaptive Base Layer checker, Matcap, Mask Layer brush/undo/group behaviour, subdivision sphere poles, UV N-Panel, A5 touch/desktop, and all Step 0 paint/export/touch regression checks.
+- Still not implemented: F1 Tear's three-role stack mask, full Pattern Craft material/export workflow, narrow Add accordion/brush Stencil+image Pattern micro-preview, gallery consumer integration (intentionally deferred until the other application work is complete), GPU/normal-space honeycomb, and UI3 oversized Undo/Redo reproduction.
