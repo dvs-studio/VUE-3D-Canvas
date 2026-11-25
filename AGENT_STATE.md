@@ -951,3 +951,15 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Workflow #354 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload after the Matcap layer-opacity change. Artifact ID `14999603968`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845.
 - The artifact contains the Wood ring modes and curvature maps, live world-matrix handoff, triplanar world transform, Warp/Pointillism/Honeycomb/Stochastic Scatter/Pattern Craft filters, adaptive Base Layer checker, dedicated Matcap layer/shader and target-linked Mask Layer with dependent-mask deletion.
 - CI does not validate the WebGL shader on device, visual output, mask brush ergonomics, undo/redo behaviour or the requested manual acceptance checklist.
+
+
+## 2026-11-25 — F1 Tear Layer implementation and CI
+
+- Added a dedicated Tear Layer action. The new helper targets the selected ordinary layer and begins white/intact.
+- Black or transparent pixels cut through the target and reveal the immediate layer below.
+- White pixels retain the target and produce a lightly irregular/frayed alpha edge where they border a cutout.
+- Green pixels cut the target and mask the configured underlying stack depth, exposing layers below that depth. The depth control is 1–8, default 2.
+- Tear helper layers are excluded from normal colour compositing and use the existing brush path for hand painting.
+- Mesh-part target scope and richer rim/under-paint workflow remain outstanding.
+- Workflow #360 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14999199885`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45567085033.
+- The #360 artifact includes the Tear Layer, Mask Layer, Matcap, Pattern Craft, Wood, Triplanar, adaptive Base Layer and new filter work. Manual painting/stack and visual acceptance remains open.
