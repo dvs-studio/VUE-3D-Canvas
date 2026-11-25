@@ -108,7 +108,7 @@ The canonical gallery is now mounted and integrated; folder scanning imports ori
 - [x] **F6** Mask layer — dedicated white-default, target-linked mask layer implemented. Grayscale luminance controls target opacity; black conceals, white reveals, grey partially reveals; multiple masks multiply; visibility and mask opacity are respected. Deleting a target removes its dependent masks. Manual brush/undo/group acceptance remains.
 - [x] **F1** Tear layer — black/transparent cuts through to the immediate layer below; white retains and frays the edge beside holes; green masks the configured underlying stack depth (1–8, default 2). Dedicated Tear Layer creation and green stack-depth control implemented. Manual painting/stack acceptance remains.
 - [ ] Tear panel mesh/target scope
-- [ ] Filter-side mesh/UV limit (separate)
+- [x] Filter-side mesh/UV limit (separate): exact active-UV triangle write mask intersects mesh-part mask; Workflow #402 passed; manual alternate-channel/island/gutter acceptance remains.
 - [x] **Pattern Craft** filter — empty layers generate monochrome displacement patterns; painted layers receive multiply-style micro-detail. [ ] Additional material/export workflow acceptance remains.
 - [x] **M1** Dedicated Matcap layer creation and viewport shader support for built-in/custom Matcap source. [ ] Narrow Add menu, export-map support and visual acceptance remain.
 - [x] Keep material import
