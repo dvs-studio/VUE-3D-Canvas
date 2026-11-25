@@ -298,6 +298,8 @@ export const BUILTIN_MODELS: Record<string, () => ModelPreset> = {
   },
   sphere: () => {
     const geom = new THREE.SphereGeometry(1.5, 32, 24);
+    // Identify this topology for the subdivision preview's pole-welding pass.
+    geom.userData.modelKey = 'sphere';
     tagModelComponents(geom, 'sphere');
     return {
       id: 'sphere',
