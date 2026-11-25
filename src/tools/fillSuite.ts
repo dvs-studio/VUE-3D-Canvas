@@ -410,6 +410,26 @@ export class FillSuite {
     const offY = config.offsetY || 0;
     const offZ = config.offsetZ || 0;
     const surface = geometry ? rasterizeMeshSurface(geometry, w, h, uvArray, 4) : null;
+    // The editor may attach the owning mesh transform to geometry metadata.
+    // World-space projection uses it when present; otherwise the current
+    // untransformed model correctly shares object-space coordinates.
+    if (surface && config.coordinateSpace === 'world' && geometry) {
+      const worldMatrix = geometry.userData?.worldMatrix;
+      let matrix: THREE.Matrix4 | null = null;
+      if (worldMatrix instanceof THREE.Matrix4) matrix = worldMatrix;
+      else if (Array.isArray(worldMatrix) && worldMatrix.length === 16) matrix = new THREE.Matrix4().fromArray(worldMatrix);
+      if (matrix) {
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(matrix);
+        const point = new THREE.Vector3();
+        const normal = new THREE.Vector3();
+        for (let i = 0; i < surface.position.length; i += 3) {
+          point.set(surface.position[i], surface.position[i + 1], surface.position[i + 2]).applyMatrix4(matrix);
+          surface.position[i] = point.x; surface.position[i + 1] = point.y; surface.position[i + 2] = point.z;
+          normal.set(surface.normal[i], surface.normal[i + 1], surface.normal[i + 2]).applyMatrix3(normalMatrix).normalize();
+          surface.normal[i] = normal.x; surface.normal[i + 1] = normal.y; surface.normal[i + 2] = normal.z;
+        }
+      }
+    }
 
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
