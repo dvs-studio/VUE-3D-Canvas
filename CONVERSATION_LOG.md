@@ -646,3 +646,11 @@ CI is not a substitute for manual browser/device acceptance.
 - Added Matcap layer opacity to viewport shader influence.
 - Workflow #353 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15000152404`). Workflow #354 is running for the final Matcap-opacity change.
 - Still outstanding: F1 Tear layer with black/white/green role-based stack masking; gallery consumer integration (deferred per user instruction until the other application work is complete); brush Stencil/image-Pattern grid accordion and micro-preview; full Pattern Craft material/export workflow; GPU/normal-space honeycomb; UI3 investigation; manual device acceptance for all recently landed features and the Step 0 regression checklist.
+
+
+## 2026-11-25 — GPT-6 — final verification follow-up
+
+- Workflow #354 completed successfully: TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload all passed.
+- Self-host artifact ID: `14999603968`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845.
+- The artifact includes the Wood, Triplanar world-matrix, adaptive Base Layer, Warp, Pointillism, Honeycomb, Stochastic Scatter, Pattern Craft, Matcap and target-linked Mask Layer changes.
+- This is build/package verification only. Manual shader, visual, brush/undo, desktop/tablet and Step 0 acceptance remains with Victory.
