@@ -963,3 +963,17 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Mesh-part target scope and richer rim/under-paint workflow remain outstanding.
 - Workflow #360 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14999199885`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45567085033.
 - The #360 artifact includes the Tear Layer, Mask Layer, Matcap, Pattern Craft, Wood, Triplanar, adaptive Base Layer and new filter work. Manual painting/stack and visual acceptance remains open.
+
+
+## 2026-11-25 — Canonical Asset Gallery consumer integration
+
+- Mounted `AssetGalleryModule` as a dedicated workspace Docker tab; adjusted its layout for the narrow dock.
+- Added shared compact accordion/grid picker `GalleryAssetPicker`, loading metadata and thumbnails only; the original Blob is loaded only after selection.
+- Connected the canonical gallery to Triplanar, Material Fill import, Mask Layer, Tear Layer, Matcap, Brush Library Stencil/image Pattern and Pattern Stamp decal/mask/grunge inputs.
+- Triplanar gallery quick-look appears on hover only when instance-colour mode is disabled; colour mode retains the colour preview.
+- Brush image Stencil and image Pattern use distinct fields and rendering paths: `stencilUrl` is the actual alpha-bearing stamp, `patternUrl` is raster brush texture, and `patternType` remains procedural. A selected-image micro-preview sits beneath the brush menu tabs.
+- Reconciled folder scanner into canonical gallery v3. Scanner classifies stencil/matcap/mask/brush/pattern/texture folders, stores unchanged original Blobs, records source path and modification time, skips unchanged scans and replaces changed files. Legacy WebP previews remain for old consumers; scanner still returns results if gallery persistence fails.
+- Added a Scan library folder action to the gallery panel and refresh action to compact pickers.
+- Rewrote `notes/ASSET_GALLERY_MODULE_2026-11-25.md` with current architecture and consumer status.
+- Workflow #385 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `15001151525`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45568723627.
+- Browser acceptance remains outstanding: v1/v2→v3 migration, folder scan/reconcile, original Blob preservation, alpha/animated GIF handling, quota errors, large library memory use, picker selection and all consumer-specific visual behaviour.
