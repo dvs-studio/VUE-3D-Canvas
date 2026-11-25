@@ -1062,14 +1062,15 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         shader.uniforms.vueBaseColourB = { value: colourB };
         shader.uniforms.vueBaseOpacityA = { value: Math.max(0, Math.min(1, baseLayerSettings.colorAOpacity / 100)) };
         shader.uniforms.vueBaseOpacityB = { value: Math.max(0, Math.min(1, baseLayerSettings.colorBOpacity / 100)) };
-        shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };\n        shader.uniforms.vueMatcapMap = { value: matcapTextureRef.current };\n        shader.uniforms.vueMatcapIntensity = { value: matcapIntensity };
+        shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };
+        shader.uniforms.vueMatcapMap = { value: matcapTextureRef.current };\n        shader.uniforms.vueMatcapIntensity = { value: matcapIntensity };
         shader.vertexShader = shader.vertexShader.replace(
           '#include <common>',
           '#include <common>\nvarying vec3 vVueMatcapNormal;\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;'
         );
         shader.vertexShader = shader.vertexShader.replace(
           '#include <worldpos_vertex>',
-          '#include <worldpos_vertex>\nvVueWorldPosition = worldPosition.xyz;\nvVueWorldNormal = normalize(mat3(modelMatrix) * objectNormal);'
+          '#include <worldpos_vertex>\nvVueMatcapNormal = normalize(transformedNormal);\nvVueWorldPosition = worldPosition.xyz;\nvVueWorldNormal = normalize(mat3(modelMatrix) * objectNormal);'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <common>',
