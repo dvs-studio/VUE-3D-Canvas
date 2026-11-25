@@ -200,10 +200,10 @@ export default function App() {
   }, []);
 
   // 3D Viewport State
-  const [modelKey, setModelKey] = useState<string>('suzanneHeadEyes');
+  const [modelKey, setModelKey] = useState<string>('sphere');
   const [customOBJText, setCustomOBJText] = useState<string | undefined>(undefined);
   const [activeGeometry, setActiveGeometry] = useState<THREE.BufferGeometry>(() => {
-    const geom = BUILTIN_MODELS.suzanneHeadEyes().geometry;
+    const geom = BUILTIN_MODELS.sphere().geometry;
     UVChannelManager.ensureBaseChannels(geom);
     return geom;
   });
