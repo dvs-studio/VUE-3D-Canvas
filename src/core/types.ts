@@ -229,6 +229,8 @@ export interface BrushPreset {
 
   // Pattern & Sub-Settings
   patternType?: BrushPatternType;
+  /** Image-based brush pattern texture; distinct from procedural patternType. */
+  patternUrl?: string;
   patternScale?: number;
   patternBlend?: 'multiply' | 'overlay' | 'hard_light' | 'screen' | 'normal';
   patternAngle?: number;
