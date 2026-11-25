@@ -35,6 +35,14 @@ These are raster filter implementations, not brush engines. They do not replace 
 - Connected visible layers whose reflection source is Matcap to the standard-material shader. Built-in Chrome/Ceramic/Clay/Pearl/Gold looks use generated preview textures; Custom uses the selected image.
 - The current renderer applies the topmost visible Matcap-enabled layer as a viewport material appearance overlay. It is not yet a separately exported Matcap map or a multi-Matcap stack.
 
+### F6 — Target-linked Mask Layer
+
+- Added a dedicated Mask Layer action in the Layers panel. It creates a white mask targeting the currently selected ordinary layer.
+- Mask layers are not drawn as visible colour layers. Their grayscale luminance and alpha multiply the target layer's colour alpha and PBR-map contribution.
+- Multiple visible masks targeting one layer multiply together; layer visibility and mask opacity are respected.
+- Deleting a target layer also removes its dependent masks.
+- Brush editing uses the ordinary paint path: white reveals, black conceals, grey partially reveals. Manual brush/undo/group tests remain outstanding.
+
 ## Still outstanding / intentionally deferred
 
 - F1 Tear layer and its black/white/green role-based stack masking.
