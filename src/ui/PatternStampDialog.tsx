@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PatternStampConfig, BlendMode } from '../core/types';
 import { PatternStampEngine } from '../tools/patternStampTool';
+import { GalleryAssetPicker } from './GalleryAssetPicker';
 import { 
   Stamp, X, Upload, Sliders, RefreshCw, 
   Layers, ShieldAlert, Move, Image as ImageIcon, Sparkles, Dices
@@ -341,6 +342,14 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
                 </div>
               </div>
 
+              <GalleryAssetPicker
+                categories={['stencil']}
+                title="Stencil / Decal Image Gallery"
+                compact
+                imageMode
+                onSelect={({ asset, dataUrl }) => update({ stampDataUrl: dataUrl, stampName: asset.name, stampId: 'gallery_' + asset.id })}
+              />
+
               {/* Size Slider */}
               <div>
                 <div className="flex justify-between items-center mb-1">
@@ -472,6 +481,14 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
                   </button>
                 </div>
 
+                <GalleryAssetPicker
+                  categories={['mask']}
+                  title="Mask Texture Gallery"
+                  compact
+                  imageMode
+                  onSelect={({ dataUrl }) => update({ tornMaskTextureUrl: dataUrl, enableTornEdgeMask: true, tornInfluenceAlphaOnly: true })}
+                />
+
                 {config.tornMaskTextureUrl ? (
                   <div className="flex items-center justify-between bg-[#1e1e1e] p-2 rounded border border-[#444]">
                     <div className="flex items-center gap-2">
@@ -598,6 +615,14 @@ export const PatternStampDialog: React.FC<PatternStampDialogProps> = ({
 
               {config.enableGrungeOverlay && (
                 <>
+                  <GalleryAssetPicker
+                    categories={['brush-texture', 'surface-texture']}
+                    title="Grunge / Surface Texture Gallery"
+                    compact
+                    imageMode
+                    onSelect={({ dataUrl }) => update({ customGrungeUrl: dataUrl, grungePreset: 'custom', enableGrungeOverlay: true })}
+                  />
+
                   {/* Preset Selector */}
                   <div>
                     <label className="block text-[10px] font-mono text-[#aaa] uppercase tracking-wider mb-1.5">
