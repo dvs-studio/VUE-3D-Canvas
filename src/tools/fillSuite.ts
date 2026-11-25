@@ -15,6 +15,7 @@
 
 import { SelectionMask, TriplanarConfig, TriplanarTextureItem, TextureFillConfig } from '../core/types';
 import { SelectionTool } from './selectionTool';
+import * as THREE from 'three';
 import type { BufferGeometry } from 'three';
 import { dilateImageData, rasterizeMeshSurface, type MeshSurfaceMap } from './textureFilters';
 
