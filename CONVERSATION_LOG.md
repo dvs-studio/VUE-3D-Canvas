@@ -613,3 +613,15 @@ CI is not a substitute for manual browser/device acceptance.
 - The subdivision repair is sphere-specific: unify duplicated pole vertices before Catmull-Clark. Manual pole/seam/silhouette verification remains outstanding.
 - A5 filter-title dragging is present in code for mouse and touch (touch uses a double-tap arm); device verification remains outstanding. UI3 oversized Undo/Redo was not found in the current 3D viewport source scan and remains a manual/reproduction item.
 - Next substantial feature task remains 2A-W Wood rings: uniform growth rings and organic fingerprint/merged rings with curvature-aware mapping and object/world space. Do not substitute a superficial phase-only adjustment.
+
+
+## 2026-11-25 — GPT-6 — 2A-W / 2A-T / 2B-M1 / 2C implementation pass
+
+- Added Wood ring structures: uniform tree-year growth rings, organic fingerprint rings and merged/flowing rings. Built active-UV surface position, normal and normal-derived curvature maps; exposed curvature influence and Object/World coordinate selector. World mode uses `geometry.userData.worldMatrix` when present; live owning-mesh matrix handoff remains.
+- Added Warp/Wavy Transform, Pointillism, Honeycomb Cells (hex/square/triangle/circle) and Stochastic Scatter filters with dedicated controls and deterministic seed behaviour. Existing selected-mesh-part pixel preservation is retained.
+- Triplanar now transforms rasterised positions/normals using supplied geometry world-matrix metadata; existing three-axis blending, A/B mixing, slope/altitude masks and selection protection remain.
+- Base Layer checker frequency now adapts to derivative-estimated surface curvature, increasing from 2x to 4x around curved areas to reduce oversized tiles on finger-like forms.
+- Added dedicated Matcap Layer creation and viewport shader sampling. Built-in styles use generated Matcap textures; custom source images are loaded into the shader. Only the topmost visible Matcap-enabled layer drives the current viewport overlay.
+- Added `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
+- Workflow #340 passed TypeScript diagnostics and Vite build, but failed during the self-host generated-output commit due to a concurrent bundle rename/content conflict in `self-host/public/index.html`. A clean follow-up self-host sync is still required.
+- F1 Tear, F6 Mask layer/target relationship, gallery consumer integration (deferred until the other tasks complete), Brush settings grid accordion/micro-preview, live world-matrix handoff, Matcap export/stacking, UI3 reproduction and manual device acceptance remain open.
