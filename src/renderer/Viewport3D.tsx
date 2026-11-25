@@ -1051,7 +1051,14 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             vec2 vueCheckerCoordinates = vueAbsWorldNormal.x >= vueAbsWorldNormal.y && vueAbsWorldNormal.x >= vueAbsWorldNormal.z
               ? vVueWorldPosition.yz
               : (vueAbsWorldNormal.y >= vueAbsWorldNormal.z ? vVueWorldPosition.xz : vVueWorldPosition.xy);
-            float vueCheckerIndex = mod(floor(vueCheckerCoordinates.x * 2.0) + floor(vueCheckerCoordinates.y * 2.0), 2.0);
+            // Increase checker frequency on tightly curved details (e.g. fingers),
+            // keeping broad, flatter surfaces on the original larger tile scale.
+            vec3 vueN = normalize(vVueWorldNormal);
+            float vueNormalRate = length(dFdx(vueN)) / max(length(dFdx(vVueWorldPosition)), 0.0001)
+              + length(dFdy(vueN)) / max(length(dFdy(vVueWorldPosition)), 0.0001);
+            float vueCurvature = smoothstep(0.15, 1.8, vueNormalRate);
+            float vueTileScale = mix(2.0, 4.0, vueCurvature);
+            float vueCheckerIndex = mod(floor(vueCheckerCoordinates.x * vueTileScale) + floor(vueCheckerCoordinates.y * vueTileScale), 2.0);
             vec3 vueCheckerColour = mix(vueBaseColourA, vueBaseColourB, vueCheckerIndex);
             float vueCheckerOpacity = mix(vueBaseOpacityA, vueBaseOpacityB, vueCheckerIndex) * vueBaseLayerOpacity;
             vec3 vueBackgroundColour = mix(vec3(0.1569), vueCheckerColour, vueCheckerOpacity);
@@ -1059,7 +1066,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
           #endif`
         );
       };
-      baseMaterial.customProgramCacheKey = () => 'vue-world-space-base-checker-v1';
+      baseMaterial.customProgramCacheKey = () => 'vue-world-space-base-checker-curvature-v2';
       baseMaterial.needsUpdate = true;
     }
 
