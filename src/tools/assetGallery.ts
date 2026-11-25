@@ -36,6 +36,7 @@ export interface GalleryAssetSummary {
   categories: GalleryAssetCategory[];
   source: GalleryAssetSource;
   sourcePath?: string;
+  sourceModifiedAt?: number;
   averageColor: string;
   createdAt: number;
   updatedAt: number;
@@ -189,6 +190,7 @@ function requestResult<T>(request: IDBRequest<T>, message: string): Promise<T> {
 export interface GalleryImportOptions {
   source?: GalleryAssetSource;
   sourcePathForFile?: (file: File) => string | undefined;
+  sourceModifiedAtForFile?: (file: File) => number | undefined;
   categoriesForFile?: (file: File) => GalleryAssetCategory[];
 }
 
@@ -219,6 +221,7 @@ export async function importGalleryFiles(
         categories: cleanCategories,
         source: options.source || 'import',
         sourcePath: options.sourcePathForFile?.(file),
+        sourceModifiedAt: options.sourceModifiedAtForFile?.(file),
         averageColor: details.averageColor,
         createdAt: now,
         updatedAt: now,
