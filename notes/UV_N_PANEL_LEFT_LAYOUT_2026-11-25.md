@@ -30,7 +30,7 @@ Move the existing 2D UV workspace tools into a left-side N-Panel instead of keep
 
 ## Verification
 
-Workflow #318 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact creation after the panel/viewport wiring. Workflow #320 (import cleanup) is the final follow-up check and must be confirmed before marking the current source as fully CI-verified.
+Workflow #320 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact creation after the final import cleanup. Artifact ID `14977799972`. This is CI verification, not visual/device acceptance.
 
 Manual acceptance is still required for:
 1. Left panel open/close and N shortcut.
