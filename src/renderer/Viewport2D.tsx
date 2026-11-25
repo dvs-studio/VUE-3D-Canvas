@@ -41,8 +41,6 @@ import {
   Smartphone, 
   RotateCcw, 
   Maximize2, 
-  Eye, 
-  EyeOff,
   Sliders,
   Paintbrush,
   Wand2,
