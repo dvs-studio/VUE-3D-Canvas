@@ -454,8 +454,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         const isHole = (pixel: number) => {
           const i = pixel * 4;
           if (pixels[i + 3] < 8) return true;
-          const luma = (0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]) / 255;
-          return luma < 0.22;
+          const red = pixels[i], green = pixels[i + 1], blue = pixels[i + 2];
+          const isGreenStackMask = green > 80 && green > red * 1.25 && green > blue * 1.25;
+          const luma = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+          return isGreenStackMask || luma < 0.22;
         };
         for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
           const pixel = y * width + x, i = pixel * 4;
