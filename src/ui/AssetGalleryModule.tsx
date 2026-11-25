@@ -8,18 +8,18 @@ import {
   listGalleryAssets,
   getGalleryThumbnail,
 } from '../tools/assetGallery';
+import { chooseExternalAssetFolder } from '../tools/externalAssetLibrary';
 
 type GalleryFilter = GalleryAssetCategory | 'all';
 
 export interface AssetGalleryModuleProps {
-  /** Optional selection notification for a future consumer; this module is not mounted yet. */
+  /** Optional selection notification for an embedding consumer. */
   onAssetSelected?: (asset: GalleryAssetSummary) => void;
   className?: string;
 }
 
 /**
- * Standalone gallery surface. It intentionally is not mounted by App.tsx:
- * renderer and tool integrations are a later, separately tested phase.
+ * Standalone gallery surface. Tool integrations use the same IndexedDB-backed source.
  */
 export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetSelected, className = '' }) => {
   const [assets, setAssets] = useState<GalleryAssetSummary[]>([]);
@@ -105,6 +105,19 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
     }
   };
 
+  const handleScanFolder = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await chooseExternalAssetFolder();
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Folder scan failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!selectedAsset) return;
     setBusy(true);
@@ -132,14 +145,19 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
           <h2 className="text-sm font-semibold text-white">Asset Gallery</h2>
           <p className="text-[11px] text-[#aaa]">Independent image library · originals preserved</p>
         </div>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={busy}
-          className="rounded border border-[#5b7893] bg-[#365b7b] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#416d91] disabled:opacity-50"
-        >
-          {busy ? 'Working…' : 'Import images'}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={handleScanFolder} disabled={busy} className="rounded border border-[#5b7893] bg-[#303f4d] px-2.5 py-1.5 text-[10px] font-medium text-white hover:bg-[#3a5268] disabled:opacity-50">
+            Scan library folder
+          </button>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+            className="rounded border border-[#5b7893] bg-[#365b7b] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#416d91] disabled:opacity-50"
+          >
+            {busy ? 'Working…' : 'Import images'}
+          </button>
+        </div>
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif" multiple className="hidden" onChange={handleImport} />
       </header>
 
