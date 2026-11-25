@@ -3,7 +3,7 @@ import * as THREE from 'three';
  * Image-layer filter algorithms. These are destructive image operations, not brush tools.
  * The selected layer's pixel buffer is transformed and written back by the caller.
  */
-export type TextureFilterKind = 'wood' | 'hatching' | 'cross-hatching' | 'hashing' | 'powderiser' | 'noise-shader' | 'dither' | 'mosaic';
+export type TextureFilterKind = 'wood' | 'hatching' | 'cross-hatching' | 'hashing' | 'powderiser' | 'noise-shader' | 'dither' | 'mosaic' | 'warp' | 'pointillism' | 'honeycomb' | 'stochastic-scatter';
 export type TextureFilterSource = 'image' | 'color';
 export interface WoodSource { id:string; source:'color'|'image'; color:string; imageDataUrl?:string; density:number; }
 export interface TextureFilterConfig {
@@ -49,6 +49,12 @@ export interface TextureFilterConfig {
   woodRingStyle: 'growth' | 'fingerprint' | 'merged';
   woodCoordinateSpace: 'object' | 'world';
   woodCurvatureInfluence: number;
+  warpStrength: number;
+  pointillismSize: number;
+  honeycombSize: number;
+  honeycombShape: 'hex' | 'square' | 'triangle' | 'circle';
+  scatterDensity: number;
+  scatterSize: number;
   surfaceNormalMap?: Float32Array;
   surfaceCurvatureMap?: Float32Array;
   /** Optional dither pattern. */
@@ -72,7 +78,7 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z',
   hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
   featureScale: 100, positionJitter: 0, angleJitter: 0,
-  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15, woodRingStyle: 'growth', woodCoordinateSpace: 'object', woodCurvatureInfluence: 55,
+  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15, woodRingStyle: 'growth', woodCoordinateSpace: 'object', woodCurvatureInfluence: 55, warpStrength: 18, pointillismSize: 8, honeycombSize: 16, honeycombShape: 'hex', scatterDensity: 32, scatterSize: 5,
   ditherPattern: 'hash', filterSeed: 71,
   woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}],
   targetMeshPart: 'all',
@@ -523,6 +529,77 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d')!.putImageData(out,0,0);
      const blurred=document.createElement('canvas');blurred.width=w;blurred.height=h;const ctx=blurred.getContext('2d')!;
      ctx.filter=`blur(${clamp(cfg.blur,0,20)}px)`;ctx.drawImage(tmp,0,0);return applyMeshMask(ctx.getImageData(0,0,w,h));
+   }
+   return applyMeshMask(out);
+ }
+ if(cfg.kind==='warp'){
+   const strength=clamp(cfg.warpStrength??18,0,100)*0.45;
+   const seed=Math.floor(cfg.filterSeed??71);
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+     const i=(y*w+x)*4;
+     const nx=(hash(Math.floor(x/18),Math.floor(y/18),seed)-0.5)*2;
+     const ny=(hash(Math.floor(x/18),Math.floor(y/18),seed+37)-0.5)*2;
+     const sx=clamp(Math.round(x+nx*strength),0,w-1),sy=clamp(Math.round(y+ny*strength),0,h-1);
+     const si=(sy*w+sx)*4;
+     dst[i]=data[si];dst[i+1]=data[si+1];dst[i+2]=data[si+2];dst[i+3]=data[si+3];
+   }
+   return applyMeshMask(out);
+ }
+ if(cfg.kind==='pointillism'){
+   const size=Math.max(2,Math.round(cfg.pointillismSize??8));
+   const seed=Math.floor(cfg.filterSeed??71);
+   dst.set(data);
+   const step=Math.max(2,Math.round(size*1.65));
+   for(let gy=0;gy<h;gy+=step)for(let gx=0;gx<w;gx+=step){
+     const cx=clamp(Math.round(gx+step*(0.2+hash(gx,gy,seed)*0.6)),0,w-1);
+     const cy=clamp(Math.round(gy+step*(0.2+hash(gx,gy,seed+19)*0.6)),0,h-1);
+     const si=(cy*w+cx)*4,radius=size*(0.65+hash(gx,gy,seed+29)*0.45);
+     const minX=Math.max(0,Math.floor(cx-radius)),maxX=Math.min(w-1,Math.ceil(cx+radius));
+     const minY=Math.max(0,Math.floor(cy-radius)),maxY=Math.min(h-1,Math.ceil(cy+radius));
+     for(let py=minY;py<=maxY;py++)for(let px=minX;px<=maxX;px++){
+       const dx=px-cx,dy=py-cy;if(dx*dx+dy*dy>radius*radius)continue;
+       const di=(py*w+px)*4;dst[di]=data[si];dst[di+1]=data[si+1];dst[di+2]=data[si+2];dst[di+3]=data[si+3];
+     }
+   }
+   return applyMeshMask(out);
+ }
+ if(cfg.kind==='stochastic-scatter'){
+   const density=clamp(cfg.scatterDensity??32,1,100)/100;
+   const radius=Math.max(1,Math.round(cfg.scatterSize??5));
+   const seed=Math.floor(cfg.filterSeed??71);
+   dst.set(data);
+   const cell=Math.max(3,Math.round(radius*2.6));
+   for(let gy=0;gy<h;gy+=cell)for(let gx=0;gx<w;gx+=cell){
+     if(hash(gx,gy,seed)>density)continue;
+     const cx=clamp(Math.round(gx+hash(gx,gy,seed+7)*cell),0,w-1);
+     const cy=clamp(Math.round(gy+hash(gx,gy,seed+13)*cell),0,h-1);
+     const si=(cy*w+cx)*4,rr=radius*(0.5+hash(gx,gy,seed+23));
+     for(let py=Math.max(0,cy-radius);py<=Math.min(h-1,cy+radius);py++)for(let px=Math.max(0,cx-radius);px<=Math.min(w-1,cx+radius);px++){
+       const dx=px-cx,dy=py-cy;if(dx*dx+dy*dy>rr*rr)continue;
+       const di=(py*w+px)*4;dst[di]=data[si];dst[di+1]=data[si+1];dst[di+2]=data[si+2];dst[di+3]=data[si+3];
+     }
+   }
+   return applyMeshMask(out);
+ }
+ if(cfg.kind==='honeycomb'){
+   const size=Math.max(3,Math.round(cfg.honeycombSize??16));
+   const shape=cfg.honeycombShape||'hex';
+   const seed=Math.floor(cfg.filterSeed??71);
+   const cellH=shape==='hex'?size*Math.sqrt(3):size;
+   const rowStep=shape==='hex'?cellH*0.75:size;
+   for(let gy=0;gy<h;gy+=Math.max(1,Math.floor(rowStep)))for(let gx=0;gx<w;gx+=Math.max(1,Math.floor(size))){
+     const row=Math.round(gy/rowStep),cx=clamp(Math.round(gx+(shape==='hex'&&(row&1)?size/2:0)),0,w-1),cy=clamp(Math.round(gy),0,h-1);
+     const si=(cy*w+cx)*4,halfW=size*0.5,halfH=shape==='hex'?cellH*0.5:size*0.5;
+     for(let py=Math.max(0,Math.floor(cy-halfH));py<=Math.min(h-1,Math.ceil(cy+halfH));py++)for(let px=Math.max(0,Math.floor(cx-halfW));px<=Math.min(w-1,Math.ceil(cx+halfW));px++){
+       const nx=Math.abs((px-cx)/Math.max(1,halfW)),ny=Math.abs((py-cy)/Math.max(1,halfH));
+       let inside=false;
+       if(shape==='circle')inside=nx*nx+ny*ny<=1;
+       else if(shape==='square')inside=nx<=1&&ny<=1;
+       else if(shape==='triangle')inside=ny<=1&&nx<=1-ny*0.5;
+       else inside=nx<=1&&ny<=1&&nx+ny*0.5<=1.25;
+       if(!inside)continue;
+       const di=(py*w+px)*4;dst[di]=data[si];dst[di+1]=data[si+1];dst[di+2]=data[si+2];dst[di+3]=data[si+3];
+     }
    }
    return applyMeshMask(out);
  }
