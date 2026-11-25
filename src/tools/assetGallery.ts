@@ -10,7 +10,7 @@
  */
 
 export const ASSET_GALLERY_DB = 'vue3d-asset-gallery';
-export const ASSET_GALLERY_VERSION = 2;
+export const ASSET_GALLERY_VERSION = 3;
 export const ASSET_GALLERY_STORE = 'assets';
 const ORIGINALS_STORE = 'originals';
 const THUMBNAILS_STORE = 'thumbnails';
@@ -93,8 +93,10 @@ function openGalleryDb(): Promise<IDBDatabase> {
         assets.createIndex('name', 'name', { unique: false });
         assets.createIndex('categories', 'categories', { unique: false, multiEntry: true });
         assets.createIndex('updatedAt', 'updatedAt', { unique: false });
+        assets.createIndex('sourcePath', 'sourcePath', { unique: false });
       } else {
         assets = tx!.objectStore(ASSET_GALLERY_STORE);
+        if (!assets.indexNames.contains('sourcePath')) assets.createIndex('sourcePath', 'sourcePath', { unique: false });
       }
       if (!db.objectStoreNames.contains(ORIGINALS_STORE)) db.createObjectStore(ORIGINALS_STORE, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(THUMBNAILS_STORE)) db.createObjectStore(THUMBNAILS_STORE, { keyPath: 'id' });
@@ -184,20 +186,26 @@ function requestResult<T>(request: IDBRequest<T>, message: string): Promise<T> {
   });
 }
 
+export interface GalleryImportOptions {
+  source?: GalleryAssetSource;
+  sourcePathForFile?: (file: File) => string | undefined;
+  categoriesForFile?: (file: File) => GalleryAssetCategory[];
+}
+
 export async function importGalleryFiles(
   files: FileList | File[],
   categories: GalleryAssetCategory[] = ['surface-texture'],
+  options: GalleryImportOptions = {},
 ): Promise<GalleryAssetSummary[]> {
   const selected = Array.from(files).filter(isSupportedImage);
   if (!selected.length) throw new Error('Choose PNG, JPEG, WebP, GIF, BMP or AVIF images.');
-
-  const cleanCategories = Array.from(new Set(categories));
-  if (!cleanCategories.length) throw new Error('Choose at least one gallery category.');
 
   const db = await openGalleryDb();
   const imported: GalleryAssetSummary[] = [];
   try {
     for (const file of selected) {
+      const cleanCategories = Array.from(new Set(options.categoriesForFile?.(file) || categories));
+      if (!cleanCategories.length) continue;
       const details = await readImageSize(file);
       const now = Date.now();
       const summary: GalleryAssetSummary = {
@@ -209,7 +217,8 @@ export async function importGalleryFiles(
         width: details.width,
         height: details.height,
         categories: cleanCategories,
-        source: 'import',
+        source: options.source || 'import',
+        sourcePath: options.sourcePathForFile?.(file),
         averageColor: details.averageColor,
         createdAt: now,
         updatedAt: now,
