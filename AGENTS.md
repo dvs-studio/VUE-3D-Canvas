@@ -180,3 +180,16 @@ CI verifies TypeScript diagnostics, Vite build, self-host sync, package validati
 - The Base Layer row has a Reset button in the multi-select checkbox position and a dedicated properties button. Keep it protected from paint, visibility, stack, duplicate, delete, group, and merge operations.
 - CI: workflow #304 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `14954377580`). This is not runtime/device acceptance.
 - See `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md` for the facility bookmark/code map and manual acceptance checklist; see `notes/PROTECTED_BASE_LAYER_2026-11-24.md` for the original protection history.
+
+
+## LATEST USER DIRECTIVE — 2026-11-25: texture integration, Mask Layer and viewport sync
+
+The user reports that the texture integration is missing in the running application. The previous gallery-complete statement is no longer accepted as verification. Re-audit the actual consumer path and restore the six supplied 2K JPEGs from `Texture integration.zip` to the canonical gallery: autumn leaf veins, brown animal fur, lush lawn grass, rusty metal, dark walnut wood and weathered wood. Preserve originals and thumbnails separately; do not replace built-in samples or create a second gallery database. Verify the actual Triplanar, Material Fill, Brush Library, Pattern Stamp, Mask/Tear and Matcap selection paths.
+
+**Execute autonomously; do not wait for confirmation.** Full specification and code bookmarks: [`notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md`](notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md).
+
+Required order: (1) restore supplied texture integration; (2) repair 3D brush continuity across corresponding UV islands; (3) keep filter UV cut-out coverage separate from mesh-part targeting; (4) add coalesced asynchronous 3D→2D UV refresh for drawing and subdivision geometry changes; (5) redesign Mask Layer; (6) group all special layer types under the Layers Add menu; (7) put Pattern Craft directly in the top Filter menu as its own command; (8) complete Tear mesh-part scope, Matcap export/stacking, Pattern Craft material/export, Honeycomb world/normal mapping, gallery GPU-tier/resource packaging and UI3 Undo/Redo investigation.
+
+Mask Layer requirements: new masks are blank/transparent and neutral until pixels exist. Normal (Pass Through) affects only its directly linked layer below. Mix uses only the directly adjacent layer above and below with alpha-aware black/white interpolation (white selects upper, black selects lower, grey blends). Right-click and touch long-press on a selected layer create its mask adjacent to that exact layer. Single-click highlight toggles mask-edit mode; double-click X toggles a mask-only diagnostic view (light grey positive/revealed values, subtle light-red negative/subtracted values) and toggles back to the project. Selection-tool overlays must remain clear in both views.
+
+Keep the mesh-part filter limit and UV-island cut-out limit separate. Preserve the accepted paint path, UV-island seam repair, protected Base Layer, and all excluded features. Workflow #386 predates this request and is not evidence of acceptance. Update `AGENT_STATE.md` and `CONVERSATION_LOG.md`; sync with `npm run host:sync`; report code/CI and manual visual acceptance separately.
