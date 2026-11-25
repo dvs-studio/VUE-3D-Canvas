@@ -46,6 +46,11 @@ export interface TextureFilterConfig {
   woodSeed: number;
   /** Seeded spatial variation applied independently to band and ring frequencies. */
   woodFrequencyRandomization: number;
+  woodRingStyle: 'growth' | 'fingerprint' | 'merged';
+  woodCoordinateSpace: 'object' | 'world';
+  woodCurvatureInfluence: number;
+  surfaceNormalMap?: Float32Array;
+  surfaceCurvatureMap?: Float32Array;
   /** Optional dither pattern. */
   ditherPattern: 'hash' | 'bayer';
   /** Powder / noise seed. */
@@ -67,7 +72,7 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z',
   hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
   featureScale: 100, positionJitter: 0, angleJitter: 0,
-  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15,
+  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15, woodRingStyle: 'growth', woodCoordinateSpace: 'object', woodCurvatureInfluence: 55,
   ditherPattern: 'hash', filterSeed: 71,
   woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}],
   targetMeshPart: 'all',
@@ -388,26 +393,56 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      for(const row of stack){
        const density=clamp(Number(row.item.density)||1,1,100);
        const ox=mapped?cfg.objectPositionMap![mi]:x/w, oy=mapped?cfg.objectPositionMap![mi+1]:y/h, oz=mapped?cfg.objectPositionMap![mi+2]:0;
-       const grainCoord=cfg.axis==='X'?oy*0.72+oz*0.28:cfg.axis==='Y'?ox*0.72+oz*0.28:ox*0.72+oy*0.28;
-       const flow=cfg.axis==='X'?ox:cfg.axis==='Y'?oy:oz;
+       // Wood coordinates are sampled from the UV-rasterised surface map, not screen pixels.
+       // The current object/world transform is supplied by the geometry metadata when available.
+       const coordX=ox, coordY=oy, coordZ=oz;
+       const grainCoord=cfg.axis==='X'?coordY*0.72+coordZ*0.28:cfg.axis==='Y'?coordX*0.72+coordZ*0.28:coordX*0.72+coordY*0.28;
+       const flow=cfg.axis==='X'?coordX:cfg.axis==='Y'?coordY:coordZ;
        const grainType=cfg.woodGrainType||'band+ring';
        const frequencyRandomization=clamp(cfg.woodFrequencyRandomization??15,0,100)/100;
-       const frequencyCellX=Math.floor(x/48),frequencyCellY=Math.floor(y/48);
+       const frequencyCellX=Math.floor((coordX*31+coordZ*17)*8),frequencyCellY=Math.floor((coordY*29+coordZ*11)*8);
        const bandFrequencyScale=1+(hash(frequencyCellX,frequencyCellY,woodSeed+73)-0.5)*2*frequencyRandomization;
        const ringFrequencyScale=1+(hash(frequencyCellX,frequencyCellY,woodSeed+79)-0.5)*2*frequencyRandomization;
        const bandFreq=(0.004+(clamp(cfg.bandFrequency??40,1,100)/100)*0.04)*bandFrequencyScale;
        const ringFreq=(2+(clamp(cfg.ringFrequency??35,1,100)/100)*48)*ringFrequencyScale;
        const ringN=clamp(cfg.ringNoise??25,0,100)/100;
        const densScale=0.5+density/100;
-       // Banding: parallel waves along grain direction
        const bandPhase=(grainCoord*128*dx+flow*12*dy)*bandFreq*densScale;
        const bandWave=Math.sin(bandPhase+Math.sin(flow*14+woodSeed)*1.8)+0.55*Math.sin(bandPhase*0.31);
-       // Rings: radial distance in plane perpendicular to axis, warped by ring noise
-       const rx=cfg.axis==='X'?oy-0.5:cfg.axis==='Y'?ox-0.5:ox-0.5;
-       const ry=cfg.axis==='X'?oz-0.5:cfg.axis==='Y'?oz-0.5:oy-0.5;
-       const ringWarp=(hash(x,y,woodSeed+9)-0.5)*ringN*0.55+(hash(x,y,woodSeed+11)-0.5)*ringN*0.25;
-       const ringDist=Math.sqrt(rx*rx+ry*ry)+ringWarp;
-       const ringWave=Math.sin(ringDist*ringFreq+Math.sin(ringDist*6+woodSeed)*ringN*2.2);
+       const axisA=cfg.axis==='X'?coordY:coordX;
+       const axisB=cfg.axis==='Z'?coordY:coordZ;
+       const curvature=cfg.surfaceCurvatureMap&&cfg.surfaceCurvatureMap.length>=w*h
+         ? clamp(cfg.surfaceCurvatureMap[y*w+x],0,1) : 0;
+       const normalOffset=cfg.surfaceNormalMap&&cfg.surfaceNormalMap.length>=w*h*3
+         ? (cfg.surfaceNormalMap[mi]+cfg.surfaceNormalMap[mi+1]+cfg.surfaceNormalMap[mi+2])*0.001 : 0;
+       const curveWarp=curvature*(clamp(cfg.woodCurvatureInfluence??55,0,100)/100)*0.12;
+       const ringStyle=cfg.woodRingStyle||'growth';
+       let ringDistance:number;
+       if(ringStyle==='growth'){
+         // Evenly spaced annual rings, gently warped by growth irregularity.
+         const rx=axisA-0.5, ry=axisB-0.5;
+         ringDistance=Math.hypot(rx*1.04,ry*0.96);
+         ringDistance+=Math.sin(Math.atan2(ry,rx)*5+woodSeed)*ringN*0.012;
+       }else{
+         // Jittered cell centres create fingerprint-like contour lines. The
+         // merged variant blends neighbouring growth centres into a continuous field.
+         const cellX=Math.floor(axisA*4),cellY=Math.floor(axisB*4);
+         let nearest=Infinity,second=Infinity,nearestValue=0;
+         for(let cy=cellY-1;cy<=cellY+1;cy++)for(let cx=cellX-1;cx<=cellX+1;cx++){
+           const siteX=cx+0.5+(hash(cx,cy,woodSeed+101)-0.5)*0.72;
+           const siteY=cy+0.5+(hash(cx,cy,woodSeed+109)-0.5)*0.72;
+           const dd=Math.hypot(axisA*4-siteX,axisB*4-siteY);
+           if(dd<nearest){second=nearest;nearest=dd;nearestValue=hash(cx,cy,woodSeed+127);}
+           else if(dd<second)second=dd;
+         }
+         ringDistance=ringStyle==='merged'
+           ? nearest+Math.max(0,second-nearest)*0.18*Math.sin(nearestValue*12+woodSeed)
+           : nearest+nearestValue*0.025;
+       }
+       const ringWarp=(hash(frequencyCellX,frequencyCellY,woodSeed+9)-0.5)*ringN*0.035
+         +(hash(frequencyCellX,frequencyCellY,woodSeed+11)-0.5)*ringN*0.018;
+       ringDistance+=ringWarp+curveWarp+normalOffset;
+       const ringWave=Math.sin(ringDistance*ringFreq+Math.sin(ringDistance*6+woodSeed)*ringN*2.2);
        let wave=0;
        if(grainType==='band')wave=bandWave;
        else if(grainType==='ring')wave=ringWave;
