@@ -206,3 +206,8 @@ Keep the mesh-part filter limit and UV-island cut-out limit separate. Preserve t
 - Latest verified self-host artifact: `15007545431`, Workflow #399: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582213410.
 
 Still active: Mask Normal/Mix blend semantics and edit/diagnostic toggles; full UV cut-out enforcement; visual seam-crossing acceptance; Mask/Tear UV composite parity; Tear mesh-part scope; Matcap export/stacking; Pattern Craft material/export; Honeycomb world/normal mapping; GPU/resource packaging; UI3. CI is not visual/device acceptance. Continue from the linked task note without asking for another confirmation.
+
+
+### 2026-11-25 — Filter UV cut-out implementation landed
+
+Added exact active-UV triangle write coverage in `src/tools/textureFilters.ts`; preview and Apply now intersect UV coverage with optional mesh-part coverage, preserve pixels outside that intersection, and reject missing/mismatched coverage. Workflow #402 passed; artifact `15007890427`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582785922. Manual tests for active UV channels, island gutters and mesh-part combinations remain. This is separate from the mesh-part selector and must remain so.
