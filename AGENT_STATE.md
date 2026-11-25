@@ -921,3 +921,14 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Added `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
 - Workflow #340 passed TypeScript diagnostics and Vite build, but the self-host output commit failed due to a rename/rename conflict and content conflict in `self-host/public/index.html` while another generated bundle was being committed. Do not call the self-host package complete until a fresh workflow succeeds. Run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45565275383.
 - Still outstanding: F1 Tear role-based stack mask, F6 dedicated Mask layer/target relationship, gallery integration (intentionally deferred until other tasks complete), Brush settings grid accordion and micro-preview, world-matrix handoff, Matcap map export/stacking, UI3 Undo/Redo viewport issue, and manual device acceptance.
+
+
+## 2026-11-25 — Target-linked Mask Layer and verification
+
+- Added `Layer.layerRole` and `maskTargetLayerId` metadata.
+- Layers panel now offers a dedicated Mask Layer action. It creates a white mask linked to the selected ordinary layer; white reveals, black conceals, grey partially reveals.
+- The composite renderer excludes mask helper layers from colour output and multiplies their luminance/alpha into the target's colour and PBR contributions. Multiple masks combine multiplicatively. Mask visibility and opacity are respected.
+- Deleting a target layer also removes masks linked to it.
+- Workflow #345 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `15000271108`). It includes the Mask layer implementation before the dependent-mask cleanup change.
+- Workflow #346 passed through code validation/build but failed while committing generated `self-host/public` output due to a concurrent generated bundle rename/content conflict. The only source delta after #345 is dependent-mask cleanup on target deletion; re-run the workflow to obtain a clean artifact.
+- Manual mask brush editing, undo/redo, target visibility, multiple masks, group visibility and deletion tests remain outstanding.
