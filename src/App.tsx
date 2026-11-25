@@ -66,7 +66,7 @@ import { PreferencesModal } from './ui/PreferencesModal';
 import { TextureAutoNodeModal } from './ui/TextureAutoNodeModal';
 import { PatternStampEngine } from './tools/patternStampTool';
 import { EdgeWearEngine } from './tools/edgeWearFilter';
-import { TextureFilterConfig, applyTextureFilterToCanvas } from './tools/textureFilters';
+import { TextureFilterConfig, TextureFilterKind, applyTextureFilterToCanvas } from './tools/textureFilters';
 import { TextureFilterDialog } from './ui/TextureFilterDialog';
 import { BumpLevelsDialog, BumpLevels, applyBumpLevelsToLayer } from './ui/BumpLevelsDialog';
 import { LayerConversions } from './tools/layerConversions';
@@ -322,6 +322,7 @@ export default function App() {
     return () => { active = false; };
   }, []);
   const [isTextureFilterOpen, setIsTextureFilterOpen] = useState<boolean>(false);
+  const [textureFilterInitialKind, setTextureFilterInitialKind] = useState<TextureFilterKind | undefined>(undefined);
   const [bumpLevelsTargetId, setBumpLevelsTargetId] = useState<string | null>(null);
   const [bumpLevelsMode, setBumpLevelsMode] = useState<'bump' | 'displacement'>('bump');
   const [isGaussianBlurOpen, setIsGaussianBlurOpen] = useState<boolean>(false);
@@ -2002,7 +2003,8 @@ export default function App() {
         activePanels={activePanels}
         onNumpadKey={handleNumpadKey}
         onOpenEdgeWearFilter={() => setIsEdgeWearDialogOpen(true)}
-        onOpenTextureFilters={() => setIsTextureFilterOpen(true)}
+        onOpenTextureFilters={() => { setTextureFilterInitialKind(undefined); setIsTextureFilterOpen(true); }}
+        onOpenPatternCraftFilter={() => { setTextureFilterInitialKind('pattern-craft'); setIsTextureFilterOpen(true); }}
         onOpenPatternStampDialog={() => {
           setActiveTool('pattern_stamp');
           setIsPatternStampDialogOpen(true);
@@ -2931,6 +2933,7 @@ export default function App() {
         meshParts={meshPartOptions}
         selectedMeshPart={meshComponentVisibility}
         defaultColor={primaryColor}
+        initialKind={textureFilterInitialKind}
         autoHideOnBlur={preferences.autoHideFloatingDialogs !== false}
         onClose={() => setIsTextureFilterOpen(false)}
         onApply={handleApplyTextureFilter}
