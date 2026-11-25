@@ -432,6 +432,68 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
       }
     }
 
+    // Tear Layers use RGB as three separate paint roles:
+    // black/transparent cuts through to the immediate layer below;
+    // white retains the target and frays its edge beside a cut;
+    // green extends the cut through the selected number of lower stack layers.
+    for (const tearLayer of layers) {
+      if (!tearLayer.visible || tearLayer.layerRole !== 'tear' || !tearLayer.maskTargetLayerId) continue;
+      if (tearLayer.groupId) {
+        const parentGroup = layers.find(candidate => candidate.id === tearLayer.groupId);
+        if (parentGroup && !parentGroup.visible) continue;
+      }
+      const tearCanvas = document.createElement('canvas');
+      tearCanvas.width = width; tearCanvas.height = height;
+      const tearContext = tearCanvas.getContext('2d');
+      if (!tearContext) continue;
+      tearContext.drawImage(tearLayer.canvas, 0, 0, width, height);
+      try {
+        const pixels = tearContext.getImageData(0, 0, width, height).data;
+        const targetAlpha = maskAlphaByTarget.get(tearLayer.maskTargetLayerId) || new Uint8ClampedArray(pixelCount).fill(255);
+        const tearOpacity = Math.max(0, Math.min(1, (tearLayer.opacity ?? 100) / 100));
+        const isHole = (pixel: number) => {
+          const i = pixel * 4;
+          if (pixels[i + 3] < 8) return true;
+          const luma = (0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]) / 255;
+          return luma < 0.22;
+        };
+        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+          const pixel = y * width + x, i = pixel * 4;
+          const red = pixels[i], green = pixels[i + 1], blue = pixels[i + 2], alpha = pixels[i + 3] / 255;
+          const isGreenStackMask = green > 80 && green > red * 1.25 && green > blue * 1.25;
+          let coverage = (red / 255) * alpha;
+          // White paint bordering black/transparent holes becomes a lightly
+          // irregular fray edge instead of a mathematically perfect cut.
+          if (red > 180 && !isGreenStackMask) {
+            const neighbours = [x > 0 ? pixel - 1 : -1, x + 1 < width ? pixel + 1 : -1, y > 0 ? pixel - width : -1, y + 1 < height ? pixel + width : -1];
+            if (neighbours.some(neighbour => neighbour >= 0 && isHole(neighbour))) {
+              const grain = Math.sin(x * 12.9898 + y * 78.233 + 19.19) * 43758.5453;
+              const random = grain - Math.floor(grain);
+              coverage *= 0.72 + random * 0.28;
+            }
+          }
+          const effective = 1 - tearOpacity + coverage * tearOpacity;
+          targetAlpha[pixel] = Math.round(targetAlpha[pixel] * effective);
+
+          if (isGreenStackMask && tearOpacity > 0) {
+            const targetIndex = layers.findIndex(layer => layer.id === tearLayer.maskTargetLayerId);
+            const depth = Math.max(1, Math.min(8, Math.round(tearLayer.tearStackDepth ?? 2)));
+            const stackCoverage = 1 - (green / 255) * tearOpacity;
+            for (let d = 1; d <= depth; d++) {
+              const below = layers[targetIndex - d];
+              if (!below || below.isGroup || below.isBaseLayer || below.layerRole === 'mask' || below.layerRole === 'tear') continue;
+              const stackAlpha = maskAlphaByTarget.get(below.id) || new Uint8ClampedArray(pixelCount).fill(255);
+              stackAlpha[pixel] = Math.round(stackAlpha[pixel] * stackCoverage);
+              maskAlphaByTarget.set(below.id, stackAlpha);
+            }
+          }
+        }
+        maskAlphaByTarget.set(tearLayer.maskTargetLayerId, targetAlpha);
+      } catch (error) {
+        console.warn('Skipping an unreadable Tear Layer:', error);
+      }
+    }
+
     let hasEmissive = false;
     for (const layer of layers) {
       if (!layer.visible || layer.isGroup || layer.isBaseLayer || layer.layerRole === 'mask' || layer.layerRole === 'tear') continue;
