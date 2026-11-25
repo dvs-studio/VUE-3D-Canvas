@@ -105,7 +105,7 @@ The independent gallery foundation is committed and CI-verified by workflow #326
 - [ ] Keep mesh-position / island-safe sampling
 
 #### 2B Layer + Pattern Craft
-- [ ] **F6** Mask layer
+- [x] **F6** Mask layer — dedicated white-default, target-linked mask layer implemented. Grayscale luminance controls target opacity; black conceals, white reveals, grey partially reveals; multiple masks multiply; visibility and mask opacity are respected. Deleting a target removes its dependent masks. Manual brush/undo/group acceptance remains.
 - [ ] **F1** Tear layer (roles in three boxes only)
 - [ ] Tear panel mesh/target scope
 - [ ] Filter-side mesh/UV limit (separate)
