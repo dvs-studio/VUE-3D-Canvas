@@ -61,7 +61,7 @@ These are raster filter implementations, not brush engines. They do not replace 
 
 ## Verification required
 
-The latest workflow after these source changes is pending. Do not mark CI complete until the current main-branch run finishes. After CI, manual checks must include:
+Workflow #354 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14999603968`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845. This confirms the source and self-host package build, not visual/device acceptance. After CI, manual checks must include:
 
 1. Wood filter preview/apply for growth, fingerprint and merged rings on the sphere and a non-spherical mesh; compare object/world mode with and without a transform matrix.
 2. Curvature effect around finger-like/narrow details; ensure no harsh distortions on flat surfaces.
@@ -71,4 +71,4 @@ The latest workflow after these source changes is pending. Do not mark CI comple
 6. Matcap presets, custom image, layer visibility/order, intensity and HDRI fallback.
 7. Confirm shader compilation on desktop WebGL and Android browser/GPU.
 
-No manual browser/device acceptance is claimed by this note.
+No manual browser/device acceptance is claimed by this note. The F6 mask layer was also included in the #354 artifact; its brush/undo/group interaction remains for user testing.
