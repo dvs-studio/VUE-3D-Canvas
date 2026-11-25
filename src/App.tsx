@@ -896,7 +896,7 @@ export default function App() {
 
   const handleDeleteLayer = (id: string) => {
     if (layers.length <= 1 || layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
-    const updated = layers.filter(l => l.id !== id);
+    const updated = layers.filter(l => l.id !== id && l.maskTargetLayerId !== id);
     setLayers(updated);
     if (activeLayerId === id) {
       setActiveLayerId(updated[updated.length - 1].id);
