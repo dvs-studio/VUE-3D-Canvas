@@ -557,3 +557,25 @@ See **AGENTS.md CURRENT TODO** for the full ordered list. Remaining after this s
 - Base Layer opacity and checker opacity independence, UV/export exclusion, and `.xblend` round-trips.
 
 CI is not a substitute for manual browser/device acceptance.
+
+
+## 2026-11-25 — GPT-6 — id `LOG-2026-11-25-GPT6-INDEPENDENT-ASSET-GALLERY`
+
+**User direction:** Build the shared gallery module first, keep it independent from consumers until the other outstanding work is complete, and add a task to move the existing 2D UV controls into a left-side N-Panel. Preserve the Brush settings grid-accordion selection and micro-preview for later integration.
+
+**Implemented source foundation**
+- Added `src/tools/assetGallery.ts` with a canonical IndexedDB asset store. It stores the original image Blob unchanged, a separate thumbnail Blob, image dimensions, MIME type, average colour, source metadata and multi-category assignments.
+- Added categories for Stencil, Brush Texture, Mask, Surface Texture, Matcap and Image Pattern. Procedural patterns are intentionally not image assets.
+- Added `src/ui/AssetGalleryModule.tsx`, a standalone and currently unmounted grid/detail interface with multi-category import, search, category filtering and removal from the gallery store.
+- Added `notes/ASSET_GALLERY_MODULE_2026-11-25.md` documenting scope, storage, boundaries and follow-up checks.
+- Updated `AGENTS.md` and `AGENT_STATE.md` with the user-directed sequencing and the new A6-N UV N-Panel task.
+
+**Explicitly not integrated**
+- No App menu, Brush, Stencil, Brush Texture, Mask, Triplanar, Material Fill, Matcap, filter or renderer integration has been made.
+- The older `externalAssetLibrary.ts` scanner has not yet been reconciled with the canonical gallery store.
+- The existing Brush grid accordion/micro-preview remains a future consumer requirement.
+
+**Verification boundary**
+- The source files are committed to `main`, but TypeScript diagnostics, Vite build, `npm run host:sync`, browser import tests and visual acceptance have not yet been run for this module.
+- The next step is code review and build verification of the standalone module, then continue the outstanding tasks without connecting consumers prematurely.
+- Manual acceptance remains distinct from CI success.
