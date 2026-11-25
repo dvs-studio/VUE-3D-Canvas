@@ -1063,7 +1063,8 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         shader.uniforms.vueBaseOpacityA = { value: Math.max(0, Math.min(1, baseLayerSettings.colorAOpacity / 100)) };
         shader.uniforms.vueBaseOpacityB = { value: Math.max(0, Math.min(1, baseLayerSettings.colorBOpacity / 100)) };
         shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };
-        shader.uniforms.vueMatcapMap = { value: matcapTextureRef.current };\n        shader.uniforms.vueMatcapIntensity = { value: matcapIntensity };
+        shader.uniforms.vueMatcapMap = { value: matcapTextureRef.current };
+        shader.uniforms.vueMatcapIntensity = { value: matcapIntensity };
         shader.vertexShader = shader.vertexShader.replace(
           '#include <common>',
           '#include <common>\nvarying vec3 vVueMatcapNormal;\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;'
