@@ -126,7 +126,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
   };
 
   return (
-    <section className={`flex h-full min-h-[420px] flex-col overflow-hidden rounded-md border border-[#484848] bg-[#292929] text-[#d7d7d7] ${className}`}>
+    <section className={`flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-[#484848] bg-[#292929] text-[#d7d7d7] ${className}`}>
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#444] bg-[#333] px-3 py-2">
         <div>
           <h2 className="text-sm font-semibold text-white">Asset Gallery</h2>
@@ -165,7 +165,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
 
       {error && <div role="alert" className="border-b border-[#754b4b] bg-[#3a2525] px-3 py-2 text-xs text-[#ffc4c4]">{error}</div>}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(180px,240px)]">
+      <div className="grid min-h-0 flex-1 grid-cols-1">
         <div className="min-h-0 overflow-y-auto p-2">
           {visibleAssets.length ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-2">
@@ -186,7 +186,7 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
           )}
         </div>
 
-        <aside className="flex min-h-0 flex-col border-l border-[#444] bg-[#242424] p-2">
+        <aside className="flex min-h-0 flex-col border-t border-[#444] bg-[#242424] p-2">
           <div className="mb-2 text-[11px] font-semibold text-[#eee]">Asset details</div>
           <div className="flex aspect-square items-center justify-center overflow-hidden rounded border border-[#454545] bg-[#1b1b1b]">
             {selectedAsset && thumbnailUrls[selectedAsset.id]
