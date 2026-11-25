@@ -297,7 +297,7 @@ export function buildWoodSurfaceMaps(
   coordinateSpace: 'object' | 'world' = 'object',
 ): WoodSurfaceMaps {
   const surface = rasterizeMeshSurface(geometry, width, height, uvArray, 4);
-  const position = new Float32Array(surface.position01);
+  const position = new Float32Array(coordinateSpace === 'world' ? surface.position : surface.position01);
   if (coordinateSpace === 'world') {
     const worldMatrix = geometry.userData?.worldMatrix;
     let matrix: THREE.Matrix4 | null = null;
@@ -309,14 +309,23 @@ export function buildWoodSurfaceMaps(
       const point = new THREE.Vector3();
       const normalMatrix = new THREE.Matrix3().getNormalMatrix(matrix);
       const normalVector = new THREE.Vector3();
+      const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+      const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
       for (let i = 0; i < position.length; i += 3) {
         point.set(position[i], position[i + 1], position[i + 2]).applyMatrix4(matrix);
         position[i] = point.x; position[i + 1] = point.y; position[i + 2] = point.z;
+        min.min(point); max.max(point);
         normalVector.set(surface.normal[i], surface.normal[i + 1], surface.normal[i + 2]).applyMatrix3(normalMatrix).normalize();
         surface.normal[i] = normalVector.x; surface.normal[i + 1] = normalVector.y; surface.normal[i + 2] = normalVector.z;
       }
+      const size = max.sub(min);
+      for (let i = 0; i < position.length; i += 3) {
+        position[i] = size.x > 1e-8 ? (position[i] - min.x) / size.x : 0.5;
+        position[i + 1] = size.y > 1e-8 ? (position[i + 1] - min.y) / size.y : 0.5;
+        position[i + 2] = size.z > 1e-8 ? (position[i + 2] - min.z) / size.z : 0.5;
+      }
     }
-    // Geometry supplied by the current editor has no per-instance matrix;
+    // Geometry supplied by the editor carries the owning mesh's live Matrix4;
     // without one, world coordinates correctly fall back to object coordinates.
   }
   const curvature = new Float32Array(width * height);
