@@ -341,21 +341,21 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
 
             {/* Visual Stencil Cards Gallery Grid */}
             <div className="grid grid-cols-3 gap-1.5">
-              {[...builtinStencils, ...customStencils.map(c => ({ id: c.id, label: c.name, desc: 'Custom', preview: '★' }))].map((st) => {
+              {[...builtinStencils, ...customStencils.map(c => ({ id: c.id, label: c.name, desc: 'Image Stencil', preview: '★', url: c.url }))].map((st) => {
                 const isSelected = (activeBrush.maskType || 'none') === st.id;
 
                 return (
                   <div
                     key={st.id}
-                    onClick={() => onUpdateBrush({ maskType: st.id, stencilUrl: undefined })}
+                    onClick={() => st.url ? onUpdateBrush({ maskType: 'none', stencilUrl: st.url }) : onUpdateBrush({ maskType: st.id, stencilUrl: undefined })}
                     className={`p-1.5 rounded border cursor-pointer flex flex-col items-center justify-center transition-all ${
                       isSelected
                         ? 'bg-[#2e4057] border-[#89b4fa] text-white shadow-xs'
                         : 'bg-[#262626] hover:bg-[#333] border-[#404040] text-[#aaa]'
                     }`}
                   >
-                    <div className="w-8 h-8 rounded bg-[#1c1c1c] border border-[#555] flex items-center justify-center text-sm font-mono text-[#89b4fa] mb-1">
-                      {st.preview}
+                    <div className="w-8 h-8 rounded bg-[#1c1c1c] border border-[#555] flex items-center justify-center text-sm font-mono text-[#89b4fa] mb-1 overflow-hidden">
+                      {st.url ? <img src={st.url} alt="" className="h-full w-full object-contain" /> : st.preview}
                     </div>
                     <span className="font-medium text-[10px] truncate max-w-full">{st.label}</span>
                     <span className="text-[8px] text-[#777] font-mono">{st.desc}</span>
@@ -492,21 +492,21 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
 
             {/* Visual Pattern Cards Gallery Grid */}
             <div className="grid grid-cols-3 gap-1.5">
-              {[...builtinPatterns, ...customPatterns.map(c => ({ id: c.id, label: c.name, desc: 'Custom', preview: '★' }))].map((pat) => {
+              {[...builtinPatterns, ...customPatterns.map(c => ({ id: c.id, label: c.name, desc: 'Image Pattern', preview: '★', url: c.url }))].map((pat) => {
                 const isSelected = (activeBrush.patternType || 'none') === pat.id;
 
                 return (
                   <div
                     key={pat.id}
-                    onClick={() => onUpdateBrush({ patternType: pat.id, patternUrl: undefined })}
+                    onClick={() => pat.url ? onUpdateBrush({ patternType: 'none', patternUrl: pat.url }) : onUpdateBrush({ patternType: pat.id, patternUrl: undefined })}
                     className={`p-1.5 rounded border cursor-pointer flex flex-col items-center justify-center transition-all ${
                       isSelected
                         ? 'bg-[#403328] border-[#fab387] text-white shadow-xs'
                         : 'bg-[#262626] hover:bg-[#333] border-[#404040] text-[#aaa]'
                     }`}
                   >
-                    <div className="w-8 h-8 rounded bg-[#1c1c1c] border border-[#555] flex items-center justify-center text-sm font-mono text-[#fab387] mb-1">
-                      {pat.preview}
+                    <div className="w-8 h-8 rounded bg-[#1c1c1c] border border-[#555] flex items-center justify-center text-sm font-mono text-[#fab387] mb-1 overflow-hidden">
+                      {pat.url ? <img src={pat.url} alt="" className="h-full w-full object-contain" /> : pat.preview}
                     </div>
                     <span className="font-medium text-[10px] truncate max-w-full">{pat.label}</span>
                     <span className="text-[8px] text-[#777] font-mono">{pat.desc}</span>
