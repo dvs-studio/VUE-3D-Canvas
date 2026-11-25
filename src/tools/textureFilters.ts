@@ -3,7 +3,7 @@ import * as THREE from 'three';
  * Image-layer filter algorithms. These are destructive image operations, not brush tools.
  * The selected layer's pixel buffer is transformed and written back by the caller.
  */
-export type TextureFilterKind = 'wood' | 'hatching' | 'cross-hatching' | 'hashing' | 'powderiser' | 'noise-shader' | 'dither' | 'mosaic' | 'warp' | 'pointillism' | 'honeycomb' | 'stochastic-scatter';
+export type TextureFilterKind = 'wood' | 'hatching' | 'cross-hatching' | 'hashing' | 'powderiser' | 'noise-shader' | 'dither' | 'mosaic' | 'warp' | 'pointillism' | 'honeycomb' | 'stochastic-scatter' | 'pattern-craft';
 export type TextureFilterSource = 'image' | 'color';
 export interface WoodSource { id:string; source:'color'|'image'; color:string; imageDataUrl?:string; density:number; }
 export interface TextureFilterConfig {
@@ -55,6 +55,9 @@ export interface TextureFilterConfig {
   honeycombShape: 'hex' | 'square' | 'triangle' | 'circle';
   scatterDensity: number;
   scatterSize: number;
+  patternCraftStyle: 'waves' | 'cells' | 'noise' | 'checker' | 'rings';
+  patternCraftScale: number;
+  patternCraftStrength: number;
   surfaceNormalMap?: Float32Array;
   surfaceCurvatureMap?: Float32Array;
   /** Optional dither pattern. */
@@ -78,7 +81,7 @@ export const DEFAULT_TEXTURE_FILTER: TextureFilterConfig = {
   angle: 35, shift: 6, randomization: 20, lineSpacing: 12, mosaicSize: 8, levels: 5, directionSpace: 'uv', axis: 'Z',
   hashSize: 10, hashDensity: 28, hashSeed: 23, hashAlgorithm: 'cell',
   featureScale: 100, positionJitter: 0, angleJitter: 0,
-  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15, woodRingStyle: 'growth', woodCoordinateSpace: 'object', woodCurvatureInfluence: 55, warpStrength: 18, pointillismSize: 8, honeycombSize: 16, honeycombShape: 'hex', scatterDensity: 32, scatterSize: 5,
+  woodGrainType: 'band+ring', bandFrequency: 40, ringFrequency: 35, ringNoise: 25, woodRoughness: 30, woodSeed: 17, woodFrequencyRandomization: 15, woodRingStyle: 'growth', woodCoordinateSpace: 'object', woodCurvatureInfluence: 55, warpStrength: 18, pointillismSize: 8, honeycombSize: 16, honeycombShape: 'hex', scatterDensity: 32, scatterSize: 5, patternCraftStyle: 'waves', patternCraftScale: 12, patternCraftStrength: 65,
   ditherPattern: 'hash', filterSeed: 71,
   woodSources: [{id:'wood-1',source:'color',color:'#8a5a35',density:50}],
   targetMeshPart: 'all',
@@ -533,6 +536,39 @@ export async function transformTexturePixels(source:ImageData,cfg:TextureFilterC
      const tmp=document.createElement('canvas');tmp.width=w;tmp.height=h;tmp.getContext('2d')!.putImageData(out,0,0);
      const blurred=document.createElement('canvas');blurred.width=w;blurred.height=h;const ctx=blurred.getContext('2d')!;
      ctx.filter=`blur(${clamp(cfg.blur,0,20)}px)`;ctx.drawImage(tmp,0,0);return applyMeshMask(ctx.getImageData(0,0,w,h));
+   }
+   return applyMeshMask(out);
+ }
+ if(cfg.kind==='pattern-craft'){
+   // Empty layers become a monochrome displacement/pattern source. Painted
+   // layers receive a multiply-style micro-detail modulation instead.
+   let hasPaint=false;
+   for(let i=3;i<data.length;i+=4){if(data[i]>2){hasPaint=true;break;}}
+   const scale=Math.max(1,clamp(cfg.patternCraftScale??12,1,100));
+   const strength=clamp(cfg.patternCraftStrength??65,0,100)/100;
+   const seed=Math.floor(cfg.filterSeed??71);
+   const style=cfg.patternCraftStyle||'waves';
+   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+     const i=(y*w+x)*4,u=x/w*scale,v=y/h*scale;
+     let value=0.5;
+     if(style==='checker') value=((Math.floor(u)+Math.floor(v))&1)?1:0;
+     else if(style==='cells'){
+       const fx=Math.abs((u%1)-0.5),fy=Math.abs((v%1)-0.5);
+       value=clamp(Math.hypot(fx,fy)*2,0,1);
+     }else if(style==='noise') value=hash(Math.floor(u*4),Math.floor(v*4),seed);
+     else if(style==='rings') value=0.5+0.5*Math.sin(Math.hypot(u-Math.floor(scale/2),v-Math.floor(scale/2))*Math.PI*2);
+     else value=0.5+0.5*Math.sin(u*2.4+Math.sin(v*1.7)*1.8);
+     value=clamp(0.5+(value-0.5)*(0.5+strength*1.5),0,1);
+     if(!hasPaint){
+       const channel=Math.round(value*255);
+       dst[i]=channel;dst[i+1]=channel;dst[i+2]=channel;dst[i+3]=255;
+     }else{
+       const multiplier=1-strength+value*strength*1.35;
+       dst[i]=clamp(data[i]*multiplier,0,255);
+       dst[i+1]=clamp(data[i+1]*multiplier,0,255);
+       dst[i+2]=clamp(data[i+2]*multiplier,0,255);
+       dst[i+3]=data[i+3];
+     }
    }
    return applyMeshMask(out);
  }
