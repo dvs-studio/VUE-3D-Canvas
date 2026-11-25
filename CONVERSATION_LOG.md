@@ -636,3 +636,13 @@ CI is not a substitute for manual browser/device acceptance.
 - Workflow #345 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15000271108`); this includes the Mask Layer code before the target-deletion cleanup.
 - Workflow #346's TypeScript/build stage passed but the generated self-host commit conflicted with another bundle rename/content change. A clean re-run is required for the latest deletion cleanup.
 - Manual brush/undo, group visibility, target visibility, multiple-mask and deletion tests remain.
+
+
+## 2026-11-25 — GPT-6 — Pattern Craft, F6 masks and live world-space matrix
+
+- Added Pattern Craft as a selected-layer filter. Empty layers auto-generate monochrome displacement patterns; painted layers receive multiply-style micro-detail while preserving alpha. Styles: waves, cells, stochastic noise, checker and rings.
+- Added live owning-mesh `matrixWorld` sharing with Wood and Triplanar through an ephemeral geometry property (not serialised into Three.js userData). World-space Wood transforms actual object positions before normalising to transformed bounds; surface normals are transformed as well.
+- Added target-linked Mask Layer creation. White reveals, black conceals, grey partially reveals; masks combine multiplicatively and affect colour/PBR output; visibility and opacity are respected. Deleting a target also deletes dependent masks.
+- Added Matcap layer opacity to viewport shader influence.
+- Workflow #353 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15000152404`). Workflow #354 is running for the final Matcap-opacity change.
+- Still outstanding: F1 Tear layer with black/white/green role-based stack masking; gallery consumer integration (deferred per user instruction until the other application work is complete); brush Stencil/image-Pattern grid accordion and micro-preview; full Pattern Craft material/export workflow; GPU/normal-space honeycomb; UI3 investigation; manual device acceptance for all recently landed features and the Step 0 regression checklist.
