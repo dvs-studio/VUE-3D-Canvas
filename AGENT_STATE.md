@@ -1006,3 +1006,14 @@ Workflow #386/artifact `15000797321` predates this request and is not verificati
 - Asset Gallery supports ZIP archive import via JSZip and the existing canonical `importGalleryFiles` store path. Workflow #393 passed. The six supplied images are not automatically in browser IndexedDB; the user must select the ZIP from the device running the app in Asset Gallery → Import images / ZIP.
 - Mask Layer now starts transparent and the 3D mask compositor treats transparent pixels as neutral. New mask is inserted adjacent to target. Workflow #396 is pending; not verified yet.
 - Remaining items are listed in `notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md`. Do not report the whole task complete. Manual acceptance remains separate from CI.
+
+
+## 2026-11-25 — Workflow #399 verified progress
+
+Latest verified self-host source is Workflow #399, artifact `15007545431`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582213410.
+
+Landed and CI-verified: Pattern Craft direct Filter command/preselection (#389); special layer Add menu plus target-specific right-click/long-press Mask creation and adjacent insertion (#392); Asset Gallery ZIP import (#393); blank transparent Mask and neutral alpha compositing (#396); textureVersion-driven 2D UV redraw (#397); shared subdivision preview geometry/version invalidation for 3D and 2D (#398); intermediate surface raycasts for sparse 3D pointer movement across UV islands (#399).
+
+The six supplied JPEGs have not been imported into the browser gallery yet. User should select the ZIP from the device running the app via Asset Gallery → Import images / ZIP, then confirm six entries and persistence. Current ZIP import feature is verified, actual user asset import is not.
+
+Still open: Mask Normal (Pass Through)/Mix compositing, mask-edit highlight, double-click X diagnostic view and selection overlay refinements; full filter UV cut-out enforcement; manual UV seam acceptance; helper-layer 2D composite parity; Tear mesh-part; Matcap export/stacking; Pattern Craft material/export; Honeycomb world/normal mapping; GPU/resource scaling; UI3. Do not report these as completed. No manual visual/device acceptance is claimed.
