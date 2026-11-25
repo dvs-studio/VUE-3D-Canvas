@@ -70,6 +70,7 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
   onClose,
   layer,
   onSavePBR,
+  onApplyMaskImage,
   uvChannels = [],
   onSetUVChannel,
   externalTextureAssets = [],
