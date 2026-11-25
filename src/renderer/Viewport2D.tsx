@@ -67,6 +67,7 @@ interface Viewport2DProps {
   onGeometryUpdated?: () => void;
   activeUVChannel?: string;
   uvGeometryVersion?: number;
+  textureVersion?: number;
   onSelectUVChannel?: (id: string) => void;
   selectedVertices?: Set<number>;
   onRebakeTexture?: (from: string, to: string, res: number) => void;
@@ -95,6 +96,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
   onGeometryUpdated,
   activeUVChannel = 'uv_original',
   uvGeometryVersion = 0,
+  textureVersion = 0,
   onSelectUVChannel,
   selectedVertices = new Set(),
   onRebakeTexture,
@@ -210,7 +212,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
     });
 
     drawOverlay();
-  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText, uvCanvasWidth, uvCanvasHeight, activeUVChannel, uvGeometryVersion]);
+  }, [layers, activeLayerId, showUVOverlay, uvOverlayOpacity, uvWireColor, modelKey, customOBJText, uvCanvasWidth, uvCanvasHeight, activeUVChannel, uvGeometryVersion, textureVersion]);
 
   // Draw overlay (UV wireframe mesh unwrap, selection marching ants, pen vector paths)
   const drawOverlay = useCallback(() => {
