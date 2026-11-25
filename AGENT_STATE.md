@@ -984,3 +984,16 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Updated Tear Layer edge detection so green stack-mask strokes are treated as cut boundaries for adjacent white fray edges.
 - Workflow #386 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `15000797321`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45569008417.
 - This is the latest verified self-host source. Manual WebGL/device, brush, mask/tear stack, gallery and full regression acceptance remains outstanding.
+
+
+## 2026-11-25 — Latest handover: texture integration / Mask Layer / UV synchronisation
+
+Authoritative task note: [`notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md`](notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md). Latest user directive is pinned in `AGENTS.md` and overrides prior statements that gallery integration is complete.
+
+User reports the texture integration is missing. Six original 2K JPEGs were supplied (leaf veins, animal fur, lawn grass, rusty metal, dark walnut and weathered wood). Re-audit the actual canonical gallery consumer path and restore import/use/persistence for Triplanar, Material Fill, Brush Library, Pattern Stamp, Mask/Tear and Matcap. Keep stencil alpha, raster image texture and procedural patterns distinct.
+
+Execute autonomously in order: restore textures; repair 3D brush continuity across UV islands; separate UV cut-out from mesh-part filter targeting; implement coalesced asynchronous 3D→2D refresh for drawing and subdivision; redesign Mask Layer (blank transparent default, Normal (Pass Through), adjacent-layer Mix, right-click/long-press creation, single-click edit toggle, double-click X diagnostic preview); group special layer types under Add; put Pattern Craft directly in Filter menu; complete Tear mesh-part, Matcap export/stacking, Pattern Craft material/export, Honeycomb world/normal mapping, gallery GPU-tier/resource packaging and UI3 Undo/Redo investigation.
+
+Bookmarks are in the task note. Key files: `src/App.tsx`, `src/core/types.ts`, `src/tools/maskEngine.ts`, `src/renderer/Viewport3D.tsx`, `src/renderer/Viewport2D.tsx`, `src/tools/textureFilters.ts`, `src/ui/TextureFilterDialog.tsx`, `src/ui/PhotoshopMenuBar.tsx`, and the canonical gallery files.
+
+Workflow #386/artifact `15000797321` predates this request and is not verification. Require source changes, `npm run host:sync`, lint/type/build/package CI; report manual visual acceptance separately.
