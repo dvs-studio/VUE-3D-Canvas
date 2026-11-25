@@ -8,6 +8,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Layer, LayerPBRSettings, BumpRampStop } from '../core/types';
 import type { ExternalAsset } from '../tools/externalAssetLibrary';
+import { GalleryAssetPicker } from './GalleryAssetPicker';
 import { Sliders, X, Check, Sun, Flame, Shield, Layers, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 
 interface LayerSettingsModalProps {
@@ -213,6 +214,13 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
                 <button type="button" onClick={onBrowseTextureLibrary} disabled={isScanningTextureLibrary} className="px-2 py-1 bg-[#333] border border-[#555] rounded text-[10px] text-[#ddd] disabled:opacity-50">{isScanningTextureLibrary ? 'Scanning…' : 'Scan library'}</button>
                 <input ref={matcapFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleMatcapFile} />
               </div>
+              <GalleryAssetPicker
+                categories={['matcap']}
+                title="Matcap Gallery"
+                compact
+                imageMode
+                onSelect={({ dataUrl }) => update({ customMatcapUrl: dataUrl, matcapPreset: 'custom', reflectionSource: 'matcap' })}
+              />
               {pbr.customMatcapUrl && <div className="flex items-center gap-2"><img src={pbr.customMatcapUrl} alt="Selected custom matcap" className="w-12 h-12 object-cover rounded border border-[#555]" /><span className="text-[10px] text-[#aaa]">Custom matcap selected</span><button type="button" onClick={() => update({ customMatcapUrl: undefined, matcapPreset: 'chrome' })} className="text-[10px] text-[#e88]">Clear</button></div>}
               {externalTextureAssets.length > 0 && <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-36 overflow-y-auto">
                 {externalTextureAssets.map(asset => <button key={asset.id} type="button" title={asset.relativePath} onClick={() => update({ customMatcapUrl: asset.dataUrl, matcapPreset: 'custom' })} className={`p-1 rounded border ${pbr.customMatcapUrl === asset.dataUrl ? 'border-[#3d7fb8] bg-[#263b50]' : 'border-[#444] bg-[#1c1c1c]'}`}><img src={asset.dataUrl} alt={asset.name} className="w-full aspect-square object-cover rounded" /><span className="block truncate text-[9px] text-[#bbb]">{asset.name}</span></button>)}
