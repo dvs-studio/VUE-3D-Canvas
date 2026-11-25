@@ -625,3 +625,14 @@ CI is not a substitute for manual browser/device acceptance.
 - Added `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
 - Workflow #340 passed TypeScript diagnostics and Vite build, but failed during the self-host generated-output commit due to a concurrent bundle rename/content conflict in `self-host/public/index.html`. A clean follow-up self-host sync is still required.
 - F1 Tear, F6 Mask layer/target relationship, gallery consumer integration (deferred until the other tasks complete), Brush settings grid accordion/micro-preview, live world-matrix handoff, Matcap export/stacking, UI3 reproduction and manual device acceptance remain open.
+
+
+## 2026-11-25 — GPT-6 — F6 target-linked Mask Layer
+
+- Added explicit mask/Matcap layer roles and target relationship metadata.
+- Added a Layers panel action to create a white-default Mask Layer for the currently selected ordinary layer. White reveals; black conceals; grey partially reveals.
+- Mask helper layers are excluded from visible colour compositing. Their luminance/alpha multiplies the target's colour and PBR contributions. Multiple masks multiply; visibility and opacity are honoured.
+- Deleting a target removes its dependent masks.
+- Workflow #345 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15000271108`); this includes the Mask Layer code before the target-deletion cleanup.
+- Workflow #346's TypeScript/build stage passed but the generated self-host commit conflicted with another bundle rename/content change. A clean re-run is required for the latest deletion cleanup.
+- Manual brush/undo, group visibility, target visibility, multiple-mask and deletion tests remain.
