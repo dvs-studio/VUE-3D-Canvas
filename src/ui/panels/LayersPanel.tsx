@@ -41,6 +41,7 @@ interface LayersPanelProps {
   onAddMatcapLayer?: () => void;
   onAddMaskLayer?: () => void;
   onAddTearLayer?: () => void;
+  onUpdateTearStackDepth?: (layerId: string, depth: number) => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -95,6 +96,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   onAddMatcapLayer,
   onAddMaskLayer,
   onAddTearLayer,
+  onUpdateTearStackDepth,
   onAddGroup,
   onToggleGroupCollapse,
   onGroupSelectedLayers,
@@ -415,6 +417,16 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
               onClick={() => setCheckedLayerIds([])}>Clear</button>
           </div>
         )}
+
+      {activeLayer?.layerRole === 'tear' && onUpdateTearStackDepth && (
+        <div className="px-2 py-1.5 bg-[#303030] border-t border-[#494949] flex items-center gap-2">
+          <label className="text-[10px] text-[#aaa] flex-1">Green stack depth</label>
+          <input type="range" min="1" max="8" step="1" value={activeLayer.tearStackDepth ?? 2}
+            onChange={e => onUpdateTearStackDepth(activeLayer.id, Number(e.target.value))}
+            className="w-24 accent-[#3d7fb8]" />
+          <span className="text-[10px] font-mono text-[#ddd] w-4 text-right">{activeLayer.tearStackDepth ?? 2}</span>
+        </div>
+      )}
 
       {/* Bottom Actions Bar */}
       <div className="p-1.5 bg-[#2d2d2d] border-t border-[#444] flex items-center justify-between">
