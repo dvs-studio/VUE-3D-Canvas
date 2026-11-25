@@ -32,7 +32,6 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
   onClose,
   onConfirm,
   defaultColor,
-  externalTextures = [],
   onScanTextureFolder,
   isScanningTextures = false,
 }) => {
@@ -439,12 +438,6 @@ export const TriplanarDialog: React.FC<TriplanarDialogProps> = ({
                           <span>{p.name}</span>
                         </button>
                       ))}
-                      {externalTextures.filter(asset => asset.kind === 'texture').map(asset => (
-                        <button key={asset.id} type="button" onClick={() => handleTextureChange(idx, { id: asset.id, name: asset.name, dataUrl: asset.dataUrl, tintColor: asset.averageColor, colorAlpha: 1, isTransparentBlank: false, useInstanceColor: false })} className="px-2 py-1 rounded text-[10px] border border-[#4b6655] bg-[#1d2b22] text-[#c7e7ce] flex items-center gap-1" title={asset.relativePath}>
-                          <img src={asset.dataUrl} alt="" className="w-7 h-7 rounded object-cover" />{asset.name}
-                        </button>
-                      ))}
-
                       <div className="w-full pt-1">
                         <GalleryAssetPicker
                           categories={['surface-texture']}
