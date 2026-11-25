@@ -233,7 +233,7 @@ async function scanHandle(handle: FileSystemDirectoryHandle, requestPermission: 
     for (const record of records) {
       const sourcePath = rootPrefix + '/' + record.relativePath;
       const existing = existingByPath.get(sourcePath);
-      if (existing && existing.size === record.file.size) continue;
+      if (existing && existing.size === record.file.size && existing.sourceModifiedAt === record.file.lastModified) continue;
       if (existing) await deleteGalleryAsset(existing.id);
       newRecords.push(record);
     }
@@ -249,7 +249,8 @@ async function scanHandle(handle: FileSystemDirectoryHandle, requestPermission: 
       const recordByFile = new Map(newRecords.map(record => [record.file, record]));
       await importGalleryFiles(newRecords.map(record => record.file), [], {
         source: 'folder-scan',
-        sourcePathForFile: file => {
+        sourceModifiedAtForFile: file => file.lastModified,
+      sourcePathForFile: file => {
           const record = recordByFile.get(file);
           return record ? rootPrefix + '/' + record.relativePath : undefined;
         },
