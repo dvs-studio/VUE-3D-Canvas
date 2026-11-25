@@ -997,3 +997,12 @@ Execute autonomously in order: restore textures; repair 3D brush continuity acro
 Bookmarks are in the task note. Key files: `src/App.tsx`, `src/core/types.ts`, `src/tools/maskEngine.ts`, `src/renderer/Viewport3D.tsx`, `src/renderer/Viewport2D.tsx`, `src/tools/textureFilters.ts`, `src/ui/TextureFilterDialog.tsx`, `src/ui/PhotoshopMenuBar.tsx`, and the canonical gallery files.
 
 Workflow #386/artifact `15000797321` predates this request and is not verification. Require source changes, `npm run host:sync`, lint/type/build/package CI; report manual visual acceptance separately.
+
+
+### 2026-11-25 implementation progress
+
+- Pattern Craft direct Filter-menu command landed in `PhotoshopMenuBar` and preselects the existing Pattern Craft kind in `TextureFilterDialog`; Workflow #389 passed.
+- Layers special-type creation is grouped under Add. Right-click / touch long-press now exposes target-specific Add Mask Layer; App inserts it next to the selected target. Workflow #392 passed.
+- Asset Gallery supports ZIP archive import via JSZip and the existing canonical `importGalleryFiles` store path. Workflow #393 passed. The six supplied images are not automatically in browser IndexedDB; the user must select the ZIP from the device running the app in Asset Gallery → Import images / ZIP.
+- Mask Layer now starts transparent and the 3D mask compositor treats transparent pixels as neutral. New mask is inserted adjacent to target. Workflow #396 is pending; not verified yet.
+- Remaining items are listed in `notes/TEXTURE_INTEGRATION_MASK_AND_VIEWPORT_SYNC_2026-11-25.md`. Do not report the whole task complete. Manual acceptance remains separate from CI.
