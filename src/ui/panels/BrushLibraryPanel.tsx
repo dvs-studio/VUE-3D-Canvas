@@ -13,6 +13,7 @@ import {
   BrushPatternType, 
   StencilApplicationMode 
 } from '../../core/types';
+import { GalleryAssetPicker } from '../GalleryAssetPicker';
 import { 
   Sliders, 
   Disc, 
@@ -112,7 +113,7 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
       const url = evt.target?.result as string;
       const newId = `custom_stencil_${Date.now()}`;
       setCustomStencils(prev => [...prev, { id: newId, name: file.name.slice(0, 10), url }]);
-      onUpdateBrush({ maskType: newId, maskScale: 1.0 });
+      onUpdateBrush({ maskType: 'none', stencilUrl: url, maskScale: 1.0 });
     };
     reader.readAsDataURL(file);
   };
@@ -132,7 +133,7 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
         } catch {}
         return next;
       });
-      onUpdateBrush({ patternType: newId, patternScale: 1.0 });
+      onUpdateBrush({ patternType: 'none', patternUrl: url, patternScale: 1.0 });
     };
     reader.readAsDataURL(file);
   };
@@ -179,6 +180,24 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
         >
           <Disc className="w-3.5 h-3.5 text-[#3d7fb8]" />
         </button>
+      </div>
+
+      {/* Selected image micro-previews remain visible below the menu bar. */}
+      <div className="flex items-center gap-2 border-b border-[#444] bg-[#303030] px-2 py-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="text-[9px] text-[#89b4fa]">STENCIL</span>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded border border-[#555] bg-[#1c1c1c]">
+            {activeBrush.stencilUrl ? <img src={activeBrush.stencilUrl} alt="Active stencil" className="h-full w-full object-contain" /> : <span className="text-[9px] text-[#777]">{activeBrush.maskType && activeBrush.maskType !== 'none' ? 'ƒ' : '—'}</span>}
+          </div>
+          <span className="truncate text-[9px] text-[#aaa]">{activeBrush.stencilUrl ? 'Image stamp' : activeBrush.maskType || 'None'}</span>
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="text-[9px] text-[#fab387]">PATTERN</span>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded border border-[#555] bg-[#1c1c1c]">
+            {activeBrush.patternUrl ? <img src={activeBrush.patternUrl} alt="Active brush pattern" className="h-full w-full object-contain" /> : <span className="text-[9px] text-[#777]">{activeBrush.patternType && activeBrush.patternType !== 'none' ? 'ƒ' : '—'}</span>}
+          </div>
+          <span className="truncate text-[9px] text-[#aaa]">{activeBrush.patternUrl ? 'Image texture' : activeBrush.patternType || 'Procedural / none'}</span>
+        </div>
       </div>
 
       {/* 1. BRUSHES GALLERY TAB (formerly Gallery Examples) */}
@@ -312,6 +331,14 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
               />
             </div>
 
+            <GalleryAssetPicker
+              categories={['stencil']}
+              title="Image Stencil Gallery"
+              compact
+              imageMode
+              onSelect={({ dataUrl }) => onUpdateBrush({ stencilUrl: dataUrl, maskType: 'none', maskScale: 1.0 })}
+            />
+
             {/* Visual Stencil Cards Gallery Grid */}
             <div className="grid grid-cols-3 gap-1.5">
               {[...builtinStencils, ...customStencils.map(c => ({ id: c.id, label: c.name, desc: 'Custom', preview: '★' }))].map((st) => {
@@ -320,7 +347,7 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
                 return (
                   <div
                     key={st.id}
-                    onClick={() => onUpdateBrush({ maskType: st.id })}
+                    onClick={() => onUpdateBrush({ maskType: st.id, stencilUrl: undefined })}
                     className={`p-1.5 rounded border cursor-pointer flex flex-col items-center justify-center transition-all ${
                       isSelected
                         ? 'bg-[#2e4057] border-[#89b4fa] text-white shadow-xs'
@@ -455,6 +482,14 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
               The Texture setting acts as the continuous surface pattern painted inside brush strokes.
             </p>
 
+            <GalleryAssetPicker
+              categories={['brush-texture', 'image-pattern']}
+              title="Image Pattern / Brush Texture Gallery"
+              compact
+              imageMode
+              onSelect={({ dataUrl }) => onUpdateBrush({ patternUrl: dataUrl, patternType: 'none', patternScale: 1.0 })}
+            />
+
             {/* Visual Pattern Cards Gallery Grid */}
             <div className="grid grid-cols-3 gap-1.5">
               {[...builtinPatterns, ...customPatterns.map(c => ({ id: c.id, label: c.name, desc: 'Custom', preview: '★' }))].map((pat) => {
@@ -463,7 +498,7 @@ export const BrushLibraryPanel: React.FC<BrushLibraryPanelProps> = ({
                 return (
                   <div
                     key={pat.id}
-                    onClick={() => onUpdateBrush({ patternType: pat.id })}
+                    onClick={() => onUpdateBrush({ patternType: pat.id, patternUrl: undefined })}
                     className={`p-1.5 rounded border cursor-pointer flex flex-col items-center justify-center transition-all ${
                       isSelected
                         ? 'bg-[#403328] border-[#fab387] text-white shadow-xs'
