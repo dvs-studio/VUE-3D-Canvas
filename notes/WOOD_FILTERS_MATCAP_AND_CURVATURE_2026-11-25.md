@@ -43,6 +43,14 @@ These are raster filter implementations, not brush engines. They do not replace 
 - Deleting a target layer also removes its dependent masks.
 - Brush editing uses the ordinary paint path: white reveals, black conceals, grey partially reveals. Manual brush/undo/group tests remain outstanding.
 
+### F1 — Tear Layer
+
+- Added a dedicated Tear Layer action targeting the currently selected ordinary layer. The helper starts white (intact surface) and is excluded from ordinary colour compositing.
+- Black or transparent pixels cut through the target to reveal the immediate layer below.
+- White pixels preserve the target and create a lightly irregular/frayed alpha edge where they border a cutout. This supports hand-painted tear boundaries.
+- Green pixels cut the target and mask the configured number of underlying layers, exposing the stack beneath them. Green stack depth is adjustable from 1 to 8 and defaults to 2.
+- The Tear Layer uses the normal brush paint path, so users can paint black, white and green with the selected brush colour. The mesh-part target scope and richer rim/under-paint workflow still need follow-up.
+
 ### Pattern Craft filter
 
 - Added Pattern Craft to the selected-layer filter list. Empty transparent layers automatically generate monochrome patterns suitable as displacement sources; painted layers receive multiply-style micro-detail modulation while preserving alpha.
@@ -50,7 +58,7 @@ These are raster filter implementations, not brush engines. They do not replace 
 
 ## Still outstanding / intentionally deferred
 
-- F1 Tear layer and its black/white/green role-based stack masking.
+
 - F6 dedicated Mask layer and proper target-layer relationship / editing UX.
 - Material Fill layer masking trigger is supported through target-linked Mask Layers; canonical Asset Gallery integration remains deferred.
 - Stencil and Brush Texture gallery consumers; image-pattern vs procedural-pattern split in the Brush options accordion.
@@ -61,7 +69,7 @@ These are raster filter implementations, not brush engines. They do not replace 
 
 ## Verification required
 
-Workflow #354 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14999603968`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845. This confirms the source and self-host package build, not visual/device acceptance. After CI, manual checks must include:
+Workflow #354 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14999603968`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845. Workflow #360 then passed after the Tear Layer and stack-depth changes, producing artifact `14999199885`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45567085033. This confirms source and self-host package builds, not visual/device acceptance. After CI, manual checks must include:
 
 1. Wood filter preview/apply for growth, fingerprint and merged rings on the sphere and a non-spherical mesh; compare object/world mode with and without a transform matrix.
 2. Curvature effect around finger-like/narrow details; ensure no harsh distortions on flat surfaces.
@@ -71,4 +79,4 @@ Workflow #354 passed TypeScript diagnostics, Vite build, self-host sync, package
 6. Matcap presets, custom image, layer visibility/order, intensity and HDRI fallback.
 7. Confirm shader compilation on desktop WebGL and Android browser/GPU.
 
-No manual browser/device acceptance is claimed by this note. The F6 mask layer was also included in the #354 artifact; its brush/undo/group interaction remains for user testing.
+No manual browser/device acceptance is claimed by this note. The F6 Mask Layer and F1 Tear Layer are included in the #360 artifact; brush/undo/group/stack behaviour remains for user testing.
