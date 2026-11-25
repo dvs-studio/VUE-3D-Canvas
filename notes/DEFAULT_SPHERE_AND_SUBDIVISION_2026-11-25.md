@@ -17,7 +17,7 @@
 ## Scope and safety
 
 - Other meshes retain their existing topology handling.
-- Suzanne remains available and is only instantiated when selected.
+- Suzanne remains available and its geometry is only instantiated when selected. The raw OBJ text is still statically imported into the bundle, so this change avoids the initial geometry allocation but does not yet code-split the source text.
 - No accepted Suzanne OBJ assets were changed or deleted.
 - No changes to the protected 3D paint path or UV-island seam logic.
 
