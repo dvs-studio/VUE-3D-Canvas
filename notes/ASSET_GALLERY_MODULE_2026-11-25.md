@@ -26,10 +26,10 @@ Procedural patterns are intentionally not represented as raster image assets.
 
 ## Storage and safety
 
-- IndexedDB database: `vue3d-asset-gallery`, store: `assets`.
+- IndexedDB database: `vue3d-asset-gallery`, version 2; stores: `assets` (metadata only), `originals` (source Blob), and `thumbnails` (derived preview Blob).
 - Preserve the original image Blob unchanged.
 - Generate a separate 320 px maximum-edge WebP thumbnail and average-colour metadata.
-- Store metadata, original and thumbnail together by stable asset ID.
+- Link metadata, original and thumbnail by stable asset ID while keeping them in separate object stores, so listing the gallery never loads full-resolution originals.
 - Import accepts PNG, JPEG, WebP, GIF, BMP and AVIF.
 - The gallery has no filesystem scanning, network access, or source-file write/delete behaviour.
 - Removing an entry deletes only the gallery's stored copy; it does not delete the user's original file.
@@ -48,6 +48,7 @@ The optional `onAssetSelected` callback is a future integration seam only; no co
 
 ## Known limitations / next checks
 
+- Version 2 migrates the early version 1 combined records into separate metadata/original/thumbnail stores without dropping existing imported assets.
 - This is the first independent module foundation, not the completed end-to-end gallery.
 - Directory scanning and the older `externalAssetLibrary.ts` scanner are deliberately not connected yet. Later reconcile the scanner with this canonical store rather than maintaining two competing libraries.
 - Add automated unit/browser tests for category validation, multi-category indexing, original-blob integrity, duplicate imports, deletion and storage failure handling.
