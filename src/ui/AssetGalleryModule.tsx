@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import JSZip from 'jszip';
 import {
   deleteGalleryAsset,
   GALLERY_CATEGORIES,
@@ -95,7 +96,30 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
     setBusy(true);
     setError('');
     try {
-      await importGalleryFiles(files, importCategories);
+      const selected = Array.from(files);
+      const importedFiles: File[] = [];
+      for (const selectedFile of selected) {
+        if (!/\.zip$/i.test(selectedFile.name) && selectedFile.type !== 'application/zip') {
+          importedFiles.push(selectedFile);
+          continue;
+        }
+        const archive = await JSZip.loadAsync(selectedFile);
+        const imageEntries = Object.values(archive.files).filter(entry => !entry.dir && /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(entry.name));
+        for (const entry of imageEntries) {
+          const blob = await entry.async('blob');
+          const fileName = entry.name.split('/').filter(Boolean).pop() || 'gallery-image';
+          const extension = fileName.split('.').pop()?.toLowerCase() || '';
+          const mimeType = extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg'
+            : extension === 'png' ? 'image/png'
+            : extension === 'webp' ? 'image/webp'
+            : extension === 'gif' ? 'image/gif'
+            : extension === 'bmp' ? 'image/bmp'
+            : extension === 'avif' ? 'image/avif' : 'application/octet-stream';
+          importedFiles.push(new File([blob], fileName, { type: mimeType, lastModified: selectedFile.lastModified }));
+        }
+      }
+      if (!importedFiles.length) throw new Error('The selected ZIP contains no supported images.');
+      await importGalleryFiles(importedFiles, importCategories);
       await refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Image import failed.');
@@ -155,10 +179,10 @@ export const AssetGalleryModule: React.FC<AssetGalleryModuleProps> = ({ onAssetS
             disabled={busy}
             className="rounded border border-[#5b7893] bg-[#365b7b] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#416d91] disabled:opacity-50"
           >
-            {busy ? 'Working…' : 'Import images'}
+            {busy ? 'Working…' : 'Import images / ZIP'}
           </button>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif" multiple className="hidden" onChange={handleImport} />
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif,.zip,application/zip" multiple className="hidden" onChange={handleImport} />
       </header>
 
       <div className="border-b border-[#444] px-3 py-2">
