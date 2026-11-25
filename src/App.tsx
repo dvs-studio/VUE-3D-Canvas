@@ -843,6 +843,7 @@ export default function App() {
       canvas: cvs,
       ctx,
       channel: 'color',
+      layerRole: 'matcap',
       pbrSettings: {
         roughness: 0.5, metallic: 0, bumpHeight: 1, normalStrength: 1,
         emissionStrength: 1, emissionColor: '#ffffff', opacity: 1,
@@ -857,6 +858,39 @@ export default function App() {
     setLayers(updated);
     setActiveLayerId(id);
     undoBuffer.pushState('Add Matcap Layer', updated);
+    notifyTextureUpdated();
+  };
+
+  const handleAddMaskLayer = () => {
+    const target = layers.find(layer => layer.id === activeLayerId && !layer.isGroup && layer.layerRole !== 'mask' && !layer.isBaseLayer);
+    if (!target) return;
+    const memory = WasmMemoryEngine.getInstance();
+    const cvs = document.createElement('canvas');
+    cvs.width = target.canvas.width || 1024;
+    cvs.height = target.canvas.height || 1024;
+    const ctx = cvs.getContext('2d')!;
+    // White reveals the target by default; paint black to conceal and grey for partial coverage.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+    memory.registerBuffer(cvs.width * cvs.height * 4);
+    const id = `mask_${Date.now()}`;
+    const newLayer: Layer = {
+      id, name: `${target.name} Mask`, visible: true, opacity: 100,
+      blendMode: 'normal', locked: false, canvas: cvs, ctx, channel: 'color',
+      layerRole: 'mask', maskTargetLayerId: target.id,
+      pbrSettings: {
+        roughness: 0.5, metallic: 0, bumpHeight: 1, normalStrength: 1,
+        emissionStrength: 1, emissionColor: '#ffffff', opacity: 1,
+        enableColor: false, enableBump: false, reflectionSource: 'hdri',
+        reflectionIntensity: 0, colorOn: false, colorInfluence: 0,
+        reflectionOn: false, reflectionInfluence: 0, emissionOn: false,
+        emissionInfluence: 0, bumpOn: false, bumpInfluence: 0, normalLock: false,
+      },
+    };
+    const updated = [...layers, newLayer];
+    setLayers(updated);
+    setActiveLayerId(id);
+    undoBuffer.pushState('Add Layer Mask', updated);
     notifyTextureUpdated();
   };
 
@@ -2344,6 +2378,7 @@ export default function App() {
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
                             onAddMatcapLayer={handleAddMatcapLayer}
+                            onAddMaskLayer={handleAddMaskLayer}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
