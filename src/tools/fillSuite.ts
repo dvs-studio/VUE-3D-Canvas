@@ -415,7 +415,7 @@ export class FillSuite {
     // World-space projection uses it when present; otherwise the current
     // untransformed model correctly shares object-space coordinates.
     if (surface && config.coordinateSpace === 'world' && geometry) {
-      const worldMatrix = geometry.userData?.worldMatrix;
+      const worldMatrix = (geometry as any).worldMatrix || geometry.userData?.worldMatrix;
       let matrix: THREE.Matrix4 | null = null;
       if (worldMatrix instanceof THREE.Matrix4) matrix = worldMatrix;
       else if (Array.isArray(worldMatrix) && worldMatrix.length === 16) matrix = new THREE.Matrix4().fromArray(worldMatrix);
