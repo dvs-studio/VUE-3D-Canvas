@@ -1,3 +1,4 @@
+import { deleteGalleryAsset, importGalleryFiles, listGalleryAssets, type GalleryAssetCategory } from './assetGallery';
 /**
  * External image-library discovery for the browser/self-hosted painter.
  *
@@ -6,7 +7,7 @@
  * thumbnail normalisation and colour sampling are delegated to a Web Worker
  * where createImageBitmap + OffscreenCanvas are supported.
  */
-export type ExternalAssetKind = 'texture' | 'brush' | 'mask';
+export type ExternalAssetKind = 'texture' | 'brush' | 'mask' | 'stencil' | 'matcap' | 'pattern';
 
 export interface ExternalAsset {
   id: string;
@@ -103,9 +104,12 @@ async function collectAssets(root: DirectoryHandleLike): Promise<AssetRecord[]> 
       if (entry.kind === 'directory') {
         const lower = entry.name.toLowerCase();
         const matchedKind: ExternalAssetKind | undefined =
-          lower.includes('texture') ? 'texture' :
+          lower.includes('stencil') ? 'stencil' :
+          lower.includes('matcap') ? 'matcap' :
+          lower.includes('mask') ? 'mask' :
           lower.includes('brush') ? 'brush' :
-          lower.includes('mask') ? 'mask' : inheritedKind;
+          lower.includes('pattern') ? 'pattern' :
+          lower.includes('texture') ? 'texture' : inheritedKind;
         const visitKey = entryPath.toLowerCase();
         if (visited.has(visitKey)) continue;
         visited.add(visitKey);
@@ -118,7 +122,7 @@ async function collectAssets(root: DirectoryHandleLike): Promise<AssetRecord[]> 
     }
   };
   const rootName = root.name.toLowerCase();
-  const rootKind: ExternalAssetKind | undefined = rootName.includes('texture') ? 'texture' : rootName.includes('brush') ? 'brush' : rootName.includes('mask') ? 'mask' : undefined;
+  const rootKind: ExternalAssetKind | undefined = rootName.includes('stencil') ? 'stencil' : rootName.includes('matcap') ? 'matcap' : rootName.includes('mask') ? 'mask' : rootName.includes('brush') ? 'brush' : rootName.includes('pattern') ? 'pattern' : rootName.includes('texture') ? 'texture' : undefined;
   await walk(root, '', rootKind);
   return records;
 }
@@ -215,6 +219,44 @@ async function scanHandle(handle: FileSystemDirectoryHandle, requestPermission: 
   const records = await collectAssets(handle as unknown as DirectoryHandleLike);
   const processed = await processFilesInWorker(records);
   const result: ExternalAsset[] = [];
+
+  // Reconcile scanned source files into the canonical gallery. Originals are
+  // stored unchanged there; this scanner's smaller WebP remains a fast legacy
+  // preview for consumers that have not migrated yet.
+  const existingGallery = await listGalleryAssets();
+  const rootPrefix = handle.name || 'asset-folder';
+  const existingByPath = new Map(existingGallery
+    .filter(asset => asset.source === 'folder-scan' && asset.sourcePath)
+    .map(asset => [asset.sourcePath!, asset]));
+  const newRecords: AssetRecord[] = [];
+  for (const record of records) {
+    const sourcePath = rootPrefix + '/' + record.relativePath;
+    const existing = existingByPath.get(sourcePath);
+    if (existing && existing.size === record.file.size) continue;
+    if (existing) await deleteGalleryAsset(existing.id);
+    newRecords.push(record);
+  }
+  const categoryForKind = (kind: ExternalAssetKind): GalleryAssetCategory[] => {
+    if (kind === 'stencil') return ['stencil'];
+    if (kind === 'matcap') return ['matcap'];
+    if (kind === 'mask') return ['mask'];
+    if (kind === 'brush') return ['brush-texture'];
+    if (kind === 'pattern') return ['image-pattern'];
+    return ['surface-texture'];
+  };
+  if (newRecords.length) {
+    await importGalleryFiles(newRecords.map(record => record.file), [], {
+      source: 'folder-scan',
+      sourcePathForFile: file => {
+        const record = newRecords.find(item => item.file === file);
+        return record ? rootPrefix + '/' + record.relativePath : undefined;
+      },
+      categoriesForFile: file => {
+        const record = newRecords.find(item => item.file === file);
+        return record ? categoryForKind(record.kind) : ['surface-texture'];
+      },
+    });
+  }
   for (let index = 0; index < records.length; index++) {
     const record = records[index];
     const image = processed.find(item => item.index === index);
