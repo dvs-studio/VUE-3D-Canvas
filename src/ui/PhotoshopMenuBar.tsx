@@ -95,7 +95,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onTogglePanel,
   activePanels,
   onNumpadKey,
-  selectedModelKey = 'suzanneHeadEyes',
+  selectedModelKey = 'sphere',
   onSelectModelKey,
   meshComponentVisibility = 'all',
   meshPartOptions = [],
@@ -650,13 +650,14 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 3D MESH GEOMETRY
               </div>
               {[
-                { id: 'suzanneHeadEyes', label: 'Suzanne Head + Eyes' },
-                { id: 'helmet', label: 'Cyber Armor Helmet' },
-                { id: 'pavilion', label: 'Classical Architectural Colonnade' },
-                { id: 'sphere', label: 'Showcase Sphere' },
-                { id: 'cube', label: 'Beveled Box' },
-                { id: 'cylinder', label: 'Barrel Cylinder' },
                 { id: 'torus', label: 'Arc Torus' },
+                { id: 'cylinder', label: 'Barrel Cylinder' },
+                { id: 'cube', label: 'Beveled Box' },
+                { id: 'pavilion', label: 'Classical Architectural Colonnade' },
+                { id: 'helmet', label: 'Cyber Armor Helmet' },
+                { id: 'sphere', label: 'Showcase Sphere' },
+                { id: 'suzanne', label: 'Suzanne' },
+                { id: 'suzanneHeadEyes', label: 'Suzanne Head + Eyes' },
               ].map((m) => (
                 <button
                   key={m.id}
