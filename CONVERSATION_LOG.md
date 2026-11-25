@@ -591,3 +591,13 @@ CI is not a substitute for manual browser/device acceptance.
 - Workflow #320 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14977799972`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45518199675.
 - Manual device acceptance remains outstanding for the left panel, N-key, HUD spacing, overlay controls, UV channels, rebake, unwrap, sculpt, painting and touch.
 - Gallery integration remains intentionally deferred until the other outstanding application tasks have been completed. The gallery foundation is independently CI-verified by workflow #315 (artifact `14979091732`); live IndexedDB/import tests remain outstanding.
+
+
+## 2026-11-25 — GPT-6 — procedural sphere startup and subdivision repair
+
+- Set the procedural sphere as the App startup mesh and as the default/fallback in the UV viewport and model menu.
+- Reordered the built-in model preset list alphabetically and retained both `Suzanne` and `Suzanne Head + Eyes` as selectable entries. Suzanne geometry is now created only when selected.
+- Tagged the procedural sphere and added a sphere-specific pole-welding pass in subdivision preview. Coincident top/bottom pole vertices are unified before subdivision; their undefined pole U coordinate is centred at 0.5; collapsed triangles are discarded.
+- Other model topologies are unchanged. No Suzanne source assets were altered.
+- Added `notes/DEFAULT_SPHERE_AND_SUBDIVISION_2026-11-25.md`.
+- Automated workflow and manual visual verification are pending. The sphere hole repair is not accepted until poles, UV seam and silhouette are inspected at levels 0–2 under both subdivision algorithms.
