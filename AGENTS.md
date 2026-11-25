@@ -37,11 +37,11 @@ Victory has refined the texture architecture and sequencing. This update takes p
 1. Build the shared Asset Gallery as an independent, unmounted module first. The foundation is in `src/tools/assetGallery.ts` and `src/ui/AssetGalleryModule.tsx`; see `notes/ASSET_GALLERY_MODULE_2026-11-25.md`.
 2. Do not integrate the gallery into App menus, Brush settings, Triplanar, Material Fill, Mask, Stencil, Brush Texture, or Matcap yet. Finish and verify the other outstanding application tasks first; then connect consumers individually.
 3. Add the new **A6-N 2D UV left N-Panel** task: reorganise the existing 2D UV workspace controls into a left-side N-Panel. Preserve existing UV channel/composite/rebake/selection/touch behaviour. Do not confuse this with a new dedicated UV desk, which remains excluded.
-4. Keep Brush settings' eventual Stencil and image Pattern/Texture selection as a grid-based accordion with a micro-preview beneath the menu bar. The brush stamp's stencil is the actual image including transparency; image patterns remain distinct from procedural patterns.
+4. Brush settings now use canonical Stencil and image Pattern/Brush Texture gallery accordions with a selected-image micro-preview beneath the menu bar. The brush stamp's stencil is the actual image including transparency; image patterns remain distinct from procedural patterns. Preserve this distinction.
 5. Correct Base Layer dialog button copy from Cancel to Close. Close retains live session settings; Save alone persists checker colours.
-6. Later tasks: shape-sensitive world-space Base Layer checker. The procedural sphere startup, alphabetically ordered Suzanne presets and sphere-pole subdivision repair have now been implemented; verify them before acceptance.
+6. Shape-sensitive world-space Base Layer checker is implemented with curvature-adaptive tile frequency. The procedural sphere startup, alphabetically ordered Suzanne presets and sphere-pole subdivision repair are also implemented; verify them before acceptance.
 
-The independent gallery foundation is committed and CI-verified by workflow #326 (artifact `14979452656`); live browser import/IndexedDB acceptance remains outstanding. Wood, filters, Matcap, adaptive checker, Mask Layer and Pattern Craft progress is recorded in `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`. New Wood/filter/Matcap/Base Layer work is documented in `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
+The canonical gallery is now mounted and integrated; folder scanning imports originals into the same IndexedDB stores with source path/modified-time reconciliation. Workflow #385 passed TypeScript, Vite build, self-host sync, package validation and artifact upload (artifact `15001151525`). Browser migration/import/quota and picker acceptance remain outstanding. The scanner must continue feeding the canonical store, never become a competing asset database.
 
 ### READ THIS FIRST — three boxes
 
@@ -99,10 +99,10 @@ The independent gallery foundation is committed and CI-verified by workflow #326
 - [x] Uniform tree-year rings and organic fingerprint/merged rings; active-UV surface mapping, normal-derived curvature influence, object/world coordinate selector implemented. World mode applies the owning mesh's live `matrixWorld` via an ephemeral geometry property; visual acceptance remains. See `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
 
 #### 2A-T Triplanar / dual-texture fill
-- [ ] True triplanar (3-axis + normal weights + sharpness)
-- [ ] Texture A/B mix (noise/height/painted mask)
-- [x] World | object coordinate option; world mode uses the owning mesh's live `matrixWorld`. [ ] Sample-gallery replacement remains.
-- [ ] Keep mesh-position / island-safe sampling
+- [x] True triplanar: XY/YZ/ZX projection with normal-weight blending and sharpness controls (manual acceptance remains).
+- [x] Texture A/B mix with procedural mixer modes and mask/height influence (manual acceptance remains).
+- [x] World | object coordinate option; world mode uses the owning mesh's live `matrixWorld`.
+- [x] Mesh-position / UV-island-safe raster sampling retained. [ ] Visual seam/gutter acceptance remains.
 
 #### 2B Layer + Pattern Craft
 - [x] **F6** Mask layer — dedicated white-default, target-linked mask layer implemented. Grayscale luminance controls target opacity; black conceals, white reveals, grey partially reveals; multiple masks multiply; visibility and mask opacity are respected. Deleting a target removes its dependent masks. Manual brush/undo/group acceptance remains.
@@ -121,10 +121,11 @@ The independent gallery foundation is committed and CI-verified by workflow #326
 - [ ] World/normal-space cell mapping and visual acceptance.
 
 #### 2D Texture gallery
-- [x] Independent gallery foundation added (IndexedDB store + unmounted grid/detail UI); build/browser verification pending. See `notes/ASSET_GALLERY_MODULE_2026-11-25.md`.
-- [ ] Reconcile the existing folder scanner with the canonical gallery store; add scanning/import workflow and storage safeguards.
-- [ ] After other outstanding application tasks are completed, integrate the gallery individually into Stencil, Brush Texture, Mask, Surface Texture/Material Fill/Triplanar, Matcap and image-pattern consumers.
-- [ ] Bundle → browser/device storage + preview; GPU-tier auto-scale; share the canonical asset records with triplanar samples.
+- [x] Independent IndexedDB gallery with separate metadata/original/thumbnail stores and versioned migration.
+- [x] Dedicated Asset Gallery workspace tab with import, delete, category assignment, search, preview and folder scan.
+- [x] Folder scanner reconciles into the canonical gallery with per-category classification and source-path/size/modified-time refresh.
+- [x] Shared gallery pickers integrated into Stencil, Brush Texture/image Pattern, Pattern Stamp decal/mask/grunge, Mask/Tear, Material Fill, Triplanar and Matcap consumers.
+- [ ] Browser/device storage migration, quota, import, alpha and picker acceptance; GPU-tier auto-scale; bundle/resource packaging.
 
 ---
 
