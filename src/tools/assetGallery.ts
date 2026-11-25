@@ -1,17 +1,19 @@
 /**
  * Independent, persistent image-asset gallery storage.
  *
- * This module deliberately has no dependency on brush, mask, material, Matcap,
- * Triplanar, or renderer code. Consumers will request an asset by ID and
- * interpret it for their own purpose only after their integration phase.
+ * This module has no dependency on brush, mask, material, Matcap, Triplanar,
+ * or renderer code. Consumers will request an asset by ID and interpret it
+ * for their own purpose only after their integration phase.
  *
- * Original image blobs are preserved unchanged. Thumbnails and metadata are
- * derived records; importing or indexing never edits the user's source file.
+ * Metadata, original images and thumbnails are stored separately so gallery
+ * browsing never loads every full-resolution source image into memory.
  */
 
 export const ASSET_GALLERY_DB = 'vue3d-asset-gallery';
-export const ASSET_GALLERY_VERSION = 1;
+export const ASSET_GALLERY_VERSION = 2;
 export const ASSET_GALLERY_STORE = 'assets';
+const ORIGINALS_STORE = 'originals';
+const THUMBNAILS_STORE = 'thumbnails';
 
 export type GalleryAssetCategory =
   | 'stencil'
@@ -23,7 +25,7 @@ export type GalleryAssetCategory =
 
 export type GalleryAssetSource = 'import' | 'folder-scan' | 'bundled';
 
-export interface GalleryAsset {
+export interface GalleryAssetSummary {
   id: string;
   name: string;
   originalName: string;
@@ -37,11 +39,12 @@ export interface GalleryAsset {
   averageColor: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface GalleryAsset extends GalleryAssetSummary {
   original: Blob;
   thumbnail: Blob;
 }
-
-export interface GalleryAssetSummary extends Omit<GalleryAsset, 'original' | 'thumbnail'> {}
 
 export const GALLERY_CATEGORIES: ReadonlyArray<{
   id: GalleryAssetCategory;
@@ -51,7 +54,7 @@ export const GALLERY_CATEGORIES: ReadonlyArray<{
   { id: 'stencil', label: 'Stencils', description: 'Brush stamp images; alpha is meaningful.' },
   { id: 'brush-texture', label: 'Brush Textures', description: 'Surface detail applied by brush behaviour.' },
   { id: 'mask', label: 'Masks', description: 'Images used to control where an effect is applied.' },
-  { id: 'surface-texture', label: 'Surface Textures', description: 'Images suitable for material and triplanar projection.' },
+  { id: 'surface-texture', label: 'Surface Textures', description: 'Images suitable for material and triplanar use.' },
   { id: 'matcap', label: 'Matcaps', description: 'Images interpreted by the Matcap shading system.' },
   { id: 'image-pattern', label: 'Image Patterns', description: 'Raster patterns; distinct from mathematical patterns.' },
 ];
@@ -68,6 +71,8 @@ export const GALLERY_IMAGE_TYPES = [
 const MAX_THUMBNAIL_EDGE = 320;
 const ACCEPTED_EXTENSIONS = /\.(png|jpe?g|webp|gif|bmp|avif)$/i;
 
+interface BlobRecord { id: string; blob: Blob; }
+
 function makeId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
   return 'asset-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
@@ -79,13 +84,35 @@ function openGalleryDb(): Promise<IDBDatabase> {
   }
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(ASSET_GALLERY_DB, ASSET_GALLERY_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = event => {
       const db = request.result;
+      const tx = request.transaction;
+      let assets: IDBObjectStore;
       if (!db.objectStoreNames.contains(ASSET_GALLERY_STORE)) {
-        const store = db.createObjectStore(ASSET_GALLERY_STORE, { keyPath: 'id' });
-        store.createIndex('name', 'name', { unique: false });
-        store.createIndex('categories', 'categories', { unique: false, multiEntry: true });
-        store.createIndex('updatedAt', 'updatedAt', { unique: false });
+        assets = db.createObjectStore(ASSET_GALLERY_STORE, { keyPath: 'id' });
+        assets.createIndex('name', 'name', { unique: false });
+        assets.createIndex('categories', 'categories', { unique: false, multiEntry: true });
+        assets.createIndex('updatedAt', 'updatedAt', { unique: false });
+      } else {
+        assets = tx!.objectStore(ASSET_GALLERY_STORE);
+      }
+      if (!db.objectStoreNames.contains(ORIGINALS_STORE)) db.createObjectStore(ORIGINALS_STORE, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(THUMBNAILS_STORE)) db.createObjectStore(THUMBNAILS_STORE, { keyPath: 'id' });
+
+      // Migrate the early single-record schema without discarding already imported assets.
+      if ((event as IDBVersionChangeEvent).oldVersion > 0 && (event as IDBVersionChangeEvent).oldVersion < 2) {
+        const cursorRequest = assets.openCursor();
+        cursorRequest.onsuccess = () => {
+          const cursor = cursorRequest.result;
+          if (!cursor) return;
+          const row = cursor.value as GalleryAssetSummary & { original?: Blob; thumbnail?: Blob };
+          if (row.original) tx!.objectStore(ORIGINALS_STORE).put({ id: row.id, blob: row.original } satisfies BlobRecord);
+          if (row.thumbnail) tx!.objectStore(THUMBNAILS_STORE).put({ id: row.id, blob: row.thumbnail } satisfies BlobRecord);
+          delete row.original;
+          delete row.thumbnail;
+          cursor.update(row);
+          cursor.continue();
+        };
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -104,6 +131,10 @@ function transactionDone(tx: IDBTransaction): Promise<void> {
 
 function readImageSize(blob: Blob): Promise<{ width: number; height: number; thumbnail: Blob; averageColor: string }> {
   return new Promise((resolve, reject) => {
+    if (typeof createImageBitmap !== 'function') {
+      reject(new Error('This browser cannot create image previews. Use a current browser with image decoding support.'));
+      return;
+    }
     createImageBitmap(blob).then(async bitmap => {
       try {
         const scale = Math.min(1, MAX_THUMBNAIL_EDGE / Math.max(bitmap.width, bitmap.height));
@@ -146,6 +177,13 @@ function isSupportedImage(file: File): boolean {
     ACCEPTED_EXTENSIONS.test(file.name);
 }
 
+function requestResult<T>(request: IDBRequest<T>, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error(message));
+  });
+}
+
 export async function importGalleryFiles(
   files: FileList | File[],
   categories: GalleryAssetCategory[] = ['surface-texture'],
@@ -162,7 +200,7 @@ export async function importGalleryFiles(
     for (const file of selected) {
       const details = await readImageSize(file);
       const now = Date.now();
-      const asset: GalleryAsset = {
+      const summary: GalleryAssetSummary = {
         id: makeId(),
         name: file.name.replace(/\.[^.]+$/, ''),
         originalName: file.name,
@@ -175,13 +213,12 @@ export async function importGalleryFiles(
         averageColor: details.averageColor,
         createdAt: now,
         updatedAt: now,
-        original: file.slice(0, file.size, file.type),
-        thumbnail: details.thumbnail,
       };
-      const tx = db.transaction(ASSET_GALLERY_STORE, 'readwrite');
-      tx.objectStore(ASSET_GALLERY_STORE).put(asset);
+      const tx = db.transaction([ASSET_GALLERY_STORE, ORIGINALS_STORE, THUMBNAILS_STORE], 'readwrite');
+      tx.objectStore(ASSET_GALLERY_STORE).put(summary);
+      tx.objectStore(ORIGINALS_STORE).put({ id: summary.id, blob: file.slice(0, file.size, file.type) } satisfies BlobRecord);
+      tx.objectStore(THUMBNAILS_STORE).put({ id: summary.id, blob: details.thumbnail } satisfies BlobRecord);
       await transactionDone(tx);
-      const { original: _original, thumbnail: _thumbnail, ...summary } = asset;
       imported.push(summary);
     }
   } finally {
@@ -194,17 +231,14 @@ export async function listGalleryAssets(category?: GalleryAssetCategory): Promis
   const db = await openGalleryDb();
   try {
     const tx = db.transaction(ASSET_GALLERY_STORE, 'readonly');
+    const store = tx.objectStore(ASSET_GALLERY_STORE);
     const request = category
-      ? tx.objectStore(ASSET_GALLERY_STORE).index('categories').getAll(category)
-      : tx.objectStore(ASSET_GALLERY_STORE).getAll();
-    const rows = await new Promise<GalleryAsset[]>((resolve, reject) => {
-      request.onsuccess = () => resolve((request.result || []) as GalleryAsset[]);
-      request.onerror = () => reject(request.error || new Error('Could not read gallery assets.'));
-    });
+      ? store.index('categories').getAll(category)
+      : store.getAll();
+    const rows = await requestResult(request, 'Could not read gallery assets.');
     await transactionDone(tx);
-    return rows
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-      .map(({ original: _original, thumbnail: _thumbnail, ...summary }) => summary);
+    return (rows as GalleryAssetSummary[])
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   } finally {
     db.close();
   }
@@ -213,27 +247,49 @@ export async function listGalleryAssets(category?: GalleryAssetCategory): Promis
 export async function getGalleryAsset(id: string): Promise<GalleryAsset | null> {
   const db = await openGalleryDb();
   try {
-    const tx = db.transaction(ASSET_GALLERY_STORE, 'readonly');
-    const request = tx.objectStore(ASSET_GALLERY_STORE).get(id);
-    const result = await new Promise<GalleryAsset | null>((resolve, reject) => {
-      request.onsuccess = () => resolve((request.result as GalleryAsset | undefined) || null);
-      request.onerror = () => reject(request.error || new Error('Could not load the selected gallery asset.'));
-    });
+    const tx = db.transaction([ASSET_GALLERY_STORE, ORIGINALS_STORE, THUMBNAILS_STORE], 'readonly');
+    const metadataRequest = tx.objectStore(ASSET_GALLERY_STORE).get(id);
+    const originalRequest = tx.objectStore(ORIGINALS_STORE).get(id);
+    const thumbnailRequest = tx.objectStore(THUMBNAILS_STORE).get(id);
+    const [metadata, original, thumbnail] = await Promise.all([
+      requestResult(metadataRequest, 'Could not load gallery metadata.'),
+      requestResult(originalRequest, 'Could not load the original image.'),
+      requestResult(thumbnailRequest, 'Could not load the gallery thumbnail.'),
+    ]);
     await transactionDone(tx);
-    return result;
+    if (!metadata || !(original as BlobRecord | undefined)?.blob || !(thumbnail as BlobRecord | undefined)?.blob) return null;
+    return {
+      ...(metadata as GalleryAssetSummary),
+      original: (original as BlobRecord).blob,
+      thumbnail: (thumbnail as BlobRecord).blob,
+    };
   } finally {
     db.close();
   }
 }
 
 export async function getGalleryThumbnail(id: string): Promise<Blob | null> {
-  const asset = await getGalleryAsset(id);
-  return asset?.thumbnail || null;
+  const db = await openGalleryDb();
+  try {
+    const tx = db.transaction(THUMBNAILS_STORE, 'readonly');
+    const row = await requestResult(tx.objectStore(THUMBNAILS_STORE).get(id), 'Could not load the gallery thumbnail.') as BlobRecord | undefined;
+    await transactionDone(tx);
+    return row?.blob || null;
+  } finally {
+    db.close();
+  }
 }
 
 export async function getGalleryOriginal(id: string): Promise<Blob | null> {
-  const asset = await getGalleryAsset(id);
-  return asset?.original || null;
+  const db = await openGalleryDb();
+  try {
+    const tx = db.transaction(ORIGINALS_STORE, 'readonly');
+    const row = await requestResult(tx.objectStore(ORIGINALS_STORE).get(id), 'Could not load the original image.') as BlobRecord | undefined;
+    await transactionDone(tx);
+    return row?.blob || null;
+  } finally {
+    db.close();
+  }
 }
 
 export async function updateGalleryAssetCategories(
@@ -247,17 +303,13 @@ export async function updateGalleryAssetCategories(
     const tx = db.transaction(ASSET_GALLERY_STORE, 'readwrite');
     const store = tx.objectStore(ASSET_GALLERY_STORE);
     const request = store.get(id);
-    await new Promise<void>((resolve, reject) => {
-      request.onsuccess = () => {
-        const asset = request.result as GalleryAsset | undefined;
-        if (!asset) { reject(new Error('The selected gallery asset no longer exists.')); return; }
-        asset.categories = cleanCategories;
-        asset.updatedAt = Date.now();
-        store.put(asset);
-        resolve();
-      };
-      request.onerror = () => reject(request.error || new Error('Could not update gallery categories.'));
-    });
+    request.onsuccess = () => {
+      const asset = request.result as GalleryAssetSummary | undefined;
+      if (!asset) { tx.abort(); return; }
+      asset.categories = cleanCategories;
+      asset.updatedAt = Date.now();
+      store.put(asset);
+    };
     await transactionDone(tx);
   } finally {
     db.close();
@@ -267,8 +319,10 @@ export async function updateGalleryAssetCategories(
 export async function deleteGalleryAsset(id: string): Promise<void> {
   const db = await openGalleryDb();
   try {
-    const tx = db.transaction(ASSET_GALLERY_STORE, 'readwrite');
+    const tx = db.transaction([ASSET_GALLERY_STORE, ORIGINALS_STORE, THUMBNAILS_STORE], 'readwrite');
     tx.objectStore(ASSET_GALLERY_STORE).delete(id);
+    tx.objectStore(ORIGINALS_STORE).delete(id);
+    tx.objectStore(THUMBNAILS_STORE).delete(id);
     await transactionDone(tx);
   } finally {
     db.close();
