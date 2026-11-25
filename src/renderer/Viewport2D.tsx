@@ -41,13 +41,11 @@ import {
   Smartphone, 
   RotateCcw, 
   Maximize2, 
-  Grid, 
   Eye, 
   EyeOff,
   Sliders,
   Paintbrush,
   Wand2,
-  Compass
 } from 'lucide-react';
 
 interface Viewport2DProps {
@@ -1056,7 +1054,7 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
       />
 
       {/* Top Left: 2D UV Map HUD Controls */}
-      <HorizontalScrollRail className={`absolute z-30 h-9 ${isSplitView ? "bottom-3 left-2 right-2 w-auto max-w-none" : "top-2 left-2 right-[11rem] w-auto max-w-none"}`} contentClassName="h-full w-max min-w-full flex items-center justify-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
+      <HorizontalScrollRail className={`absolute z-30 h-9 ${isSplitView ? (isNPanelOpen ? "bottom-3 left-[18.5rem] right-2 w-auto max-w-none" : "bottom-3 left-2 right-2 w-auto max-w-none") : (isNPanelOpen ? "top-2 left-[18.5rem] right-[11rem] w-auto max-w-none" : "top-2 left-2 right-[11rem] w-auto max-w-none")}`} contentClassName="h-full w-max min-w-full flex items-center justify-center gap-2 bg-[#2a2a2a]/95 px-2.5 py-1.5 rounded border border-[#444] shadow-md cs5-inset text-xs text-[#ccc]">
         <div className="flex items-center gap-1 font-bold text-[#eee] uppercase text-[10px] shrink-0">
           <Paintbrush className="w-3.5 h-3.5 text-[#3d7fb8]" />
           <span>2D UV CANVAS</span>
@@ -1067,84 +1065,6 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         <span className="text-[#3d7fb8] font-mono font-bold text-[10px]">{Math.round(zoom * 100)}%</span>
 
         <div className="h-3.5 w-px bg-[#444] mx-0.5" />
-
-        {/* UV WIREFRAME MESH OVERLAY TOGGLE */}
-        <button
-          onClick={() => setShowUVOverlay(v => !v)}
-          className={`px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1.5 transition-colors border ${
-            showUVOverlay
-              ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
-              : 'bg-[#333] hover:bg-[#404040] text-[#888] border-[#555]'
-          }`}
-          title="Toggle 3D Model UV Mesh Wireframe Overlay on 2D Canvas"
-        >
-          <Grid className="w-3 h-3" />
-          <span>UV Overlay: {showUVOverlay ? 'ON' : 'OFF'}</span>
-        </button>
-
-        {/* Toggle UV Suite N-Panel */}
-        <button
-          onClick={() => setIsNPanelOpen(o => !o)}
-          className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors ${
-            isNPanelOpen
-              ? 'bg-[#1e3a5f] text-[#38bdf8] border-[#38bdf8] shadow-xs'
-              : 'bg-[#222] hover:bg-[#333] text-[#aaa] border-[#555]'
-          }`}
-          title="Toggle UV Suite N-Panel (Key: N)"
-        >
-          <Sliders className="w-3 h-3 text-[#38bdf8]" />
-          <span>UV N-Panel (N)</span>
-        </button>
-
-        {/* UV Wireframe Opacity Adjuster when active */}
-        {showUVOverlay && (
-          <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
-            <span className="text-[9px] text-[#888]">Opac:</span>
-            <input
-              type="range"
-              min="0.1"
-              max="1.0"
-              step="0.05"
-              value={uvOverlayOpacity}
-              onChange={(e) => setUvOverlayOpacity(Number(e.target.value))}
-              className="w-12 accent-[#38bdf8] h-1"
-              title="UV Wireframe Overlay Opacity"
-            />
-            <span className="text-[9px] font-mono text-[#38bdf8]">{Math.round(uvOverlayOpacity * 100)}%</span>
-          </div>
-        )}
-
-        {/* UV Set Dropdown */}
-        <div className="flex items-center gap-1 bg-[#222] px-1.5 py-0.5 rounded border border-[#444] shrink-0">
-          <Compass className="w-3 h-3 text-[#38bdf8]" />
-          <span className="text-[9px] text-[#888]">UV Set:</span>
-          <select
-            value={activeUVChannel}
-            onChange={(e) => {
-              const channelId = e.target.value;
-              if (onSelectUVChannel) onSelectUVChannel(channelId);
-              else {
-                UVChannelManager.setActiveChannel(effectiveGeom, channelId);
-                onTextureUpdated();
-                drawOverlay();
-              }
-            }}
-            className="bg-[#181818] border border-[#555] text-white px-1 py-0.5 rounded text-[9.5px] cursor-pointer outline-none font-mono"
-            title="Switch the active UV channel"
-          >
-            {uvChannels.map(channel => <option key={channel.id} value={channel.id}>{channel.name}</option>)}
-          </select>
-        </div>
-
-        {/* Smart UV Generation Button (Exists ONLY inside 2D UV Map editor view) */}
-        <button
-          onClick={() => setShowSmartUVModal(true)}
-          className="px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1 bg-[#1e293b] hover:bg-[#334155] text-[#a6e3a1] border border-[#22c55e]/50 shadow-xs transition-colors"
-          title="Open Smart UV Projection and Automatic Unwrap Engine"
-        >
-          <Wand2 className="w-3 h-3 text-[#a6e3a1]" />
-          <span>Smart UV Unwrap...</span>
-        </button>
 
         {/* Physical Selection Shading Status Badge */}
         {selectionMask && selectionMask.active && (
@@ -1403,6 +1323,13 @@ export const Viewport2D: React.FC<Viewport2DProps> = ({
         onChangeSculptStrength={setSculptStrength}
         xrayVertexCount={selectedVertices ? selectedVertices.size : 0}
         selectedVertexIndices={selectedVertices}
+        showUVOverlay={showUVOverlay}
+        onToggleUVOverlay={() => setShowUVOverlay(value => !value)}
+        uvOverlayOpacity={uvOverlayOpacity}
+        onChangeUVOverlayOpacity={setUvOverlayOpacity}
+        uvWireColor={uvWireColor}
+        onChangeUVWireColor={setUvWireColor}
+        onOpenQuickUnwrap={() => setShowSmartUVModal(true)}
       />
     </div>
   );
