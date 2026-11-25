@@ -112,3 +112,16 @@ Inspect actual current symbols before changing them.
 ## Verification caveat
 
 Workflow #386 and artifact `15000797321` predate this request. They do not verify any item above. Do not claim new work is complete until source changes are synced and CI passes. Report manual visual/device acceptance separately.
+
+
+## Implementation progress — 2026-11-25 (in progress; not full acceptance)
+
+The following source changes have now landed after the handover was written:
+- `src/ui/PhotoshopMenuBar.tsx`, `src/ui/TextureFilterDialog.tsx`, `src/App.tsx`: Pattern Craft now has its own direct Filter-menu command and opens the existing filter dialog with `pattern-craft` preselected. Workflow #389 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45581003681.
+- `src/ui/panels/LayersPanel.tsx`: special layer creation actions are grouped under an Add menu; desktop right-click and touch long-press expose the layer context menu and a target-specific Add Mask Layer command. `src/App.tsx` now accepts the selected target ID and inserts the new linked mask immediately adjacent to that target. Workflow #392 passed for the target-specific handler and accumulated source: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45581294372.
+- `src/ui/AssetGalleryModule.tsx`: Import images now also accepts ZIP archives, extracts supported image files with JSZip, and imports originals through the canonical `importGalleryFiles` path. Workflow #393 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45581466549.
+- `src/App.tsx` and `src/renderer/Viewport3D.tsx`: new Mask Layers start transparent; the mask compositor now treats transparent pixels as neutral and uses alpha × mask opacity to interpolate grayscale influence. The new mask is inserted next to its linked target. Workflow #396 is currently validating the latest combined source; do not mark this portion verified until it completes.
+
+**Asset import status:** the six images are not yet present in the repository or a user's browser IndexedDB. The gallery now supports importing the supplied ZIP from the device running the app; select the ZIP in Asset Gallery → Import images / ZIP to populate the canonical Surface Textures category. Do not claim the six records are already imported until that operation has been completed and checked after reload.
+
+Still not implemented: Mask Normal/Mix blend menu and adjacent-layer alpha-aware mixing; single-click mask-edit highlight; double-click X diagnostic preview and selection-overlay refinements; dedicated 3D→2D/subdivision invalidation; UV seam-crossing brush continuity; filter UV cut-out enforcement; Tear mesh-part scope; Matcap export/stacking; Pattern Craft material/export; Honeycomb world/normal mapping; gallery GPU/resource scaling; UI3 Undo/Redo investigation. These remain active in the order above.
