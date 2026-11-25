@@ -48,6 +48,7 @@ import { DockablePanelFrame } from './ui/DockablePanelFrame';
 import { LayersPanel } from './ui/panels/LayersPanel';
 import { ColorWheelPanel } from './ui/panels/ColorWheelPanel';
 import { BrushLibraryPanel } from './ui/panels/BrushLibraryPanel';
+import { AssetGalleryModule } from './ui/AssetGalleryModule';
 import { NavigatorPanel } from './ui/panels/NavigatorPanel';
 import { MeshPartsPanel, type MeshPartOption } from './ui/panels/MeshPartsPanel';
 import { CircularCarousel } from './ui/CircularCarousel';
@@ -112,7 +113,8 @@ import {
   ZoomIn,
   Sliders,
   Settings,
-  Tablet
+  Tablet,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function App() {
@@ -450,6 +452,7 @@ export default function App() {
     uvEditor: false,
     subdivision: true,
     meshParts: true,
+    assetGallery: true,
   };
   const defaultPanelFloating: Record<string, boolean> = {
     layers: false,
@@ -460,6 +463,7 @@ export default function App() {
     masking: false,
     uvEditor: true,
     meshParts: false,
+    assetGallery: false,
   };
   const readPanelLayout = (key: string, defaults: Record<string, boolean>) => {
     try {
@@ -2551,6 +2555,16 @@ export default function App() {
                             onUpdateBrush={(patch) => setActiveBrush(b => ({ ...b, ...patch }))}
                             onOpenCarousel={() => setIsCarouselOpen(true)}
                           />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'assetGallery',
+                      title: 'Asset Gallery',
+                      icon: <ImageIcon className="w-3 h-3 text-[#89b4fa]" />,
+                      content: (
+                        <div className="h-72">
+                          <AssetGalleryModule />
                         </div>
                       ),
                     },
