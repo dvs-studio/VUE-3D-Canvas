@@ -49,6 +49,7 @@ interface PhotoshopMenuBarProps {
   onChangeTheme?: (theme: ThemeMode) => void;
   onOpenEdgeWearFilter?: () => void;
   onOpenTextureFilters?: () => void;
+  onOpenPatternCraftFilter?: () => void;
   onOpenPatternStampDialog?: () => void;
   onExportMultiChannelModel?: () => void;
   onOpenGpuDiagnostics?: () => void;
@@ -106,6 +107,7 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
   onChangeTheme,
   onOpenEdgeWearFilter,
   onOpenTextureFilters,
+  onOpenPatternCraftFilter,
   onOpenPatternStampDialog,
   onExportMultiChannelModel,
   onOpenGpuDiagnostics,
@@ -369,6 +371,15 @@ export const PhotoshopMenuBar: React.FC<PhotoshopMenuBarProps> = ({
                 >
                   <span>Layer Filter (Selected Layer)...</span>
                   <span className="text-[#888] font-mono text-[10px]">Image</span>
+                </button>
+              )}
+              {onOpenPatternCraftFilter && (
+                <button
+                  onClick={() => { onOpenPatternCraftFilter(); close(); }}
+                  className="w-full text-left px-3 py-1 hover:bg-[#3d7fb8] hover:text-white flex justify-between text-[#a6e3a1]"
+                >
+                  <span>Pattern Craft...</span>
+                  <span className="text-[#a6e3a1] font-mono text-[10px]">Pattern</span>
                 </button>
               )}
 
