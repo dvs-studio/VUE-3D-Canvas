@@ -220,44 +220,50 @@ async function scanHandle(handle: FileSystemDirectoryHandle, requestPermission: 
   const processed = await processFilesInWorker(records);
   const result: ExternalAsset[] = [];
 
-  // Reconcile scanned source files into the canonical gallery. Originals are
-  // stored unchanged there; this scanner's smaller WebP remains a fast legacy
-  // preview for consumers that have not migrated yet.
-  const existingGallery = await listGalleryAssets();
-  const rootPrefix = handle.name || 'asset-folder';
-  const existingByPath = new Map(existingGallery
-    .filter(asset => asset.source === 'folder-scan' && asset.sourcePath)
-    .map(asset => [asset.sourcePath!, asset]));
-  const newRecords: AssetRecord[] = [];
-  for (const record of records) {
-    const sourcePath = rootPrefix + '/' + record.relativePath;
-    const existing = existingByPath.get(sourcePath);
-    if (existing && existing.size === record.file.size) continue;
-    if (existing) await deleteGalleryAsset(existing.id);
-    newRecords.push(record);
+  try {
+    // Reconcile scanned source files into the canonical gallery. Originals are
+    // stored unchanged there; this scanner's smaller WebP remains a fast legacy
+    // preview for consumers that have not migrated yet.
+    const existingGallery = await listGalleryAssets();
+    const rootPrefix = handle.name || 'asset-folder';
+    const existingByPath = new Map(existingGallery
+      .filter(asset => asset.source === 'folder-scan' && asset.sourcePath)
+      .map(asset => [asset.sourcePath!, asset]));
+    const newRecords: AssetRecord[] = [];
+    for (const record of records) {
+      const sourcePath = rootPrefix + '/' + record.relativePath;
+      const existing = existingByPath.get(sourcePath);
+      if (existing && existing.size === record.file.size) continue;
+      if (existing) await deleteGalleryAsset(existing.id);
+      newRecords.push(record);
+    }
+    const categoryForKind = (kind: ExternalAssetKind): GalleryAssetCategory[] => {
+      if (kind === 'stencil') return ['stencil'];
+      if (kind === 'matcap') return ['matcap'];
+      if (kind === 'mask') return ['mask'];
+      if (kind === 'brush') return ['brush-texture'];
+      if (kind === 'pattern') return ['image-pattern'];
+      return ['surface-texture'];
+    };
+    if (newRecords.length) {
+      const recordByFile = new Map(newRecords.map(record => [record.file, record]));
+      await importGalleryFiles(newRecords.map(record => record.file), [], {
+        source: 'folder-scan',
+        sourcePathForFile: file => {
+          const record = recordByFile.get(file);
+          return record ? rootPrefix + '/' + record.relativePath : undefined;
+        },
+        categoriesForFile: file => {
+          const record = newRecords.find(item => item.file === file);
+          return record ? categoryForKind(record.kind) : ['surface-texture'];
+        },
+      });
+    }
+  
+  } catch (error) {
+    console.warn('[External assets] Canonical gallery sync skipped; legacy scan results remain available:', error);
   }
-  const categoryForKind = (kind: ExternalAssetKind): GalleryAssetCategory[] => {
-    if (kind === 'stencil') return ['stencil'];
-    if (kind === 'matcap') return ['matcap'];
-    if (kind === 'mask') return ['mask'];
-    if (kind === 'brush') return ['brush-texture'];
-    if (kind === 'pattern') return ['image-pattern'];
-    return ['surface-texture'];
-  };
-  if (newRecords.length) {
-    const recordByFile = new Map(newRecords.map(record => [record.file, record]));
-    await importGalleryFiles(newRecords.map(record => record.file), [], {
-      source: 'folder-scan',
-      sourcePathForFile: file => {
-        const record = recordByFile.get(file);
-        return record ? rootPrefix + '/' + record.relativePath : undefined;
-      },
-      categoriesForFile: file => {
-        const record = newRecords.find(item => item.file === file);
-        return record ? categoryForKind(record.kind) : ['surface-texture'];
-      },
-    });
-  }
+
   for (let index = 0; index < records.length; index++) {
     const record = records[index];
     const image = processed.find(item => item.index === index);
