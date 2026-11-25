@@ -152,3 +152,12 @@ The six JPEGs are still not automatically present in the repository or browser I
 - Tear mesh-part target scope; Matcap export/multi-layer stacking; Pattern Craft material/export; Honeycomb world/normal-space mapping; gallery GPU-tier auto-scale/resource packaging; UI3 oversized Undo/Redo investigation.
 
 No visual/device acceptance is claimed. Workflow #399 confirms TypeScript/build/self-host sync/package only.
+
+
+## Filter UV cut-out implementation — Workflow #402
+
+Added `buildUVCoverageMask` in `src/tools/textureFilters.ts` to rasterise the active UV triangles without gutter dilation. Filter preview and Apply now carry this full-resolution write boundary. `transformTexturePixels` intersects UV coverage with the optional mesh-part mask and restores original pixels outside the intersection. `applyTextureFilterToCanvas` no longer dilates writes outside either boundary, and `App.tsx` refuses to apply when the active UV coverage is missing or dimensionally invalid.
+
+Workflow #402 passed: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582785922. Artifact: `15007890427`. This verifies TypeScript/build/self-host packaging only; visual checks for multiple UV channels, islands, gutters and selected mesh parts remain.
+
+The implementation sequence now has source code for UV cut-out enforcement, but the 3D seam interpolation and 3D→2D/subdivision refresh still need manual visual acceptance. Remaining Mask Mix/edit/diagnostic UX and the Tear/Matcap/Pattern Craft/Honeycomb/GPU/UI3 backlog remain open.
