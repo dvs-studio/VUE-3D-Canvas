@@ -866,8 +866,8 @@ export default function App() {
     notifyTextureUpdated();
   };
 
-  const handleAddMaskLayer = () => {
-    const target = layers.find(layer => layer.id === activeLayerId && !layer.isGroup && layer.layerRole !== 'mask' && !layer.isBaseLayer);
+  const handleAddMaskLayer = (targetLayerId: string = activeLayerId) => {
+    const target = layers.find(layer => layer.id === targetLayerId && !layer.isGroup && layer.layerRole !== 'mask' && !layer.isBaseLayer);
     if (!target) return;
     const memory = WasmMemoryEngine.getInstance();
     const cvs = document.createElement('canvas');
