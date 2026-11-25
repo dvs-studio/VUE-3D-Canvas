@@ -579,3 +579,15 @@ CI is not a substitute for manual browser/device acceptance.
 - The source files are committed to `main`, but TypeScript diagnostics, Vite build, `npm run host:sync`, browser import tests and visual acceptance have not yet been run for this module.
 - The next step is code review and build verification of the standalone module, then continue the outstanding tasks without connecting consumers prematurely.
 - Manual acceptance remains distinct from CI success.
+
+
+## 2026-11-25 — GPT-6 — follow-up: Base Layer Close and UV N-Panel
+
+- Changed the Base Layer dialog action from **Cancel** to **Close**. It continues to call the existing close handler: live in-session checker settings remain in effect, but are not persisted. Save remains the only persistence action. Updated `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md`.
+- Moved the existing 2D UV N-Panel from the right edge to the left edge.
+- Added a Display tab for UV overlay visibility, opacity and colour. UV set selection remains in Channels; Smart UV entry is in Unwrap.
+- Removed those controls from the horizontal UV HUD and offset the remaining HUD while the panel is open.
+- Added `notes/UV_N_PANEL_LEFT_LAYOUT_2026-11-25.md`.
+- Workflow #320 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14977799972`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45518199675.
+- Manual device acceptance remains outstanding for the left panel, N-key, HUD spacing, overlay controls, UV channels, rebake, unwrap, sculpt, painting and touch.
+- Gallery integration remains intentionally deferred until the other outstanding application tasks have been completed. The gallery foundation is independently CI-verified by workflow #315 (artifact `14979091732`); live IndexedDB/import tests remain outstanding.
