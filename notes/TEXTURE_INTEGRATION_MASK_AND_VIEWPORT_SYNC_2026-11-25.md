@@ -125,3 +125,30 @@ The following source changes have now landed after the handover was written:
 **Asset import status:** the six images are not yet present in the repository or a user's browser IndexedDB. The gallery now supports importing the supplied ZIP from the device running the app; select the ZIP in Asset Gallery → Import images / ZIP to populate the canonical Surface Textures category. Do not claim the six records are already imported until that operation has been completed and checked after reload.
 
 Still not implemented: Mask Normal/Mix blend menu and adjacent-layer alpha-aware mixing; single-click mask-edit highlight; double-click X diagnostic preview and selection-overlay refinements; dedicated 3D→2D/subdivision invalidation; UV seam-crossing brush continuity; filter UV cut-out enforcement; Tear mesh-part scope; Matcap export/stacking; Pattern Craft material/export; Honeycomb world/normal mapping; gallery GPU/resource scaling; UI3 Undo/Redo investigation. These remain active in the order above.
+
+
+## Latest verified source pass — 2026-11-25, Workflow #399
+
+<badge>CI passed</badge> The following code is present in the #399 self-host artifact:
+- Pattern Craft direct Filter menu command, preselected dialog mode — #389.
+- Layers Add menu groups Paint Layer, Material Fill/import, Matcap, Mask, Tear and Group — #392.
+- Right-click and touch long-press layer context actions; Add Mask Layer targets the exact selected layer and inserts adjacent to it — #392.
+- Asset Gallery ZIP import uses JSZip and the existing canonical gallery importer — #393.
+- Blank/transparent Mask Layer default and neutral transparent-pixel mask compositing — #396.
+- 2D UV composite redraw listens to the coalesced `textureVersion` invalidation — #397.
+- 2D UV and 3D viewports now receive the same resolved subdivision preview geometry; subdivision geometry commits advance UV/texture versions — #398.
+- 3D paint event processing now interpolates intermediate screen-space surface samples and raycasts them, so sparse pointer events are less likely to skip a UV-island crossing; it resets UV-local paint paths per island while continuing the surface-space stroke — #399.
+
+**Latest verified workflow:** https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582213410 (run #399, passed). **Self-host artifact:** `15007545431`.
+
+The six JPEGs are still not automatically present in the repository or browser IndexedDB. Download the supplied ZIP to the device running the app and use Asset Gallery → Import images / ZIP. Confirm six Surface Texture entries and reload persistence. The ZIP import feature is CI-verified; actual asset import has not yet been performed in the app.
+
+### Still open after #399
+- Mask blend menu and implementation: Normal (Pass Through) vs alpha-aware adjacent-layer Mix.
+- Single-click mask-edit highlight toggle and double-click X light-grey/red diagnostic preview; selection overlay clarity.
+- Full 2D UV preview parity for helper effects (Mask/Tear) and manual viewport/subdivision visual checks.
+- UV seam interpolation requires visual acceptance on sphere, Suzanne and a deliberately split UV mesh; current algorithm is a focused sparse-event interpolation improvement, not proof every seam topology is solved.
+- Filter UV cut-out limit remains distinct from mesh-part targeting and still needs code audit/enforcement.
+- Tear mesh-part target scope; Matcap export/multi-layer stacking; Pattern Craft material/export; Honeycomb world/normal-space mapping; gallery GPU-tier auto-scale/resource packaging; UI3 oversized Undo/Redo investigation.
+
+No visual/device acceptance is claimed. Workflow #399 confirms TypeScript/build/self-host sync/package only.
