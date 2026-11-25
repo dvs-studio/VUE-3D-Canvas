@@ -771,7 +771,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     const mesh = new THREE.Mesh(geometry || modelPreset.geometry, material);
     scene.add(mesh);
     mesh.updateMatrixWorld(true);
-    mesh.geometry.userData.worldMatrix = mesh.matrixWorld;
+    (mesh.geometry as any).worldMatrix = mesh.matrixWorld;
     meshRef.current = mesh;
 
     // 3D Viewport X-Ray Vertex Highlight Helper
@@ -996,7 +996,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     meshRef.current.geometry.dispose();
     meshRef.current.geometry = newGeom;
     meshRef.current.updateMatrixWorld(true);
-    newGeom.userData.worldMatrix = meshRef.current.matrixWorld;
+    (newGeom as any).worldMatrix = meshRef.current.matrixWorld;
     needsRenderRef.current = true;
   }, [modelKey, customOBJText, geometry, uvGeometryVersion, activeUVChannel]);
 
