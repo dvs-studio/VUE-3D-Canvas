@@ -825,6 +825,41 @@ export default function App() {
     notifyTextureUpdated();
   };
 
+  const handleAddMatcapLayer = () => {
+    const memory = WasmMemoryEngine.getInstance();
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024;
+    cvs.height = 1024;
+    const ctx = cvs.getContext('2d')!;
+    memory.registerBuffer(1024 * 1024 * 4);
+    const id = `matcap_${Date.now()}`;
+    const newLayer: Layer = {
+      id,
+      name: 'Matcap Layer',
+      visible: true,
+      opacity: 100,
+      blendMode: 'normal',
+      locked: false,
+      canvas: cvs,
+      ctx,
+      channel: 'color',
+      pbrSettings: {
+        roughness: 0.5, metallic: 0, bumpHeight: 1, normalStrength: 1,
+        emissionStrength: 1, emissionColor: '#ffffff', opacity: 1,
+        enableColor: true, enableBump: false, reflectionSource: 'matcap',
+        reflectionIntensity: 0.8, matcapPreset: 'chrome',
+        colorOn: false, colorInfluence: 0, reflectionOn: true,
+        reflectionInfluence: 1, emissionOn: false, emissionInfluence: 0,
+        bumpOn: false, bumpInfluence: 0, normalLock: false,
+      },
+    };
+    const updated = [...layers, newLayer];
+    setLayers(updated);
+    setActiveLayerId(id);
+    undoBuffer.pushState('Add Matcap Layer', updated);
+    notifyTextureUpdated();
+  };
+
   const handleDeleteLayer = (id: string) => {
     if (layers.length <= 1 || layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     const updated = layers.filter(l => l.id !== id);
@@ -2308,6 +2343,7 @@ export default function App() {
                             activeLayerId={activeLayerId}
                             onSelectLayer={handleSelectLayer}
                             onAddLayer={handleAddLayer}
+                            onAddMatcapLayer={handleAddMatcapLayer}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
