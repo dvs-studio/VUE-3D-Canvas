@@ -421,9 +421,12 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         for (let pixel = 0; pixel < pixelCount; pixel++) {
           const i = pixel * 4;
           const luminance = (0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]) / 255;
-          const maskValue = luminance * (pixels[i + 3] / 255);
+          const pixelAlpha = pixels[i + 3] / 255;
           const maskOpacity = Math.max(0, Math.min(1, (maskLayer.opacity ?? 100) / 100));
-          const coverage = 1 - maskOpacity + maskValue * maskOpacity;
+          // Transparent/untouched mask pixels are neutral. Alpha gates the
+          // amount by which grayscale luminance moves coverage away from 1.
+          const influence = pixelAlpha * maskOpacity;
+          const coverage = 1 - (1 - luminance) * influence;
           combined[pixel] = Math.round(combined[pixel] * coverage);
         }
         maskAlphaByTarget.set(maskLayer.maskTargetLayerId, combined);
