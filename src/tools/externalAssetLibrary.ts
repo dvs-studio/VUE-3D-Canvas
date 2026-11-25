@@ -245,10 +245,11 @@ async function scanHandle(handle: FileSystemDirectoryHandle, requestPermission: 
     return ['surface-texture'];
   };
   if (newRecords.length) {
+    const recordByFile = new Map(newRecords.map(record => [record.file, record]));
     await importGalleryFiles(newRecords.map(record => record.file), [], {
       source: 'folder-scan',
       sourcePathForFile: file => {
-        const record = newRecords.find(item => item.file === file);
+        const record = recordByFile.get(file);
         return record ? rootPrefix + '/' + record.relativePath : undefined;
       },
       categoriesForFile: file => {
