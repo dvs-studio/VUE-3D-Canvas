@@ -909,3 +909,15 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Workflow #326 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14979452656`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45519196459.
 - The same workflow includes the procedural sphere startup, alphabetical model presets and sphere pole subdivision repair source changes.
 - No browser-level IndexedDB migration/import/alpha-preservation test or manual sphere subdivision inspection has been completed. Do not mark either feature visually accepted.
+
+
+## 2026-11-25 — Wood, procedural filters, triplanar world mapping, adaptive Base Layer and Matcap
+
+- Added tree-year growth, fingerprint and merged wood ring styles. The Wood filter now builds active-UV surface position, normal and normal-derived curvature maps; curvature influences the ring field. Object/World coordinate selector is available. World mode applies `geometry.userData.worldMatrix` when supplied; a live mesh matrix handoff is still outstanding for transformed instances.
+- Added Warp/Wavy Transform, Pointillism, Honeycomb Cells (hex/square/triangle/circle) and Stochastic Scatter to the selected-layer filter engine with dedicated controls. Mesh-part masking is applied after each transform.
+- Triplanar fill now transforms rasterised surface positions and normals when `geometry.userData.worldMatrix` is supplied. Existing three-axis normal-weight projection, texture mixing, slope/altitude masks and selection protection remain.
+- Base Layer checker shader now increases tile frequency with derivative-based surface curvature (2x on flatter surfaces up to 4x on curved details). This is intended to shrink tiles around finger-like forms; manual visual tuning remains.
+- Added dedicated Matcap Layer creation in LayersPanel/App. Viewport shader now consumes the topmost visible Matcap-enabled layer; built-in Chrome/Ceramic/Clay/Pearl/Gold use generated Matcap textures and Custom uses its chosen image. This is a single topmost viewport appearance overlay, not a multi-layer Matcap export pipeline.
+- Added `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
+- Workflow #340 passed TypeScript diagnostics and Vite build, but the self-host output commit failed due to a rename/rename conflict and content conflict in `self-host/public/index.html` while another generated bundle was being committed. Do not call the self-host package complete until a fresh workflow succeeds. Run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45565275383.
+- Still outstanding: F1 Tear role-based stack mask, F6 dedicated Mask layer/target relationship, gallery integration (intentionally deferred until other tasks complete), Brush settings grid accordion and micro-preview, world-matrix handoff, Matcap map export/stacking, UI3 Undo/Redo viewport issue, and manual device acceptance.
