@@ -664,3 +664,17 @@ CI is not a substitute for manual browser/device acceptance.
 - Mesh-part target scope and richer rim/under-paint workflow remain open.
 - Workflow #360 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `14999199885`): https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45567085033.
 - Manual painting, fray quality, green stack depth, underlying-layer visibility, undo/redo and mesh-part scope still require user acceptance.
+
+
+## 2026-11-25 — GPT-6 — Canonical Asset Gallery integration phase
+
+- Mounted the full Asset Gallery as a dedicated workspace Docker tab and compacted its layout for the dock.
+- Added a shared compact accordion/grid picker. It loads metadata and thumbnails for browsing and loads the original Blob only after selection.
+- Connected gallery categories to Triplanar, Material Fill import, Mask Layer, Tear Layer, Matcap, Brush Library Stencil/image Pattern and Pattern Stamp decal/mask/grunge.
+- Triplanar quick-look hover is conditional: visible only when the instance-colour checkbox is off; existing colour preview remains when it is on.
+- Brush settings now distinguish the actual alpha-bearing image stencil (`stencilUrl`), raster image Pattern/Brush Texture (`patternUrl`) and mathematical procedural pattern (`patternType`). Added micro-previews below the brush menu tabs.
+- Folder scanner now reconciles original file Blobs into the canonical gallery, classifies stencil/matcap/mask/brush/pattern/texture folders, tracks source path and modified time, skips unchanged files and replaces changed files. Legacy scanner results remain available if gallery persistence fails.
+- Added folder scan to the gallery panel and refresh to compact pickers.
+- Updated `notes/ASSET_GALLERY_MODULE_2026-11-25.md` and the authoritative AGENTS task ledger.
+- Workflow #385 passed TypeScript, Vite build, self-host sync, package validation and artifact upload. Artifact `15001151525`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45568723627.
+- Manual browser/device testing remains outstanding for IndexedDB migration, scanner reconciliation, alpha/GIF handling, quota/memory, consumer selection, hover preview, and brush stamp/pattern rendering.
