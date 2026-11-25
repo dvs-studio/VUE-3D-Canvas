@@ -1,72 +1,88 @@
-# Independent Asset Gallery Module — 2026-11-25
+# Canonical Asset Gallery — 2026-11-25
 
-## Scope and sequencing
+## User direction
 
-The user requested one shared asset-gallery module, with later connections to the features that consume images. The gallery must be developed and tested independently first. Do **not** mount it in `App.tsx`, add it to a menu, or connect it to any brush, filter, layer, Matcap, Triplanar, or renderer pipeline during this phase.
+Build one independent gallery/storage module first, then connect consumers individually after the other application work is complete. Keep consumer-specific behaviour (brush stamp alpha, procedural-vs-image pattern, Triplanar colour-vs-texture preview, Matcap interpretation, mask luminance) in the consumers rather than duplicating asset stores.
 
-After the standalone module is stable, continue the outstanding application stabilisation and layer/filter tasks. Only after those tasks have been completed and tested should the gallery be connected to consumers one at a time.
+The gallery foundation and first integration pass are now complete. Do not revert it to an unmounted module or create new consumer-specific image databases.
 
-## Source files added
+## Canonical source
 
-- `src/tools/assetGallery.ts` — IndexedDB-backed asset records and storage operations.
-- `src/ui/AssetGalleryModule.tsx` — standalone, currently unmounted gallery interface.
+- `src/tools/assetGallery.ts` — IndexedDB metadata/original/thumbnail records and category operations.
+- `src/ui/AssetGalleryModule.tsx` — dedicated gallery workspace panel, import/delete/search/category management and folder scan.
+- `src/ui/GalleryAssetPicker.tsx` — compact reusable accordion/grid picker for consumer panels.
+- `src/tools/externalAssetLibrary.ts` — browser folder scanner; folder-scan originals are reconciled into the canonical gallery.
 
-## Data model
+## Categories
 
-One original image may carry multiple categories without duplicating its stored binary:
+One original image can belong to multiple categories without duplicating its stored binary:
 
-- Stencil — brush-stamp image; preserve alpha.
+- Stencil — brush stamp image; preserve alpha.
 - Brush Texture — image interpreted as brush surface detail.
 - Mask — image used to control effect coverage.
-- Surface Texture — image suitable for material/triplanar use.
-- Matcap — image intended for Matcap shading.
-- Image Pattern — raster pattern, separate from mathematical/procedural patterns.
+- Surface Texture — material/triplanar texture.
+- Matcap — image interpreted by the Matcap viewport shader.
+- Image Pattern — raster pattern, distinct from mathematical/procedural patterns.
 
-Procedural patterns are intentionally not represented as raster image assets.
+Procedural patterns remain procedural settings and are not stored as raster assets.
 
-## Storage and safety
+## Storage model
 
-- IndexedDB database: `vue3d-asset-gallery`, version 2; stores: `assets` (metadata only), `originals` (source Blob), and `thumbnails` (derived preview Blob).
-- Preserve the original image Blob unchanged.
-- Generate a separate 320 px maximum-edge WebP thumbnail and average-colour metadata.
-- Link metadata, original and thumbnail by stable asset ID while keeping them in separate object stores, so listing the gallery never loads full-resolution originals.
-- Import accepts PNG, JPEG, WebP, GIF, BMP and AVIF.
-- The gallery has no filesystem scanning, network access, or source-file write/delete behaviour.
-- Removing an entry deletes only the gallery's stored copy; it does not delete the user's original file.
-- Category assignments are metadata; the same image can appear in several consumer categories without duplicate image storage.
+- IndexedDB database: `vue3d-asset-gallery`, version 3.
+- `assets`: metadata only.
+- `originals`: unchanged source Blob.
+- `thumbnails`: derived preview Blob.
+- Metadata links the other stores by stable asset ID. Listing and grid browsing do not load full-resolution originals.
+- Thumbnail maximum edge: 320 px, WebP.
+- Import supports PNG, JPEG, WebP, GIF, BMP and AVIF.
+- Versioned migration preserves early combined v1 records and v2 metadata/original/thumbnail records; v3 adds a source-path index.
+- Removing a gallery entry removes only the stored gallery copy, never the user's source file.
 
-## Current interface
+## Folder scanner reconciliation
 
-The unmounted standalone component provides:
-- Multi-category import assignment.
-- Category filtering and text search.
-- Grid thumbnails and a larger detail preview.
-- Basic metadata including dimensions, file size, MIME type and average colour.
-- Removal from the gallery's IndexedDB store.
+The existing File System Access scanner still enumerates user-granted directories and processes image previews in a Worker where supported. It now also:
 
-The optional `onAssetSelected` callback is a future integration seam only; no consumers are wired.
+- Classifies `stencil`, `matcap`, `mask`, `brush`, `pattern` and `texture` folder names into the matching gallery category.
+- Stores original file Blobs in the canonical gallery; the scanner's smaller WebP remains available to legacy consumers.
+- Records source path and source modification time.
+- Skips unchanged files and replaces a gallery copy when file size or modification time changes.
+- Keeps the legacy scan result available if canonical gallery persistence fails.
 
-## Known limitations / next checks
+The gallery panel exposes a **Scan library folder** action. After scanning, use the refresh control in a compact picker if it was already open.
 
-- Version 2 migrates the early version 1 combined records into separate metadata/original/thumbnail stores without dropping existing imported assets.
-- This is the first independent module foundation, not the completed end-to-end gallery.
-- Directory scanning and the older `externalAssetLibrary.ts` scanner are deliberately not connected yet. Later reconcile the scanner with this canonical store rather than maintaining two competing libraries.
-- Add automated unit/browser tests for category validation, multi-category indexing, original-blob integrity, duplicate imports, deletion and storage failure handling.
-- Test import and thumbnail generation in the self-host browser, including transparent PNGs and animated GIFs.
-- Add storage quota reporting and a clear recovery path for IndexedDB failures before wide integration.
-- Confirm low-memory behaviour with larger image collections; do not eagerly load original blobs into the grid.
-- Workflow #326 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload. Artifact ID `14979452656`; https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45519196459.
+## Consumer integrations
 
-## Separate active UI task: 2D UV N-Panel
+- Triplanar: compact Surface Texture Gallery accordion in each texture row. The existing preview still shows the selected colour when instance-colour mode is enabled and the image when disabled. Hover quick-look is enabled only in image mode.
+- Material Fill: Surface Texture Gallery inside the texture import/auto-node dialog.
+- Mask Layer: Mask Gallery; selected image is applied to the target-linked mask canvas.
+- Tear Layer: Mask Gallery; selected image is applied to the RGB-role tear canvas.
+- Matcap: Matcap Gallery in Layer Settings; selection switches the layer to custom Matcap.
+- Brush Library: image Stencil Gallery and image Pattern/Brush Texture Gallery, kept separate from procedural pattern types. Selected image micro-previews sit below the brush menu tabs.
+- Pattern Stamp: Stencil/Decal gallery, Mask gallery for torn-edge input, and Surface/Brush Texture gallery for grunge overlays.
+- Full gallery workspace is mounted as a dedicated Docker tab.
 
-The user has requested that the existing 2D UV workspace controls be reorganised into a left-side N-panel. This is a new active task, not a claim that the previous A6 work was rejected. Preserve the existing UV channel, composite, rebake, selection, and touch behaviour while moving the controls. Avoid disturbing the accepted 3D viewport.
+## Brush image vs procedural pattern distinction
 
-## Related follow-up corrections
+- `stencilUrl` is the actual brush-stamp image, including its alpha.
+- `patternUrl` is a raster image pattern/brush texture.
+- `patternType` remains the mathematical/procedural pattern setting.
+- Selecting a procedural pattern clears the image URL; selecting an image pattern clears the procedural type. This prevents the two concepts from being conflated.
 
-- Base Layer dialog's bottom action should read **Close**, not Cancel. Close retains live in-session settings; Save alone persists checker colours. Update UI copy and docs without changing this behaviour.
-- The Base Layer checker is intended to become shape-sensitive around narrow geometry (for example, fingers). Treat this as a separate shader/design task and preserve the world-space projection until a safe solution is validated.
-- The procedural sphere should become the startup mesh; Suzanne remains in the alphabetically ordered model preset list. Investigate holes in the sphere when subdivision is enabled.
+## Verification
 
-## Verification status
+- Workflow #385 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload.
+- Self-host artifact ID: `15001151525`.
+- Run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45568723627
 
-Source files have been committed, but no TypeScript diagnostics, Vite build, self-host sync, browser import test, or visual acceptance has been run yet for this module. Do not describe it as verified or complete until those checks pass.
+This is automated build/package verification only. Still required:
+- Browser test IndexedDB migration from v1/v2 to v3.
+- Import and re-import scans, changed-file refresh, categories and source path reconciliation.
+- Transparent PNG and animated GIF preview/original integrity.
+- Quota/storage failure handling and large-library memory behaviour.
+- Verify each consumer selection, persistence, hover quick-look and alpha handling on desktop/tablet.
+- Add GPU-tier auto-scaling and bundle/resource packaging policy.
+
+## Related project state
+
+- 2D UV workspace left N-Panel is implemented; manual desktop/tablet acceptance remains.
+- Base Layer Close copy, curvature-adaptive checker, procedural sphere startup, sphere subdivision pole repair, Wood rings, Triplanar world matrix, Mask/Tear, Matcap, Pattern Craft and additional filters are documented in `AGENTS.md`, `AGENT_STATE.md` and `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
