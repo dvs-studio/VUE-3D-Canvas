@@ -16,6 +16,7 @@ interface LayerSettingsModalProps {
   onClose: () => void;
   layer: Layer | null;
   onSavePBR: (layerId: string, pbrSettings: LayerPBRSettings) => void;
+  onApplyMaskImage?: (layerId: string, dataUrl: string) => void;
   onOpenNodeEditor?: () => void;
   uvChannels?: { id: string; name: string }[];
   onSetUVChannel?: (layerId: string, channelId: string) => void;
@@ -159,6 +160,30 @@ export const LayerSettingsModal: React.FC<LayerSettingsModalProps> = ({
           <button onClick={onClose} className="text-[#aaa] hover:text-white p-0.5 rounded cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
 
+        {layer.layerRole === 'mask' && (
+          <div className="px-3 py-2 border-b border-[#3e3e3e] bg-[#292929] space-y-1.5">
+            <div className="text-[10px] font-semibold text-[#a6e3a1]">Mask Source · White reveals / black conceals</div>
+            <GalleryAssetPicker
+              categories={['mask']}
+              title="Mask Gallery"
+              compact
+              imageMode
+              onSelect={({ dataUrl }) => onApplyMaskImage?.(layer.id, dataUrl)}
+            />
+          </div>
+        )}
+        {layer.layerRole === 'tear' && (
+          <div className="px-3 py-2 border-b border-[#3e3e3e] bg-[#292929] space-y-1.5">
+            <div className="text-[10px] font-semibold text-[#f9a8d4]">Tear Source · Black cuts / white frays / green masks stack</div>
+            <GalleryAssetPicker
+              categories={['mask']}
+              title="Tear / Mask Image Gallery"
+              compact
+              imageMode
+              onSelect={({ dataUrl }) => onApplyMaskImage?.(layer.id, dataUrl)}
+            />
+          </div>
+        )}
         <div className="px-3 py-2 bg-[#262626] border-b border-[#3e3e3e] flex items-center gap-2 text-[11px]">
           <span className="text-[#aaa] shrink-0">UV channel</span>
           <select value={layer.uvChannel || 'uv_original'} onChange={e => onSetUVChannel?.(layer.id, e.target.value)} className="flex-1 bg-[#1c1c1c] border border-[#555] text-[#eee] rounded px-2 py-1">
