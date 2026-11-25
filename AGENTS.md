@@ -41,7 +41,7 @@ Victory has refined the texture architecture and sequencing. This update takes p
 5. Correct Base Layer dialog button copy from Cancel to Close. Close retains live session settings; Save alone persists checker colours.
 6. Later tasks: shape-sensitive world-space Base Layer checker. The procedural sphere startup, alphabetically ordered Suzanne presets and sphere-pole subdivision repair have now been implemented; verify them before acceptance.
 
-The independent gallery foundation is committed but **not yet build- or browser-verified**. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
+The independent gallery foundation is committed and CI-verified by workflow #326 (artifact `14979452656`); live browser import/IndexedDB acceptance remains outstanding. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
 
 ### READ THIS FIRST — three boxes
 
