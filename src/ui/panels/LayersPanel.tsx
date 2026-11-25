@@ -39,7 +39,7 @@ interface LayersPanelProps {
   onSelectLayer: (id: string) => void;
   onAddLayer: () => void;
   onAddMatcapLayer?: () => void;
-  onAddMaskLayer?: () => void;
+  onAddMaskLayer?: (layerId?: string) => void;
   onAddTearLayer?: () => void;
   onUpdateTearStackDepth?: (layerId: string, depth: number) => void;
   onAddGroup?: () => void;
@@ -135,6 +135,8 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [longPressMenu, setLongPressMenu] = useState<{ x: number; y: number } | null>(null);
   const longPressTimer = React.useRef<number | null>(null);
+  const layerContextLongPressTimer = React.useRef<number | null>(null);
+  const suppressLayerClickRef = React.useRef(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -260,17 +262,33 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           return (
             <div
               key={layer.id}
-              onClick={() => onSelectLayer(layer.id)}
+              onClick={() => { if (suppressLayerClickRef.current) { suppressLayerClickRef.current = false; return; } onSelectLayer(layer.id); }}
               onContextMenu={(e) => handleContextMenu(e, layer.id)}
               onPointerDown={(e) => {
-                if (checkedLayerIds.length < 2 || !checkedLayerIds.includes(layer.id)) return;
-                if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
-                longPressTimer.current = window.setTimeout(() => {
-                  setLongPressMenu({ x: e.clientX, y: e.clientY });
-                }, 480);
+                if (e.pointerType === 'touch') {
+                  if (layerContextLongPressTimer.current) window.clearTimeout(layerContextLongPressTimer.current);
+                  layerContextLongPressTimer.current = window.setTimeout(() => {
+                    suppressLayerClickRef.current = true;
+                    setContextMenu({ x: e.clientX, y: e.clientY, layerId: layer.id });
+                  }, 520);
+                }
+                if (checkedLayerIds.length >= 2 && checkedLayerIds.includes(layer.id)) {
+                  if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+                  longPressTimer.current = window.setTimeout(() => setLongPressMenu({ x: e.clientX, y: e.clientY }), 480);
+                }
               }}
-              onPointerUp={() => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }}
-              onPointerLeave={() => { if (longPressTimer.current) window.clearTimeout(longPressTimer.current); }}
+              onPointerUp={() => {
+                if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+                if (layerContextLongPressTimer.current) window.clearTimeout(layerContextLongPressTimer.current);
+              }}
+              onPointerLeave={() => {
+                if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+                if (layerContextLongPressTimer.current) window.clearTimeout(layerContextLongPressTimer.current);
+              }}
+              onPointerCancel={() => {
+                if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+                if (layerContextLongPressTimer.current) window.clearTimeout(layerContextLongPressTimer.current);
+              }}
               className={`flex items-center gap-1.5 p-1.5 rounded cursor-pointer transition-colors border relative ${
                 layer.groupId ? 'ml-4 border-l-2 border-l-[#e5a038]' : ''
               } ${
@@ -543,6 +561,12 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           <div className="px-3 py-1 text-[10px] font-mono text-[#888] border-b border-[#444] uppercase tracking-wider">
             LAYER EXPORT &amp; UTILITIES
           </div>
+          {onAddMaskLayer && !layers.find(layer => layer.id === contextMenu.layerId)?.isBaseLayer && layers.find(layer => layer.id === contextMenu.layerId)?.layerRole !== 'mask' && (
+            <button type="button" onClick={() => { onAddMaskLayer(contextMenu.layerId); setContextMenu(null); }}
+              className="w-full px-3 py-1.5 text-left text-green-300 hover:bg-[#3d7fb8]">
+              Add Mask Layer to This Layer
+            </button>
+          )}
 
           {/* CorelDraw style custom scaling export */}
           <button
