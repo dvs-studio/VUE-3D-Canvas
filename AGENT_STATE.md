@@ -1017,3 +1017,10 @@ Landed and CI-verified: Pattern Craft direct Filter command/preselection (#389);
 The six supplied JPEGs have not been imported into the browser gallery yet. User should select the ZIP from the device running the app via Asset Gallery → Import images / ZIP, then confirm six entries and persistence. Current ZIP import feature is verified, actual user asset import is not.
 
 Still open: Mask Normal (Pass Through)/Mix compositing, mask-edit highlight, double-click X diagnostic view and selection overlay refinements; full filter UV cut-out enforcement; manual UV seam acceptance; helper-layer 2D composite parity; Tear mesh-part; Matcap export/stacking; Pattern Craft material/export; Honeycomb world/normal mapping; GPU/resource scaling; UI3. Do not report these as completed. No manual visual/device acceptance is claimed.
+
+
+## 2026-11-25 — Workflow #402: UV cut-out enforcement
+
+Added `buildUVCoverageMask` to rasterise active UV triangles without gutter dilation. Filter preview/Apply now carry the UV write mask and combine it multiplicatively with mesh-part coverage; pixels outside the intersection are restored from the original image. Apply rejects missing or mismatched UV coverage. `applyTextureFilterToCanvas` avoids gutter dilation when either write boundary is active. Workflow #402 passed with artifact `15007890427`: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45582785922.
+
+Manual acceptance remains for alternate UV channels, multiple islands/gutters and mesh-part combinations. Mask Mix/edit/preview and remaining Tear/Matcap/Pattern Craft/Honeycomb/GPU/UI3 work remain open.
