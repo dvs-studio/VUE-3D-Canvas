@@ -601,3 +601,15 @@ CI is not a substitute for manual browser/device acceptance.
 - Other model topologies are unchanged. No Suzanne source assets were altered.
 - Added `notes/DEFAULT_SPHERE_AND_SUBDIVISION_2026-11-25.md`.
 - Automated workflow and manual visual verification are pending. The sphere hole repair is not accepted until poles, UV seam and silhouette are inspected at levels 0–2 under both subdivision algorithms.
+
+
+## 2026-11-25 — GPT-6 — gallery storage v2 and verification update
+
+- Refined the gallery storage schema to version 2: metadata, original image Blobs and thumbnails now live in separate IndexedDB object stores. Browsing and thumbnail requests no longer load all full-resolution originals into memory.
+- Added migration from the first version's combined records so any existing gallery imports are retained.
+- Workflow #326 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `14979452656`). This workflow includes the gallery v2, left UV N-Panel, Base Layer Close label, sphere startup and targeted subdivision pole changes.
+- Browser tests are still outstanding for IndexedDB migration, import, alpha preservation, quota/error handling and gallery visual behaviour.
+- The sphere is now the startup geometry. Both Suzanne variants remain in the alphabetically sorted model menu; geometry is only instantiated when selected. The raw OBJ source text remains statically imported into the bundle, so geometry allocation is deferred but the raw text is not yet code-split.
+- The subdivision repair is sphere-specific: unify duplicated pole vertices before Catmull-Clark. Manual pole/seam/silhouette verification remains outstanding.
+- A5 filter-title dragging is present in code for mouse and touch (touch uses a double-tap arm); device verification remains outstanding. UI3 oversized Undo/Redo was not found in the current 3D viewport source scan and remains a manual/reproduction item.
+- Next substantial feature task remains 2A-W Wood rings: uniform growth rings and organic fingerprint/merged rings with curvature-aware mapping and object/world space. Do not substitute a superficial phase-only adjustment.
