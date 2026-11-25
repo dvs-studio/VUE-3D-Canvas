@@ -341,8 +341,8 @@ export class BrushEngine {
     }
 
     // 3. Procedural Pattern Fill (if active)
-    if (brush.patternType && brush.patternType !== 'none' && !isEraser) {
-      this.applyPatternFill(ctx, radius, brush.color, brush.patternType, brush.patternScale || 1.0);
+    if ((brush.patternUrl || (brush.patternType && brush.patternType !== 'none')) && !isEraser) {
+      this.applyPatternFill(ctx, radius, brush.color, brush.patternType || 'none', brush.patternScale || 1.0, brush.patternUrl);
     } else if (brush.hardness < 85) {
       // Soft radial gradient dab (works for both brush color and eraser destination-out)
       const grad = ctx.createRadialGradient(0, 0, radius * (brush.hardness / 100), 0, 0, radius);
@@ -433,10 +433,13 @@ export class BrushEngine {
     radius: number,
     color: string,
     patternType: BrushPatternType,
-    scale: number
+    scale: number,
+    patternUrl?: string,
   ) {
     const tileSize = Math.max(8, Math.min(128, Math.floor(24 * scale)));
-    const cacheKey = `${patternType}|${Math.round(scale * 100)}|${color}`;
+    const cacheKey = patternUrl
+      ? `image|${patternUrl}|${Math.round(scale * 100)}`
+      : `${patternType}|${Math.round(scale * 100)}|${color}`;
     let pCanvas = this.patternCanvasCache.get(cacheKey);
     if (!pCanvas) {
       pCanvas = document.createElement('canvas');
@@ -444,6 +447,14 @@ export class BrushEngine {
       pCanvas.height = tileSize;
       const pctx = pCanvas.getContext('2d');
       if (!pctx) return;
+      if (patternUrl) {
+        const image = this.getImageMask(patternUrl);
+        if (!image || !image.complete || image.naturalWidth === 0) return;
+        pctx.clearRect(0, 0, tileSize, tileSize);
+        pctx.drawImage(image, 0, 0, tileSize, tileSize);
+        if (this.patternCanvasCache.size >= 64) this.patternCanvasCache.delete(this.patternCanvasCache.keys().next().value!);
+        this.patternCanvasCache.set(cacheKey, pCanvas);
+      } else {
       pctx.fillStyle = color;
       pctx.fillRect(0, 0, tileSize, tileSize);
       const line = Math.max(1, tileSize / 18);
@@ -532,6 +543,7 @@ export class BrushEngine {
       // Keep the cache bounded for long sessions with many colours and scales.
       if (this.patternCanvasCache.size >= 64) this.patternCanvasCache.delete(this.patternCanvasCache.keys().next().value!);
       this.patternCanvasCache.set(cacheKey, pCanvas);
+      }
     }
 
     const pattern = ctx.createPattern(pCanvas, 'repeat');
@@ -683,8 +695,8 @@ export class BrushEngine {
     }
 
     // 3. Pattern Overlay on Smudge
-    if (brush.patternType && brush.patternType !== 'none') {
-      this.applyPatternFill(ctx, radius, smudgeRgba, brush.patternType, brush.patternScale || 1.0);
+    if (brush.patternUrl || (brush.patternType && brush.patternType !== 'none')) {
+      this.applyPatternFill(ctx, radius, smudgeRgba, brush.patternType || 'none', brush.patternScale || 1.0, brush.patternUrl);
     } else if (brush.hardness < 85) {
       const grad = ctx.createRadialGradient(0, 0, radius * (brush.hardness / 100), 0, 0, radius);
       grad.addColorStop(0, smudgeRgba);
