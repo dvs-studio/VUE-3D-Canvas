@@ -129,7 +129,7 @@ Still not implemented: Mask Normal/Mix blend menu and adjacent-layer alpha-aware
 
 ## Latest verified source pass — 2026-11-25, Workflow #399
 
-<badge>CI passed</badge> The following code is present in the #399 self-host artifact:
+**CI passed** The following code is present in the #399 self-host artifact:
 - Pattern Craft direct Filter menu command, preselected dialog mode — #389.
 - Layers Add menu groups Paint Layer, Material Fill/import, Matcap, Mask, Tear and Group — #392.
 - Right-click and touch long-press layer context actions; Add Mask Layer targets the exact selected layer and inserts adjacent to it — #392.
@@ -148,7 +148,7 @@ The six JPEGs are still not automatically present in the repository or browser I
 - Single-click mask-edit highlight toggle and double-click X light-grey/red diagnostic preview; selection overlay clarity.
 - Full 2D UV preview parity for helper effects (Mask/Tear) and manual viewport/subdivision visual checks.
 - UV seam interpolation requires visual acceptance on sphere, Suzanne and a deliberately split UV mesh; current algorithm is a focused sparse-event interpolation improvement, not proof every seam topology is solved.
-- Filter UV cut-out limit remains distinct from mesh-part targeting and still needs code audit/enforcement.
+- Filter UV cut-out enforcement is implemented in Workflow #402 as a separate boundary from mesh-part targeting; manual multi-channel/island/gutter acceptance remains.
 - Tear mesh-part target scope; Matcap export/multi-layer stacking; Pattern Craft material/export; Honeycomb world/normal-space mapping; gallery GPU-tier auto-scale/resource packaging; UI3 oversized Undo/Redo investigation.
 
 No visual/device acceptance is claimed. Workflow #399 confirms TypeScript/build/self-host sync/package only.
