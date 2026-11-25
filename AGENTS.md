@@ -41,7 +41,7 @@ Victory has refined the texture architecture and sequencing. This update takes p
 5. Correct Base Layer dialog button copy from Cancel to Close. Close retains live session settings; Save alone persists checker colours.
 6. Later tasks: shape-sensitive world-space Base Layer checker. The procedural sphere startup, alphabetically ordered Suzanne presets and sphere-pole subdivision repair have now been implemented; verify them before acceptance.
 
-The independent gallery foundation is committed and CI-verified by workflow #326 (artifact `14979452656`); live browser import/IndexedDB acceptance remains outstanding. New Wood/filter/Matcap/Base Layer work is documented in `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
+The independent gallery foundation is committed and CI-verified by workflow #326 (artifact `14979452656`); live browser import/IndexedDB acceptance remains outstanding. Wood, filters, Matcap, adaptive checker, Mask Layer and Pattern Craft progress is recorded in `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`. New Wood/filter/Matcap/Base Layer work is documented in `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`. Do not call it complete until verification passes. The old external scanner must eventually feed the canonical gallery store, not become a competing asset database.
 
 ### READ THIS FIRST — three boxes
 
@@ -96,12 +96,12 @@ The independent gallery foundation is committed and CI-verified by workflow #326
 - [x] **A6-N** Reorganised the existing 2D UV workspace into a left-side N-Panel; Display tab now owns wireframe visibility/opacity/colour, while Channels owns UV-set selection and Unwrap owns Smart UV entry. CI workflow #320 passed; manual acceptance remains. See `notes/UV_N_PANEL_LEFT_LAYOUT_2026-11-25.md`.
 
 #### 2A-W Wood rings
-- [x] Uniform tree-year rings and organic fingerprint/merged rings; active-UV surface mapping, normal-derived curvature influence, object/world coordinate selector implemented. World mode applies supplied `geometry.userData.worldMatrix`; live mesh-matrix handoff and visual acceptance remain. See `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
+- [x] Uniform tree-year rings and organic fingerprint/merged rings; active-UV surface mapping, normal-derived curvature influence, object/world coordinate selector implemented. World mode applies the owning mesh's live `matrixWorld` via an ephemeral geometry property; visual acceptance remains. See `notes/WOOD_FILTERS_MATCAP_AND_CURVATURE_2026-11-25.md`.
 
 #### 2A-T Triplanar / dual-texture fill
 - [ ] True triplanar (3-axis + normal weights + sharpness)
 - [ ] Texture A/B mix (noise/height/painted mask)
-- [x] World | object coordinate option; world matrix is applied when supplied by geometry metadata. [ ] Live mesh-matrix handoff and sample-gallery replacement remain.
+- [x] World | object coordinate option; world mode uses the owning mesh's live `matrixWorld`. [ ] Sample-gallery replacement remains.
 - [ ] Keep mesh-position / island-safe sampling
 
 #### 2B Layer + Pattern Craft
@@ -109,7 +109,7 @@ The independent gallery foundation is committed and CI-verified by workflow #326
 - [ ] **F1** Tear layer (roles in three boxes only)
 - [ ] Tear panel mesh/target scope
 - [ ] Filter-side mesh/UV limit (separate)
-- [ ] **Pattern Craft** filters + if–else multiply vs displacement
+- [x] **Pattern Craft** filter — empty layers generate monochrome displacement patterns; painted layers receive multiply-style micro-detail. [ ] Additional material/export workflow acceptance remains.
 - [x] **M1** Dedicated Matcap layer creation and viewport shader support for built-in/custom Matcap source. [ ] Narrow Add menu, export-map support and visual acceptance remain.
 - [x] Keep material import
 
