@@ -1513,6 +1513,21 @@ export default function App() {
     notifyTextureUpdated();
   };
 
+  const handleApplyMaskImage = (layerId: string, dataUrl: string) => {
+    const target = layers.find(layer => layer.id === layerId && (layer.layerRole === 'mask' || layer.layerRole === 'tear'));
+    if (!target) return;
+    const image = new Image();
+    image.onload = () => {
+      target.ctx.clearRect(0, 0, target.canvas.width, target.canvas.height);
+      target.ctx.drawImage(image, 0, 0, target.canvas.width, target.canvas.height);
+      setLayers([...layers]);
+      undoBuffer.pushState(target.layerRole === 'tear' ? 'Apply Tear Image' : 'Apply Mask Image', layers);
+      notifyTextureUpdated();
+    };
+    image.onerror = () => console.warn('Could not decode the selected mask gallery image.');
+    image.src = dataUrl;
+  };
+
   // Edge Wear & Cavity Ambient Occlusion Filter
   const handleApplyEdgeWear = (config: EdgeWearConfig) => {
     const target = layers.find(l => l.id === activeLayerId);
@@ -3023,6 +3038,7 @@ export default function App() {
         onClose={() => setIsLayerSettingsOpen(false)}
         layer={layers.find(l => l.id === (layerSettingsTargetId || activeLayerId)) || null}
         onSavePBR={handleSaveLayerPBR}
+        onApplyMaskImage={handleApplyMaskImage}
         uvChannels={activeGeometry ? UVChannelManager.getChannels(activeGeometry) : []}
         onSetUVChannel={handleSetLayerUV}
         externalTextureAssets={externalAssets.filter(asset => asset.kind === 'texture')}
