@@ -891,7 +891,9 @@ export default function App() {
         emissionInfluence: 0, bumpOn: false, bumpInfluence: 0, normalLock: false,
       },
     };
-    const updated = [...layers, newLayer];
+    const targetIndex = layers.findIndex(layer => layer.id === target.id);
+    const updated = [...layers];
+    updated.splice(targetIndex + 1, 0, newLayer);
     setLayers(updated);
     setActiveLayerId(id);
     undoBuffer.pushState('Add Layer Mask', updated);
