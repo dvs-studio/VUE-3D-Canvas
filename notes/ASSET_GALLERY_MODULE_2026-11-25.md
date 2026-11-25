@@ -70,9 +70,10 @@ The gallery panel exposes a **Scan library folder** action. After scanning, use 
 
 ## Verification
 
-- Workflow #385 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload.
-- Self-host artifact ID: `15001151525`.
-- Run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45568723627
+- Workflow #386 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload after the final Tear Layer fray-boundary correction.
+- Self-host artifact ID: `15000797321`.
+- Run: https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45569008417
+- Earlier #385 also passed the full gallery integration build (artifact `15001151525`).
 
 This is automated build/package verification only. Still required:
 - Browser test IndexedDB migration from v1/v2 to v3.
