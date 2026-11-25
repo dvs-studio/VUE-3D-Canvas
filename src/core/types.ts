@@ -122,6 +122,8 @@ export interface Layer {
   /** Non-destructive helper layer role; mask layers target another layer and are not composited directly. */
   layerRole?: 'mask' | 'tear' | 'matcap';
   maskTargetLayerId?: string;
+  /** Number of underlying paint layers reached by a Tear Layer's green stack mask. */
+  tearStackDepth?: number;
   /** Reserved, immutable bottom-of-stack fallback/base layer. */
   isBaseLayer?: boolean;
 }
