@@ -57,13 +57,41 @@ function sourceMesh(source: THREE.BufferGeometry): { vertices: PreviewVertex[]; 
   let ids: number[];
 
   if (index) {
-    for (let i = 0; i < positions.count; i++) {
-      vertices.push({
-        p: [positions.getX(i), positions.getY(i), positions.getZ(i)],
-        uv: uvAttribute ? [uvAttribute.getX(i), uvAttribute.getY(i)] : [0, 0],
-      });
+    const spherePoles = source.userData?.modelKey === 'sphere';
+    let minY = Infinity, maxY = -Infinity;
+    if (spherePoles) {
+      for (let i = 0; i < positions.count; i++) {
+        minY = Math.min(minY, positions.getY(i));
+        maxY = Math.max(maxY, positions.getY(i));
+      }
     }
-    ids = Array.from(index.array);
+    const poleEpsilon = spherePoles ? Math.max(1e-7, (maxY - minY) * 1e-6) : 0;
+    const poleIds = new Map<'top' | 'bottom', number>();
+    const remap = new Array<number>(positions.count);
+
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i);
+      const uv: Vec2 = uvAttribute ? [uvAttribute.getX(i), uvAttribute.getY(i)] : [0, 0];
+      const pole: 'top' | 'bottom' | null = spherePoles && Math.abs(y - maxY) <= poleEpsilon
+        ? 'top'
+        : spherePoles && Math.abs(y - minY) <= poleEpsilon ? 'bottom' : null;
+
+      if (pole) {
+        let vertexIndex = poleIds.get(pole);
+        if (vertexIndex === undefined) {
+          vertexIndex = vertices.length;
+          poleIds.set(pole, vertexIndex);
+          // U is undefined at a sphere pole; centre it to avoid a fan of
+          // coincident, disconnected pole vertices in Catmull-Clark topology.
+          vertices.push({ p: [x, y, z], uv: [0.5, uv[1]] });
+        }
+        remap[i] = vertexIndex;
+      } else {
+        remap[i] = vertices.length;
+        vertices.push({ p: [x, y, z], uv });
+      }
+    }
+    ids = Array.from(index.array, value => remap[value]);
   } else {
     // Weld duplicate non-indexed corners by position + UV, retaining UV seams.
     const lookup = new Map<string, number>();
@@ -83,7 +111,12 @@ function sourceMesh(source: THREE.BufferGeometry): { vertices: PreviewVertex[]; 
   }
 
   const faces: PreviewFace[] = [];
-  for (let i = 0; i + 2 < ids.length; i += 3) faces.push({ v: [ids[i], ids[i + 1], ids[i + 2]] });
+  for (let i = 0; i + 2 < ids.length; i += 3) {
+    const a = ids[i], b = ids[i + 1], c = ids[i + 2];
+    // Pole welding can collapse degenerate cap triangles in imported sphere variants.
+    if (a === b || b === c || c === a) continue;
+    faces.push({ v: [a, b, c] });
+  }
   return { vertices, faces };
 }
 
