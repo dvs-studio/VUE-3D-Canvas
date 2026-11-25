@@ -654,3 +654,13 @@ CI is not a substitute for manual browser/device acceptance.
 - Self-host artifact ID: `14999603968`; run https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45566378845.
 - The artifact includes the Wood, Triplanar world-matrix, adaptive Base Layer, Warp, Pointillism, Honeycomb, Stochastic Scatter, Pattern Craft, Matcap and target-linked Mask Layer changes.
 - This is build/package verification only. Manual shader, visual, brush/undo, desktop/tablet and Step 0 acceptance remains with Victory.
+
+
+## 2026-11-25 — GPT-6 — F1 Tear Layer implementation
+
+- Added a dedicated Tear Layer action targeting the selected ordinary layer. It starts white/intact and is excluded from ordinary colour compositing.
+- Black or transparent pixels cut through to the immediate layer below. White pixels preserve the target and create a lightly irregular/frayed alpha edge beside holes. Green pixels cut the target and mask the configured number of underlying layers.
+- Added adjustable green stack depth (1–8, default 2) to the Layers panel. The layer uses the existing brush paint path for hand-painted black/white/green roles.
+- Mesh-part target scope and richer rim/under-paint workflow remain open.
+- Workflow #360 passed TypeScript diagnostics, Vite build, self-host sync, package validation and artifact upload (artifact `14999199885`): https://github.com/dvs-studio/VUE-3D-Canvas/actions/runs/45567085033.
+- Manual painting, fray quality, green stack depth, underlying-layer visibility, undo/redo and mesh-part scope still require user acceptance.
