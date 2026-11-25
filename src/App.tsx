@@ -928,6 +928,14 @@ export default function App() {
     notifyTextureUpdated();
   };
 
+  const handleUpdateTearStackDepth = (layerId: string, depth: number) => {
+    const updated = layers.map(layer => layer.id === layerId && layer.layerRole === 'tear'
+      ? { ...layer, tearStackDepth: Math.max(1, Math.min(8, Math.round(depth))) }
+      : layer);
+    setLayers(updated);
+    notifyTextureUpdated();
+  };
+
   const handleDeleteLayer = (id: string) => {
     if (layers.length <= 1 || layers.some(layer => layer.id === id && layer.isBaseLayer)) return;
     const updated = layers.filter(l => l.id !== id && l.maskTargetLayerId !== id);
@@ -2414,6 +2422,7 @@ export default function App() {
                             onAddMatcapLayer={handleAddMatcapLayer}
                             onAddMaskLayer={handleAddMaskLayer}
                             onAddTearLayer={handleAddTearLayer}
+                            onUpdateTearStackDepth={handleUpdateTearStackDepth}
                             onAddGroup={handleAddGroup}
                             onGroupSelectedLayers={handleGroupSelectedLayers}
                             groups={layers.filter(layer => layer.isGroup)}
