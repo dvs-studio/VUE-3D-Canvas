@@ -37,6 +37,7 @@ interface LayersPanelProps {
   activeLayerId: string;
   onSelectLayer: (id: string) => void;
   onAddLayer: () => void;
+  onAddMatcapLayer?: () => void;
   onAddGroup?: () => void;
   onToggleGroupCollapse?: (groupId: string) => void;
   onGroupSelectedLayers?: (layerIds: string[]) => void;
@@ -88,6 +89,7 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
   activeLayerId,
   onSelectLayer,
   onAddLayer,
+  onAddMatcapLayer,
   onAddGroup,
   onToggleGroupCollapse,
   onGroupSelectedLayers,
@@ -416,6 +418,13 @@ export const LayersPanel: React.FC<LayersPanelProps> = ({
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+          {onAddMatcapLayer && <button
+            onClick={onAddMatcapLayer}
+            className="p-1 bg-[#3a3a3a] hover:bg-[#484848] text-[#c4b5fd] rounded border border-[#505050] transition-colors"
+            title="Create Matcap Layer"
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+          </button>}
           {onImportTexture && (
             <button
               onClick={onImportTexture}
