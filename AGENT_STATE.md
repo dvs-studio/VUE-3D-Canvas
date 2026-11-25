@@ -867,3 +867,15 @@ This section supersedes the earlier A4/A6/A7 "open" checklist entries above. The
 - Its initial solid-grey UV fallback-coat rendering was superseded by the world-space procedural checker implementation.
 - Current behaviour, Save / Cancel / Reset semantics, file/symbol bookmarks, and acceptance checks are documented in `notes/WORLD_SPACE_BASE_LAYER_2026-11-24.md`.
 - The earlier protection-only CI result does not validate the newer shader/dialog implementation; see the later GPT-6 world-space Base Layer handover entry above.
+
+
+## 2026-11-25 — Independent Asset Gallery and revised execution order
+
+- Added `src/tools/assetGallery.ts`: canonical IndexedDB-backed asset record/store, preserving original image Blobs and storing separate thumbnails/metadata. Categories support Stencil, Brush Texture, Mask, Surface Texture, Matcap and Image Pattern; procedural patterns remain separate.
+- Added `src/ui/AssetGalleryModule.tsx`: standalone grid/detail gallery with multi-category import, search, filtering and local gallery removal. It is deliberately unmounted and has no consumer integration yet.
+- Added `notes/ASSET_GALLERY_MODULE_2026-11-25.md` with architecture, boundaries and verification checklist.
+- User-directed sequence: build/test the independent gallery first; do not wire it into Brush, Triplanar, Material Fill, Mask, Stencil or Matcap until the other outstanding application tasks are completed. Later integrate one consumer at a time.
+- New active task **A6-N**: reorganise the existing 2D UV workspace controls into a left-side N-Panel while preserving existing channel/composite/rebake/selection/touch behaviour. This is a rearrangement of the existing UV workspace, not approval for a separate UV desk.
+- Keep the Brush settings stencil/image-pattern selector as a grid-based accordion with a micro-preview below the menu bar when that integration is reached.
+- Additional follow-ups: Base Layer action label Cancel → Close (live session settings retained; Save alone persists colours); shape-sensitive checker sizing; procedural sphere startup mesh; Suzanne remains in alphabetical presets; investigate subdivision holes in the procedural sphere.
+- **Verification:** no TypeScript/build/self-host/browser test has yet been run for the new module. Treat source commits as landed, not accepted. See `notes/ASSET_GALLERY_MODULE_2026-11-25.md`.
