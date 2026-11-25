@@ -21,6 +21,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { TextureFillConfig } from '../core/types';
+import { GalleryAssetPicker } from './GalleryAssetPicker';
 
 export type TextureImportRole = 
   | 'texture_fill' 
@@ -51,6 +52,9 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
   onApply,
 }) => {
   const [role, setRole] = useState<TextureImportRole>('texture_fill');
+  const [activeImageDataUrl, setActiveImageDataUrl] = useState(imageDataUrl);
+  const [activeImageFileName, setActiveImageFileName] = useState(imageFileName);
+
   const [layerName, setLayerName] = useState(() => {
     return imageFileName.replace(/\.[^/.]+$/, '');
   });
@@ -69,16 +73,16 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
-  // Update layer name when imageFileName changes
+  // Reset to the staged file when the parent opens/imports a new file.
   useEffect(() => {
-    if (imageFileName) {
-      setLayerName(imageFileName.replace(/\.[^/.]+$/, ''));
-    }
-  }, [imageFileName]);
+    setActiveImageDataUrl(imageDataUrl);
+    setActiveImageFileName(imageFileName);
+    if (imageFileName) setLayerName(imageFileName.replace(/\.[^/.]+$/, ''));
+  }, [imageDataUrl, imageFileName]);
 
   // Render Image onto Preview Canvas with Auto-Zoom
   useEffect(() => {
-    if (!isOpen || !imageDataUrl) return;
+    if (!isOpen || !activeImageDataUrl) return;
     const canvas = previewCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -127,8 +131,8 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
       ctx.drawImage(img, drawX, drawY, drawW, drawH);
       ctx.restore();
     };
-    img.src = imageDataUrl;
-  }, [isOpen, imageDataUrl, previewZoom, previewPan]);
+    img.src = activeImageDataUrl;
+  }, [isOpen, activeImageDataUrl, previewZoom, previewPan]);
 
   if (!isOpen) return null;
 
@@ -160,8 +164,8 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
 
     if (isTextureFill) {
       fillConfig = {
-        dataUrl: imageDataUrl,
-        name: imageFileName,
+        dataUrl: activeImageDataUrl,
+        name: activeImageFileName,
         scale,
         repeat,
         rotation,
@@ -244,9 +248,23 @@ export const TextureAutoNodeModal: React.FC<TextureAutoNodeModalProps> = ({
                 className="w-full h-full block"
               />
               <div className="absolute bottom-1.5 left-2 text-[9px] font-mono text-[#888] bg-[#141414]/80 px-1.5 py-0.5 rounded border border-[#333]">
-                Drag to pan · File: {imageFileName}
+                Drag to pan · File: {activeImageFileName}
               </div>
             </div>
+
+            <GalleryAssetPicker
+              categories={['surface-texture']}
+              title="Material Texture Gallery"
+              compact
+              imageMode
+              onSelect={({ asset, dataUrl }) => {
+                setActiveImageDataUrl(dataUrl);
+                setActiveImageFileName(asset.originalName);
+                setLayerName(asset.name);
+                setPreviewZoom(1);
+                setPreviewPan({ x: 0, y: 0 });
+              }}
+            />
 
             {/* Target Layer Name Input */}
             <div className="space-y-1 pt-1">
