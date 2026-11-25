@@ -105,6 +105,24 @@ interface Viewport3DProps {
   viewSnapTrigger?: { view: 'front' | 'back' | 'right' | 'left' | 'top' | 'bottom'; timestamp: number } | null;
 }
 
+function createMatcapPresetTexture(preset: string): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+  const palettes: Record<string, [string, string, string, string]> = {
+    chrome: ['#080d18', '#d9e5f4', '#343f52', '#f8fbff'], ceramic: ['#302d31', '#f6eee4', '#a69b91', '#fffaf2'],
+    clay: ['#211b18', '#d7a58a', '#805b4b', '#f3c5a8'], pearl: ['#24243a', '#f3e9f5', '#b7a9c7', '#ffffff'],
+    gold: ['#241609', '#f8d77b', '#9c681d', '#fff1b3'],
+  };
+  const [dark, light, mid, highlight] = palettes[preset] || palettes.chrome;
+  const bg = ctx.createLinearGradient(0, 0, 256, 256);
+  bg.addColorStop(0, dark); bg.addColorStop(0.28, light); bg.addColorStop(0.52, mid); bg.addColorStop(0.72, dark); bg.addColorStop(1, highlight);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, 256, 256);
+  const glow = ctx.createRadialGradient(82, 62, 4, 112, 100, 170);
+  glow.addColorStop(0, highlight); glow.addColorStop(0.18, light); glow.addColorStop(0.5, 'rgba(255,255,255,0.12)'); glow.addColorStop(1, 'rgba(0,0,0,0.55)');
+  ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = glow; ctx.fillRect(0, 0, 256, 256);
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.needsUpdate = true; return texture;
+}
+
 export const Viewport3D: React.FC<Viewport3DProps> = ({
   layers,
   baseLayerSettings,
@@ -201,6 +219,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   const [internalSelectedVerts, setInternalSelectedVerts] = useState<Set<number>>(new Set());
   const activeSelectedVerts = selectedVertices !== undefined ? selectedVertices : internalSelectedVerts;
   const dynamicTextureRef = useRef<THREE.CanvasTexture | null>(null);
+  const matcapTextureRef = useRef<THREE.Texture | null>(null);
   const compositeCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Multi-Touch tracking for Android / WASM touch navigation
@@ -1022,6 +1041,19 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
     // The dominant world-space face normal selects the projection plane for stable coverage.
     // Keep the checker underneath the alpha-composited paint map.
     const baseMaterial = mesh.material;
+    const matcapLayer = [...layers].reverse().find(layer => layer.visible && !layer.isGroup && !layer.isBaseLayer && layer.pbrSettings?.reflectionSource === 'matcap');
+    if (matcapTextureRef.current) { matcapTextureRef.current.dispose(); matcapTextureRef.current = null; }
+    let matcapIntensity = 0;
+    if (matcapLayer?.pbrSettings) {
+      const pbr = matcapLayer.pbrSettings;
+      matcapIntensity = THREE.MathUtils.clamp((pbr.reflectionIntensity ?? 0.8) * (pbr.reflectionInfluence ?? 1), 0, 1);
+      if (pbr.matcapPreset === 'custom' && pbr.customMatcapUrl) {
+        const texture = new THREE.TextureLoader().load(pbr.customMatcapUrl, () => {
+          if (meshRef.current === mesh && mesh.material === baseMaterial) { baseMaterial.needsUpdate = true; needsRenderRef.current = true; }
+        });
+        texture.colorSpace = THREE.SRGBColorSpace; matcapTextureRef.current = texture;
+      } else matcapTextureRef.current = createMatcapPresetTexture(pbr.matcapPreset || 'chrome');
+    }
     if (baseMaterial instanceof THREE.MeshStandardMaterial) {
       const colourA = new THREE.Color(baseLayerSettings.colorA || '#9c9c9c');
       const colourB = new THREE.Color(baseLayerSettings.colorB || '#9c9c9c');
@@ -1030,10 +1062,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         shader.uniforms.vueBaseColourB = { value: colourB };
         shader.uniforms.vueBaseOpacityA = { value: Math.max(0, Math.min(1, baseLayerSettings.colorAOpacity / 100)) };
         shader.uniforms.vueBaseOpacityB = { value: Math.max(0, Math.min(1, baseLayerSettings.colorBOpacity / 100)) };
-        shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };
+        shader.uniforms.vueBaseLayerOpacity = { value: Math.max(0, Math.min(1, baseLayerSettings.layerOpacity / 100)) };\n        shader.uniforms.vueMatcapMap = { value: matcapTextureRef.current };\n        shader.uniforms.vueMatcapIntensity = { value: matcapIntensity };
         shader.vertexShader = shader.vertexShader.replace(
           '#include <common>',
-          '#include <common>\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;'
+          '#include <common>\nvarying vec3 vVueMatcapNormal;\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;'
         );
         shader.vertexShader = shader.vertexShader.replace(
           '#include <worldpos_vertex>',
@@ -1041,7 +1073,7 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <common>',
-          '#include <common>\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;\nuniform vec3 vueBaseColourA;\nuniform vec3 vueBaseColourB;\nuniform float vueBaseOpacityA;\nuniform float vueBaseOpacityB;\nuniform float vueBaseLayerOpacity;'
+          '#include <common>\nvarying vec3 vVueWorldPosition;\nvarying vec3 vVueWorldNormal;\nvarying vec3 vVueMatcapNormal;\nuniform sampler2D vueMatcapMap;\nuniform float vueMatcapIntensity;\nuniform vec3 vueBaseColourA;\nuniform vec3 vueBaseColourB;\nuniform float vueBaseOpacityA;\nuniform float vueBaseOpacityB;\nuniform float vueBaseLayerOpacity;'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
           '#include <map_fragment>',
@@ -1063,10 +1095,16 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
             float vueCheckerOpacity = mix(vueBaseOpacityA, vueBaseOpacityB, vueCheckerIndex) * vueBaseLayerOpacity;
             vec3 vueBackgroundColour = mix(vec3(0.1569), vueCheckerColour, vueCheckerOpacity);
             diffuseColor.rgb = mix(vueBackgroundColour, vuePaintSample.rgb, vuePaintSample.a);
+            if (vueMatcapIntensity > 0.001) {
+              vec3 vueMatcapN = normalize(vVueMatcapNormal);
+              vec2 vueMatcapUv = vueMatcapN.xy * 0.5 + 0.5;
+              vec4 vueMatcapSample = texture2D(vueMatcapMap, vueMatcapUv);
+              diffuseColor.rgb = mix(diffuseColor.rgb, vueMatcapSample.rgb, vueMatcapIntensity * vueMatcapSample.a);
+            }
           #endif`
         );
       };
-      baseMaterial.customProgramCacheKey = () => 'vue-world-space-base-checker-curvature-v2';
+      baseMaterial.customProgramCacheKey = () => 'vue-world-space-base-checker-curvature-matcap-v3';
       baseMaterial.needsUpdate = true;
     }
 
