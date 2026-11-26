@@ -2,7 +2,29 @@
 
 ## PIN — read only this far (unless absolutely necessary)
 
-### Agent status — 2026-11-23 (Grok-Atelier-PIN)
+### Agent status — 2026-11-26 repair pass (`LOG-2026-11-26-GROK-REPAIR-PASS`)
+
+**This pass wins** over the 2026-11-23 PIN, the 2026-11-25 notes, and workflow #399 / #402 / #386 / #320. Those runs are not proof. Victory device-tests. Do not claim a visual pass.
+
+**Product path:** `src/` → `npm run host:sync` → `self-host/public/`. Self-host only. No `crates/vue3d_core`. Do not delete ZIPs. Do not touch Suzanne OBJ assets. Do not merge PR #2.
+
+**Still excluded:** F7 logo fabric, HOLD-SEL marching-ants cage, dedicated UV desk / NURBS / LTM. Do not add Pattern Craft to Jenny or `stitchStudio`.
+
+**Active order (check a box only after the step is on `main` and the generated bundle contains it):**
+
+1. [ ] Undo 2D subdivision coupling. `Viewport2D` geometry is `activeGeometry` only. Subdivision preview stays on `Viewport3D`. 2D still redraws when `textureVersion` changes.
+2. [ ] Eraser lag and brush draw. One visible-layer restack per flush over the union of dab bounds. UV-island clip and island path reset stay. A UV jump larger than `brush.size * 4` resets the path and stamps once, with no bridge. Live composite `clearRect`s the dirty rect. `execute2DPaint` clears the dirty rect and draws the visible stack. Eraser stays `destination-out`. No full-canvas `getImageData` on that path.
+3. [ ] Base Layer `tileScale` (default 2), slider, save with the colours, reset with the default colours. Checker cell size comes from `vueBaseTileScale`. Curvature does not override it.
+4. [ ] Accordion N-panel (Display, Unwrap, Channels, Sculpt, Mirror, zoom/overlay) in both UV layouts. Combo-view pointer/touch drag handle. Floating UV controls and the duplicate Smart UV modal removed. Pen path menu stays.
+5. [ ] Rasterize on every special layer, one Displacement/Normal submenu, Matcap JPG alpha cookie, 3D selection feedback preference, mask blank/normal/mix rules.
+6. [ ] Pattern Craft paint-limit and triplanar A/B mixer (noise, height, or painted mask). An empty mixer factor must not wipe paint.
+7. [ ] Gallery cards rebuild from the original blob when the thumbnail is missing or the object URL was revoked. One store: `src/tools/assetGallery.ts`. No fake images.
+
+Resume note: `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md`.
+
+---
+
+### Agent status — 2026-11-23 (Grok-Atelier-PIN) — older; the 2026-11-26 repair pass above wins
 
 **Product path:** `src/` → `npm run host:sync` → `self-host/public/`. Self-host only. No `crates/vue3d_core`. Do not delete safety ZIPs.
 

@@ -725,3 +725,14 @@ Read the named notes and the log, including `LOG-GROK-VUEEDGE`. No `src/` change
 Resume file: `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md`. The 2026-11-26 prompt wins over older notes. Workflow #399, #402, #386 and #320 are not proof for the pass that follows this stop. No visual test was run.
 
 **Session end timestamp:** 2026-11-26 13:45 WAT. Resume from this entry.
+
+---
+
+## 2026-11-26 — Grok Repair — id `LOG-2026-11-26-GROK-REPAIR-PASS`
+
+**Repair pass, not a continuation of `LOG-2026-11-26-GROK-BUILD-PASS`, `LOG-GROK-VUEEDGE`, or any GPT-6 section.** Append only.
+
+Started from origin/main after the stop note. The 2026-11-26 prompt in `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md` wins where older notes disagree. Workflow #399, #402, #386, and #320 are not proof for this pass. No visual test. Victory device-tests.
+
+Order: 2D subdivision decoupling, eraser restack and 2D dirty-stack blit, Base Layer tile scale, accordion N-panel plus combo drag handle, rasterize / one Displacement-Normal submenu / Matcap / mask rules, Pattern Craft and triplanar mixer, gallery card rebuild. Self-host only.
+
