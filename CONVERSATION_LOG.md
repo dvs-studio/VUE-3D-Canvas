@@ -723,3 +723,5 @@ Implemented a distinct active-UV triangle write mask for texture filters. Added 
 Read the named notes and the log, including `LOG-GROK-VUEEDGE`. No `src/` change at this stop. HEAD remains `df354b326580df270b0b123d891d7f30a247f7a6`. Pattern Craft is not inside Jenny. Subdivision preview is still passed to the 2D view. Eraser restack is still per sample. Base Layer has no tile-size slider. UV controls are still tabs plus loose HUD buttons. Rasterize, the merged Displacement/Normal submenu, Matcap alpha-only paint, 3D selection shading, Pattern Craft paint-limit, triplanar empty-mixer safety, and the empty gallery cards are not done.
 
 Resume file: `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md`. The 2026-11-26 prompt wins over older notes. Workflow #399, #402, #386 and #320 are not proof for the pass that follows this stop. No visual test was run.
+
+**Session end timestamp:** 2026-11-26 13:45 WAT. Resume from this entry.
