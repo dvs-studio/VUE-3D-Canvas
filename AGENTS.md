@@ -148,6 +148,8 @@ See notes/SELF_HOST_P0_REPAIR_2026-11-24.md. The audited TypeScript, UI, OBJ exp
 
 Meticulous. Unique agent ids. Short commits. Do not damage accepted 3D view. Mark done in PIN only after code landed + synced (Victory still device-tests).
 
+**Log timestamps:** Add a date/time only to the **last** log entry of your session in `CONVERSATION_LOG.md`. Do not timestamp intermediate entries. This lets Victory identify exactly when each agent session ended and resume from that point.
+
 ## STOP
 
 Prior history in git. F7 / HOLD-SEL / dedicated UV desk remain excluded.
