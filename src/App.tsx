@@ -547,11 +547,6 @@ export default function App() {
       return null;
     }
   }, [activeGeometry, subdivisionSettings, subdivisionHeightMap]);
-  // Keep both viewport geometry versions in lockstep after subdivision preview commits.
-  useEffect(() => {
-    setUvGeometryVersion(version => version + 1);
-    setTextureVersion(version => version + 1);
-  }, [subdivisionPreviewGeometry]);
   useEffect(() => () => {
     if (subdivisionPreviewGeometry && subdivisionPreviewGeometry !== activeGeometry) {
       subdivisionPreviewGeometry.dispose();
@@ -2330,7 +2325,7 @@ export default function App() {
                 touchNavEnabled={touchNavEnabled}
                 onToggleTouchNav={() => setTouchNavEnabled(t => !t)}
                 patternStampConfig={patternStampConfig}
-                geometry={subdivisionPreviewGeometry && hiddenMeshComponents.length === 0 && !isolateSelectedGroupOnly ? subdivisionPreviewGeometry : activeGeometry}
+                geometry={activeGeometry}
                 onGeometryUpdated={notifyUVGeometryUpdated}
                 activeUVChannel={activeUVChannel}
                 uvGeometryVersion={uvGeometryVersion}
