@@ -724,8 +724,6 @@ Read the named notes and the log, including `LOG-GROK-VUEEDGE`. No `src/` change
 
 Resume file: `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md`. The 2026-11-26 prompt wins over older notes. Workflow #399, #402, #386 and #320 are not proof for the pass that follows this stop. No visual test was run.
 
-**Session end timestamp:** 2026-11-26 13:45 WAT. Resume from this entry.
-
 ---
 
 ## 2026-11-26 — Grok Repair — id `LOG-2026-11-26-GROK-REPAIR-PASS`
@@ -735,4 +733,18 @@ Resume file: `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md`. The 2026-11-26 promp
 Started from origin/main after the stop note. The 2026-11-26 prompt in `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md` wins where older notes disagree. Workflow #399, #402, #386, and #320 are not proof for this pass. No visual test. Victory device-tests.
 
 Order: 2D subdivision decoupling, eraser restack and 2D dirty-stack blit, Base Layer tile scale, accordion N-panel plus combo drag handle, rasterize / one Displacement-Normal submenu / Matcap / mask rules, Pattern Craft and triplanar mixer, gallery card rebuild. Self-host only.
+
+---
+
+## 2026-11-28 — Grok Build — same id `LOG-2026-11-26-GROK-BUILD-PASS` — handoff, not a finished painter
+
+Same conversation. Do not start a second id for this handoff. The next agent must take a new id. Do not reuse `LOG-2026-11-26-GROK-REPAIR-PASS` either. That id only pinned docs.
+
+Landed after rebase onto `26fee7f`: commit message `fix(uv): keep subdivision preview on the 3D view only`. The 2D viewport geometry is `activeGeometry`. The lockstep `uvGeometryVersion` / `textureVersion` bump on subdivision identity was removed.
+
+Not landed: eraser once-per-flush composite, jump stamp, 2D dirty-rect stack, Base Layer `tileScale`, UV accordion, split drag handle, Rasterize, merged Displacement/Normal menu, Matcap alpha paint, 3D selection shade, Pattern Craft paint limit, empty triplanar mixer, gallery thumbnail repair, `npm run host:sync`. `deferCompositeRef` and `strokeDirtyRef` are declared in `Viewport3D.tsx` and not read.
+
+Resume from the top of `AGENTS.md` (`CONTINUE FROM HERE — 2026-11-28`). The workflow started by pushing this handoff is not proof. Workflow #399, #402, #386 and #320 are not proof. No visual test was run.
+
+**Session end timestamp:** 2026-11-28 12:35 WAT. Resume from this entry.
 

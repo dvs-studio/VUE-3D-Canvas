@@ -1,5 +1,7 @@
 # Stop point — Grok Build — 2026-11-26
 
+**SUPERSEDED 2026-11-28.** The sentence "no src change" below is stale. Subdivision decoupling landed in `e39d5d0`. Two unused refs were left in `Viewport3D.tsx`. The resume instructions that win are the top block of `AGENTS.md` titled `CONTINUE FROM HERE — 2026-11-28`. Do not follow this file's "no src edit" line.
+
 **Agent:** Grok Build  
 **Id:** `LOG-2026-11-26-GROK-BUILD-PASS`  
 **Repo:** https://github.com/dvs-studio/VUE-3D-Canvas  

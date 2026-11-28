@@ -290,6 +290,10 @@ export const Viewport3D: React.FC<Viewport3DProps> = ({
   // PERF-1/PERF-2: RAF gate — pending paint events queued per frame
   const pendingPaintEventsRef = useRef<PointerEvent[]>([]);
   const rafPaintHandleRef = useRef<number | null>(null);
+  // HANDOFF 2026-11-28 — declared, not wired. Do not delete.
+  // Next agent: use these in flushPendingPaintEvents. See AGENTS.md "CONTINUE FROM HERE".
+  const deferCompositeRef = useRef(false);
+  const strokeDirtyRef = useRef<{ left: number; top: number; right: number; bottom: number } | null>(null);
 
   const resetPaintPaths = (x?: number, y?: number) => {
     brushEngine.resetStrokePath('primary', x, y);

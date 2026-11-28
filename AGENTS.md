@@ -1,10 +1,102 @@
 # AGENTS.md - VUE 3D Canvas Developer Handover
 
+## CONTINUE FROM HERE — 2026-11-28 12:35 WAT — Grok Build — `LOG-2026-11-26-GROK-BUILD-PASS`
+
+**Stop. Incomplete. Do not treat any older workflow as proof. Do not treat the workflow started by this handoff push as proof of the remaining work.**
+
+This block wins over the 2026-11-23 PIN, the 2026-11-25 texture note, and `notes/HANDOFF_GROK_BUILD_STOP_2026-11-26.md` wherever they disagree. That older handoff said "no src change". That sentence is stale. Read this block, then the code.
+
+### What is already on this branch
+
+| Commit | What it is | Done? |
+|---|---|---|
+| `fix(uv): keep subdivision preview on the 3D view only` | 2D view no longer receives subdivision preview geometry. Rebased onto `26fee7f`. | **Yes. Leave it.** |
+| `26fee7f` `LOG-2026-11-26-GROK-REPAIR-PASS` | Docs pin only. No painter code. | **Do not treat as a feature.** |
+| this handoff commit | `AGENTS.md`, log, and two unused refs in `Viewport3D.tsx` | **Docs plus a stub. Not a feature.** |
+
+`npm run host:sync` was **not** run. `self-host/public/` is still the previous bundle. Do not quote its filename as this pass.
+
+**Landed code (do not redo):**
+
+- `src/App.tsx` `subdivisionPreviewGeometry` still exists (~line 541) and is still passed to **Viewport3D** (~line 2289) when no mesh part is hidden and isolate is off.
+- The lockstep effect that called `setUvGeometryVersion` and `setTextureVersion` whenever that geometry identity changed **has been deleted**. Do not put it back.
+- `Viewport2D` `geometry` is `activeGeometry` only (~line 2328). `onGeometryUpdated={notifyUVGeometryUpdated}` is still there. Do not pass `subdivisionPreviewGeometry` into the 2D view again.
+- 2D redraw still depends on `textureVersion` (`Viewport2D.tsx` effect ~line 181). Pixel edits must keep calling `notifyTextureUpdated`. Subdivision mesh changes must not.
+
+**Started and abandoned (the incomplete change):**
+
+`src/renderer/Viewport3D.tsx` lines ~293–294 declare `deferCompositeRef` and `strokeDirtyRef`. Nothing reads them. The per-sample restack is still inside `executePaintTool` (~2052). The grey fill is still there (~2076 and ~2119). The UV jump still skips the dab (~2242). Do not delete the two refs. Wire them as specified below.
+
+Pattern Craft was checked. It is **not** inside `src/tools/stitchStudio.ts` or `src/ui/StitchStudioDialog.tsx`. Do not add a link. Do not remove Jenny.
+
+### Do not touch
+
+- `crates/vue3d_core`
+- Any ZIP, including `Suzanne.zip` and the safety ZIPs
+- `src/assets/Suzanne.obj` and `src/assets/Suzanne.head-eyes.obj`
+- PR #2 — do not merge
+- F7 Logo fabric, HOLD-SEL marching ants, feather blink, cyan cage, the 2D 65% veil, dedicated UV desk, NURBS, LTM
+- Fake gallery images. Do not create a second gallery database
+- Victory tests. Do not run a visual test pass unless he asks
+
+### Finish in this order. Short commits. Then one host:sync and one push of `src/**`.
+
+The push of this handoff already starts `build-self-host.yml` because `Viewport3D.tsx` is under `src/**`. **Ignore that run.** After you finish items 2–8, run `npm run host:sync`, push, wait for a **new** run, pull `main`, and confirm the new commit message is exactly `chore(self-host): sync generated painter output` and that it contains your `src/` changes. Open `self-host/public/index.html`. Quote a string that exists only in your pass, the new run number, and the new bundle filename (`self-host/public/assets/index-*.js`). Write in `CONVERSATION_LOG.md` that the handoff-push run was not used as proof. Append only. Timestamp only your last log line. New agent id. Do not reuse `LOG-2026-11-26-GROK-BUILD-PASS`.
+
+#### 2. Eraser lag and brush gaps — do this first
+
+Do not rebuild `paintDabs` or spacing in `src/tools/brushEngine.ts`. Eraser stays `destination-out` in `renderSingleDab`. Do not switch it to `source-over` with black. Do not add a full-canvas `getImageData` on the brush or eraser path.
+
+**3D lag.** `flushPendingPaintEvents` (~2156) raycasts up to 16 samples. Each sample calls `executePaintTool` (~1956), and each call restacks every visible layer in the dirty rect (~2052–2149). That is the lag.
+
+- At the start of `flushPendingPaintEvents`, after the empty-queue return, set `deferCompositeRef.current = true`.
+- In `executePaintTool`, still paint the dab (keep `ctx.clip(uvIslandPathRef.current)` and `paintDabs(..., true)` for the eraser). Compute the same dirty rect you already compute.
+- If `deferCompositeRef.current` is true, union that rect into `strokeDirtyRef` (`left/top` min, `right/bottom` max) and **return before** the `drawImage` loop. Also cover the non-region branch (bucket, gradient, dragged-dot): union the full canvas `{ left: 0, top: 0, right: width, bottom: height }`.
+- After the sample `for` loop in `flushPendingPaintEvents`, set `deferCompositeRef.current = false`, copy `strokeDirtyRef.current`, null the ref, and restack **once** for that union.
+- `handlePointerDown` (~1762) calls `executePaintTool` outside the flush. Leave `deferCompositeRef` false there so that single dab still composites immediately.
+- Extract the restack into one function used by both the immediate path and the flush tail. Do not leave two copies that drift.
+- In that restack, `clearRect` the dirty rect. **Delete** `cctx.fillStyle = '#2b2b2b'; cctx.fillRect(...)`. The opaque grey is the draw error: it covers the world-space checker and makes an erase look like a paint. Skip `isGroup`, `isBaseLayer`, `layerRole === 'mask'`, and `layerRole === 'tear'` in this live colour restack. Masks must not be copied in as colour. Keep the existing blend-mode switch and the source-rect scale. Then set `dynamicTextureRef` mipmaps off, `minFilter = LinearFilter`, `needsUpdate = true`, and `needsRenderRef.current = true`.
+- Wrap the flush body in `try/finally` so a throw cannot leave `deferCompositeRef` stuck true.
+
+**3D gaps.** ~2242: `jumped` is `hypot(stabilized - lastDab) > brush.size * 4`, and the dab is skipped while `lastDab` stays put, so the next samples keep skipping. On `jumped`, do what the island cross already does (~2229): `resetPaintPaths(stabilized.x, stabilized.y)`, set `lastUVIslandIdRef.current = uvIslandId`, call `executePaintTool` **once** at the new point, draw the tether, `continue`. Do not interpolate across the jump. Keep the island-cross reset. Do not remove the 16-sample screen-space interpolation that feeds the raycasts.
+
+**2D erase.** `Viewport2D.tsx` `execute2DPaint` ~904–918 blits only the active layer with `source-over`, so a `destination-out` hole is invisible until the full effect at ~181 runs. In the dirty rect: `save`, clip to the rect, `clearRect`, redraw the 32px `#222222` / `#2b2b2b` checker the effect already draws, then draw visible layers with the same opacity and blend rules as lines ~202–212, `restore`. Keep one `onTextureUpdated()` so the 3D view still refreshes. Do not wait on the full 1024 effect for the hole to appear.
+
+#### 3. Base Layer scale
+
+Add `tileScale: number` to `BaseLayerSettings` in `src/core/types.ts`. Default `2`. Slider in `src/ui/BaseLayerSettingsDialog.tsx`. Live via `updateBaseLayerSettings`. Save stores it with `colorA` and `colorB` in `vue3d_base_layer_colours` (`src/App.tsx` `saveBaseLayerSettings`). Close keeps the live value and does not persist. Reset restores scale together with `#9c9c9c` and the opacities. In `src/renderer/Viewport3D.tsx` the checker shader (~1196–1225) uses `mix(2.0, 4.0, vueCurvature)`. Replace that frequency with a `vueBaseTileScale` uniform driven by `tileScale`. Curvature must not override the slider. Bump `customProgramCacheKey` so the material recompiles. World-space checker stays. It is not a UV texture.
+
+#### 4. Accordion N-panel and the split drag handle
+
+`src/ui/UVNPanel.tsx` is exclusive tabs. Change it to accordion groups: Display, Unwrap, Channels, Sculpt, Mirror, plus the loose zoom and overlay controls. More than one group may be open. The same component is already mounted once in combined and separate 2D. Remove the loose floating UV controls from `src/renderer/Viewport2D.tsx` (top-right zoom cluster and the duplicate Smart UV modal). The pen path menu can stay a pointer menu. `src/App.tsx` split is hard `w-1/2` (~2310). Add a divider the pointer and touch can drag (`touch-action: none`, pointer capture, widths that cannot collapse a view to zero). Persist is not required.
+
+#### 5. Rasterize, one Displacement/Normal submenu, Matcap, mask and selection
+
+- Right-click Rasterize on every special type, including Matcap and Material Fill (`src/ui/panels/LayersPanel.tsx` context menu). Bake to a normal colour paint layer. Undo restores the original layer.
+- Material Fill bakes its projection. Tear or Mask bakes the pixels that are actually visible, not a flat white.
+- Matcap: the gallery image is the material. Paint writes **alpha only**, not colour into the cookie. Store JPG, not EXR. Rasterize summarises strong colours toward weaker ones, then adds 20% of the colour across the middle line. Until rasterized, Blender export for this layer only is view-based matcap mixed with MixRGB. Do not bring back the HDRI vs chrome/ceramic/clay switch.
+- Put Displacement and Normal in one submenu. Displacement must become real greyscale (`src/tools/layerConversions.ts` `convertToDisplacementMap`). Normal stays tangent-space. Bump Levels stays the greyscale adjustment after displacement.
+- Selection is drawn on the **3D model**, not a text label only (`Viewport3D.tsx` currently has a text status near the bottom). A preference darkens or lightens that feedback. Do not redesign the 2D UV veil. The preference must not change stored mask colours.
+- Mask is a real layer. Any brush paints it. Greys are strength. A new mask starts blank. Transparent pixels do nothing. A clip mask keeps its stored pixels. Normal affects only the linked layer beside it. Mix uses only the layer directly above and the layer directly below.
+
+#### 6. Pattern Craft and the triplanar mixer
+
+- `src/tools/textureFilters.ts` `pattern-craft` (~613): empty layer → black-and-white pattern. Painted layer → multiply micro-detail into existing paint only. User paint (coverage / alpha) is the limit. Do not invent colour outside it.
+- `src/tools/fillSuite.ts` triplanar mix (~511): two textures A and B, mixed by noise, height, or a painted mask, three-axis projection and normal weights, world or object space. Keep mesh-position sampling (`surfaceFrame`). An empty mixer factor must not wipe the paint.
+
+#### 7. Gallery
+
+One store: `src/tools/assetGallery.ts`. Originals and thumbnails are separate. Cards show a broken image or "Preview" when the thumbnail blob is missing or the object URL was revoked (`src/ui/AssetGalleryModule.tsx`, `src/ui/GalleryAssetPicker.tsx`). Repair display from the real original blob. Do not commit fake images. Import `Texture integration.zip` only when the file is actually supplied (six JPEGs: autumn leaf veins, brown animal fur, lush lawn grass, rusty metal, dark walnut, weathered wood). After import, each card shows a real picture, survives reload, and is selectable by Triplanar, Material Fill, Brush stencil, Brush image texture, Pattern Stamp, Mask, Tear, and Matcap.
+
+#### 8. Ship
+
+Short commits through 2–7. Then `npm run host:sync`. Push. Pull after the **new** workflow (not this handoff push, not #399, not #402, not #386, not #320). Confirm `chore(self-host): sync generated painter output`. Quote the new run number, the new `index-*.js` filename, and one string that exists only in that bundle. Append `CONVERSATION_LOG.md` only.
+
 ## PIN — read only this far (unless absolutely necessary)
 
 ### Agent status — 2026-11-26 repair pass (`LOG-2026-11-26-GROK-REPAIR-PASS`)
 
-**This pass wins** over the 2026-11-23 PIN, the 2026-11-25 notes, and workflow #399 / #402 / #386 / #320. Those runs are not proof. Victory device-tests. Do not claim a visual pass.
+**Superseded by `CONTINUE FROM HERE` at the top of this file.** That repair commit is docs only. Item 1 below is now committed. Items 2–7 are not. Do not reuse `LOG-2026-11-26-GROK-REPAIR-PASS`.
 
 **Product path:** `src/` → `npm run host:sync` → `self-host/public/`. Self-host only. No `crates/vue3d_core`. Do not delete ZIPs. Do not touch Suzanne OBJ assets. Do not merge PR #2.
 
@@ -12,7 +104,7 @@
 
 **Active order (check a box only after the step is on `main` and the generated bundle contains it):**
 
-1. [ ] Undo 2D subdivision coupling. `Viewport2D` geometry is `activeGeometry` only. Subdivision preview stays on `Viewport3D`. 2D still redraws when `textureVersion` changes.
+1. [x] Undo 2D subdivision coupling. `Viewport2D` geometry is `activeGeometry` only. Subdivision preview stays on `Viewport3D`. 2D still redraws when `textureVersion` changes. Code is committed. The self-host bundle does **not** contain it yet.
 2. [ ] Eraser lag and brush draw. One visible-layer restack per flush over the union of dab bounds. UV-island clip and island path reset stay. A UV jump larger than `brush.size * 4` resets the path and stamps once, with no bridge. Live composite `clearRect`s the dirty rect. `execute2DPaint` clears the dirty rect and draws the visible stack. Eraser stays `destination-out`. No full-canvas `getImageData` on that path.
 3. [ ] Base Layer `tileScale` (default 2), slider, save with the colours, reset with the default colours. Checker cell size comes from `vueBaseTileScale`. Curvature does not override it.
 4. [ ] Accordion N-panel (Display, Unwrap, Channels, Sculpt, Mirror, zoom/overlay) in both UV layouts. Combo-view pointer/touch drag handle. Floating UV controls and the duplicate Smart UV modal removed. Pen path menu stays.
